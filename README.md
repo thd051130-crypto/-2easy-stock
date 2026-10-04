@@ -2,7 +2,16 @@
 
 KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램으로 알려주는 감시봇.
 
-## 실계정 연결 확인 (5단계)
+## 폰만으로 연결 확인 (GitHub Actions)
+
+1. 텔레그램 @BotFather에서 `/newbot` → 봇 토큰 받기, 만든 봇에게 아무 메시지나 보내기
+2. 모바일 브라우저로 저장소 Settings → Secrets and variables → Actions에 `KIS_APP_KEY`, `KIS_APP_SECRET`, `TELEGRAM_BOT_TOKEN` 등록
+3. Actions → kis-live-check → Run workflow, mode=`chat-id` → 로그에 나온 숫자를 `TELEGRAM_CHAT_ID` Secret으로 등록
+4. mode=`test-telegram` → 텔레그램에 테스트 메시지가 오면 성공
+5. mode=`check` → 승인키 발급 확인 (모의투자 앱키면 kis_env=mock, 실전이면 real)
+6. 평일 09:00~15:30에 mode=`live` → 로그에 체결이 찍히고 텔레그램에 "[실시간 연결 확인]" 알림
+
+## PC에서 연결 확인 (5단계)
 
 ```bash
 pip install -r requirements.txt

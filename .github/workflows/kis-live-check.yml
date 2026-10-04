@@ -1,0 +1,53 @@
+# 폰에서 실행: GitHub 앱/모바일 브라우저 → Actions → kis-live-check → Run workflow
+# 필요한 저장소 Secrets: KIS_APP_KEY, KIS_APP_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+name: kis-live-check
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check=승인키 확인, test-telegram=알림 테스트, chat-id=채팅ID 찾기, live=장중 실시간 수신"
+        type: choice
+        options: [test-telegram, chat-id, check, live]
+        default: test-telegram
+      kis_env:
+        description: "real=실전 앱키, mock=모의투자 앱키"
+        type: choice
+        options: [mock, real]
+        default: mock
+      minutes:
+        description: "live 모드에서 몇 분 동안 받을지"
+        default: "5"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+      KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      KIS_ENV: ${{ inputs.kis_env }}
+      KIS_MARKET: kr
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: run ${{ inputs.mode }}
+        env:
+          MODE: ${{ inputs.mode }}
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          case "$MODE" in
+            live)
+              # 정해진 시간만 받고 끝내요. timeout으로 끝난 건(124) 정상 종료로 봐요.
+              timeout "$(( MINUTES * 60 ))" python realtime_monitor.py --raw || [ $? -eq 124 ]
+              ;;
+            *)
+              python realtime_monitor.py "--$MODE"
+              ;;
+          esac

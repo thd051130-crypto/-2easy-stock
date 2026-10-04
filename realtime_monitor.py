@@ -205,7 +205,9 @@ def main():
         find_chat_id()
     elif args.test_telegram:
         ok = send_telegram("[easy-stock] 텔레그램 테스트 메시지예요. 이게 보이면 알림 설정 완료!")
-        print("전송 성공" if ok else "전송 실패")
+        if not ok:
+            raise SystemExit("전송 실패")
+        print("전송 성공")
     elif args.check:
         app_key, app_secret, (rest_url, _), _ = load_config()
         key = get_approval_key(rest_url, app_key, app_secret)
