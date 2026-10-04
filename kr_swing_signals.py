@@ -16,6 +16,7 @@
     python kr_swing_signals.py --csv my.csv # 받아 둔 데이터로 계산 (형식은 kr_swing_backtest.py와 같음)
     python kr_swing_signals.py --save-csv data/kr_daily_recent.csv  # 받은 데이터를 남겨서 paper_trade.py에 넘기기
     python kr_swing_signals.py --save-json paper/kr/signal.json      # 대시보드(dashboard.py)가 읽을 오늘 신호 저장
+                                                                     # (종목별 조건 + watchlist.txt 관심종목 포함)
 """
 
 import argparse
@@ -27,6 +28,7 @@ import tempfile
 
 import pandas as pd
 
+import conditions
 import kr_swing_backtest as kb
 import strategy
 from markets import MARKETS
@@ -222,6 +224,34 @@ def us_payload(us, index_close, etf_close=None):
                 etf_close=round(etf_close, 2) if etf_close else None, series=index_series(index_close))
 
 
+def condition_rows(market, closes, index_close, watchlist_path, today):
+    """대시보드 '신호 조건' 카드: 국장 대상 종목 전체와 관심종목의 조건 채점. 관심종목 시세를 못 받아도 계속 가요."""
+    watch = conditions.read_watchlist(watchlist_path)[market]
+    out = {}
+    if market == "kr":
+        rows = conditions.kr_checks(closes, index_close, kb.UNIVERSE)
+        out["checks"] = rows
+        watch_rows = [dict(r, name=watch[r["code"]] if watch[r["code"]] != r["code"] else r["name"])
+                      for r in rows if r["code"] in watch]
+    else:
+        watch_rows = []
+    extra = [code for code in watch if not (market == "kr" and code in kb.UNIVERSE)]
+    if extra:
+        try:
+            extra_closes = conditions.download_closes(extra, market, f"{today - dt.timedelta(days=LOOKBACK_DAYS):%Y-%m-%d}",
+                                                      index_close.index)
+        except Exception as e:  # 네트워크 등
+            print(f"관심종목 시세를 못 받았어요: {e!r}")
+            extra_closes = pd.DataFrame(index=index_close.index)
+        check = conditions.kr_checks if market == "kr" else conditions.us_checks
+        args = (extra_closes, index_close, watch) if market == "kr" else (extra_closes, watch)
+        watch_rows += check(*args)
+        missing = [code for code in extra if code not in {r["code"] for r in watch_rows}]
+        watch_rows += [dict(code=code, name=watch[code], missing=True) for code in missing]
+    out["watch"] = watch_rows
+    return out
+
+
 def save_json(path, payload):
     payload = dict(payload, generated=dt.datetime.now(KST).isoformat(timespec="minutes"))
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -246,6 +276,8 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="텔레그램으로 보내지 않고 출력만")
     parser.add_argument("--save-csv", type=pathlib.Path, help="받은 야후 데이터를 이 경로에 남겨요 (가상매매 기록이 같이 써요)")
     parser.add_argument("--save-json", type=pathlib.Path, help="오늘 신호를 대시보드용 JSON으로 저장")
+    parser.add_argument("--watchlist", type=pathlib.Path, default=conditions.WATCHLIST,
+                        help="관심종목 파일 (--save-json일 때 조건을 같이 계산해요)")
     args = parser.parse_args()
 
     from realtime_monitor import send_telegram
@@ -276,6 +308,7 @@ def main():
         text = format_message(market, picks, capital, today)
         payload = kr_payload(market, picks, index_close)
     if args.save_json:
+        payload.update(condition_rows(args.market, closes, index_close, args.watchlist, today))
         save_json(args.save_json, payload)
     print(text)
     if not args.dry_run:

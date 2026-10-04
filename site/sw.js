@@ -1,5 +1,5 @@
 // 홈 화면 앱용 서비스워커: 화면은 캐시로 빨리 띄우고, data.json은 항상 새로 받아요 (오프라인이면 마지막 데이터).
-const CACHE = "easystock-v1";
+const CACHE = "easystock-v2";
 const SHELL = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {

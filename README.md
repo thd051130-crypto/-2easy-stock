@@ -35,6 +35,10 @@ KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램�
 - 처음 한 번: Settings → Pages → Source를 **GitHub Actions**로 → Actions → pages → Run workflow
 - 주소: `https://thd051130-crypto.github.io/-2easy-stock/` → 폰 브라우저 메뉴에서 "홈 화면에 추가"하면 앱처럼 열려요
 - GitHub Pages 사이트는 저장소가 비공개여도 누구나 주소로 볼 수 있어요 (무료 계정은 공개 저장소에서만 Pages를 켤 수 있어요)
+- **신호 조건 카드**: 국장 30종목마다 규칙 4가지(코스피 추세, 200일선 위, 10일 안 20일 신고가, RSI2 < 10)를 ✓/✗로 보여 주고,
+  신호까지 남은 것(예: "다음 거래일 약 ○○원 아래로 마감하면 RSI2가 10 아래")을 신호에 가까운 순으로 정렬해요 (`conditions.py`)
+- **관심종목**: `watchlist.txt`에 `kr 035720 카카오`, `us NVDA 엔비디아`처럼 적으면 같은 방식으로 채점해요 (가상계좌는 사지 않음).
+  폰에서는 저장소 → watchlist.txt → 연필 아이콘(이 파일 편집) → "변경 사항 커밋". 다음 신호 계산 때 반영돼요
 - 미리 보기: `python dashboard.py --out _site && python -m http.server -d _site`
 
 ## 폰만으로 연결 확인 (GitHub Actions)

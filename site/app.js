@@ -63,7 +63,8 @@ function render() {
   if (!DATA) return;
   const d = DATA.markets[market];
   const app = $("#app");
-  app.innerHTML = [signalCard(d), accountCard(d), positionsCard(d), tradesCard(d), trendCard(d), rulesCard(d)].join("");
+  app.innerHTML = [signalCard(d), watchCard(d), conditionsCard(d), accountCard(d), positionsCard(d), tradesCard(d), trendCard(d),
+    rulesCard(d)].join("");
   const acc = d.account;
   if (acc && acc.curve.length) {
     lineChart($("#equity-chart"), {
@@ -101,6 +102,10 @@ function signalCard(d) {
     : `<span class="chip wait">■ 추세 조건 미달</span>`;
   const gap = s.index / s.ma200 - 1;
   const idx = `<p class="sub">${esc(d.index_name)} ${num(s.index)} · 50일선 ${num(s.ma50)} · 200일선 ${num(s.ma200)} (${pct(gap)})</p>`;
+  const marketChecks = checkChips([
+    { label: `${d.index_name} 200일선 위`, ok: s.index > s.ma200 },
+    market === "us" ? { label: "50일선 > 200일선", ok: s.ma50 > s.ma200 } : { label: `${d.index_name} 50일선 위`, ok: s.index > s.ma50 },
+  ]);
   let body;
   if (market === "us") {
     const [title, desc] = US_ACTION[s.action] || ["-", ""];
@@ -121,13 +126,58 @@ function signalCard(d) {
       <p class="sub">다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.</p>${idx}
       <ul class="list" style="margin-top:12px">${items}</ul>`;
   }
-  return `<section class="card"><h2>오늘의 신호 <small>${md(s.day)} 종가 기준</small></h2>${chip}${body}</section>`;
+  return `<section class="card"><h2>오늘의 신호 <small>${md(s.day)} 종가 기준</small></h2>${chip}${body}${marketChecks}</section>`;
 }
 
 // 규칙으로 만든 매매 의견 (이유, 위험 등). 예전 기록엔 없을 수 있어요.
 function opinion(lines) {
   if (!lines || !lines.length) return "";
   return lines.map((l) => `<div class="opinion">${esc(l)}</div>`).join("");
+}
+
+// 조건 하나하나를 ✓/✗ 칩으로 (색만으로 구분하지 않게 기호를 같이 써요)
+function checkChips(checks) {
+  return `<div class="checks">${checks.map((c) => `<span class="check ${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"} ${esc(c.label)}${
+    c.detail ? ` <em>${esc(c.detail)}</em>` : ""}</span>`).join("")}</div>`;
+}
+
+function conditionRow(r, unit) {
+  if (r.missing) {
+    return `<li><div class="l"><div class="name">${esc(r.name)} <span class="meta">${esc(r.code)}</span></div>
+      <div class="meta">시세를 못 찾았어요. watchlist.txt의 종목코드를 확인해 주세요.</div></div></li>`;
+  }
+  const badge = r.signal ? `<span class="chip good">● ${market === "us" ? "추세 충족" : "신호"}</span>` : `<span class="count">${r.met}/${r.total}</span>`;
+  return `<li class="cond"><div class="l" style="width:100%">
+      <div class="row-top"><div class="name">${esc(r.name)} <span class="meta">${esc(r.code)}</span></div>
+        <div class="r">${badge} <span class="meta">${unit(r.close)}</span></div></div>
+      ${checkChips(r.checks)}
+      ${r.todo.map((t) => `<div class="meta todo">→ ${esc(t)}</div>`).join("")}</div></li>`;
+}
+
+function watchCard(d) {
+  const s = d.signal;
+  if (!s || !s.watch) return "";
+  const unit = (x) => price(market, x);
+  const note = market === "us"
+    ? "S&P500에 쓰는 추세 조건을 이 종목에 대 본 참고용이에요. 가상계좌는 지수 ETF만 사요."
+    : "국장 규칙 조건을 그대로 채점했어요. 대상 30종목 밖이면 가상계좌는 사지 않아요.";
+  const body = s.watch.length
+    ? `<ul class="list">${s.watch.map((r) => conditionRow(r, unit)).join("")}</ul>`
+    : `<p class="empty">아직 관심종목이 없어요.</p>`;
+  return `<section class="card"><h2>관심종목 <small>${s.watch.length}개</small></h2>${body}
+    <p class="muted" style="margin:8px 0 0">${note} 종목은 저장소의 watchlist.txt에서 바꿔요.</p></section>`;
+}
+
+function conditionsCard(d) {
+  const s = d.signal;
+  if (!s || !s.checks || !s.checks.length) return "";
+  const unit = (x) => price(market, x);
+  const top = s.checks.slice(0, 5), rest = s.checks.slice(5);
+  return `<section class="card"><h2>신호 조건 <small>신호에 가까운 순</small></h2>
+    <ul class="list">${top.map((r) => conditionRow(r, unit)).join("")}</ul>
+    ${rest.length ? `<details style="margin-top:8px"><summary>나머지 ${rest.length}종목 보기</summary>
+      <ul class="list" style="margin-top:8px">${rest.map((r) => conditionRow(r, unit)).join("")}</ul></details>` : ""}
+    <p class="muted" style="margin:8px 0 0">4가지가 모두 ✓이면 다음 거래일 시가에 사요.</p></section>`;
 }
 
 function accountCard(d) {
