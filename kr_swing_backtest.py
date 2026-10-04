@@ -50,25 +50,25 @@ COSTS = {
 
 # ---------------------------------------------------------------- 데이터
 
-def load_csv(path):
+def load_csv(path, index=INDEX):
     df = pd.read_csv(path, dtype={"ticker": str}, parse_dates=["date"])
     opens = df.pivot(index="date", columns="ticker", values="open").sort_index()
     closes = df.pivot(index="date", columns="ticker", values="close").sort_index()
-    if INDEX not in closes:
-        raise SystemExit(f"{path}에 코스피 지수({INDEX}) 행이 없어요.")
-    index_close = closes.pop(INDEX).dropna()
-    opens = opens.drop(columns=[INDEX], errors="ignore")
+    if index not in closes:
+        raise SystemExit(f"{path}에 지수({index}) 행이 없어요.")
+    index_close = closes.pop(index).dropna()
+    opens = opens.drop(columns=[index], errors="ignore")
     calendar = index_close.index
     return opens.reindex(calendar), closes.reindex(calendar), index_close
 
 
-def download(path, pause=1.5, retries=5, start=START):
+def download(path, pause=1.5, retries=5, start=START, universe=None, index=INDEX, suffix=".KS"):
     """야후는 한꺼번에 받으면 429(요청 과다)를 자주 줘서 종목별로 쉬어 가며 받고, 실패하면 간격을 늘려 다시 시도해요."""
     import time
 
     import yfinance as yf
 
-    symbols = [f"{code}.KS" for code in UNIVERSE] + [INDEX]
+    symbols = [f"{code}{suffix}" for code in (universe or UNIVERSE)] + [index]
     frames = []
     for symbol in symbols:
         part = None
@@ -86,7 +86,7 @@ def download(path, pause=1.5, retries=5, start=START):
             continue
         part = part[["Open", "Close"]].dropna(how="all")
         part.index = pd.to_datetime(part.index).tz_localize(None).normalize()
-        frames.append(pd.DataFrame({"date": part.index, "ticker": symbol.removesuffix(".KS"),
+        frames.append(pd.DataFrame({"date": part.index, "ticker": symbol.removesuffix(suffix) if suffix else symbol,
                                     "open": part["Open"].to_numpy(), "close": part["Close"].to_numpy()}))
     if not frames:
         raise SystemExit("다운로드된 데이터가 없어요. 네트워크(야후 파이낸스 접속)를 확인하거나 --csv로 데이터를 넣어 주세요.")
@@ -150,10 +150,13 @@ def dip_after_breakout(closes, market_ok, th=10, n=20, within=10, exit_ma=5, max
 
 # ---------------------------------------------------------------- 시뮬레이션
 
-def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, cash_rate=CASH_RATE):
+def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, cash_rate=CASH_RATE,
+             stop=None, weight=None):
     """일봉 포트폴리오 시뮬레이션.
 
     capital이 없으면 소수 주식 허용(비율로만 계산), 있으면 그 금액으로 정수 주식만 매수해요.
+    stop: 종가가 매수 시가보다 이 비율 넘게 빠지면 다음 날 시가에 손절 (예: 0.05)
+    weight: 종목당 평가금액 대비 비중 (기본 1/MAX_POSITIONS, 0.1이면 5종목 다 차도 절반은 현금)
     반환: (자산 곡선(시작=1), 평균 투자 비중, 거래 목록[(수익률, 보유일)], 돈이 모자라 못 산 횟수)
     """
     buy_mult = 1 + cost["fee"] + cost["slip"]
@@ -163,7 +166,7 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
     ent, ext, rk = entry.fillna(False).to_numpy(bool), exit_.fillna(False).to_numpy(bool), rank.to_numpy(float)
     T, N = c.shape
     start = float(capital) if capital else 1.0
-    cash, shares, cost_basis, buy_day = start, np.zeros(N), np.zeros(N), np.zeros(N, int)
+    cash, shares, cost_basis, buy_day, buy_open = start, np.zeros(N), np.zeros(N), np.zeros(N, int), np.zeros(N)
     equity, invested = np.empty(T), np.empty(T)
     trades, skipped, to_sell, to_buy = [], 0, [], []
     for i in range(T):
@@ -173,7 +176,7 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
                 cash += proceeds
                 trades.append((proceeds / cost_basis[j] - 1, i - buy_day[j]))
                 shares[j] = 0.0
-        slot = (equity[i - 1] if i else start) / MAX_POSITIONS
+        slot = (equity[i - 1] if i else start) * (weight or 1 / MAX_POSITIONS)
         for j in to_buy:
             if np.isnan(o[i, j]) or cash <= 0:
                 continue
@@ -184,7 +187,7 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
                 if qty < 1:
                     skipped += 1
                     continue
-            shares[j], cost_basis[j], buy_day[j] = qty, qty * px, i
+            shares[j], cost_basis[j], buy_day[j], buy_open[j] = qty, qty * px, i, o[i, j]
             cash -= qty * px
         cash *= 1 + daily_cash
         value = np.nansum(shares * c[i])
@@ -194,6 +197,8 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
         selling = held & ext[i]
         if max_hold:
             selling |= held & (i - buy_day >= max_hold)
+        if stop:
+            selling |= held & (c[i] < buy_open * (1 - stop))
         to_sell = list(np.where(selling)[0])
         free = MAX_POSITIONS - held.sum() + selling.sum()
         candidates = np.where(ent[i] & ~held & ~np.isnan(rk[i]))[0]
