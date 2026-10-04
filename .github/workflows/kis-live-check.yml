@@ -8,8 +8,8 @@ on:
       mode:
         description: "check=승인키 확인, test-telegram=알림 테스트, chat-id=채팅ID 찾기, live=장중 실시간 수신"
         type: choice
-        options: [test-telegram, chat-id, check, live]
-        default: test-telegram
+        options: [chat-id, test-telegram, check, live]
+        default: chat-id
       kis_env:
         description: "real=실전 앱키, mock=모의투자 앱키"
         type: choice

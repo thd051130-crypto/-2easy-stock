@@ -95,7 +95,7 @@ def parse_frame(raw, fields):
 
 
 def send_telegram(text):
-    token, chat_id = os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    token, chat_id = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip(), (os.getenv("TELEGRAM_CHAT_ID") or "").strip()
     if not token or not chat_id:
         print("(텔레그램 미설정: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)", flush=True)
         return False
@@ -114,11 +114,17 @@ def find_chat_id():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         raise SystemExit(".env에 TELEGRAM_BOT_TOKEN을 먼저 넣으세요")
+    token = token.strip()
     updates = requests.get(f"https://api.telegram.org/bot{token}/getUpdates", timeout=10).json()
+    if not updates.get("ok"):
+        raise SystemExit(f"텔레그램이 토큰을 거부했어요 ({updates.get('description')}). "
+                         "BotFather에서 토큰을 다시 Copy 해서 TELEGRAM_BOT_TOKEN을 고쳐 넣으세요")
+    me = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=10).json().get("result", {})
+    print(f"토큰 정상: @{me.get('username')}")
     chats = {u["message"]["chat"]["id"]: u["message"]["chat"].get("first_name") or u["message"]["chat"].get("title")
              for u in updates.get("result", []) if "message" in u}
     if not chats:
-        raise SystemExit("봇에게 텔레그램에서 아무 메시지나 하나 보낸 뒤 다시 실행하세요")
+        raise SystemExit(f"@{me.get('username')} 대화방에서 시작(START)을 누르고 아무 메시지나 보낸 뒤 다시 실행하세요")
     for chat_id, name in chats.items():
         print(f"TELEGRAM_CHAT_ID={chat_id}  ({name})")
 
