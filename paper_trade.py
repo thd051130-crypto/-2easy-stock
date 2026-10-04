@@ -31,6 +31,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 import kr_swing_backtest as kb
+import rulebook
 import strategy
 from markets import MARKETS, name_of
 
@@ -147,6 +148,32 @@ def advance(state, opens, closes, index_close):
     return trades, equity_rows, events
 
 
+def advance_rulebook(book, opens, closes, volumes, index_close):
+    """사용자 규칙표(rulebook.py) 가상계좌를 마지막 반영일 다음부터 하루씩 진행해요. 처음이면 마지막 거래일만."""
+    market = book["market"]
+    ind = rulebook.indicators(closes, volumes, index_close)
+    calendar = closes.index
+    days = calendar[-1:] if book["last_day"] is None else calendar[calendar > pd.Timestamp(book["last_day"])]
+    names = MARKETS[market]["universe"]
+    trades, rows, events = [], [], []
+    for day in days:
+        i = calendar.get_loc(day)
+        t, row, ev = rulebook.step(book, day, opens.iloc[i], rulebook.day_row(ind, i), index_close.iloc[i],
+                                   MARKETS[market]["cost"], names)
+        trades += t
+        rows.append(row)
+        events += ev
+    # 주간 결산·대시보드가 읽는 모양으로 다음 날 주문을 맞춰 둬요
+    book["pending_buys"] = [dict(code=o["code"], name=o["name"]) for o in book["orders"] if o["side"] == "buy"]
+    book["pending_sells"] = [dict(code=o["code"], reason=o["reason"]) for o in book["orders"] if o["side"] == "sell"]
+    return trades, rows, events
+
+
+def title(state):
+    name = MARKETS[state["market"]]["name"]
+    return f"규칙표 {name}" if state.get("version") == 2 else name
+
+
 def shares(qty):
     return f"{qty:.0f}주" if float(qty).is_integer() else f"{qty:.3f}주"
 
@@ -160,9 +187,8 @@ def held_days(calendar, buy_date, day, missing=0):
 
 
 def daily_message(state, events):
-    m = MARKETS[state["market"]]
     gain = state["equity"] / state["capital"] - 1
-    lines = [f"[가상매매 {m['name']}] 시가 체결"] + events
+    lines = [f"[가상매매 {title(state)}] 시가 체결"] + events
     lines.append(f"평가금액 {money(state['market'], state['equity'])} "
                  f"(시작 {money(state['market'], state['capital'])} 대비 {gain:+.1%})")
     return "\n".join(lines)
@@ -175,7 +201,7 @@ def weekly_summary(state, trades, equity, today, closes):
     last = equity.iloc[-1]
     gain = round(last["equity"] / state["capital"] - 1, 4) + 0.0  # -0.0% 대신 +0.0%
     index_gain = round(last["index"] / state["index_start"] - 1, 4) + 0.0
-    lines = [f"[가상매매 {m['name']} 주간 결산] {today:%Y-%m-%d} ({last['date']} 종가 기준)",
+    lines = [f"[가상매매 {title(state)} 주간 결산] {today:%Y-%m-%d} ({last['date']} 종가 기준)",
              f"{state['start']} 시작 {money(market, state['capital'])} → {money(market, last['equity'])} ({gain:+.1%})",
              f"같은 기간 {m['index_name']} {index_gain:+.1%} ({state['index_start']:,.0f} → {last['index']:,.0f}), "
              f"차이 {(gain - index_gain) * 100:+.1f}%p"]
@@ -249,8 +275,10 @@ def append(df, rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--market", choices=sorted(MARKETS), default="kr")
-    parser.add_argument("--csv", type=pathlib.Path, required=True, help="date,ticker,open,close 형식 일봉")
-    parser.add_argument("--dir", type=pathlib.Path, help="기록 폴더 (기본 paper/<시장>)")
+    parser.add_argument("--rule", choices=["main", "rulebook"], default="main",
+                        help="main=알림 규칙(strategy.py), rulebook=사용자 규칙표(rulebook.py)를 따로 검증")
+    parser.add_argument("--csv", type=pathlib.Path, required=True, help="date,ticker,open,close(,volume) 형식 일봉")
+    parser.add_argument("--dir", type=pathlib.Path, help="기록 폴더 (기본 paper/<시장>, 규칙표는 paper/<시장>/rulebook)")
     parser.add_argument("--capital", type=float, help="처음 만들 때 가상계좌 금액 (기본 국장 30만 원, 미장 300달러)")
     parser.add_argument("--whole-shares", action="store_true", help="처음 만들 때 정수 주식만 사는 계좌로 (기본은 소수점)")
     parser.add_argument("--summary", action="store_true", default=os.getenv("PAPER_SUMMARY") == "true",
@@ -260,11 +288,24 @@ def main():
 
     from realtime_monitor import send_telegram
 
-    folder = args.dir or pathlib.Path("paper") / args.market
+    m = MARKETS[args.market]
+    folder = args.dir or pathlib.Path("paper") / args.market / ("rulebook" if args.rule == "rulebook" else "")
     today = dt.datetime.now(TIMEZONES[args.market]).date()
-    opens, closes, index_close = kb.load_csv(args.csv, MARKETS[args.market]["index"])
-    state, trades, equity = load(folder, args.market, args.capital, not args.whole_shares)
-    new_trades, new_rows, events = advance(state, opens, closes, index_close)
+    opens, closes, index_close = kb.load_csv(args.csv, m["index"])
+    etf = [c for c in closes.columns if c == strategy.US_ETF]
+    if args.rule == "rulebook":
+        stocks = [c for c in closes.columns if c in m["universe"]]
+        volumes = kb.load_volume(args.csv, closes.index, m["index"])
+        volumes = volumes[stocks] if volumes is not None else None
+        state, trades, equity = load(folder, args.market, args.capital)
+        if state.get("version") != 2:
+            state = rulebook.new_book(args.market, args.capital or m["capital"])
+        new_trades, new_rows, events = advance_rulebook(state, opens[stocks], closes[stocks], volumes, index_close)
+    else:
+        if args.market == "us" and etf:  # 미장 알림 규칙은 SPY만 사고팔아요 (같은 파일에 규칙표용 개별주도 있어요)
+            opens, closes = opens[etf], closes[etf]
+        state, trades, equity = load(folder, args.market, args.capital, not args.whole_shares)
+        new_trades, new_rows, events = advance(state, opens, closes, index_close)
     trades, equity = append(trades, new_trades), append(equity, new_rows)
     save(folder, state, trades, equity)
 

@@ -110,3 +110,16 @@ def test_us_money_in_dollars():
     assert pt.money("us", 1234.5) == "1,234.50달러"
     assert pt.money("us", 3.2, sign=True) == "+3.20달러"
     assert pt.money("kr", -1500, sign=True) == "-1,500원"
+
+
+def test_rulebook_paper_account_runs_and_exposes_pending_orders():
+    opens, closes, index_close = synthetic()
+    closes.columns = opens.columns = [f"{i:06d}" for i in range(closes.shape[1])]
+    book = pt.rulebook.new_book("kr", 300000)
+    book["last_day"] = str(closes.index[-120].date())
+    trades, rows, events = pt.advance_rulebook(book, opens, closes, None, index_close)
+    assert len(rows) == 119 and book["last_day"] == str(closes.index[-1].date())
+    assert isinstance(book["pending_buys"], list) and isinstance(book["pending_sells"], list)
+    assert pt.title(book) == "규칙표 국장"
+    # 이어서 같은 데이터로 돌리면 아무 일도 없어요
+    assert pt.advance_rulebook(book, opens, closes, None, index_close)[1] == []
