@@ -59,7 +59,7 @@ def test_first_run_only_queues_todays_signals():
     trades, rows, events = pt.advance(state, opens, closes, index_close)
     assert trades == [] and events == [] and len(rows) == 1
     assert state["start"] == state["last_day"] == str(closes.index[-1].date())
-    assert state["equity"] == 300000
+    assert state["equity"] == 700000  # 기본 가상계좌: 국장 70만 원
     # 같은 데이터로 다시 돌려도 아무 일도 안 일어나요 (수동 재실행)
     assert pt.advance(state, opens, closes, index_close) == ([], [], [])
 
@@ -84,7 +84,7 @@ def test_expensive_stock_skipped_only_for_whole_shares(fractional):
 
 
 def test_weekly_summary_compares_with_index(tmp_path):
-    state = pt.new_state("kr")
+    state = pt.new_state("kr", 300000)
     state.update(start="2026-10-05", index_start=3000.0, cash=240000.0, equity=310000.0,
                  positions=[dict(code="005930", name="삼성전자", qty=1, buy_date="2026-10-08",
                                  buy_price=60000.0, cost=60039.0)])
@@ -123,3 +123,9 @@ def test_rulebook_paper_account_runs_and_exposes_pending_orders():
     assert pt.title(book) == "규칙표 국장"
     # 이어서 같은 데이터로 돌리면 아무 일도 없어요
     assert pt.advance_rulebook(book, opens, closes, None, index_close)[1] == []
+
+
+def test_default_capital_per_market():
+    assert pt.new_state("kr")["capital"] == 700000
+    assert pt.new_state("us")["capital"] == 500
+    assert pt.rulebook.new_book("us", MARKETS["us"]["capital"])["cash"] == 500

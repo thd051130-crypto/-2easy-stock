@@ -2,9 +2,9 @@
 """알림 규칙대로 실제로 샀다고 치고 가상계좌를 매일 기록해요. 진짜 주문은 하지 않아요.
 
 규칙은 strategy.py (알림과 같아요).
-  - 국장 30만 원: 신호가 나오면 다음 거래일 시가에 종목당 10%씩 매수, 최대 5종목.
+  - 국장 70만 원: 신호가 나오면 다음 거래일 시가에 종목당 10%씩 매수, 최대 5종목.
     종가가 5일선 위, 10거래일 경과, 매수가 대비 -5% 손절 중 하나면 다음 날 시가에 매도
-  - 미장 300달러: S&P500 추세가 살아 있으면 다음 거래일 시가에 계좌 50%를 SPY로, 꺾이면 다음 날 시가에 전부 매도
+  - 미장 500달러: S&P500 추세가 살아 있으면 다음 거래일 시가에 계좌 50%를 SPY로, 꺾이면 다음 날 시가에 전부 매도
   - 계좌가 작아서 1주를 못 사는 경우가 많아 기본은 소수점 매수로 기록해요 (--whole-shares면 정수 주식만)
   - 수수료·세금·슬리피지는 백테스트와 같고, 현금 이자는 넣지 않았어요. 미장은 환율 변동을 빼고 달러로만 계산해요
 
@@ -279,7 +279,7 @@ def main():
                         help="main=알림 규칙(strategy.py), rulebook=사용자 규칙표(rulebook.py)를 따로 검증")
     parser.add_argument("--csv", type=pathlib.Path, required=True, help="date,ticker,open,close(,volume) 형식 일봉")
     parser.add_argument("--dir", type=pathlib.Path, help="기록 폴더 (기본 paper/<시장>, 규칙표는 paper/<시장>/rulebook)")
-    parser.add_argument("--capital", type=float, help="처음 만들 때 가상계좌 금액 (기본 국장 30만 원, 미장 300달러)")
+    parser.add_argument("--capital", type=float, help="처음 만들 때 가상계좌 금액 (기본 국장 70만 원, 미장 500달러)")
     parser.add_argument("--whole-shares", action="store_true", help="처음 만들 때 정수 주식만 사는 계좌로 (기본은 소수점)")
     parser.add_argument("--summary", action="store_true", default=os.getenv("PAPER_SUMMARY") == "true",
                         help="금요일이 아니어도 주간 결산 보내기")

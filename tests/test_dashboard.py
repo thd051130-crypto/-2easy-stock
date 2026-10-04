@@ -32,7 +32,7 @@ def test_signal_payload_round_trip(tmp_path):
 
 def test_account_summary_from_paper_records(tmp_path):
     folder = tmp_path / "kr"
-    state = pt.new_state("kr")
+    state = pt.new_state("kr", 300000)
     state.update(start="2024-01-02", index_start=100.0, cash=270000.0, positions=[
         dict(code="005930", name="삼성전자", qty=0.5, buy_date="2024-01-03", buy_price=60000.0, cost=30030.0,
              last_price=66000.0)], pending_buys=[dict(code="000660", name="SK하이닉스", signal_date="2024-01-04")])
