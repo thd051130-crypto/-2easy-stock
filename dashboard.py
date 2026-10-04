@@ -13,6 +13,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
 import argparse
 import csv
 import datetime as dt
+import hashlib
 import json
 import pathlib
 import shutil
@@ -121,6 +122,28 @@ def build(paper_dir):
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets)
 
 
+def site_version(site_dir):
+    """웹앱 파일이 바뀌면 달라지는 짧은 값. 앱을 열어 둔 사이 새 화면이 배포됐는지 앱이 알아채는 데 써요."""
+    h = hashlib.sha1()
+    for path in sorted(p for p in site_dir.rglob("*") if p.is_file()):
+        h.update(path.relative_to(site_dir).as_posix().encode())
+        h.update(path.read_bytes())
+    return h.hexdigest()[:12]
+
+
+def stamp_assets(out_dir):
+    """index.html이 부르는 app.js·style.css 주소 끝에 내용 해시를 붙여요 (app.js?v=…).
+    파일이 바뀌면 주소도 바뀌어서, 폰 브라우저가 메모리에 들고 있던 예전 파일을 다시 쓰지 않아요."""
+    index = out_dir / "index.html"
+    html = index.read_text(encoding="utf-8")
+    for name in ("app.js", "style.css"):
+        asset = out_dir / name
+        if asset.exists():
+            digest = hashlib.sha1(asset.read_bytes()).hexdigest()[:10]
+            html = html.replace(f'"{name}"', f'"{name}?v={digest}"')
+    index.write_text(html, encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--paper", type=pathlib.Path, default=pathlib.Path("paper"), help="기록 폴더")
@@ -130,7 +153,8 @@ def main():
     if args.out.exists():
         shutil.rmtree(args.out)
     shutil.copytree(args.site, args.out)
-    data = build(args.paper)
+    stamp_assets(args.out)
+    data = dict(build(args.paper), site_version=site_version(args.site))
     (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     for key, m in data["markets"].items():
         acc = m["account"]

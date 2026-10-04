@@ -58,6 +58,7 @@ KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램�
 - 처음 한 번: Settings → Pages → Source를 **GitHub Actions**로 → Actions → pages → Run workflow
 - 주소: `https://thd051130-crypto.github.io/-2easy-stock/` → 폰 브라우저 메뉴에서 "홈 화면에 추가"하면 앱처럼 열려요
 - GitHub Pages 사이트는 저장소가 비공개여도 누구나 주소로 볼 수 있어요 (무료 계정은 공개 저장소에서만 Pages를 켤 수 있어요)
+- 새 화면이 배포되면 앱을 열 때 서버에 새 버전이 있는지 확인해서 바로 보여 줘요. 앱을 열어 둔 채였으면 다시 볼 때 한 번 새로고침돼요
 - 미리 보기: `python dashboard.py --out _site && python -m http.server -d _site`
 
 ## 폰만으로 연결 확인 (GitHub Actions)
