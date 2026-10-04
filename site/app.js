@@ -6,7 +6,7 @@ const US_ACTION = {
   buy: ["매수 신호", "다음 거래일 시가에 계좌의 50%를 S&P500 ETF로 사요."],
   hold: ["보유 유지", "계좌의 50%는 S&P500 ETF, 나머지는 현금으로 둬요."],
   sell: ["매도 신호", "추세가 꺾여서 다음 거래일 시가에 ETF를 전부 팔아요."],
-  cash: ["현금 유지", "S&P500 추세 조건이 아니라서 사지 않아요."],
+  cash: ["현금 유지", "S&P500 추세가 약하거나 변동성이 커서 사지 않아요."],
 };
 
 let DATA = null;
@@ -63,7 +63,7 @@ function render() {
   if (!DATA) return;
   const d = DATA.markets[market];
   const app = $("#app");
-  app.innerHTML = [signalCard(d), accountCard(d), positionsCard(d), tradesCard(d), trendCard(d), rulesCard(d)].join("");
+  app.innerHTML = [signalCard(d), desksCard(d), accountCard(d), positionsCard(d), tradesCard(d), trendCard(d), rulesCard(d)].join("");
   const acc = d.account;
   if (acc && acc.curve.length) {
     lineChart($("#equity-chart"), {
@@ -97,8 +97,8 @@ function signalCard(d) {
       <p class="empty">아직 계산된 신호가 없어요. ${NEXT_RUN[market]} 자동으로 계산되면 여기에 떠요.</p></section>`;
   }
   const chip = s.ok
-    ? `<span class="chip good">● 추세 조건 충족</span>`
-    : `<span class="chip wait">■ 추세 조건 미달</span>`;
+    ? `<span class="chip good">● 매수 조건 충족</span>`
+    : `<span class="chip wait">■ 매수 조건 미달</span>`;
   const gap = s.index / s.ma200 - 1;
   const idx = `<p class="sub">${esc(d.index_name)} ${num(s.index)} · 50일선 ${num(s.ma50)} · 200일선 ${num(s.ma200)} (${pct(gap)})</p>`;
   let body;
@@ -107,7 +107,7 @@ function signalCard(d) {
     const etf = s.etf_close ? `<p class="muted">${esc(s.etf)} 종가 ${price("us", s.etf_close)} · ${money("us", d.capital)} 계좌면 ${money("us", d.capital / 2)} ≈ ${(d.capital / 2 / s.etf_close).toFixed(3)}주</p>` : "";
     body = `<p class="headline">${title}</p><p class="sub">${desc}</p>${idx}${etf}${opinion(s.opinion)}`;
   } else if (!s.ok) {
-    body = `<p class="headline">신규 매수 쉬는 날</p><p class="sub">코스피가 50일선이나 200일선 아래라 새로 사지 않아요.</p>${idx}`;
+    body = `<p class="headline">신규 매수 쉬는 날</p><p class="sub">${esc(s.pause || "코스피가 50일선이나 200일선 아래라 새로 사지 않아요.")}</p>${idx}`;
   } else if (!s.picks.length) {
     body = `<p class="headline">오늘은 매수 신호 없음</p><p class="sub">조건에 맞게 눌린 종목이 없어요. 기다리는 것도 규칙이에요.</p>${idx}`;
   } else {
@@ -122,6 +122,15 @@ function signalCard(d) {
       <ul class="list" style="margin-top:12px">${items}</ul>`;
   }
   return `<section class="card"><h2>오늘의 신호 <small>${md(s.day)} 종가 기준</small></h2>${chip}${body}</section>`;
+}
+
+// 부서별 보고 (스크리닝·기술적 분석·펀더멘탈·마켓·리스크관리·운용부). 예전 기록엔 없을 수 있어요.
+function desksCard(d) {
+  const desks = d.signal && d.signal.desks;
+  if (!desks || !desks.length) return "";
+  const items = desks.map((x) => `<li><div class="l"><div class="name">${esc(x.dept)}</div>
+      <div class="meta">${esc(x.text)}</div></div></li>`).join("");
+  return `<section class="card"><h2>부서별 보고 <small>규칙 코드로 계산</small></h2><ul class="list">${items}</ul></section>`;
 }
 
 // 규칙으로 만든 매매 의견 (이유, 위험 등). 예전 기록엔 없을 수 있어요.

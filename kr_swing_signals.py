@@ -27,6 +27,7 @@ import tempfile
 
 import pandas as pd
 
+import departments
 import kr_swing_backtest as kb
 import strategy
 from markets import MARKETS
@@ -54,8 +55,11 @@ def compute_signals(closes, index_close):
                           recent=[round(float(x)) for x in closes[code].dropna().iloc[-20:]]))
     picks.sort(key=lambda p: -p["rank"])
     index_ma200, index_ma50 = index_close.rolling(200).mean().iloc[-1], index_close.rolling(50).mean().iloc[-1]
+    breadth = f["wide"].iloc[-1] if "wide" in f else True
     market = dict(day=day, kospi=float(index_close.iloc[-1]), kospi_ma200=float(index_ma200),
-                  kospi_ma50=float(index_ma50), kospi_ok=bool(f["ok"].iloc[-1]), max_hold=max_hold)
+                  kospi_ma50=float(index_ma50), kospi_ok=bool(f["ok"].iloc[-1]), max_hold=max_hold,
+                  trend_ok=bool(f.get("trend", f["ok"]).iloc[-1]), breadth_ok=bool(breadth),
+                  breadth=float(strategy.breadth(closes).iloc[-1]) if closes.shape[1] else None)
     return market, picks
 
 
@@ -63,6 +67,16 @@ def days_since_high(close, n=20):
     """마지막으로 n일 신고가를 낸 날이 몇 거래일 전인지."""
     hits = (close >= close.rolling(n).max()).to_numpy()[::-1]
     return int(hits.argmax()) if hits.any() else None
+
+
+def kr_pause_reason(market):
+    """국장 신규 매수를 쉬는 이유."""
+    if not market.get("trend_ok", False):
+        return "코스피가 50일선이나 200일선 아래라 규칙상 새로 사지 않는 날이에요."
+    b = market.get("breadth")
+    share = f"{b:.0%}" if b is not None else "절반 미만"
+    return (f"코스피 추세는 괜찮지만 대형주 중 200일선 위 종목이 {share}로 "
+            f"{strategy.KR_BREADTH_MIN:.0%} 미만이라(시장 폭이 좁음) 새로 사지 않는 날이에요.")
 
 
 def kr_opinion(p, market):
@@ -100,8 +114,7 @@ def format_message(market, picks, capital, today):
                  f"200일선 {market['kospi_ma200']:,.0f}, {gap:+.1%}) {state}")
     lines.append("")
     if not picks:
-        lines.append("오늘은 매수 신호가 없어요." if market["kospi_ok"] else
-                     "코스피가 50일선이나 200일선 아래라 규칙상 새로 사지 않는 날이에요.")
+        lines.append("오늘은 매수 신호가 없어요." if market["kospi_ok"] else kr_pause_reason(market))
     else:
         lines.append(f"매수 후보 {len(picks)}개 (RSI2 낮은 순, 최대 {kb.MAX_POSITIONS}개)")
         for i, p in enumerate(picks, 1):
@@ -115,7 +128,7 @@ def format_message(market, picks, capital, today):
             lines.append(f"   {capital:,.0f}원 계좌 기준 종목당 {strategy.KR_WEIGHT:.0%}({slot:,.0f}원): {buy} (소수점 매수 가능)")
             lines.extend(kr_opinion(p, market))
     lines.append("")
-    lines.append("백테스트(2011~) 기준 연 +4.8%, 최대 낙폭 -8%, 최악의 해 -3%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
+    lines.append("백테스트(2011~) 기준 연 +4.1%, 최대 낙폭 -4.4%, 최악의 해 -0.2%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
                  "수익은 적게, 하락은 작게 고른 규칙이고 하락이 아예 없진 않아요. "
                  "과거 성과가 미래를 보장하진 않아요. 이 알림은 참고용이고 주문은 직접 판단해서 하세요.")
     return "\n".join(lines)
@@ -124,12 +137,12 @@ def format_message(market, picks, capital, today):
 def compute_us(index_close):
     """S&P500 추세 상태와 어제 대비 바뀌었는지 돌려줘요."""
     ma50, ma200 = index_close.rolling(50).mean(), index_close.rolling(200).mean()
-    ok = (index_close > ma200) & (ma50 > ma200)
-    vol20 = index_close.pct_change().rolling(20).std().iloc[-1] * 252 ** 0.5
+    ok, trend, _ = strategy.us_ok(index_close)
+    vol20 = strategy.volatility(index_close).iloc[-1]
     high = index_close.iloc[-252:].max()
     return dict(day=index_close.index[-1], spx=float(index_close.iloc[-1]), ma50=float(ma50.iloc[-1]),
                 ma200=float(ma200.iloc[-1]), ok=bool(ok.iloc[-1]), was_ok=bool(ok.iloc[-2]),
-                vol20=float(vol20), from_high=float(index_close.iloc[-1] / high - 1))
+                vol20=float(vol20), from_high=float(index_close.iloc[-1] / high - 1), trend=bool(trend.iloc[-1]))
 
 
 def us_opinion(us):
@@ -140,6 +153,10 @@ def us_opinion(us):
         reason = f"S&P500이 200일선보다 {gap200:+.1%} 위, 50일선도 200일선보다 {gap50:+.1%} 위라 상승 추세예요"
         exit_ = (f"S&P500 종가가 200일선(약 {us['ma200']:,.0f}) 아래로 내려가거나 50일선이 200일선 아래로 가면 매도 신호 "
                  f"(지금보다 약 {gap200:.1%} 더 빠지면)")
+    elif us.get("trend", False):
+        reason = (f"추세는 살아 있지만 S&P500 변동성이 연 {us['vol20']:.0%}로 {strategy.US_VOL_MAX:.0%}를 넘어서 "
+                  "급락 위험을 피해 현금으로 쉬어요")
+        exit_ = f"변동성이 연 {strategy.US_VOL_MAX:.0%} 아래로 내려오고 추세가 유지되면 다시 매수 신호"
     else:
         why = "200일선 아래" if gap200 <= 0 else "50일선이 200일선 아래"
         reason = f"S&P500이 {why}라 하락·횡보 추세로 보고 현금으로 쉬어요 (200일선 대비 {gap200:+.1%})"
@@ -172,7 +189,7 @@ def format_us(us, capital, today, etf_close=None):
     elif us["was_ok"]:
         lines.append("매도 신호: 추세가 꺾였어요. 다음 거래일 시가에 S&P500 ETF를 전부 팔고 현금으로.")
     else:
-        lines.append("현금 유지: S&P500이 200일선 아래거나 50일선이 200일선 아래라 사지 않아요.")
+        lines.append("현금 유지: S&P500 추세가 약하거나 변동성이 커서 사지 않아요.")
     if etf_close:
         amount = capital * strategy.US_WEIGHT
         lines.append(f"{capital:,.0f}달러 계좌면 {amount:,.0f}달러 ≈ {strategy.US_ETF} {amount / etf_close:.3f}주 "
@@ -180,7 +197,7 @@ def format_us(us, capital, today, etf_close=None):
     lines.extend(us_opinion(us))
     lines.append("미장 개별주 단타는 국내 증권사 수수료(0.25%)를 내면 백테스트에서 손실이라 지수 ETF만 봐요.")
     lines.append("")
-    lines.append("백테스트(2011~, SPY 배당 포함) 연 +5.5%, 최대 낙폭 -11%, 최악의 해 -6%였어요 "
+    lines.append("백테스트(2011~, SPY 배당 포함) 연 +5.7%, 최대 낙폭 -9.5%, 최악의 해 -5.6%였어요 "
                  "(S&P500 보유는 연 +12.2%, 최대 낙폭 -34%). 하락이 아예 없진 않고, 환율 변동과 세금은 빠져 있어요. "
                  "과거 성과가 미래를 보장하진 않아요. 주문은 직접 판단해서 하세요.")
     return "\n".join(lines)
@@ -203,6 +220,7 @@ def kr_payload(market, picks, index_close):
                  ma5=round(p["ma5"], 2), stop=round(p["close"] * (1 - strategy.KR_STOP), 2),
                  opinion=[line.strip() for line in kr_opinion(p, market)]) for p in picks]
     return dict(market="kr", day=f"{market['day']:%Y-%m-%d}", index=round(market["kospi"], 2),
+                pause=None if market["kospi_ok"] else kr_pause_reason(market),
                 ma50=round(market["kospi_ma50"], 2), ma200=round(market["kospi_ma200"], 2), ok=market["kospi_ok"],
                 picks=rows, max_positions=kb.MAX_POSITIONS, series=index_series(index_close))
 
@@ -226,6 +244,24 @@ def save_json(path, payload):
     payload = dict(payload, generated=dt.datetime.now(KST).isoformat(timespec="minutes"))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+
+def add_departments(text, payload, market_key, closes, index_close, state, picks):
+    """부서별 보고(departments.py)를 메시지 끝과 대시보드 JSON에 붙여요. 실패해도 신호는 그대로 보내요."""
+    try:
+        if market_key == "us":
+            report = departments.us_report(index_close, state)
+        else:
+            departments.check_picks(picks)
+            for row, p in zip(payload["picks"], picks):
+                row["fund"] = p["fund"]["grade"]
+                row["opinion"].append(f"펀더멘탈: {p['fund']['line']}")
+            report = departments.kr_report(closes, index_close, state, picks, kb.MAX_POSITIONS)
+    except Exception as e:
+        print(f"부서별 보고 실패 (신호는 그대로 보내요): {e}")
+        return text, payload
+    text = text + "\n\n" + "\n".join(departments.report_lines(report))
+    return text, dict(payload, desks=departments.report_payload(report))
 
 
 def split_message(text, limit=TELEGRAM_LIMIT):
@@ -275,6 +311,8 @@ def main():
         market, picks = compute_signals(closes, index_close)
         text = format_message(market, picks, capital, today)
         payload = kr_payload(market, picks, index_close)
+    text, payload = add_departments(text, payload, args.market, closes, index_close,
+                                    us if args.market == "us" else market, [] if args.market == "us" else picks)
     if args.save_json:
         save_json(args.save_json, payload)
     print(text)
