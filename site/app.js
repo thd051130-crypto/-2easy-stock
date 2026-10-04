@@ -66,7 +66,8 @@ function render() {
   if (!DATA) return;
   const d = DATA.markets[market];
   const app = $("#app");
-  app.innerHTML = [signalCard(d), accountCard(d), positionsCard(d), tradesCard(d), trendCard(d), rulesCard(d)].join("");
+  app.innerHTML = [signalCard(d), accountCard(d), positionsCard(d), tradesCard(d), rulebookCard(d), trendCard(d),
+    rulesCard(d)].join("");
   const acc = d.account;
   if (acc && acc.curve.length) {
     lineChart($("#equity-chart"), {
@@ -231,6 +232,32 @@ function trendCard(d) {
     <p class="muted" style="margin:8px 0 0">${d.signal.candles
       ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 시가·고가·저가·종가가 보여요. "
       : ""}지수가 두 이동평균선 위에 있을 때만 새로 사요.</p></section>`;
+}
+
+// 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요)
+function rulebookCard(d) {
+  const rb = d.rulebook;
+  if (!rb) return "";
+  const picks = (d.signal && d.signal.rulebook) || [];
+  const unit = market === "kr" ? "원" : "달러";
+  const items = picks.map((p, i) => `<li><div class="l">
+      <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${opinion(p.opinion)}</div>
+      <div class="r">${num(p.close)}${unit}</div></li>`).join("");
+  const a = rb.account;
+  const main = d.account;
+  const acc = a
+    ? `<div class="stats">
+        <div class="stat"><span>규칙표 계좌</span><b class="${sign(a.gain)}">${pct(a.gain)}</b></div>
+        <div class="stat"><span>알림 규칙 계좌</span><b class="${main ? sign(main.gain) : ""}">${main ? pct(main.gain) : "-"}</b></div>
+        <div class="stat"><span>최대 낙폭</span><b>${pct(a.mdd)}</b></div>
+      </div>
+      <p class="muted" style="margin:8px 0 0">${money(market, a.equity)} · 끝난 거래 ${a.trade_count}건${a.trade_count ? ` · 승률 ${Math.round(a.win_rate * 100)}%` : ""} · 보유 ${a.positions.length}종목</p>`
+    : `<p class="empty">${NEXT_RUN[market]} 첫 자동 실행부터 기록해요.</p>`;
+  return `<section class="card"><h2>내 규칙표 검증 <small>가상계좌</small></h2>${acc}
+    <p class="sub" style="margin-top:12px">오늘 규칙표 후보 ${picks.length}개</p>
+    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
+    <details><summary>규칙표 보기</summary><ol>${rb.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details>
+  </section>`;
 }
 
 function rulesCard(d) {
