@@ -43,8 +43,8 @@ def test_message_shares_and_stale_note():
     picks = [dict(code="005930", name="삼성전자", close=50000.0, rsi2=5.0, ma5=52000.0),
              dict(code="000660", name="SK하이닉스", close=200000.0, rsi2=7.0, ma5=210000.0)]
     text = ks.format_message(market, picks, 300000, dt.date(2026, 10, 4), {"005930": "테스트 의견"})
-    assert "1주 ≈ 50,000원" in text
-    assert "1주도 못 삼" in text
+    assert "1주도 못 삼" in text  # 종목당 10% = 3만 원
+    assert "손절" in text and "47,500원" in text
     assert "Claude: 테스트 의견" in text
     assert "마지막 거래일" in text
 
@@ -80,3 +80,22 @@ def test_claude_opinions_parsed(monkeypatch):
              for c in ("005930", "000660")]
     out = ks.claude_opinions(market, picks)
     assert out == {"005930": "신고가 뒤 눌림이에요. 손절 참고선 48,000원.", "000660": "변동성이 커요."}
+
+
+def test_us_trend_states():
+    up = series(np.linspace(4000, 6000, 260))
+    us = ks.compute_us(up)
+    assert us["ok"] and us["was_ok"]
+    text = ks.format_us(us, 300, us["day"].date(), etf_close=600.0)
+    assert "보유 유지" in text and "150달러" in text and "0.250주" in text
+    down = series(list(np.linspace(4000, 6000, 250)) + list(np.linspace(5900, 4500, 30)))
+    us = ks.compute_us(down)
+    assert not us["ok"]
+    assert "현금 유지" in ks.format_us(us, 300, us["day"].date()) or "매도 신호" in ks.format_us(us, 300, us["day"].date())
+
+
+def test_us_buy_signal_on_cross():
+    us = dict(day=pd.Timestamp("2026-10-02"), spx=6000.0, ma50=5800.0, ma200=5700.0, ok=True, was_ok=False)
+    assert "매수 신호" in ks.format_us(us, 300, dt.date(2026, 10, 3))
+    us.update(ok=False, was_ok=True)
+    assert "매도 신호" in ks.format_us(us, 300, dt.date(2026, 10, 3))

@@ -1,17 +1,21 @@
-# 평일 장 마감 뒤(한국시간 17:30쯤) 오늘의 스윙 매수 신호를 텔레그램으로 보내요. 계좌·증권사 키 없이 돌아가요.
-# 신호는 30만 원 가상계좌로 산 것처럼 paper/ 폴더에 기록하고(저장소에 자동 커밋), 금요일엔 주간 결산을 보내요.
+# 장 마감 뒤 국장·미장 매매 신호를 텔레그램으로 보내요. 계좌·증권사 키 없이 돌아가요.
+#   국장: 평일 한국시간 17:30쯤 / 미장: 화~토 한국시간 07:30쯤 (뉴욕 장 마감 뒤)
+# 신호는 가상계좌(국장 30만 원, 미장 300달러)로 산 것처럼 paper/ 폴더에 기록하고(저장소에 자동 커밋), 금요일엔 주간 결산을 보내요.
 # 폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → swing-signals → Run workflow
-# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (선택: ANTHROPIC_API_KEY → 신호마다 Claude 의견)
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (선택: ANTHROPIC_API_KEY → 국장 신호마다 Claude 의견)
 name: swing-signals
 
 on:
   schedule:
-    - cron: "30 8 * * 1-5"  # UTC 08:30 = 한국 17:30, 월~금 (GitHub 사정으로 몇십 분 늦게 돌 수 있어요)
+    - cron: "30 8 * * 1-5"   # UTC 08:30 = 한국 17:30, 월~금 → 국장 (GitHub 사정으로 몇십 분 늦게 돌 수 있어요)
+    - cron: "30 22 * * 1-5"  # UTC 22:30 = 한국 다음 날 07:30, 뉴욕 월~금 장 마감 뒤 → 미장
   workflow_dispatch:
     inputs:
-      capital:
-        description: "계좌 금액(원), 종목당 1/5로 몇 주 살 수 있는지 계산"
-        default: "300000"
+      market:
+        description: "kr=국장, us=미장, both=둘 다"
+        type: choice
+        options: [both, kr, us]
+        default: both
       paper_summary:
         description: "가상매매 주간 결산을 지금 받기 (평소엔 금요일에만)"
         type: boolean
@@ -27,12 +31,13 @@ concurrency:
 jobs:
   signals:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      CAPITAL: ${{ inputs.capital || '300000' }}
+      PAPER_SUMMARY: ${{ inputs.paper_summary }}
+      MARKETS: ${{ inputs.market == 'both' && 'kr us' || inputs.market || (github.event.schedule == '30 22 * * 1-5' && 'us' || 'kr') }}
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
@@ -40,17 +45,18 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python kr_swing_signals.py --save-csv data/kr_daily_recent.csv
-      - name: paper trade
-        env:
-          PAPER_SUMMARY: ${{ inputs.paper_summary }}
-        run: python paper_trade.py --csv data/kr_daily_recent.csv
+      - name: signals and paper trade (${{ env.MARKETS }})
+        run: |
+          for mk in $MARKETS; do
+            python kr_swing_signals.py --market "$mk" --save-csv "data/${mk}_daily_recent.csv"
+            python paper_trade.py --market "$mk" --csv "data/${mk}_daily_recent.csv"
+          done
       - name: commit paper log
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add paper
           if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
-          git commit -m "가상매매 기록 $(TZ=Asia/Seoul date +%F)"
+          git commit -m "가상매매 기록 $(TZ=Asia/Seoul date +%F) ($MARKETS)"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1
