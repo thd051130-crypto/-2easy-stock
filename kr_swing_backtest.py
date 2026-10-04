@@ -62,6 +62,15 @@ def load_csv(path, index=INDEX):
     return opens.reindex(calendar), closes.reindex(calendar), index_close
 
 
+def load_volume(path, calendar, index=INDEX):
+    """거래량 (date x ticker, load_csv와 같은 날짜). 예전 CSV처럼 volume 열이 없으면 None."""
+    df = pd.read_csv(path, dtype={"ticker": str}, parse_dates=["date"])
+    if "volume" not in df:
+        return None
+    vol = df.pivot(index="date", columns="ticker", values="volume").sort_index()
+    return vol.drop(columns=[index], errors="ignore").reindex(calendar)
+
+
 def download(path, pause=1.5, retries=5, start=START, universe=None, index=INDEX, suffix=".KS"):
     """야후는 한꺼번에 받으면 429(요청 과다)를 자주 줘서 종목별로 쉬어 가며 받고, 실패하면 간격을 늘려 다시 시도해요."""
     import time
@@ -84,10 +93,11 @@ def download(path, pause=1.5, retries=5, start=START, universe=None, index=INDEX
         if part is None or part.empty:
             print(f"경고: {symbol} 데이터 없음, 제외")
             continue
-        part = part[["Open", "Close"]].dropna(how="all")
+        part = part[["Open", "Close", "Volume"]].dropna(how="all", subset=["Open", "Close"])
         part.index = pd.to_datetime(part.index).tz_localize(None).normalize()
         frames.append(pd.DataFrame({"date": part.index, "ticker": symbol.removesuffix(suffix) if suffix else symbol,
-                                    "open": part["Open"].to_numpy(), "close": part["Close"].to_numpy()}))
+                                    "open": part["Open"].to_numpy(), "close": part["Close"].to_numpy(),
+                                    "volume": part["Volume"].to_numpy()}))
     if not frames:
         raise SystemExit("다운로드된 데이터가 없어요. 네트워크(야후 파이낸스 접속)를 확인하거나 --csv로 데이터를 넣어 주세요.")
     path.parent.mkdir(parents=True, exist_ok=True)

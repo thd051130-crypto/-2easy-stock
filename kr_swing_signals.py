@@ -29,6 +29,7 @@ import pandas as pd
 
 import departments
 import kr_swing_backtest as kb
+import rulebook
 import strategy
 from markets import MARKETS
 
@@ -240,6 +241,31 @@ def us_payload(us, index_close, etf_close=None):
                 etf_close=round(etf_close, 2) if etf_close else None, series=index_series(index_close))
 
 
+def rulebook_section(opens, closes, volumes, index_close, market):
+    """사용자 규칙표 후보 (가상계좌로 나란히 검증 중). 반환: (텔레그램 문장, 대시보드용 목록)."""
+    stocks = [c for c in closes.columns if c in MARKETS[market]["universe"]]
+    closes = closes[stocks]
+    volumes = volumes[stocks] if volumes is not None else None
+    ind = rulebook.indicators(closes, volumes, index_close)
+    today = rulebook.day_row(ind, len(closes) - 1)
+    index_ok = bool(index_close.iloc[-1] > index_close.rolling(200).mean().iloc[-1])
+    picks = []
+    for code in rulebook.candidates(today):
+        close = float(today["close"][code])
+        picks.append(dict(code=code, name=MARKETS[market]["universe"].get(code, code), close=round(close, 2),
+                          opinion=rulebook.opinion(code, today, close, index_ok, market)))
+    unit = "원" if market == "kr" else "달러"
+    lines = ["", "[규칙표 후보] 내 매매 규칙표 기준. 백테스트에선 손실이라 가상계좌로만 검증 중이에요."]
+    if volumes is None:
+        lines.append("(거래량 데이터가 없어서 거래량 조건은 빼고 계산했어요.)")
+    if not picks:
+        lines.append("오늘은 규칙표 조건(200일선 위, 60일선 > 200일선, RSI14 45~60, 거래량 20일 평균 이상)에 맞는 종목이 없어요.")
+    for i, p in enumerate(picks, 1):
+        lines.append(f"{i}. {p['name']}({p['code']}) 종가 {p['close']:,.2f}{unit}".replace(".00" + unit, unit))
+        lines.extend(f"   {line}" for line in p["opinion"])
+    return "\n".join(lines), picks
+
+
 def save_json(path, payload):
     payload = dict(payload, generated=dt.datetime.now(KST).isoformat(timespec="minutes"))
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -292,7 +318,7 @@ def main():
     path = args.csv
     if path is None:
         path = args.save_csv or pathlib.Path(tempfile.mkdtemp()) / f"{args.market}_daily_recent.csv"
-        universe = m["universe"] if args.market == "kr" else {strategy.US_ETF: strategy.US_ETF}
+        universe = m["universe"] if args.market == "kr" else dict(m["universe"], **{strategy.US_ETF: strategy.US_ETF})
         try:
             kb.download(path, start=f"{today - dt.timedelta(days=LOOKBACK_DAYS):%Y-%m-%d}", universe=universe,
                         index=m["index"], suffix=m["suffix"])
@@ -311,6 +337,10 @@ def main():
         market, picks = compute_signals(closes, index_close)
         text = format_message(market, picks, capital, today)
         payload = kr_payload(market, picks, index_close)
+    volumes = kb.load_volume(path, closes.index, m["index"])
+    extra, rb_picks = rulebook_section(opens, closes, volumes, index_close, args.market)
+    text += "\n" + extra
+    payload["rulebook"] = rb_picks
     text, payload = add_departments(text, payload, args.market, closes, index_close,
                                     us if args.market == "us" else market, [] if args.market == "us" else picks)
     if args.save_json:

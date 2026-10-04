@@ -140,7 +140,7 @@ def kr_report(closes, index_close, market, picks, max_positions):
     funds = [p["fund"]["line"] for p in picks if "fund" in p]
     fundamental = "; ".join(funds) if funds else "오늘은 점검할 후보 없음"
     risk = (f"종목당 {strategy.KR_WEIGHT:.0%}, 최대 {max_positions}종목(다 차도 절반은 현금), 손절 -{strategy.KR_STOP:.0%}, "
-            + ("지수 조건 충족" if market["kospi_ok"] else "지수 조건 미달이라 신규 매수 멈춤"))
+            + ("매수 조건 충족" if market["kospi_ok"] else "지수 추세나 시장 폭 조건 미달이라 신규 매수 멈춤"))
     ops = (f"내일 시가에 최대 {min(len(picks), max_positions)}종목 가상 매수 기록" if picks and market["kospi_ok"]
            else "새 주문 없음") + ", 실제 주문은 직접 판단"
     return [("스크리닝부", screening), ("기술적 분석부", tech), ("펀더멘탈부", fundamental),
