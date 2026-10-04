@@ -163,6 +163,50 @@ details li { margin: 4px 0; }
 .spark polyline { fill: none; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .spark.up polyline { stroke: var(--up); }
 .spark.down polyline { stroke: var(--down); }
+.spark .base { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.stat small { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.35; margin-top: 2px; }
+.track-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.track-line > span:first-child { flex-basis: 100%; font-size: 13px; color: var(--text-secondary); }
+.track-line small { color: var(--text-muted); }
+.track-line b { font-size: 20px; font-variant-numeric: tabular-nums; }
+
+/* 관심종목 한 줄: 이름 | 가격 | ★ / 코드·3개월 | (3개월 추세선) | 전일 대비 */
+.list li.stock {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "name price star" "meta chg star";
+  column-gap: 10px; row-gap: 1px; align-items: center;
+}
+.list li.stock.spark-row { grid-template-columns: minmax(0, 1fr) 64px auto auto; grid-template-areas: "name name price star" "meta mini chg star"; }
+.list li.stock.no-star { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name price" "meta chg"; }
+.list li.stock.spark-row.no-star { grid-template-columns: minmax(0, 1fr) 64px auto; grid-template-areas: "name name price" "meta mini chg"; }
+.stock .name { grid-area: name; min-width: 0; }
+.stock .meta { grid-area: meta; min-width: 0; }
+.stock .mini { grid-area: mini; }
+.stock .mini .spark { height: 26px; }
+.stock .price { grid-area: price; text-align: right; font-variant-numeric: tabular-nums; }
+.stock .chg { grid-area: chg; text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
+.stock .star { grid-area: star; }
+.star {
+  flex: 0 0 auto; width: 40px; height: 40px; margin: -4px -8px -4px -4px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--text-muted); font-size: 22px; line-height: 1; cursor: pointer;
+}
+.star[aria-pressed="true"] { color: var(--ma50); }
+.badge { margin-left: 6px; vertical-align: 2px; white-space: nowrap; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--surface-0); color: var(--accent); }
+.badge.good { background: var(--good-bg); color: var(--good-fg); }
+/* 추천 종목 한 줄: 이름 | 수익률 / 날짜·가격 | 작은 그래프 */
+.list li.pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; }
+.pick .ret { text-align: right; font-variant-numeric: tabular-nums; }
+.pick .mini { width: 72px; justify-self: end; }
+.pick .mini .spark { height: 32px; }
+details.more-list { margin-top: 4px; }
+details.more-list summary { padding: 10px 0; }
+details.more-list .list li:first-child { border-top: 1px solid var(--border); padding-top: 10px; }
+.list li.divider { display: block; font-size: 12px; color: var(--text-muted); background: var(--surface-0); border-radius: 8px; padding: 6px 10px; margin: 6px 0; border-top: 0; }
+.list li.divider + li { border-top: 0; }
+.search {
+  width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; color: var(--text-primary);
+  border: 1px solid var(--border); background: var(--surface-0); -webkit-appearance: none; appearance: none;
+}
+.search::placeholder { color: var(--text-muted); }
 
 .period { display: inline-flex; background: var(--surface-0); border-radius: 999px; padding: 3px; gap: 2px; }
 .period button {
