@@ -15,10 +15,12 @@
     python kr_swing_signals.py --dry-run    # 전송 없이 메시지만 출력
     python kr_swing_signals.py --csv my.csv # 받아 둔 데이터로 계산 (형식은 kr_swing_backtest.py와 같음)
     python kr_swing_signals.py --save-csv data/kr_daily_recent.csv  # 받은 데이터를 남겨서 paper_trade.py에 넘기기
+    python kr_swing_signals.py --save-json paper/kr/signal.json      # 대시보드(dashboard.py)가 읽을 오늘 신호 저장
 """
 
 import argparse
 import datetime as dt
+import json
 import os
 import pathlib
 import tempfile
@@ -184,6 +186,48 @@ def format_us(us, capital, today, etf_close=None):
     return "\n".join(lines)
 
 
+def index_series(index_close, days=260):
+    """대시보드 지수 차트용: 최근 days거래일 종가와 50·200일선."""
+    ma50, ma200 = index_close.rolling(50).mean(), index_close.rolling(200).mean()
+    tail = index_close.index[-days:]
+
+    def nums(s):
+        return [None if pd.isna(x) else round(float(x), 2) for x in s.loc[tail]]
+
+    return dict(dates=[f"{d:%Y-%m-%d}" for d in tail], close=nums(index_close), ma50=nums(ma50), ma200=nums(ma200))
+
+
+def kr_payload(market, picks, index_close):
+    """대시보드가 읽는 오늘의 국장 신호 (paper/kr/signal.json)."""
+    rows = [dict(code=p["code"], name=p["name"], close=round(p["close"], 2), rsi2=round(p["rsi2"], 1),
+                 ma5=round(p["ma5"], 2), stop=round(p["close"] * (1 - strategy.KR_STOP), 2),
+                 opinion=[line.strip() for line in kr_opinion(p, market)]) for p in picks]
+    return dict(market="kr", day=f"{market['day']:%Y-%m-%d}", index=round(market["kospi"], 2),
+                ma50=round(market["kospi_ma50"], 2), ma200=round(market["kospi_ma200"], 2), ok=market["kospi_ok"],
+                picks=rows, max_positions=kb.MAX_POSITIONS, series=index_series(index_close))
+
+
+def us_payload(us, index_close, etf_close=None):
+    """대시보드가 읽는 오늘의 미장 신호 (paper/us/signal.json)."""
+    if us["ok"] and not us["was_ok"]:
+        action = "buy"
+    elif us["ok"]:
+        action = "hold"
+    elif us["was_ok"]:
+        action = "sell"
+    else:
+        action = "cash"
+    return dict(market="us", day=f"{us['day']:%Y-%m-%d}", index=round(us["spx"], 2), ma50=round(us["ma50"], 2),
+                ma200=round(us["ma200"], 2), ok=us["ok"], action=action, etf=strategy.US_ETF, opinion=us_opinion(us),
+                etf_close=round(etf_close, 2) if etf_close else None, series=index_series(index_close))
+
+
+def save_json(path, payload):
+    payload = dict(payload, generated=dt.datetime.now(KST).isoformat(timespec="minutes"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+
 def split_message(text, limit=TELEGRAM_LIMIT):
     parts, current = [], ""
     for line in text.split("\n"):
@@ -201,6 +245,7 @@ def main():
     parser.add_argument("--capital", type=float, help="계좌 금액 (기본 국장 30만 원, 미장 300달러)")
     parser.add_argument("--dry-run", action="store_true", help="텔레그램으로 보내지 않고 출력만")
     parser.add_argument("--save-csv", type=pathlib.Path, help="받은 야후 데이터를 이 경로에 남겨요 (가상매매 기록이 같이 써요)")
+    parser.add_argument("--save-json", type=pathlib.Path, help="오늘 신호를 대시보드용 JSON으로 저장")
     args = parser.parse_args()
 
     from realtime_monitor import send_telegram
@@ -222,10 +267,16 @@ def main():
     opens, closes, index_close = kb.load_csv(path, m["index"])
     if args.market == "us":
         etf = closes[strategy.US_ETF].dropna() if strategy.US_ETF in closes else None
-        text = format_us(compute_us(index_close), capital, today, float(etf.iloc[-1]) if etf is not None else None)
+        etf_close = float(etf.iloc[-1]) if etf is not None else None
+        us = compute_us(index_close)
+        text = format_us(us, capital, today, etf_close)
+        payload = us_payload(us, index_close, etf_close)
     else:
         market, picks = compute_signals(closes, index_close)
         text = format_message(market, picks, capital, today)
+        payload = kr_payload(market, picks, index_close)
+    if args.save_json:
+        save_json(args.save_json, payload)
     print(text)
     if not args.dry_run:
         for part in split_message(text):

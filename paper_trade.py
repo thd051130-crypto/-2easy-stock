@@ -114,6 +114,8 @@ def advance(state, opens, closes, index_close):
             events.append(f"{label} 매수 {order['name']} {shares(qty)} @ {money(market, px)} "
                           f"(약 {money(market, qty * unit)})")
 
+        for p in state["positions"]:
+            p["last_price"] = round(float(c[p["code"]]), 2)  # 대시보드가 평가손익을 보여 줄 때 써요
         stocks = sum(p["qty"] * float(c[p["code"]]) for p in state["positions"])
         state["equity"] = state["cash"] + stocks
         index = float(index_close.loc[day])

@@ -27,6 +27,16 @@ KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램�
 - 결산을 아무 때나 받기: Actions → swing-signals → Run workflow → paper_summary 체크
 - 처음부터 다시 시작하려면 그 시장의 `paper/` 폴더를 지우면 돼요
 
+### 폰 대시보드 (GitHub Pages)
+
+`site/` 웹앱이 오늘의 신호, 가상계좌 수익률 그래프(지수와 비교), 보유 종목, 최근 거래, 지수 추세를 한 화면에 보여 줘요.
+`pages` 워크플로가 `dashboard.py`로 `paper/` 기록을 `data.json`으로 묶어 올리고, swing-signals가 끝날 때마다 다시 올려요.
+
+- 처음 한 번: Settings → Pages → Source를 **GitHub Actions**로 → Actions → pages → Run workflow
+- 주소: `https://thd051130-crypto.github.io/-2easy-stock/` → 폰 브라우저 메뉴에서 "홈 화면에 추가"하면 앱처럼 열려요
+- GitHub Pages 사이트는 저장소가 비공개여도 누구나 주소로 볼 수 있어요 (무료 계정은 공개 저장소에서만 Pages를 켤 수 있어요)
+- 미리 보기: `python dashboard.py --out _site && python -m http.server -d _site`
+
 ## 폰만으로 연결 확인 (GitHub Actions)
 
 1. 텔레그램 @BotFather에서 `/newbot` → 봇 토큰 받기, 만든 봇에게 아무 메시지나 보내기
