@@ -1,6 +1,16 @@
 # -2easy-stock
 
-KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램으로 알려주는 감시봇.
+KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램으로 알려주는 감시봇, 그리고 계좌 없이 돌아가는 스윙 신호 알림.
+
+## 스윙 신호 알림 (계좌 필요 없음)
+
+평일 한국시간 17:30쯤 `swing-signals` 워크플로가 야후 일봉으로 대형주 48개를 훑어서, 백테스트에서 가장 나았던
+"돌파 후 눌림 + 코스피 200일선 필터" 규칙([docs/swing-backtest-kr.md](docs/swing-backtest-kr.md))의 매수 후보를 텔레그램으로 보내요.
+
+- 필요한 Secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (위 감시봇과 같은 값)
+- 선택: `ANTHROPIC_API_KEY`를 넣으면 신호마다 Claude가 이유·손절 참고선·리스크를 한두 줄 붙여요 (API 사용료가 들어요)
+- 바로 확인: Actions → swing-signals → Run workflow
+- 주문은 하지 않아요. 백테스트 숫자는 과거 결과일 뿐이에요.
 
 ## 폰만으로 연결 확인 (GitHub Actions)
 
@@ -30,5 +40,6 @@ python realtime_monitor.py --raw            # 4. 장중(평일 09:00~15:30) 실�
 ## 테스트
 
 ```bash
-python -m unittest discover tests
+pip install pytest
+python -m pytest
 ```

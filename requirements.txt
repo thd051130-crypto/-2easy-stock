@@ -1,3 +1,7 @@
 requests
 websockets>=13
 python-dotenv
+pandas
+numpy
+yfinance
+anthropic>=1.11
