@@ -1,4 +1,5 @@
 import json
+import re
 
 import pandas as pd
 
@@ -63,7 +64,38 @@ def test_main_copies_site_and_writes_data(tmp_path, monkeypatch):
                                      "--out", str(out)])
     dashboard.main()
     assert (out / "index.html").exists()
-    assert json.loads((out / "data.json").read_text())["markets"]["kr"]["name"] == "국장"
+    data = json.loads((out / "data.json").read_text())
+    assert data["markets"]["kr"]["name"] == "국장"
+    assert data["site_version"] == dashboard.site_version(site)
+
+
+def test_stamp_assets_versions_script_and_style_urls(tmp_path):
+    html = '<link rel="stylesheet" href="style.css"><script src="app.js"></script>'
+
+    def stamped(app_js):
+        (tmp_path / "index.html").write_text(html)
+        (tmp_path / "app.js").write_text(app_js)
+        (tmp_path / "style.css").write_text("body{}")
+        dashboard.stamp_assets(tmp_path)
+        return (tmp_path / "index.html").read_text()
+
+    first = stamped("one")
+    assert re.search(r'src="app\.js\?v=[0-9a-f]{10}"', first)
+    assert re.search(r'href="style\.css\?v=[0-9a-f]{10}"', first)
+    second = stamped("two")
+    assert second != first
+    assert re.search(r'href="style\.css\?v=[0-9a-f]{10}"', second).group() == \
+        re.search(r'href="style\.css\?v=[0-9a-f]{10}"', first).group()
+
+
+def test_site_version_changes_only_when_site_files_change(tmp_path):
+    (tmp_path / "app.js").write_text("one")
+    (tmp_path / "icons").mkdir()
+    (tmp_path / "icons" / "icon.svg").write_text("<svg/>")
+    before = dashboard.site_version(tmp_path)
+    assert dashboard.site_version(tmp_path) == before
+    (tmp_path / "app.js").write_text("two")
+    assert dashboard.site_version(tmp_path) != before
 
 
 def test_kr_payload_carries_rule_opinion():

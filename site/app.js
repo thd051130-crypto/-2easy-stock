@@ -40,15 +40,26 @@ const num = (x) => (x == null ? "-" : Math.round(x).toLocaleString("ko-KR"));
 const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
 const shares = (q) => (Number.isInteger(q) ? `${q}주` : `${q.toFixed(3)}주`);
 
+let siteVersion = null;  // 이 화면을 연 뒤 처음 받은 data.json의 화면 버전
+
 async function load() {
+  let data;
   try {
     const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
-    DATA = await res.json();
+    data = await res.json();
   } catch (e) {
+    if (DATA) return;  // 이미 화면이 있으면 그대로 둬요
     $("#app").innerHTML = `<div class="card"><p class="empty">데이터를 못 불러왔어요. 인터넷 연결을 확인하고 다시 열어 주세요.</p></div>`;
     return;
   }
+  // 앱을 열어 둔 사이에 새 화면이 배포됐으면 한 번 새로고침해서 새 화면으로 바꿔요.
+  if (siteVersion && data.site_version && data.site_version !== siteVersion) {
+    location.reload();
+    return;
+  }
+  siteVersion = siteVersion || data.site_version || null;
+  DATA = data;
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   render();
 }
