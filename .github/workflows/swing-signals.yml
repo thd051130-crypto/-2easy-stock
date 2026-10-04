@@ -1,0 +1,31 @@
+# 평일 장 마감 뒤(한국시간 17:30쯤) 오늘의 스윙 매수 신호를 텔레그램으로 보내요. 계좌·증권사 키 없이 돌아가요.
+# 폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → swing-signals → Run workflow
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (선택: ANTHROPIC_API_KEY → 신호마다 Claude 의견)
+name: swing-signals
+
+on:
+  schedule:
+    - cron: "30 8 * * 1-5"  # UTC 08:30 = 한국 17:30, 월~금 (GitHub 사정으로 몇십 분 늦게 돌 수 있어요)
+  workflow_dispatch:
+    inputs:
+      capital:
+        description: "계좌 금액(원), 종목당 1/5로 몇 주 살 수 있는지 계산"
+        default: "300000"
+
+jobs:
+  signals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CAPITAL: ${{ inputs.capital || '300000' }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python kr_swing_signals.py
