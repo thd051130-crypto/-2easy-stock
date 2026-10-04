@@ -126,3 +126,10 @@ details li { margin: 4px 0; }
 .empty { color: var(--text-secondary); font-size: 14px; margin: 0; }
 .foot { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; }
 .foot p { margin: 4px 0; }
+
+.period { display: inline-flex; background: var(--surface-0); border-radius: 999px; padding: 3px; gap: 2px; }
+.period button {
+  border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 14px; font-weight: 600;
+  padding: 6px 16px; border-radius: 999px; min-height: 36px; cursor: pointer;
+}
+.period button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
