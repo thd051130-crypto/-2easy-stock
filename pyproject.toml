@@ -1,0 +1,27 @@
+[project]
+name = "stockbot"
+version = "0.1.0"
+description = "KIS 실시간 시세 감시 → Claude 매매 의견 → 텔레그램 알림 봇 (알림 전용, 자동주문 없음)"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=1.0",
+    "websockets>=13",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+stockbot = "stockbot.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["stockbot"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

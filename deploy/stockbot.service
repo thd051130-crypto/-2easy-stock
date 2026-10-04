@@ -1,0 +1,23 @@
+# 설치:  sudo cp deploy/stockbot.service /etc/systemd/system/
+#        (User / WorkingDirectory / ExecStart 경로를 본인 환경에 맞게 수정)
+#        sudo systemctl daemon-reload && sudo systemctl enable --now stockbot
+# 로그:  journalctl -u stockbot -f
+[Unit]
+Description=stockbot (KIS realtime -> Claude -> Telegram)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/-2easy-stock
+EnvironmentFile=/home/ubuntu/-2easy-stock/.env
+ExecStart=/home/ubuntu/-2easy-stock/.venv/bin/stockbot run
+Restart=always
+RestartSec=5
+# 하루 한 번 이상 죽었다 살아나도 알림이 유실되지 않게 짧게 재시작, 로그는 journald로
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
