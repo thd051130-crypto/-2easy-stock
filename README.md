@@ -14,7 +14,7 @@ KIS(한국투자증권) Open API로 실시간 체결가를 받아 텔레그램�
 
 - 하락이 아예 없는 규칙은 없어요. 대신 하락 폭을 지수의 1/3~1/5로 줄이고, 그만큼 수익도 덜 나요.
 - 필요한 Secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (아래 감시봇과 같은 값)
-- 선택: `ANTHROPIC_API_KEY`를 넣으면 국장 신호마다 Claude가 이유·손절 참고선·리스크를 한두 줄 붙여요 (API 사용료가 들어요)
+- 신호마다 매매 의견(매수 이유, 손절가, 청산 조건, 위험 요인)이 붙어요. 규칙으로 계산해서 사용료가 없어요
 - 바로 확인: Actions → swing-signals → Run workflow (market=both)
 - 주문은 하지 않아요. 백테스트 숫자는 과거 결과일 뿐이에요.
 

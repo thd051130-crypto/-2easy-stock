@@ -4,4 +4,3 @@ python-dotenv
 pandas
 numpy
 yfinance
-anthropic>=1.11

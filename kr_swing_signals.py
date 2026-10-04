@@ -7,7 +7,7 @@
   미장: S&P500이 200일선 위이고 50일선도 200일선 위면 계좌 50%를 S&P500 ETF(SPY 등)로, 아니면 현금
 
 데이터는 야후 파이낸스 일봉(무료)이라 계좌나 증권사 API 키가 없어도 돌아가요.
-ANTHROPIC_API_KEY가 있으면 국장 신호마다 Claude가 짧은 의견(이유, 손절 참고선, 리스크)을 붙여요.
+신호마다 규칙으로 계산한 매매 의견(매수 이유, 손절가, 청산 조건, 위험 요인)을 붙여요. 유료 API는 쓰지 않아요.
 
 사용법:
     python kr_swing_signals.py              # 국장 계산 후 텔레그램 전송
@@ -31,7 +31,6 @@ from markets import MARKETS
 
 KST = dt.timezone(dt.timedelta(hours=9))
 LOOKBACK_DAYS = 500  # 200일선 계산에 필요한 거래일(약 280일)보다 넉넉하게
-CLAUDE_MODEL = "claude-opus-5-5"
 TELEGRAM_LIMIT = 4000  # 텔레그램 한 메시지 최대 4096자
 
 
@@ -43,11 +42,13 @@ def compute_signals(closes, index_close):
     rsi2 = kb.rsi(closes).iloc[-1]
     ma5, ma200 = closes.rolling(5).mean().iloc[-1], closes.rolling(200).mean().iloc[-1]
     high20 = closes.rolling(20).max().iloc[-1]
+    vol20 = closes.pct_change(fill_method=None).rolling(20).std().iloc[-1] * 252 ** 0.5
     picks = []
     for code in entry.columns[entry.iloc[-1].fillna(False).to_numpy(bool)]:
         picks.append(dict(code=code, name=kb.UNIVERSE.get(code, code), close=float(closes[code].iloc[-1]),
                           rsi2=float(rsi2[code]), ma5=float(ma5[code]), ma200=float(ma200[code]),
-                          high20=float(high20[code]), rank=float(rank[code].iloc[-1]),
+                          high20=float(high20[code]), rank=float(rank[code].iloc[-1]), vol20=float(vol20[code]),
+                          days_since_high=days_since_high(closes[code]),
                           recent=[round(float(x)) for x in closes[code].dropna().iloc[-20:]]))
     picks.sort(key=lambda p: -p["rank"])
     index_ma200, index_ma50 = index_close.rolling(200).mean().iloc[-1], index_close.rolling(50).mean().iloc[-1]
@@ -56,7 +57,36 @@ def compute_signals(closes, index_close):
     return market, picks
 
 
-def format_message(market, picks, capital, today, opinions=None):
+def days_since_high(close, n=20):
+    """마지막으로 n일 신고가를 낸 날이 몇 거래일 전인지."""
+    hits = (close >= close.rolling(n).max()).to_numpy()[::-1]
+    return int(hits.argmax()) if hits.any() else None
+
+
+def kr_opinion(p, market):
+    """규칙으로 만든 국장 매매 의견 두 줄 (이유, 위험)."""
+    pull = p["close"] / p["high20"] - 1
+    reason = []
+    if p.get("days_since_high") is not None:
+        reason.append(f"{p['days_since_high']}거래일 전 20일 신고가")
+    reason.append(f"고점 대비 {pull:.1%} 눌림")
+    reason.append(f"RSI2 {p['rsi2']:.0f}로 단기 과매도")
+    reason.append(f"200일선보다 {p['close'] / p['ma200'] - 1:+.0%} 위라 장기 추세는 살아 있음")
+    risks = []
+    vol = p.get("vol20")
+    if vol is not None:
+        risks.append(f"최근 변동성 연 {vol:.0%}" + ("로 큰 편이라 손절에 닿기 쉬워요" if vol > 0.4 else ""))
+    if pull < -0.10:
+        risks.append("고점 대비 10% 넘게 빠져서 눌림이 아니라 추세 꺾임일 수 있어요")
+    gap50 = market["kospi"] / market["kospi_ma50"] - 1 if market.get("kospi_ma50") else None
+    if gap50 is not None and gap50 < 0.02:
+        risks.append(f"코스피가 50일선에 가까워({gap50:+.1%}) 곧 신규 매수가 멈출 수 있어요")
+    if not risks[1:] and (vol is None or vol <= 0.4):
+        risks.append("지금 숫자로는 특별한 경고 없음")
+    return f"   이유: {', '.join(reason)}", f"   위험: {'; '.join(risks)}"
+
+
+def format_message(market, picks, capital, today):
     slot = capital * strategy.KR_WEIGHT
     day = market["day"]
     lines = [f"[국장 신호] {day:%Y-%m-%d} 종가 기준 (보수적 규칙)"]
@@ -81,8 +111,7 @@ def format_message(market, picks, capital, today, opinions=None):
             lines.append(f"   손절: 종가가 매수가 -{strategy.KR_STOP:.0%} 아래(오늘 종가로 사면 "
                          f"{p['close'] * (1 - strategy.KR_STOP):,.0f}원)면 다음 날 시가 매도")
             lines.append(f"   {capital:,.0f}원 계좌 기준 종목당 {strategy.KR_WEIGHT:.0%}({slot:,.0f}원): {buy} (소수점 매수 가능)")
-            if opinions and opinions.get(p["code"]):
-                lines.append(f"   Claude: {opinions[p['code']]}")
+            lines.extend(kr_opinion(p, market))
     lines.append("")
     lines.append("백테스트(2011~) 기준 연 +4.8%, 최대 낙폭 -8%, 최악의 해 -3%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
                  "수익은 적게, 하락은 작게 고른 규칙이고 하락이 아예 없진 않아요. "
@@ -94,8 +123,35 @@ def compute_us(index_close):
     """S&P500 추세 상태와 어제 대비 바뀌었는지 돌려줘요."""
     ma50, ma200 = index_close.rolling(50).mean(), index_close.rolling(200).mean()
     ok = (index_close > ma200) & (ma50 > ma200)
+    vol20 = index_close.pct_change().rolling(20).std().iloc[-1] * 252 ** 0.5
+    high = index_close.iloc[-252:].max()
     return dict(day=index_close.index[-1], spx=float(index_close.iloc[-1]), ma50=float(ma50.iloc[-1]),
-                ma200=float(ma200.iloc[-1]), ok=bool(ok.iloc[-1]), was_ok=bool(ok.iloc[-2]))
+                ma200=float(ma200.iloc[-1]), ok=bool(ok.iloc[-1]), was_ok=bool(ok.iloc[-2]),
+                vol20=float(vol20), from_high=float(index_close.iloc[-1] / high - 1))
+
+
+def us_opinion(us):
+    """규칙으로 만든 미장 매매 의견 (이유, 청산 기준, 위험)."""
+    gap200 = us["spx"] / us["ma200"] - 1
+    gap50 = us["ma50"] / us["ma200"] - 1
+    if us["ok"]:
+        reason = f"S&P500이 200일선보다 {gap200:+.1%} 위, 50일선도 200일선보다 {gap50:+.1%} 위라 상승 추세예요"
+        exit_ = (f"S&P500 종가가 200일선(약 {us['ma200']:,.0f}) 아래로 내려가거나 50일선이 200일선 아래로 가면 매도 신호 "
+                 f"(지금보다 약 {gap200:.1%} 더 빠지면)")
+    else:
+        why = "200일선 아래" if gap200 <= 0 else "50일선이 200일선 아래"
+        reason = f"S&P500이 {why}라 하락·횡보 추세로 보고 현금으로 쉬어요 (200일선 대비 {gap200:+.1%})"
+        exit_ = (f"S&P500 종가가 200일선(약 {us['ma200']:,.0f}) 위이고 50일선({us['ma50']:,.0f})도 200일선 위로 "
+                 "올라오면 다시 매수 신호")
+    risks = [f"최근 변동성 연 {us.get('vol20', float('nan')):.0%}"
+             + (" (평소 15% 안팎보다 커요)" if us.get("vol20", 0) > 0.22 else "")]
+    if us.get("from_high") is not None:
+        risks.append(f"1년 고점 대비 {us['from_high']:.1%}")
+    if us["ok"] and gap200 > 0.10:
+        risks.append(f"200일선과 {gap200:.0%} 떨어져 있어서 매도 신호 전에 그만큼 빠질 수 있어요 "
+                     f"(ETF는 계좌 절반이라 계좌 영향은 그 절반)")
+    risks.append("환율이 내리면 원화 기준 수익이 줄어요")
+    return [f"이유: {reason}", f"청산 기준: {exit_}", f"위험: {'; '.join(risks)}"]
 
 
 def format_us(us, capital, today, etf_close=None):
@@ -119,51 +175,13 @@ def format_us(us, capital, today, etf_close=None):
         amount = capital * strategy.US_WEIGHT
         lines.append(f"{capital:,.0f}달러 계좌면 {amount:,.0f}달러 ≈ {strategy.US_ETF} {amount / etf_close:.3f}주 "
                      f"(종가 {etf_close:,.2f}달러, 소수점 매수)")
+    lines.extend(us_opinion(us))
     lines.append("미장 개별주 단타는 국내 증권사 수수료(0.25%)를 내면 백테스트에서 손실이라 지수 ETF만 봐요.")
     lines.append("")
     lines.append("백테스트(2011~, SPY 배당 포함) 연 +5.5%, 최대 낙폭 -11%, 최악의 해 -6%였어요 "
                  "(S&P500 보유는 연 +12.2%, 최대 낙폭 -34%). 하락이 아예 없진 않고, 환율 변동과 세금은 빠져 있어요. "
                  "과거 성과가 미래를 보장하진 않아요. 주문은 직접 판단해서 하세요.")
     return "\n".join(lines)
-
-
-def claude_opinions(market, picks):
-    """ANTHROPIC_API_KEY가 있을 때만 신호별 한두 문장 의견을 받아요. 실패해도 신호 알림은 그대로 보내요."""
-    if not picks or not os.getenv("ANTHROPIC_API_KEY"):
-        return {}
-    try:
-        import anthropic
-
-        rows = "\n".join(
-            f"{p['code']} {p['name']}: 종가 {p['close']:.0f}, RSI2 {p['rsi2']:.1f}, 5일선 {p['ma5']:.0f}, "
-            f"200일선 {p['ma200']:.0f}, 20일 최고가 {p['high20']:.0f}, 최근 20일 종가 {p['recent']}"
-            for p in picks[:kb.MAX_POSITIONS])
-        prompt = (
-            "한국 대형주 스윙 규칙(최근 10일 내 20일 신고가 → RSI2<10 눌림에 다음 날 시가 매수, "
-            "종가가 5일선 위면 매도, 최대 10거래일, 매수가 -5% 아래 마감 시 손절, 종목당 계좌 10%)이 아래 종목에서 매수 신호를 냈어요. "
-            f"코스피 {market['kospi']:.0f}, 200일선 {market['kospi_ma200']:.0f}.\n\n{rows}\n\n"
-            "종목마다 한 줄씩 `코드: 의견` 형식으로만 답하세요. 의견은 한국어 두 문장 이내로, "
-            "가격 데이터에서 보이는 신호 이유, 손절 참고선(가격), 주의할 리스크를 담으세요. "
-            "수익을 보장하는 표현은 쓰지 말고, 위 숫자 밖의 뉴스나 실적은 지어내지 마세요.")
-        client = anthropic.Anthropic(timeout=120.0)
-        resp = client.beta.messages.create(
-            model=CLAUDE_MODEL, max_tokens=4000, output_config={"effort": "low"},
-            betas=["server-side-fallback-2026-07-01"], fallbacks="default",
-            messages=[{"role": "user", "content": prompt}])
-        if resp.stop_reason == "refusal":
-            print("Claude 의견 생략: 요청이 거절됐어요.")
-            return {}
-        text = "".join(b.text for b in resp.content if b.type == "text")
-    except Exception as e:  # 키 오류, 잔액 부족, 네트워크 등
-        print(f"Claude 의견 생략: {e!r}")
-        return {}
-    out = {}
-    for line in text.splitlines():
-        code, sep, opinion = line.strip().strip("-* `").partition(":")
-        code = code.strip(" `")
-        if sep and code in kb.UNIVERSE:
-            out[code] = opinion.strip(" `")
-    return out
 
 
 def split_message(text, limit=TELEGRAM_LIMIT):
@@ -207,7 +225,7 @@ def main():
         text = format_us(compute_us(index_close), capital, today, float(etf.iloc[-1]) if etf is not None else None)
     else:
         market, picks = compute_signals(closes, index_close)
-        text = format_message(market, picks, capital, today, claude_opinions(market, picks))
+        text = format_message(market, picks, capital, today)
     print(text)
     if not args.dry_run:
         for part in split_message(text):

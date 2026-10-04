@@ -1,6 +1,4 @@
 import datetime as dt
-import sys
-import types
 
 import numpy as np
 import pandas as pd
@@ -42,10 +40,12 @@ def test_message_shares_and_stale_note():
     market = dict(day=pd.Timestamp("2026-10-02"), kospi=3000.0, kospi_ma200=2800.0, kospi_ok=True, max_hold=10)
     picks = [dict(code="005930", name="삼성전자", close=50000.0, rsi2=5.0, ma5=52000.0),
              dict(code="000660", name="SK하이닉스", close=200000.0, rsi2=7.0, ma5=210000.0)]
-    text = ks.format_message(market, picks, 300000, dt.date(2026, 10, 4), {"005930": "테스트 의견"})
+    for p in picks:
+        p.update(high20=p["close"] * 1.05, ma200=p["close"] * 0.9, vol20=0.3, days_since_high=4)
+    text = ks.format_message(market, picks, 300000, dt.date(2026, 10, 4))
     assert "1주도 못 삼" in text  # 종목당 10% = 3만 원
     assert "손절" in text and "47,500원" in text
-    assert "Claude: 테스트 의견" in text
+    assert "이유: 4거래일 전 20일 신고가" in text and "위험:" in text
     assert "마지막 거래일" in text
 
 
@@ -56,30 +56,18 @@ def test_split_message_keeps_lines_under_limit():
     assert "\n".join(parts) == text
 
 
-def test_claude_skipped_without_key(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    assert ks.claude_opinions({}, [{"code": "005930"}]) == {}
+def test_kr_opinion_reason_and_risks():
+    market = dict(kospi=3000.0, kospi_ma50=2980.0, kospi_ma200=2800.0)
+    p = dict(close=88000.0, high20=100000.0, rsi2=4.2, ma200=80000.0, vol20=0.55, days_since_high=3)
+    reason, risk = ks.kr_opinion(p, market)
+    assert "3거래일 전 20일 신고가" in reason and "-12.0% 눌림" in reason and "RSI2 4" in reason
+    assert "큰 편" in risk and "추세 꺾임" in risk and "50일선에 가까워" in risk
+    calm = dict(p, close=97000.0, vol20=0.2)
+    assert "특별한 경고 없음" in ks.kr_opinion(calm, dict(market, kospi_ma50=2700.0))[1]
 
 
-def test_claude_opinions_parsed(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    reply = "005930: 신고가 뒤 눌림이에요. 손절 참고선 48,000원.\n- `000660`: 변동성이 커요.\n잡담"
-
-    class Client:
-        def __init__(self, **kw):
-            self.beta = types.SimpleNamespace(messages=types.SimpleNamespace(create=self.create))
-
-        def create(self, **kw):
-            assert kw["model"] == ks.CLAUDE_MODEL
-            block = types.SimpleNamespace(type="text", text=reply)
-            return types.SimpleNamespace(stop_reason="end_turn", content=[block])
-
-    monkeypatch.setitem(sys.modules, "anthropic", types.SimpleNamespace(Anthropic=Client))
-    market = dict(kospi=3000.0, kospi_ma200=2800.0)
-    picks = [dict(code=c, name=c, close=1.0, rsi2=1.0, ma5=1.0, ma200=1.0, high20=1.0, recent=[1])
-             for c in ("005930", "000660")]
-    out = ks.claude_opinions(market, picks)
-    assert out == {"005930": "신고가 뒤 눌림이에요. 손절 참고선 48,000원.", "000660": "변동성이 커요."}
+def test_days_since_high():
+    assert ks.days_since_high(series(list(range(1, 30)) + [25, 24])) == 2
 
 
 def test_us_trend_states():
@@ -88,6 +76,7 @@ def test_us_trend_states():
     assert us["ok"] and us["was_ok"]
     text = ks.format_us(us, 300, us["day"].date(), etf_close=600.0)
     assert "보유 유지" in text and "150달러" in text and "0.250주" in text
+    assert "이유: S&P500이 200일선보다" in text and "청산 기준:" in text and "1년 고점 대비" in text
     down = series(list(np.linspace(4000, 6000, 250)) + list(np.linspace(5900, 4500, 30)))
     us = ks.compute_us(down)
     assert not us["ok"]
@@ -95,7 +84,10 @@ def test_us_trend_states():
 
 
 def test_us_buy_signal_on_cross():
-    us = dict(day=pd.Timestamp("2026-10-02"), spx=6000.0, ma50=5800.0, ma200=5700.0, ok=True, was_ok=False)
-    assert "매수 신호" in ks.format_us(us, 300, dt.date(2026, 10, 3))
-    us.update(ok=False, was_ok=True)
-    assert "매도 신호" in ks.format_us(us, 300, dt.date(2026, 10, 3))
+    us = dict(day=pd.Timestamp("2026-10-02"), spx=6000.0, ma50=5800.0, ma200=5700.0, ok=True, was_ok=False,
+              vol20=0.3, from_high=-0.02)
+    text = ks.format_us(us, 300, dt.date(2026, 10, 3))
+    assert "매수 신호" in text and "평소 15% 안팎보다 커요" in text
+    us.update(ok=False, was_ok=True, spx=5600.0)
+    text = ks.format_us(us, 300, dt.date(2026, 10, 3))
+    assert "매도 신호" in text and "200일선 아래라" in text and "다시 매수 신호" in text

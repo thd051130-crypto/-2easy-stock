@@ -2,7 +2,7 @@
 #   국장: 평일 한국시간 17:30쯤 / 미장: 화~토 한국시간 07:30쯤 (뉴욕 장 마감 뒤)
 # 신호는 가상계좌(국장 30만 원, 미장 300달러)로 산 것처럼 paper/ 폴더에 기록하고(저장소에 자동 커밋), 금요일엔 주간 결산을 보내요.
 # 폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → swing-signals → Run workflow
-# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (선택: ANTHROPIC_API_KEY → 국장 신호마다 Claude 의견)
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 name: swing-signals
 
 on:
@@ -35,7 +35,6 @@ jobs:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       PAPER_SUMMARY: ${{ inputs.paper_summary }}
       MARKETS: ${{ inputs.market == 'both' && 'kr us' || inputs.market || (github.event.schedule == '30 22 * * 1-5' && 'us' || 'kr') }}
       PYTHONUNBUFFERED: "1"
