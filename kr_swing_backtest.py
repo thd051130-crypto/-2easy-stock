@@ -62,19 +62,29 @@ def load_csv(path):
     return opens.reindex(calendar), closes.reindex(calendar), index_close
 
 
-def download(path):
+def download(path, pause=1.5, retries=5):
+    """야후는 한꺼번에 받으면 429(요청 과다)를 자주 줘서 종목별로 쉬어 가며 받고, 실패하면 간격을 늘려 다시 시도해요."""
+    import time
+
     import yfinance as yf
 
     symbols = [f"{code}.KS" for code in UNIVERSE] + [INDEX]
-    raw = yf.download(symbols, start=START, auto_adjust=True, group_by="ticker", progress=False, threads=True)
     frames = []
     for symbol in symbols:
-        if symbol not in raw.columns.get_level_values(0):
-            continue
-        part = raw[symbol][["Open", "Close"]].dropna(how="all")
-        if part.empty:
+        part = None
+        for attempt in range(retries):
+            try:
+                part = yf.Ticker(symbol).history(start=START, auto_adjust=True)
+                if not part.empty:
+                    break
+            except Exception as e:  # 레이트리밋 등
+                print(f"{symbol} 재시도 {attempt + 1}/{retries}: {e}")
+            time.sleep(pause * 2 ** attempt)
+        time.sleep(pause)
+        if part is None or part.empty:
             print(f"경고: {symbol} 데이터 없음, 제외")
             continue
+        part = part[["Open", "Close"]].dropna(how="all")
         part.index = pd.to_datetime(part.index).tz_localize(None).normalize()
         frames.append(pd.DataFrame({"date": part.index, "ticker": symbol.removesuffix(".KS"),
                                     "open": part["Open"].to_numpy(), "close": part["Close"].to_numpy()}))
