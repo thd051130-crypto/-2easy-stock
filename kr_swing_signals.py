@@ -13,6 +13,7 @@ ANTHROPIC_API_KEY가 있으면 신호마다 Claude가 짧은 의견(이유, 손�
     python kr_swing_signals.py              # 계산 후 텔레그램 전송
     python kr_swing_signals.py --dry-run    # 전송 없이 메시지만 출력
     python kr_swing_signals.py --csv my.csv # 받아 둔 데이터로 계산 (형식은 kr_swing_backtest.py와 같음)
+    python kr_swing_signals.py --save-csv data/kr_daily_recent.csv  # 받은 데이터를 남겨서 paper_trade.py에 넘기기
 """
 
 import argparse
@@ -137,6 +138,7 @@ def main():
     parser.add_argument("--capital", type=float, default=float(os.getenv("CAPITAL") or 300000),
                         help="계좌 금액(원), 종목당 1/5로 몇 주 살 수 있는지 계산 (기본 30만 원)")
     parser.add_argument("--dry-run", action="store_true", help="텔레그램으로 보내지 않고 출력만")
+    parser.add_argument("--save-csv", type=pathlib.Path, help="받은 야후 데이터를 이 경로에 남겨요 (가상매매 기록이 같이 써요)")
     args = parser.parse_args()
 
     from realtime_monitor import send_telegram
@@ -144,7 +146,7 @@ def main():
     today = dt.datetime.now(KST).date()
     path = args.csv
     if path is None:
-        path = pathlib.Path(tempfile.mkdtemp()) / "kr_daily_recent.csv"
+        path = args.save_csv or pathlib.Path(tempfile.mkdtemp()) / "kr_daily_recent.csv"
         try:
             kb.download(path, start=f"{today - dt.timedelta(days=LOOKBACK_DAYS):%Y-%m-%d}")
         except SystemExit as e:
