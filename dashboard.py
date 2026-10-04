@@ -97,13 +97,24 @@ def account(folder, market):
         realized=round(sum(t["pnl"] or 0 for t in trades), 2))
 
 
+RULEBOOK_RULES = [
+    "내 매매 규칙표를 알림과 따로 가상계좌로 검증하는 중이에요 (국장 30만 원, 미장 300달러).",
+    "종목이 200일선 위, 60일선 > 200일선, RSI14 45~60, 거래량이 20일 평균 이상이면 사요. 하루 +5%·5일 +10% 넘게 오른 종목은 추격하지 않아요.",
+    "종목당 계좌의 20%를 30/30/40%로 나눠 사요. 2·3차는 종가가 직전 매수가보다 오를 때만 (물타기 금지).",
+    "평균가 +1/+2/+3%에서 30/30/40%씩 익절, 종가가 평균가 -2% 아래면 다음 날 시가에 전부 손절.",
+    "계좌가 하루 -1%, 그 주 -2%, 그 달 -4%면 각각 다음 날, 그 주, 그 달 동안 새로 사지 않아요.",
+    "백테스트(2011~): 국장 연 -2.3%, 최대 낙폭 -50% / 미장 연 -5.1%, 최대 낙폭 -56%. 그래서 알림 규칙은 바꾸지 않았어요.",
+]
+
+
 def build(paper_dir):
     markets = {}
     for key, m in MARKETS.items():
         folder = paper_dir / key
         markets[key] = dict(name=m["name"], index_name=m["index_name"], currency=m["currency"],
                             capital=m["capital"], signal=read_json(folder / "signal.json"),
-                            account=account(folder, key), rules=RULES[key])
+                            account=account(folder, key), rules=RULES[key],
+                            rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets)
 
 

@@ -91,3 +91,13 @@ def test_us_buy_signal_on_cross():
     us.update(ok=False, was_ok=True, spx=5600.0)
     text = ks.format_us(us, 300, dt.date(2026, 10, 3))
     assert "매도 신호" in text and "200일선 아래라" in text and "다시 매수 신호" in text
+
+
+def test_rulebook_section_lists_candidates_with_plan():
+    import kr_swing_backtest as kb
+    opens, closes, index_close = kb.synthetic(n_stocks=30, seed=1)
+    closes.columns = list(kb.UNIVERSE)[:30]
+    text, picks = ks.rulebook_section(opens, closes, None, index_close, "kr")
+    assert "[규칙표 후보]" in text and "거래량 데이터가 없어서" in text
+    for p in picks:
+        assert p["opinion"][1].startswith("계획: 내일 시가에 1차 30%")
