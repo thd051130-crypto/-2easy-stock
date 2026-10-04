@@ -48,7 +48,7 @@ jobs:
       - name: signals and paper trade (${{ env.MARKETS }})
         run: |
           for mk in $MARKETS; do
-            python kr_swing_signals.py --market "$mk" --save-csv "data/${mk}_daily_recent.csv"
+            python kr_swing_signals.py --market "$mk" --save-csv "data/${mk}_daily_recent.csv" --save-json "paper/$mk/signal.json"
             python paper_trade.py --market "$mk" --csv "data/${mk}_daily_recent.csv"
           done
       - name: commit paper log

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>이지스톡</title>
+<meta name="description" content="국장·미장 보수적 매매 신호와 가상계좌 기록">
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="이지스톡">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28"><h1>이지스톡</h1></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-market="kr" aria-selected="true">국장</button>
+    <button role="tab" data-market="us" aria-selected="false">미장</button>
+  </div>
+</header>
+<main id="app"><p class="muted center">불러오는 중…</p></main>
+<footer class="foot">
+  <p id="updated" class="muted"></p>
+  <p class="muted">가상매매·백테스트 기록이에요. 실제 체결가와 다를 수 있고, 과거·가상 성과가 미래 수익을 보장하지 않아요. 주문은 직접 판단해서 하세요.</p>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
