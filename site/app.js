@@ -105,7 +105,7 @@ function signalCard(d) {
   if (market === "us") {
     const [title, desc] = US_ACTION[s.action] || ["-", ""];
     const etf = s.etf_close ? `<p class="muted">${esc(s.etf)} 종가 ${price("us", s.etf_close)} · ${money("us", d.capital)} 계좌면 ${money("us", d.capital / 2)} ≈ ${(d.capital / 2 / s.etf_close).toFixed(3)}주</p>` : "";
-    body = `<p class="headline">${title}</p><p class="sub">${desc}</p>${idx}${etf}`;
+    body = `<p class="headline">${title}</p><p class="sub">${desc}</p>${idx}${etf}${opinion(s.opinion)}`;
   } else if (!s.ok) {
     body = `<p class="headline">신규 매수 쉬는 날</p><p class="sub">코스피가 50일선이나 200일선 아래라 새로 사지 않아요.</p>${idx}`;
   } else if (!s.picks.length) {
@@ -114,7 +114,7 @@ function signalCard(d) {
     const items = s.picks.map((p, i) => `<li><div class="l">
         <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
         <div class="meta">RSI2 ${p.rsi2.toFixed(1)} · 5일선 ${num(p.ma5)}원 위로 마감하면 매도 · 손절 참고 ${num(p.stop)}원</div>
-        ${p.opinion ? `<div class="opinion">Claude: ${esc(p.opinion)}</div>` : ""}
+        ${opinion(p.opinion)}
         ${i >= s.max_positions ? `<div class="meta">${s.max_positions}종목이 차면 건너뛰어요</div>` : ""}
       </div><div class="r">${num(p.close)}원</div></li>`).join("");
     body = `<p class="headline">매수 후보 ${s.picks.length}개</p>
@@ -122,6 +122,12 @@ function signalCard(d) {
       <ul class="list" style="margin-top:12px">${items}</ul>`;
   }
   return `<section class="card"><h2>오늘의 신호 <small>${md(s.day)} 종가 기준</small></h2>${chip}${body}</section>`;
+}
+
+// 규칙으로 만든 매매 의견 (이유, 위험 등). 예전 기록엔 없을 수 있어요.
+function opinion(lines) {
+  if (!lines || !lines.length) return "";
+  return lines.map((l) => `<div class="opinion">${esc(l)}</div>`).join("");
 }
 
 function accountCard(d) {

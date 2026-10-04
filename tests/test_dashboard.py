@@ -64,3 +64,13 @@ def test_main_copies_site_and_writes_data(tmp_path, monkeypatch):
     dashboard.main()
     assert (out / "index.html").exists()
     assert json.loads((out / "data.json").read_text())["markets"]["kr"]["name"] == "국장"
+
+
+def test_kr_payload_carries_rule_opinion():
+    index_close = series()
+    market = dict(day=index_close.index[-1], kospi=230.0, kospi_ma50=200.0, kospi_ma200=180.0, kospi_ok=True)
+    pick = dict(code="005930", name="삼성전자", close=60000.0, rsi2=5.0, ma5=61000.0, ma200=55000.0, high20=63000.0,
+                days_since_high=3, vol20=0.3)
+    row = ks.kr_payload(market, [pick], index_close)["picks"][0]
+    assert row["stop"] == 57000.0
+    assert row["opinion"][0].startswith("이유:") and row["opinion"][1].startswith("위험:")
