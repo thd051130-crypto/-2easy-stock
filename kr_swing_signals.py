@@ -31,6 +31,7 @@ import departments
 import kr_swing_backtest as kb
 import rulebook
 import strategy
+import track
 from markets import MARKETS
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -241,6 +242,24 @@ def us_payload(us, index_close, etf_close=None):
                 etf_close=round(etf_close, 2) if etf_close else None, series=index_series(index_close))
 
 
+def stock_summary(closes, market, days=60):
+    """관심종목 화면용: 종목별 마지막 종가, 전일 대비 등락률, 최근 days거래일(약 3개월) 종가."""
+    names = dict(MARKETS[market]["universe"])
+    if market == "us":
+        names[strategy.US_ETF] = track.etf_name()
+    out = []
+    for code, name in names.items():
+        if code not in closes:
+            continue
+        s = closes[code].dropna()
+        if len(s) < 2:
+            continue
+        spark = [round(float(x)) if market == "kr" else round(float(x), 2) for x in s.iloc[-days:]]
+        out.append(dict(code=code, name=name, day=f"{s.index[-1]:%Y-%m-%d}", close=round(float(s.iloc[-1]), 2),
+                        d1=round(float(s.iloc[-1] / s.iloc[-2] - 1), 4), spark=spark))
+    return out
+
+
 def ohlc_payload(h, date_fmt="%Y-%m-%d"):
     """Open·High·Low·Close 표를 대시보드 JSON 모양(dates, o, h, l, c)으로."""
     def col(name):
@@ -388,6 +407,12 @@ def main():
                                     us if args.market == "us" else market, [] if args.market == "us" else picks)
     if args.save_json:
         payload["candles"] = index_candles(m["index"])
+        payload["stocks"] = stock_summary(closes, args.market)
+        try:  # 추천 종목 기록(paper/<시장>/picks.csv)과 추천일부터의 수익률. 실패해도 신호는 그대로 보내요
+            rows = track.update(args.save_json.parent / "picks.csv", args.market, payload, closes, index_close, volumes)
+            payload["tracked"] = track.summary(rows, closes, index_close)
+        except Exception as e:
+            print(f"추천 성과 계산 실패 (신호는 그대로 보내요): {e!r}")
         save_json(args.save_json, payload)
     print(text)
     if not args.dry_run:
