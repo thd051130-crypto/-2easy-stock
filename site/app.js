@@ -9,6 +9,11 @@ const US_ACTION = {
   cash: ["현금 유지", "S&P500 추세가 약하거나 변동성이 커서 사지 않아요."],
 };
 
+const TREND_RULE = {
+  kr: "코스피가 50일선과 200일선 둘 다 위일 때만 새로 사요.",
+  us: "S&P500이 200일선 위이고 50일선도 200일선 위일 때만 사요.",
+};
+
 // 캔들 하나의 기간과 처음 보이는 캔들 수: 일봉 1개월, 주봉 6개월, 월봉 3년, 년봉 전체
 const FRAMES = [["d", "일봉", 21], ["w", "주봉", 26], ["m", "월봉", 36], ["y", "년봉", 60]];
 const UNIT = { d: "일", w: "주", m: "개월", y: "년" };
@@ -18,7 +23,16 @@ try { frame = localStorage.getItem("frame") || "d"; } catch (e) { /* 기본값 *
 if (!FRAMES.some((f) => f[0] === frame)) frame = "d";
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
-if (location.hash === "#us" || location.hash === "#kr") market = location.hash.slice(1);
+// 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
+const SCREENS = ["home", "signal", "perf", "chart"];
+let screen = "home";
+const fromHash = () => { const [m, s] = location.hash.slice(1).split("/"); return { m, s }; };
+{
+  const h = fromHash();
+  if (h.m === "kr" || h.m === "us") market = h.m;
+  if (SCREENS.includes(h.s)) screen = h.s;
+}
+const hashFor = () => `#${market}${screen === "home" ? "" : `/${screen}`}`;
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -67,41 +81,149 @@ async function load() {
   render();
 }
 
-function selectTab(m) {
+function selectMarket(m) {
   market = m;
   try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ }
-  history.replaceState(null, "", `#${m}`);
-  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === m)));
+  history.replaceState(history.state, "", hashFor());
   render();
 }
 
+// 홈에서 다른 화면으로 갈 때만 기록을 하나 남겨요. 그래서 폰의 뒤로 가기를 누르면 앱이 꺼지지 않고 홈으로 돌아와요.
+function go(s, fromBack) {
+  if (!SCREENS.includes(s)) s = "home";
+  if (!fromBack) {
+    if (s === screen) { window.scrollTo(0, 0); return; }  // 지금 화면 버튼을 또 누르면 맨 위로
+    if (s === "home" && history.state && history.state.screen) { history.back(); return; }
+    const push = screen === "home";
+    screen = s;
+    if (push) history.pushState({ screen: s }, "", hashFor());
+    else history.replaceState(history.state, "", hashFor());
+  } else {
+    screen = s;
+    history.replaceState(history.state, "", hashFor());
+  }
+  window.scrollTo(0, 0);
+  render();
+}
+
+const VIEWS = {
+  home: (d) => [homeSignalCard(d), homeAccountCard(d), homeIndexCard(d)],
+  signal: (d) => [signalCard(d), desksCard(d), rulebookPicksCard(d), rulesCard(d)],
+  perf: (d) => [accountCard(d), positionsCard(d), tradesCard(d), rulebookAccountCard(d)],
+  chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
+};
+
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
+  document.querySelectorAll(".nav button").forEach((b) => {
+    if (b.dataset.screen === screen) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
   if (!DATA) return;
   const d = DATA.markets[market];
   const app = $("#app");
-  app.innerHTML = [signalCard(d), desksCard(d), accountCard(d), positionsCard(d), tradesCard(d), rulebookCard(d),
-    trendCard(d), rulesCard(d)].join("");
-  const acc = d.account;
-  if (acc && acc.curve.length) {
-    lineChart($("#equity-chart"), {
-      dates: acc.curve.map((r) => r.date),
-      series: [
-        { name: "가상계좌", color: "var(--series-1)", values: acc.curve.map((r) => r.account) },
-        { name: d.index_name, color: "var(--series-2)", values: acc.curve.map((r) => r.index) },
-      ],
-      fmt: (v) => pct(v),
-      zero: true,
-      tall: true,
-    });
+  app.innerHTML = VIEWS[screen](d).join("");
+  app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
+  if (screen === "perf") drawEquity(d);
+  if (screen === "chart") {
+    drawTrend(d);
+    app.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
+      frame = b.dataset.frame;
+      try { localStorage.setItem("frame", frame); } catch (e) { /* 무시 */ }
+      app.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      drawTrend(d, true);
+    }));
   }
-  drawTrend(d);
-  document.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
-    frame = b.dataset.frame;
-    try { localStorage.setItem("frame", frame); } catch (e) { /* 무시 */ }
-    document.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    drawTrend(d, true);
-  }));
+}
+
+function drawEquity(d) {
+  const acc = d.account;
+  if (!acc || !acc.curve.length) return;
+  lineChart($("#equity-chart"), {
+    dates: acc.curve.map((r) => r.date),
+    series: [
+      { name: "가상계좌", color: "var(--series-1)", values: acc.curve.map((r) => r.account) },
+      { name: d.index_name, color: "var(--series-2)", values: acc.curve.map((r) => r.index) },
+    ],
+    fmt: (v) => pct(v),
+    zero: true,
+    tall: true,
+  });
+}
+
+// 작은 추세선 (축 없이 모양만). 기간 처음보다 오르면 빨강, 내리면 파랑.
+function spark(values, label) {
+  const v = values.filter((x) => x != null);
+  if (v.length < 2) return "";
+  const w = 120, h = 40, lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+  const pts = v.map((x, i) => `${((i / (v.length - 1)) * w).toFixed(1)},${(h - 3 - ((x - lo) / span) * (h - 6)).toFixed(1)}`).join(" ");
+  return `<svg class="spark ${v[v.length - 1] >= v[0] ? "up" : "down"}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"
+    role="img" aria-label="${esc(label)}"><polyline points="${pts}"/></svg>`;
+}
+
+const more = (to, label) => `<button type="button" class="more" data-go="${to}">${label}<span aria-hidden="true">›</span></button>`;
+
+// 홈: 오늘 할 일만 짧게. 자세한 이유·부서 보고는 신호 화면에 있어요.
+function homeSignalCard(d) {
+  const s = d.signal;
+  if (!s) return signalCard(d);
+  const chip = s.ok
+    ? `<span class="chip good">● 매수 조건 충족</span>`
+    : `<span class="chip wait">■ 매수 조건 미달</span>`;
+  let head, sub, extra = "";
+  if (market === "us") {
+    [head, sub] = US_ACTION[s.action] || ["-", ""];
+    const risk = (s.opinion || []).find((l) => l.startsWith("위험:"));
+    if (risk) extra = `<p class="caution">${esc(risk)}</p>`;
+  } else if (!s.ok) {
+    head = "신규 매수 쉬는 날";
+    sub = s.pause || "코스피가 50일선이나 200일선 아래라 새로 사지 않아요.";
+  } else if (!s.picks.length) {
+    head = "오늘은 매수 신호 없음";
+    sub = "조건에 맞게 눌린 종목이 없어요. 기다리는 것도 규칙이에요.";
+  } else {
+    head = `매수 후보 ${s.picks.length}개`;
+    sub = `다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.`;
+    extra = `<ul class="list" style="margin-top:12px">${s.picks.map((p, i) => `<li><div class="l">
+        <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
+        <div class="meta">손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("")}</ul>`;
+  }
+  const rb = s.rulebook || [];
+  const rbLine = rb.length ? `<p class="muted" style="margin:10px 0 0">내 규칙표 후보 ${rb.length}개: ${rb.map((p) => esc(p.name)).join(" · ")}</p>` : "";
+  return `<section class="card"><h2>오늘의 신호 <small>${md(s.day)} 종가 기준</small></h2>${chip}
+    <p class="headline">${esc(head)}</p><p class="sub">${esc(sub)}</p>${extra}${rbLine}
+    ${more("signal", "신호 자세히 보기")}</section>`;
+}
+
+function homeAccountCard(d) {
+  const a = d.account;
+  if (!a) return accountCard(d);
+  const rb = d.rulebook && d.rulebook.account;
+  return `<section class="card"><h2>가상계좌 <small>${md(a.last_day)} 종가</small></h2>
+    <p class="hero">${money(market, a.equity)}</p>
+    <div class="stats">
+      <div class="stat"><span>가상계좌</span><b class="${sign(a.gain)}">${pct(a.gain)}</b></div>
+      <div class="stat"><span>${esc(d.index_name)}</span><b class="${sign(a.index_gain)}">${pct(a.index_gain)}</b></div>
+      <div class="stat"><span>최대 낙폭</span><b>${pct(a.mdd)}</b></div>
+    </div>
+    ${rb ? `<p class="muted" style="margin:8px 0 0">내 규칙표 계좌 <b class="${sign(rb.gain)}">${pct(rb.gain)}</b></p>` : ""}
+    ${pendingLines(a)}
+    ${more("perf", "가상계좌 자세히 보기")}</section>`;
+}
+
+function homeIndexCard(d) {
+  const s = d.signal;
+  const close = s && s.series ? s.series.close.filter((v) => v != null) : [];
+  if (close.length < 2) return "";
+  const last = close[close.length - 1], ch = last / close[close.length - 2] - 1, gap = s.index / s.ma200 - 1;
+  return `<section class="card"><h2>${esc(d.index_name)} <small>${md(s.day)} 종가</small></h2>
+    <div class="tile"><div>
+      <p class="big">${num(last)}</p>
+      <p class="sub nowrap"><b class="${sign(ch)}">${pct(ch, 2)}</b> 전일 대비</p>
+    </div><div class="tile-spark">${spark(close.slice(-63), `${d.index_name} 최근 3개월`)}<span class="muted">최근 3개월</span></div></div>
+    ${s.ma200 && s.ma50 ? `<p class="muted" style="margin:8px 0 0">200일선보다 ${(Math.abs(gap) * 100).toFixed(1)}% ${gap >= 0 ? "위" : "아래"} ·
+      50일선보다 ${s.index >= s.ma50 ? "위" : "아래"}</p>` : ""}
+    ${more("chart", "차트 크게 보기")}</section>`;
 }
 
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
@@ -252,9 +374,6 @@ function accountCard(d) {
     return `<section class="card"><h2>가상계좌 <small>${money(market, d.capital)}로 시작</small></h2>
       <p class="empty">아직 첫 기록 전이에요. ${NEXT_RUN[market]} 첫 자동 실행부터 신호대로 샀다고 치고 날마다 기록해요.</p></section>`;
   }
-  const pending = [];
-  if (a.pending_buys.length) pending.push(`다음 거래일 시가 매수 예정: ${a.pending_buys.map(esc).join(", ")}`);
-  if (a.pending_sells.length) pending.push(`다음 거래일 시가 매도 예정: ${a.pending_sells.map(esc).join(", ")}`);
   return `<section class="card"><h2>가상계좌 <small>${md(a.start)} 시작 · ${md(a.last_day)} 종가</small></h2>
     <p class="hero">${money(market, a.equity)}</p>
     <p class="sub"><span class="${sign(a.gain)}">${pct(a.gain)}</span> · 시작 ${money(market, a.capital)} · 현금 ${money(market, a.cash)}</p>
@@ -268,8 +387,16 @@ function accountCard(d) {
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>${esc(d.index_name)}</span>
       <span class="muted">시작일 대비 수익률</span></div>
       <div class="chart" id="equity-chart"></div></div>
-    ${pending.map((p) => `<p class="muted" style="margin:8px 0 0">${p}</p>`).join("")}
+    ${pendingLines(a)}
   </section>`;
+}
+
+// 다음 거래일 시가에 사고팔 예정인 종목
+function pendingLines(a) {
+  const out = [];
+  if (a.pending_buys.length) out.push(`다음 거래일 시가 매수 예정: ${a.pending_buys.map(esc).join(", ")}`);
+  if (a.pending_sells.length) out.push(`다음 거래일 시가 매도 예정: ${a.pending_sells.map(esc).join(", ")}`);
+  return out.map((p) => `<p class="muted" style="margin:8px 0 0">${p}</p>`).join("");
 }
 
 function positionsCard(d) {
@@ -313,11 +440,12 @@ function trendCard(d) {
     <div class="chart candle" id="trend-chart"></div>
     <p class="muted" style="margin:8px 0 0">${d.signal.candles
       ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. "
-      : ""}지수가 두 이동평균선 위에 있을 때만 새로 사요.</p></section>`;
+      : ""}${TREND_RULE[market]}</p></section>`;
 }
 
-// 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요)
-function rulebookCard(d) {
+// 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요).
+// 오늘 후보와 규칙은 신호 화면, 계좌 성과는 성과 화면에 보여요.
+function rulebookPicksCard(d) {
   const rb = d.rulebook;
   if (!rb) return "";
   const picks = (d.signal && d.signal.rulebook) || [];
@@ -325,9 +453,18 @@ function rulebookCard(d) {
   const items = picks.map((p, i) => `<li><div class="l">
       <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${opinion(p.opinion)}</div>
       <div class="r">${num(p.close)}${unit}</div></li>`).join("");
+  return `<section class="card"><h2>내 규칙표 후보 <small>${picks.length}개 · 검증용 가상계좌에 기록</small></h2>
+    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
+    <details style="margin-top:12px"><summary>규칙표 보기</summary><ol>${rb.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details>
+  </section>`;
+}
+
+function rulebookAccountCard(d) {
+  const rb = d.rulebook;
+  if (!rb) return "";
   const a = rb.account;
   const main = d.account;
-  const acc = a
+  const body = a
     ? `<div class="stats">
         <div class="stat"><span>규칙표 계좌</span><b class="${sign(a.gain)}">${pct(a.gain)}</b></div>
         <div class="stat"><span>알림 규칙 계좌</span><b class="${main ? sign(main.gain) : ""}">${main ? pct(main.gain) : "-"}</b></div>
@@ -335,11 +472,7 @@ function rulebookCard(d) {
       </div>
       <p class="muted" style="margin:8px 0 0">${money(market, a.equity)} · 끝난 거래 ${a.trade_count}건${a.trade_count ? ` · 승률 ${Math.round(a.win_rate * 100)}%` : ""} · 보유 ${a.positions.length}종목</p>`
     : `<p class="empty">${NEXT_RUN[market]} 첫 자동 실행부터 기록해요.</p>`;
-  return `<section class="card"><h2>내 규칙표 검증 <small>가상계좌</small></h2>${acc}
-    <p class="sub" style="margin-top:12px">오늘 규칙표 후보 ${picks.length}개</p>
-    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
-    <details><summary>규칙표 보기</summary><ol>${rb.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details>
-  </section>`;
+  return `<section class="card"><h2>내 규칙표 검증 <small>가상계좌</small></h2>${body}</section>`;
 }
 
 function rulesCard(d) {
@@ -577,10 +710,17 @@ function lineChart(el, { dates, series, fmt, zero, tall }) {
   };
   draw();
   let w = el.clientWidth;
-  new ResizeObserver(() => { if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; draw(); } }).observe(el);
+  const ro = new ResizeObserver(() => {
+    if (!el.isConnected) { ro.disconnect(); return; }  // 화면을 바꿔 사라진 차트
+    if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; draw(); }
+  });
+  ro.observe(el);
 }
 
-document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectTab(b.dataset.market)));
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
+document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => go(b.dataset.screen)));
+window.addEventListener("popstate", () => go(fromHash().s, true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+render();  // 데이터가 오기 전에도 주소에 맞는 시장·화면 버튼을 표시해요
 load();

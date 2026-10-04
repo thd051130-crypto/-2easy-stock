@@ -60,7 +60,7 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--surface-0); color: var(--text-primary);
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));  /* 아래쪽 화면 버튼에 가리지 않게 */
 }
 .top {
   position: sticky; top: 0; z-index: 5; background: var(--surface-0);
@@ -130,6 +130,39 @@ details li { margin: 4px 0; }
 .empty { color: var(--text-secondary); font-size: 14px; margin: 0; }
 .foot { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; }
 .foot p { margin: 4px 0; }
+
+/* 아래쪽 화면 버튼 (홈·신호·성과·차트) */
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  padding: 2px max(8px, calc((100% - 640px) / 2)) env(safe-area-inset-bottom);
+  background: var(--surface-1); border-top: 1px solid var(--border);
+}
+.nav button {
+  border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 58px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.nav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav button[aria-current="page"] { color: var(--accent); }
+.nav button[aria-current="page"] svg { stroke-width: 2.3; }
+
+/* 홈 카드 */
+.more {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 14px;
+  padding: 10px 14px; min-height: 44px; border: 0; border-radius: 10px; background: var(--surface-0);
+  color: var(--text-secondary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.more span { font-size: 20px; line-height: 1; color: var(--text-muted); }
+.caution { font-size: 13px; color: var(--wait-fg); background: var(--wait-bg); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
+.big { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0; font-variant-numeric: tabular-nums; }
+.tile { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.tile-spark { flex: 0 1 44%; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.nowrap { white-space: nowrap; }
+.spark { display: block; width: 100%; height: 44px; overflow: visible; }
+.spark polyline { fill: none; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.spark.up polyline { stroke: var(--up); }
+.spark.down polyline { stroke: var(--down); }
 
 .period { display: inline-flex; background: var(--surface-0); border-radius: 999px; padding: 3px; gap: 2px; }
 .period button {
