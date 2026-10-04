@@ -10,6 +10,8 @@
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
+  --ma50: #c98500;
+  --ma200: #1baf7a;
   /* 한국식: 오르면 빨강, 내리면 파랑 (항상 +/- 기호와 같이 써요) */
   --up: #d03b3a;
   --down: #2a6cc4;
@@ -33,6 +35,8 @@
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
+    --ma50: #eda100;
+    --ma200: #199e70;
     --up: #ff6b6a;
     --down: #6aa6f2;
     --good-bg: #173a26;
@@ -46,7 +50,7 @@
   color-scheme: dark;
   --surface-0: #111110; --surface-1: #1a1a19; --border: #2f2f2c; --grid: #2a2a27;
   --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #9a998f;
-  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ma50: #eda100; --ma200: #199e70;
   --up: #ff6b6a; --down: #6aa6f2; --good-bg: #173a26; --good-fg: #8fe0b0; --wait-bg: #3d2f12; --wait-fg: #f2c46b;
   --accent: #3987e5;
 }
@@ -126,3 +130,25 @@ details li { margin: 4px 0; }
 .empty { color: var(--text-secondary); font-size: 14px; margin: 0; }
 .foot { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; }
 .foot p { margin: 4px 0; }
+
+.period { display: inline-flex; background: var(--surface-0); border-radius: 999px; padding: 3px; gap: 2px; }
+.period button {
+  border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 14px; font-weight: 600;
+  padding: 6px 16px; border-radius: 999px; min-height: 36px; cursor: pointer;
+}
+.period button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+
+.chart.candle { touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+.chart .wick { stroke-width: 1; }
+.chart .wick.up, .chart .body.up { stroke: var(--up); fill: var(--up); }
+.chart .wick.down, .chart .body.down { stroke: var(--down); fill: var(--down); }
+.chart .wick.flat, .chart .body.flat { stroke: var(--text-muted); fill: var(--text-muted); }
+.chart .ma { fill: none; stroke-width: 1.5; }
+.chart .ma50 { stroke: var(--ma50); }
+.chart .ma200 { stroke: var(--ma200); }
+.chart .mark { stroke: var(--text-secondary); stroke-width: 1; }
+.chart text.mark-text { fill: var(--text-primary); font-weight: 600; }
+.chart .now { stroke-width: 1; stroke-dasharray: 2 3; }
+.chart .now.up { stroke: var(--up); } .chart .now.down { stroke: var(--down); }
+.chart .tag.up { fill: var(--up); } .chart .tag.down { fill: var(--down); }
+.chart text.tag-text { fill: #fff; font-weight: 700; }

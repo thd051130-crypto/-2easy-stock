@@ -9,7 +9,10 @@ const US_ACTION = {
   cash: ["현금 유지", "S&P500 추세가 약하거나 변동성이 커서 사지 않아요."],
 };
 
+const PERIODS = [["1w", "1주", 5], ["1m", "1개월", 21], ["1y", "1년", 260]];  // 거래일 수
 let DATA = null;
+let period = "1m";
+try { period = localStorage.getItem("period") || "1m"; } catch (e) { /* 기본값 */ }
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 if (location.hash === "#us" || location.hash === "#kr") market = location.hash.slice(1);
@@ -75,20 +78,50 @@ function render() {
       ],
       fmt: (v) => pct(v),
       zero: true,
+      tall: true,
     });
   }
+  drawTrend(d);
+  document.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
+    period = b.dataset.period;
+    try { localStorage.setItem("period", period); } catch (e) { /* 무시 */ }
+    document.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    drawTrend(d, true);
+  }));
+}
+
+// 지수 추세: 고른 기간(1주·1개월·1년)만 잘라 그려요. 짧은 기간은 지수 움직임이 보이게 지수 기준으로 세로축을 맞춰요.
+// 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 종가 선 그래프
+function drawTrend(d, reset) {
+  const c = d.signal && d.signal.candles;
+  const days = (PERIODS.find((p) => p[0] === period) || PERIODS[1])[2];
+  if (c && c.dates.length) {
+    candleChart($("#trend-chart"), c, days, reset, (txt) => { $("#trend-change").innerHTML = txt; });
+    return;
+  }
+  drawTrendLine(d);
+}
+
+function drawTrendLine(d) {
   const s = d.signal && d.signal.series;
-  if (s && s.dates.length) {
-    lineChart($("#trend-chart"), {
-      dates: s.dates,
-      series: [
-        { name: d.index_name, color: "var(--series-1)", values: s.close },
-        { name: "50일선", color: "var(--series-2)", values: s.ma50 },
-        { name: "200일선", color: "var(--series-3)", values: s.ma200 },
-      ],
-      fmt: (v) => num(v),
-    });
-  }
+  if (!s || !s.dates.length) return;
+  const days = (PERIODS.find((p) => p[0] === period) || PERIODS[2])[2];
+  const cut = (arr) => arr.slice(-days - 1);  // 기간 시작 전날 종가부터 (변화율 기준점)
+  const close = cut(s.close);
+  lineChart($("#trend-chart"), {
+    dates: cut(s.dates),
+    series: [
+      { name: d.index_name, color: "var(--series-1)", values: close },
+      { name: "50일선", color: "var(--series-2)", values: cut(s.ma50), scale: days > 21 },
+      { name: "200일선", color: "var(--series-3)", values: cut(s.ma200), scale: days > 21 },
+    ],
+    fmt: (v) => num(v),
+    tall: true,
+  });
+  const first = close.find((v) => v != null), last = close[close.length - 1];
+  const label = (PERIODS.find((p) => p[0] === period) || PERIODS[2])[1];
+  $("#trend-change").innerHTML = first && last
+    ? `최근 ${label} <b class="${sign(last / first - 1)}">${pct(last / first - 1)}</b> (${num(first)} → ${num(last)})` : "";
 }
 
 function signalCard(d) {
@@ -191,13 +224,23 @@ function tradesCard(d) {
 
 function trendCard(d) {
   if (!d.signal) return "";
-  return `<section class="card"><h2>${esc(d.index_name)} 추세 <small>최근 1년</small></h2>
-    <div class="legend">
+  const buttons = PERIODS.map(([key, label]) =>
+    `<button type="button" data-period="${key}" aria-pressed="${key === period}">${label}</button>`).join("");
+  return `<section class="card"><h2>${esc(d.index_name)} 추세</h2>
+    <div class="period" role="group" aria-label="기간">${buttons}</div>
+    <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>
+    ${d.signal.candles ? `<div class="legend">
+      <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
+      <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
+      <span class="key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
+      <span class="key"><i class="sw" style="background:var(--ma200)"></i>200일선</span></div>` : `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--series-1)"></i>${esc(d.index_name)}</span>
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>50일선</span>
-      <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>
-    <div class="chart" id="trend-chart"></div>
-    <p class="muted" style="margin:8px 0 0">지수가 두 이동평균선 위에 있을 때만 새로 사요.</p></section>`;
+      <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
+    <div class="chart candle" id="trend-chart"></div>
+    <p class="muted" style="margin:8px 0 0">${d.signal.candles
+      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 시가·고가·저가·종가가 보여요. "
+      : ""}지수가 두 이동평균선 위에 있을 때만 새로 사요.</p></section>`;
 }
 
 // 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요)
@@ -231,22 +274,170 @@ function rulesCard(d) {
     <ol>${d.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
 }
 
+// 캔들 차트 (SVG). 가격 축은 오른쪽, 보이는 구간의 최고·최저를 표시해요.
+// 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그날 값.
+const VIEW = {};  // 차트별 보기 상태 (보이는 캔들 수, 마지막 캔들 위치)
+function candleChart(el, c, days, reset, onRange) {
+  if (!el) return;
+  const n = c.dates.length;
+  const ma = (k) => { const out = new Array(n).fill(null); let sum = 0;
+    for (let i = 0; i < n; i++) { sum += c.c[i]; if (i >= k) sum -= c.c[i - k]; if (i >= k - 1) out[i] = sum / k; } return out; };
+  const ma50 = ma(50), ma200 = ma(200);
+  const key = el.id;
+  if (reset || !VIEW[key] || VIEW[key].n !== n) VIEW[key] = { count: Math.min(days, n), end: n - 1, n, pick: null };
+  const v = VIEW[key];
+  const fmt = (x) => num(x);
+  let W = 0, H = 0, pad, iw, ih, cw, start, lo, hi;
+
+  const draw = () => {
+    W = Math.max(el.clientWidth, 260);
+    H = Math.round(Math.max(300, window.innerHeight * 0.55));
+    pad = { l: 6, r: 62, t: 22, b: 22 };
+    iw = W - pad.l - pad.r; ih = H - pad.t - pad.b;
+    v.count = Math.max(5, Math.min(n, v.count));
+    v.end = Math.max(v.count - 1, Math.min(n - 1, v.end));
+    const endI = Math.round(v.end);
+    start = endI - Math.round(v.count) + 1;
+    cw = iw / Math.round(v.count);
+    let hiI = start, loI = start;
+    for (let i = start; i <= endI; i++) { if (c.h[i] > c.h[hiI]) hiI = i; if (c.l[i] < c.l[loI]) loI = i; }
+    hi = c.h[hiI]; lo = c.l[loI];
+    const span = hi - lo || hi * 0.01; hi += span * 0.08; lo -= span * 0.08;
+    const X = (i) => pad.l + (i - start + 0.5) * cw;
+    const Y = (p) => pad.t + (1 - (p - lo) / (hi - lo)) * ih;
+    const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => lo + (hi - lo) * (0.06 + 0.88 * f));
+    const lastY = Y(c.c[n - 1]);
+    const grid = ticks.map((t) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>
+      ${Math.abs(Y(t) - lastY) < 16 ? "" : `<text x="${pad.l + iw + 6}" y="${Y(t) + 4}">${esc(fmt(t))}</text>`}`).join("");
+    const bw = Math.max(1, cw * 0.7);
+    let bodies = "";
+    for (let i = start; i <= endI; i++) {
+      const o = c.o[i], cl = c.c[i];
+      const cls = cl > o ? "up" : cl < o ? "down" : "flat";
+      const x = X(i), top = Y(Math.max(o, cl)), bh = Math.max(1, Math.abs(Y(o) - Y(cl)));
+      bodies += `<line class="wick ${cls}" x1="${x}" x2="${x}" y1="${Y(c.h[i])}" y2="${Y(c.l[i])}"/>`
+        + (cw >= 3 ? `<rect class="body ${cls}" x="${x - bw / 2}" y="${top}" width="${bw}" height="${bh}"/>` : "");
+    }
+    const line = (vals, cls) => {
+      let dstr = "", pen = false;
+      for (let i = start; i <= endI; i++) {
+        const val = vals[i]; if (val == null) { pen = false; continue; }
+        dstr += `${pen ? "L" : "M"}${X(i).toFixed(1)},${Y(val).toFixed(1)}`; pen = true;
+      }
+      return `<path class="${cls}" d="${dstr}"/>`;
+    };
+    // 최고·최저 표시 (캔들 옆에 가격, 화면 밖으로 안 나가게 좌우를 골라요)
+    const mark = (i, price, label, above) => {
+      const x = X(i), y = Y(price), right = x < pad.l + iw * 0.6;
+      const tx = right ? x + 6 : x - 6, ty = above ? y - 6 : y + 14;
+      return `<line class="mark" x1="${x}" x2="${right ? x + 4 : x - 4}" y1="${y}" y2="${y}"/>
+        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${label} ${esc(fmt(price))} (${md(c.dates[i])})</text>`;
+    };
+    // 지금 값 표시 (오른쪽 축, 마지막 캔들 색)
+    const last = c.c[n - 1], lastCls = last >= c.o[n - 1] ? "up" : "down";
+    const ly = Math.min(pad.t + ih, Math.max(pad.t, Y(last)));
+    const nowTag = `<line class="now ${lastCls}" x1="${pad.l}" x2="${pad.l + iw}" y1="${ly}" y2="${ly}"/>
+      <rect class="tag ${lastCls}" x="${pad.l + iw + 1}" y="${ly - 9}" width="${pad.r - 2}" height="18" rx="3"/>
+      <text class="tag-text" x="${pad.l + iw + 6}" y="${ly + 4}">${esc(fmt(last))}</text>`;
+    const xs = [start, Math.round((start + endI) / 2), endI];
+    const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(c.dates[i].slice(2).replace(/-/g, "."))}</text>`).join("");
+    const clip = `cc-${key}`;
+    let pickSvg = "";
+    if (v.pick != null && v.pick >= start && v.pick <= endI) {
+      pickSvg = `<line class="cross" x1="${X(v.pick)}" x2="${X(v.pick)}" y1="${pad.t}" y2="${pad.t + ih}"/>`;
+    }
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="지수 캔들 차트">
+      <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath></defs>
+      ${grid}<g clip-path="url(#${clip})">${line(ma200, "ma ma200")}${line(ma50, "ma ma50")}${bodies}${pickSvg}</g>
+      ${mark(hiI, c.h[hiI], "최고", true)}${mark(loI, c.l[loI], "최저", false)}${nowTag}${xl}</svg>
+      <div class="tip" style="display:none"></div>`;
+    const first = start > 0 ? c.c[start - 1] : c.o[start];
+    const ch = c.c[endI] / first - 1;
+    onRange(`${c.dates[start].slice(2).replace(/-/g, ".")} ~ ${c.dates[endI].slice(2).replace(/-/g, ".")} (${Math.round(v.count)}일) `
+      + `<b class="${sign(ch)}">${pct(ch)}</b> · 최고 ${fmt(c.h[hiI])} · 최저 ${fmt(c.l[loI])}`);
+    if (v.pick != null && v.pick >= start && v.pick <= endI) showTip(v.pick, X(v.pick));
+  };
+
+  const showTip = (i, x) => {
+    const tip = $(".tip", el);
+    const prev = i > 0 ? c.c[i - 1] : c.o[i], ch = c.c[i] / prev - 1;
+    tip.innerHTML = `<div class="muted">${esc(c.dates[i])}</div>
+      <div class="row">시가 <b>${fmt(c.o[i])}</b></div><div class="row">고가 <b>${fmt(c.h[i])}</b></div>
+      <div class="row">저가 <b>${fmt(c.l[i])}</b></div><div class="row">종가 <b>${fmt(c.c[i])}</b> <span class="${sign(ch)}">${pct(ch, 2)}</span></div>
+      ${ma50[i] ? `<div class="row">50일선 <b>${fmt(ma50[i])}</b></div>` : ""}${ma200[i] ? `<div class="row">200일선 <b>${fmt(ma200[i])}</b></div>` : ""}`;
+    tip.style.display = "";
+    const r = el.getBoundingClientRect(), left = (x / W) * r.width, tw = tip.offsetWidth;
+    tip.style.left = `${Math.max(0, Math.min(r.width - tw, left > r.width / 2 ? left - tw - 12 : left + 12))}px`;
+    tip.style.top = `${pad.t}px`;
+  };
+
+  // 손가락·마우스 조작
+  const pts = new Map();
+  let gesture = null, raf = 0;
+  const redraw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
+  const scale = () => el.getBoundingClientRect().width / W;
+  el.onpointerdown = (e) => {
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) gesture = { type: "tap", x0: e.clientX, y0: e.clientY, end0: v.end };
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      gesture = { type: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, count0: v.count };
+    }
+  };
+  el.onpointermove = (e) => {
+    if (!pts.has(e.pointerId) || !gesture) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesture.type === "pinch" && pts.size >= 2) {
+      const [a, b] = [...pts.values()];
+      v.count = gesture.count0 * gesture.d0 / (Math.hypot(a.x - b.x, a.y - b.y) || 1);
+      redraw();
+    } else if (gesture.type !== "pinch") {
+      const dx = e.clientX - gesture.x0;
+      if (gesture.type === "tap" && Math.abs(dx) > 6) gesture.type = "pan";
+      if (gesture.type === "pan") { v.end = gesture.end0 - dx / (cw * scale()); redraw(); }
+    }
+  };
+  const up = (e) => {
+    if (gesture && gesture.type === "tap" && pts.size === 1) {
+      const r = el.getBoundingClientRect(), px = (e.clientX - r.left) / scale();
+      const i = Math.round(start + (px - pad.l) / cw - 0.5);
+      v.pick = i >= start && i <= Math.round(v.end) && v.pick !== i ? i : null;
+      if (v.pick == null) $(".tip", el).style.display = "none";
+      draw();
+    }
+    pts.delete(e.pointerId);
+    if (pts.size === 0) gesture = null;
+    else if (pts.size === 1) { const [p] = [...pts.values()]; gesture = { type: "pan", x0: p.x, y0: p.y, end0: v.end }; }
+  };
+  el.onpointerup = up;
+  el.onpointercancel = (e) => { pts.delete(e.pointerId); if (!pts.size) gesture = null; };
+  el.onwheel = (e) => { e.preventDefault(); v.count *= e.deltaY > 0 ? 1.15 : 1 / 1.15; redraw(); };
+  draw();
+  let w = el.clientWidth;
+  if (!el._ro) {
+    el._ro = new ResizeObserver(() => { if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; draw(); } });
+    el._ro.observe(el);
+  }
+}
+
 // 선 차트 (SVG). 같은 단위 시리즈만 한 축에 그려요. 손가락으로 좌우로 밀면 그날 값이 보여요.
-function lineChart(el, { dates, series, fmt, zero }) {
+function lineChart(el, { dates, series, fmt, zero, tall }) {
   if (!el) return;
   const draw = () => {
-    const W = Math.max(el.clientWidth, 260), H = 190;
+    const W = Math.max(el.clientWidth, 260);
+    const H = tall ? Math.round(Math.max(300, window.innerHeight * 0.55)) : 190;  // 크게: 화면 높이의 55%
     const pad = { l: 48, r: 54, t: 8, b: 22 };
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
     const n = dates.length;
-    const all = series.flatMap((s) => s.values).filter((v) => v != null);
+    const all = series.filter((s) => s.scale !== false).flatMap((s) => s.values).filter((v) => v != null);
     if (zero) all.push(0);
     let lo = Math.min(...all), hi = Math.max(...all);
     if (hi - lo < 1e-9) { lo -= Math.abs(lo) * 0.01 + 0.01; hi += Math.abs(hi) * 0.01 + 0.01; }
     const span = hi - lo; lo -= span * 0.06; hi += span * 0.06;
     const x = (i) => pad.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
     const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * ih;
-    const ticks = [0, 0.5, 1].map((f) => lo + (hi - lo) * (0.1 + 0.8 * f));
+    const ticks = (tall ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.5, 1]).map((f) => lo + (hi - lo) * (0.1 + 0.8 * f));
     const grid = ticks.map((v) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${y(v)}" y2="${y(v)}"/>
       <text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end">${esc(fmt(v))}</text>`).join("");
     const xl = (n === 1 ? [0] : [0, Math.floor((n - 1) / 2), n - 1]).map((i, k, arr) =>
@@ -257,19 +448,26 @@ function lineChart(el, { dates, series, fmt, zero }) {
         if (v == null) { pen = false; return; }
         dstr += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true;
       });
-      const dot = n === 1 && s.values[0] != null ? `<circle cx="${x(0)}" cy="${y(s.values[0])}" r="4" fill="${s.color}"/>` : "";
+      // 점이 적으면(1주·1개월) 하루하루가 보이게 점도 찍어요
+      const dot = n <= 30 && s.scale !== false ? s.values.map((v, i) => v == null ? "" :
+        `<circle cx="${x(i)}" cy="${y(v)}" r="${n === 1 ? 4 : 3}" fill="${s.color}"/>`).join("") : "";
       return `<path d="${dstr}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dot}`;
     }).join("");
     // 오른쪽 끝 직접 라벨 (겹치면 위아래로 벌려요)
     const ends = series.map((s) => {
       let i = s.values.length - 1; while (i >= 0 && s.values[i] == null) i--;
-      return i < 0 ? null : { s, v: s.values[i], y: y(s.values[i]) };
+      if (i < 0) return null;
+      const yy = y(s.values[i]), top = pad.t + 6, bottom = pad.t + ih - 2;
+      const arrow = yy < top ? "↑ " : yy > bottom ? "↓ " : "";  // 세로축 밖에 있는 선
+      return { s, v: s.values[i], y: Math.min(bottom, Math.max(top, yy)), arrow };
     }).filter(Boolean).sort((a, b) => a.y - b.y);
     for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 13) ends[k].y = ends[k - 1].y + 13;
-    const labels = ends.map((e) => `<text x="${pad.l + iw + 6}" y="${e.y + 4}" style="fill:var(--text-secondary)">${esc(fmt(e.v))}</text>`).join("");
+    const labels = ends.map((e) => `<text x="${pad.l + iw + 6}" y="${e.y + 4}" style="fill:var(--text-secondary)">${e.arrow}${esc(fmt(e.v))}</text>`).join("");
     const zl = zero ? `<line class="zero" x1="${pad.l}" x2="${pad.l + iw}" y1="${y(0)}" y2="${y(0)}"/>` : "";
+    const clip = `clip${Math.random().toString(36).slice(2, 8)}`;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(series.map((s) => s.name).join(", "))} 차트">
-      ${grid}${zl}${paths}${labels}${xl}
+      <defs><clipPath id="${clip}"><rect x="${pad.l - 4}" y="${pad.t}" width="${iw + 8}" height="${ih}"/></clipPath></defs>
+      ${grid}${zl}<g clip-path="url(#${clip})">${paths}</g>${labels}${xl}
       <g class="hover" style="display:none"><line class="cross" y1="${pad.t}" y2="${pad.t + ih}"/>
         ${series.map((s) => `<circle r="4.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2"/>`).join("")}</g>
       <rect x="${pad.l}" y="0" width="${iw}" height="${H}" fill="transparent"/></svg><div class="tip" style="display:none"></div>`;
@@ -283,7 +481,7 @@ function lineChart(el, { dates, series, fmt, zero }) {
       $("line", g).setAttribute("x1", cx); $("line", g).setAttribute("x2", cx);
       g.querySelectorAll("circle").forEach((c, k) => {
         const v = series[k].values[i];
-        c.style.display = v == null ? "none" : "";
+        c.style.display = v == null || y(v) < pad.t || y(v) > pad.t + ih ? "none" : "";
         if (v != null) { c.setAttribute("cx", cx); c.setAttribute("cy", y(v)); }
       });
       tip.innerHTML = `<div class="muted">${esc(dates[i])}</div>` + series.map((s) =>

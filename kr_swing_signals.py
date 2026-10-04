@@ -241,6 +241,25 @@ def us_payload(us, index_close, etf_close=None):
                 etf_close=round(etf_close, 2) if etf_close else None, series=index_series(index_close))
 
 
+def index_candles(symbol, years=5):
+    """대시보드 캔들 차트용 지수 일봉(시가·고가·저가·종가) years년치. 못 받으면 None (화면은 선 그래프로 대신해요)."""
+    try:
+        import yfinance as yf
+
+        h = yf.Ticker(symbol).history(period=f"{years}y", auto_adjust=False)[["Open", "High", "Low", "Close"]].dropna()
+    except Exception as e:  # 네트워크, 레이트리밋 등
+        print(f"지수 캔들 데이터를 못 받았어요: {e!r}")
+        return None
+    if h.empty:
+        return None
+    h.index = pd.to_datetime(h.index).tz_localize(None)
+
+    def col(name):
+        return [round(float(x), 2) for x in h[name]]
+
+    return dict(dates=[f"{d:%Y-%m-%d}" for d in h.index], o=col("Open"), h=col("High"), l=col("Low"), c=col("Close"))
+
+
 def rulebook_section(opens, closes, volumes, index_close, market):
     """사용자 규칙표 후보 (가상계좌로 나란히 검증 중). 반환: (텔레그램 문장, 대시보드용 목록)."""
     stocks = [c for c in closes.columns if c in MARKETS[market]["universe"]]
@@ -344,6 +363,7 @@ def main():
     text, payload = add_departments(text, payload, args.market, closes, index_close,
                                     us if args.market == "us" else market, [] if args.market == "us" else picks)
     if args.save_json:
+        payload["candles"] = index_candles(m["index"])
         save_json(args.save_json, payload)
     print(text)
     if not args.dry_run:
