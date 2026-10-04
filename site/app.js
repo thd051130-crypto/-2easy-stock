@@ -9,10 +9,13 @@ const US_ACTION = {
   cash: ["현금 유지", "S&P500 추세가 약하거나 변동성이 커서 사지 않아요."],
 };
 
-const PERIODS = [["1w", "1주", 5], ["1m", "1개월", 21], ["1y", "1년", 260]];  // 거래일 수
+// 캔들 하나의 기간과 처음 보이는 캔들 수: 일봉 1개월, 주봉 6개월, 월봉 3년, 년봉 전체
+const FRAMES = [["d", "일봉", 21], ["w", "주봉", 26], ["m", "월봉", 36], ["y", "년봉", 60]];
+const UNIT = { d: "일", w: "주", m: "개월", y: "년" };
 let DATA = null;
-let period = "1m";
-try { period = localStorage.getItem("period") || "1m"; } catch (e) { /* 기본값 */ }
+let frame = "d";
+try { frame = localStorage.getItem("frame") || "d"; } catch (e) { /* 기본값 */ }
+if (!FRAMES.some((f) => f[0] === frame)) frame = "d";
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 if (location.hash === "#us" || location.hash === "#kr") market = location.hash.slice(1);
@@ -94,29 +97,89 @@ function render() {
   }
   drawTrend(d);
   document.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
-    period = b.dataset.period;
-    try { localStorage.setItem("period", period); } catch (e) { /* 무시 */ }
+    frame = b.dataset.frame;
+    try { localStorage.setItem("frame", frame); } catch (e) { /* 무시 */ }
     document.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     drawTrend(d, true);
   }));
 }
 
-// 지수 추세: 고른 기간(1주·1개월·1년)만 잘라 그려요. 짧은 기간은 지수 움직임이 보이게 지수 기준으로 세로축을 맞춰요.
-// 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 종가 선 그래프
+// 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
+// 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프
 function drawTrend(d, reset) {
   const c = d.signal && d.signal.candles;
-  const days = (PERIODS.find((p) => p[0] === period) || PERIODS[1])[2];
   if (c && c.dates.length) {
-    candleChart($("#trend-chart"), c, days, reset, (txt) => { $("#trend-change").innerHTML = txt; });
+    const f = frameCandles(c, frame);
+    const show = (FRAMES.find((x) => x[0] === frame) || FRAMES[0])[2];
+    document.querySelectorAll(".ma-key").forEach((k) => { k.style.display = frame === "y" ? "none" : ""; });
+    candleChart($("#trend-chart"), f, show, reset, (txt) => { $("#trend-change").innerHTML = txt; });
     return;
   }
   drawTrendLine(d);
 }
 
+// 묶는 열쇠: 주(그 주 월요일 날짜), 월(YYYY-MM), 년(YYYY)
+const WEEK = (s) => {
+  const t = new Date(`${s}T00:00:00Z`);
+  t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7));
+  return t.toISOString().slice(0, 10);
+};
+const KEY = { d: (s) => s, w: WEEK, m: (s) => s.slice(0, 7), y: (s) => s.slice(0, 4) };
+
+// 시가는 첫날, 고가·저가는 기간 중 최고·최저, 종가는 마지막 날로 묶어요.
+function groupCandles(src, keyOf) {
+  const out = { keys: [], first: [], last: [], o: [], h: [], l: [], c: [] };
+  src.dates.forEach((dt, i) => {
+    const k = keyOf(dt), j = out.keys.length - 1;
+    if (j < 0 || out.keys[j] !== k) {
+      out.keys.push(k); out.first.push(dt); out.last.push(dt);
+      out.o.push(src.o[i]); out.h.push(src.h[i]); out.l.push(src.l[i]); out.c.push(src.c[i]);
+    } else {
+      out.last[j] = dt; out.h[j] = Math.max(out.h[j], src.h[i]); out.l[j] = Math.min(out.l[j], src.l[i]); out.c[j] = src.c[i];
+    }
+  });
+  return out;
+}
+const dropFirst = (f) => (f.keys.length > 1 ? Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v.slice(1)])) : f);
+
+// 일봉(5년치)·월봉(전체 기간)으로 고른 기간의 캔들을 만들어요.
+// 50일선·200일선은 각 캔들 기간 마지막 거래일의 값이에요 (일봉이 있는 최근 몇 년만, 년봉엔 안 그려요).
+function frameCandles(c, fr) {
+  let f;
+  if (fr === "d") f = groupCandles(c, KEY.d);
+  else if (fr === "w") f = dropFirst(groupCandles(c, KEY.w));  // 첫 주는 중간부터일 수 있어서 빼요
+  else if (c.monthly && c.monthly.dates.length) {
+    f = groupCandles(c.monthly, fr === "m" ? KEY.m : KEY.y);
+    if (fr === "y" && f.first[0].slice(5, 7) !== "01") f = dropFirst(f);  // 1월부터가 아닌 첫 해는 빼요
+  } else f = dropFirst(groupCandles(c, KEY[fr]));  // 월봉이 없는 예전 기록: 일봉을 묶어요
+  const n = c.dates.length;
+  const ma = (k) => {
+    const out = new Array(n).fill(null); let sum = 0;
+    for (let i = 0; i < n; i++) { sum += c.c[i]; if (i >= k) sum -= c.c[i - k]; if (i >= k - 1) out[i] = sum / k; }
+    return out;
+  };
+  const ma50 = ma(50), ma200 = ma(200), lastDay = new Map();
+  c.dates.forEach((dt, i) => lastDay.set(KEY[fr](dt), i));
+  const pick = (vals) => f.keys.map((k) => (fr === "y" || !lastDay.has(k) ? null : vals[lastDay.get(k)]));
+  return { ...f, ma50: pick(ma50), ma200: pick(ma200), frame: fr };
+}
+
+// 캔들 이름: axis = 아래 날짜 축, short = 최고·최저 표시, full = 눌렀을 때
+function frameLabel(f, i, kind) {
+  const a = f.first[i], b = f.last[i];
+  if (f.frame === "y") return kind === "full" ? `${f.keys[i]}년` : f.keys[i];
+  if (f.frame === "m") {
+    const [y, m] = f.keys[i].split("-");
+    return kind === "full" ? `${y}년 ${Number(m)}월` : `${y.slice(2)}.${m}`;
+  }
+  if (f.frame === "w") return kind === "full" ? `${a} ~ ${b.slice(5)}` : kind === "short" ? `${md(a)} 주` : a.slice(2).replace(/-/g, ".");
+  return kind === "full" ? b : kind === "short" ? md(b) : b.slice(2).replace(/-/g, ".");
+}
+
 function drawTrendLine(d) {
   const s = d.signal && d.signal.series;
   if (!s || !s.dates.length) return;
-  const days = (PERIODS.find((p) => p[0] === period) || PERIODS[2])[2];
+  const days = 260;
   const cut = (arr) => arr.slice(-days - 1);  // 기간 시작 전날 종가부터 (변화율 기준점)
   const close = cut(s.close);
   lineChart($("#trend-chart"), {
@@ -130,9 +193,8 @@ function drawTrendLine(d) {
     tall: true,
   });
   const first = close.find((v) => v != null), last = close[close.length - 1];
-  const label = (PERIODS.find((p) => p[0] === period) || PERIODS[2])[1];
   $("#trend-change").innerHTML = first && last
-    ? `최근 ${label} <b class="${sign(last / first - 1)}">${pct(last / first - 1)}</b> (${num(first)} → ${num(last)})` : "";
+    ? `최근 1년 <b class="${sign(last / first - 1)}">${pct(last / first - 1)}</b> (${num(first)} → ${num(last)})` : "";
 }
 
 function signalCard(d) {
@@ -235,22 +297,22 @@ function tradesCard(d) {
 
 function trendCard(d) {
   if (!d.signal) return "";
-  const buttons = PERIODS.map(([key, label]) =>
-    `<button type="button" data-period="${key}" aria-pressed="${key === period}">${label}</button>`).join("");
+  const buttons = FRAMES.map(([key, label]) =>
+    `<button type="button" data-frame="${key}" aria-pressed="${key === frame}">${label}</button>`).join("");
   return `<section class="card"><h2>${esc(d.index_name)} 추세</h2>
-    <div class="period" role="group" aria-label="기간">${buttons}</div>
+    ${d.signal.candles ? `<div class="period" role="group" aria-label="캔들 기간">${buttons}</div>` : ""}
     <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>
     ${d.signal.candles ? `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
       <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
-      <span class="key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
-      <span class="key"><i class="sw" style="background:var(--ma200)"></i>200일선</span></div>` : `<div class="legend">
+      <span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
+      <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span></div>` : `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--series-1)"></i>${esc(d.index_name)}</span>
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>50일선</span>
       <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
     <div class="chart candle" id="trend-chart"></div>
     <p class="muted" style="margin:8px 0 0">${d.signal.candles
-      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 시가·고가·저가·종가가 보여요. "
+      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. "
       : ""}지수가 두 이동평균선 위에 있을 때만 새로 사요.</p></section>`;
 }
 
@@ -286,16 +348,17 @@ function rulesCard(d) {
 }
 
 // 캔들 차트 (SVG). 가격 축은 오른쪽, 보이는 구간의 최고·최저를 표시해요.
-// 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그날 값.
+// 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그 캔들 값.
 const VIEW = {};  // 차트별 보기 상태 (보이는 캔들 수, 마지막 캔들 위치)
-function candleChart(el, c, days, reset, onRange) {
+// c = frameCandles()가 만든 캔들 (일봉·주봉·월봉·년봉), show = 처음 보이는 캔들 수
+function candleChart(el, c, show, reset, onRange) {
   if (!el) return;
-  const n = c.dates.length;
-  const ma = (k) => { const out = new Array(n).fill(null); let sum = 0;
-    for (let i = 0; i < n; i++) { sum += c.c[i]; if (i >= k) sum -= c.c[i - k]; if (i >= k - 1) out[i] = sum / k; } return out; };
-  const ma50 = ma(50), ma200 = ma(200);
+  const n = c.keys.length;
+  const { ma50, ma200 } = c;
   const key = el.id;
-  if (reset || !VIEW[key] || VIEW[key].n !== n) VIEW[key] = { count: Math.min(days, n), end: n - 1, n, pick: null };
+  if (reset || !VIEW[key] || VIEW[key].n !== n || VIEW[key].frame !== c.frame) {
+    VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: c.frame, pick: null };
+  }
   const v = VIEW[key];
   const fmt = (x) => num(x);
   let W = 0, H = 0, pad, iw, ih, cw, start, lo, hi;
@@ -305,7 +368,7 @@ function candleChart(el, c, days, reset, onRange) {
     H = Math.round(Math.max(300, window.innerHeight * 0.55));
     pad = { l: 6, r: 62, t: 22, b: 22 };
     iw = W - pad.l - pad.r; ih = H - pad.t - pad.b;
-    v.count = Math.max(5, Math.min(n, v.count));
+    v.count = Math.max(Math.min(5, n), Math.min(n, v.count));
     v.end = Math.max(v.count - 1, Math.min(n - 1, v.end));
     const endI = Math.round(v.end);
     start = endI - Math.round(v.count) + 1;
@@ -342,7 +405,7 @@ function candleChart(el, c, days, reset, onRange) {
       const x = X(i), y = Y(price), right = x < pad.l + iw * 0.6;
       const tx = right ? x + 6 : x - 6, ty = above ? y - 6 : y + 14;
       return `<line class="mark" x1="${x}" x2="${right ? x + 4 : x - 4}" y1="${y}" y2="${y}"/>
-        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${label} ${esc(fmt(price))} (${md(c.dates[i])})</text>`;
+        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${label} ${esc(fmt(price))} (${esc(frameLabel(c, i, "short"))})</text>`;
     };
     // 지금 값 표시 (오른쪽 축, 마지막 캔들 색)
     const last = c.c[n - 1], lastCls = last >= c.o[n - 1] ? "up" : "down";
@@ -351,20 +414,20 @@ function candleChart(el, c, days, reset, onRange) {
       <rect class="tag ${lastCls}" x="${pad.l + iw + 1}" y="${ly - 9}" width="${pad.r - 2}" height="18" rx="3"/>
       <text class="tag-text" x="${pad.l + iw + 6}" y="${ly + 4}">${esc(fmt(last))}</text>`;
     const xs = [start, Math.round((start + endI) / 2), endI];
-    const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(c.dates[i].slice(2).replace(/-/g, "."))}</text>`).join("");
+    const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(frameLabel(c, i, "axis"))}</text>`).join("");
     const clip = `cc-${key}`;
     let pickSvg = "";
     if (v.pick != null && v.pick >= start && v.pick <= endI) {
       pickSvg = `<line class="cross" x1="${X(v.pick)}" x2="${X(v.pick)}" y1="${pad.t}" y2="${pad.t + ih}"/>`;
     }
-    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="지수 캔들 차트">
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="지수 ${(FRAMES.find((x) => x[0] === c.frame) || FRAMES[0])[1]} 차트">
       <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath></defs>
       ${grid}<g clip-path="url(#${clip})">${line(ma200, "ma ma200")}${line(ma50, "ma ma50")}${bodies}${pickSvg}</g>
       ${mark(hiI, c.h[hiI], "최고", true)}${mark(loI, c.l[loI], "최저", false)}${nowTag}${xl}</svg>
       <div class="tip" style="display:none"></div>`;
     const first = start > 0 ? c.c[start - 1] : c.o[start];
     const ch = c.c[endI] / first - 1;
-    onRange(`${c.dates[start].slice(2).replace(/-/g, ".")} ~ ${c.dates[endI].slice(2).replace(/-/g, ".")} (${Math.round(v.count)}일) `
+    onRange(`${esc(frameLabel(c, start, "axis"))} ~ ${esc(frameLabel(c, endI, "axis"))} (${Math.round(v.count)}${UNIT[c.frame]}) `
       + `<b class="${sign(ch)}">${pct(ch)}</b> · 최고 ${fmt(c.h[hiI])} · 최저 ${fmt(c.l[loI])}`);
     if (v.pick != null && v.pick >= start && v.pick <= endI) showTip(v.pick, X(v.pick));
   };
@@ -372,7 +435,7 @@ function candleChart(el, c, days, reset, onRange) {
   const showTip = (i, x) => {
     const tip = $(".tip", el);
     const prev = i > 0 ? c.c[i - 1] : c.o[i], ch = c.c[i] / prev - 1;
-    tip.innerHTML = `<div class="muted">${esc(c.dates[i])}</div>
+    tip.innerHTML = `<div class="muted">${esc(frameLabel(c, i, "full"))}</div>
       <div class="row">시가 <b>${fmt(c.o[i])}</b></div><div class="row">고가 <b>${fmt(c.h[i])}</b></div>
       <div class="row">저가 <b>${fmt(c.l[i])}</b></div><div class="row">종가 <b>${fmt(c.c[i])}</b> <span class="${sign(ch)}">${pct(ch, 2)}</span></div>
       ${ma50[i] ? `<div class="row">50일선 <b>${fmt(ma50[i])}</b></div>` : ""}${ma200[i] ? `<div class="row">200일선 <b>${fmt(ma200[i])}</b></div>` : ""}`;
@@ -425,9 +488,15 @@ function candleChart(el, c, days, reset, onRange) {
   el.onpointercancel = (e) => { pts.delete(e.pointerId); if (!pts.size) gesture = null; };
   el.onwheel = (e) => { e.preventDefault(); v.count *= e.deltaY > 0 ? 1.15 : 1 / 1.15; redraw(); };
   draw();
-  let w = el.clientWidth;
+  // 화면 폭이 바뀌면(폰 돌리기) 지금 고른 기간으로 다시 그려요. 탭을 바꿔 사라진 예전 차트는 다시 그리지 않아요
+  // (안 그러면 예전 차트가 위의 기간·최고·최저 문구를 덮어써요).
+  el._draw = draw;
   if (!el._ro) {
-    el._ro = new ResizeObserver(() => { if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; draw(); } });
+    let w = el.clientWidth;
+    el._ro = new ResizeObserver(() => {
+      if (!el.isConnected) { el._ro.disconnect(); return; }
+      if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; el._draw(); }
+    });
     el._ro.observe(el);
   }
 }

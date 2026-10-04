@@ -106,3 +106,13 @@ def test_kr_payload_carries_rule_opinion():
     row = ks.kr_payload(market, [pick], index_close)["picks"][0]
     assert row["stop"] == 57000.0
     assert row["opinion"][0].startswith("이유:") and row["opinion"][1].startswith("위험:")
+
+
+def test_monthly_ohlc_merges_duplicate_month_rows():
+    # 야후 월봉은 이번 달이 두 줄(월초 + 마지막 거래일)로 올 때가 있어요
+    idx = pd.to_datetime(["2026-08-01", "2026-09-01", "2026-10-01", "2026-10-02"]).tz_localize("Asia/Seoul")
+    h = pd.DataFrame({"Open": [10, 20, 30, 31], "High": [15, 25, 35, 40], "Low": [9, 19, 29, 28],
+                      "Close": [14, 24, 34, 39]}, index=idx)
+    m = ks.ohlc_payload(ks.monthly_ohlc(h), "%Y-%m")
+    assert m == dict(dates=["2026-08", "2026-09", "2026-10"], o=[10, 20, 30], h=[15, 25, 40], l=[9, 19, 28],
+                     c=[14, 24, 39])
