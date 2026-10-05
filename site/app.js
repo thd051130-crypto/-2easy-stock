@@ -21,6 +21,13 @@ let DATA = null;
 let frame = "d";
 try { frame = localStorage.getItem("frame") || "d"; } catch (e) { /* 기본값 */ }
 if (!FRAMES.some((f) => f[0] === frame)) frame = "d";
+// 차트 보조지표 켜기·끄기 (이 폰 브라우저에 기억해요). 처음엔 이동평균선만 켜져 있어요.
+const IND_KEYS = [["ma", "이동평균선"], ["bb", "볼린저밴드"], ["vol", "거래량"], ["rsi", "RSI"]];
+const IND = { ma: true, bb: false, vol: false, rsi: false };
+try {
+  const saved = JSON.parse(localStorage.getItem("ind") || "{}");
+  for (const [k] of IND_KEYS) if (typeof (saved && saved[k]) === "boolean") IND[k] = saved[k];
+} catch (e) { /* 기본값 */ }
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
@@ -157,6 +164,11 @@ function render() {
       try { localStorage.setItem("frame", frame); } catch (e) { /* 무시 */ }
       app.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       drawTrend(d, true);
+    }));
+    app.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => {
+      IND[b.dataset.ind] = !IND[b.dataset.ind];
+      try { localStorage.setItem("ind", JSON.stringify(IND)); } catch (e) { /* 이번만 기억 */ }
+      render();  // 보던 구간·확대는 그대로 두고 지표만 다시 그려요
     }));
   }
 }
@@ -452,7 +464,7 @@ function drawTrend(d, reset) {
     const f = frameCandles(c, frame);
     const show = (FRAMES.find((x) => x[0] === frame) || FRAMES[0])[2];
     document.querySelectorAll(".ma-key").forEach((k) => { k.style.display = frame === "y" ? "none" : ""; });
-    candleChart($("#trend-chart"), f, show, reset, (txt) => { $("#trend-change").innerHTML = txt; });
+    candleChart($("#trend-chart"), f, show, reset, (txt) => { $("#trend-change").innerHTML = txt; }, { name: d.index_name });
     return;
   }
   drawTrendLine(d);
@@ -466,16 +478,20 @@ const WEEK = (s) => {
 };
 const KEY = { d: (s) => s, w: WEEK, m: (s) => s.slice(0, 7), y: (s) => s.slice(0, 4) };
 
-// 시가는 첫날, 고가·저가는 기간 중 최고·최저, 종가는 마지막 날로 묶어요.
+// 시가는 첫날, 고가·저가는 기간 중 최고·최저, 종가는 마지막 날, 거래량은 기간 합계로 묶어요.
 function groupCandles(src, keyOf) {
   const out = { keys: [], first: [], last: [], o: [], h: [], l: [], c: [] };
+  const vol = Array.isArray(src.v) && src.v.length === src.dates.length;
+  if (vol) out.v = [];
   src.dates.forEach((dt, i) => {
     const k = keyOf(dt), j = out.keys.length - 1;
     if (j < 0 || out.keys[j] !== k) {
       out.keys.push(k); out.first.push(dt); out.last.push(dt);
       out.o.push(src.o[i]); out.h.push(src.h[i]); out.l.push(src.l[i]); out.c.push(src.c[i]);
+      if (vol) out.v.push(src.v[i]);
     } else {
       out.last[j] = dt; out.h[j] = Math.max(out.h[j], src.h[i]); out.l[j] = Math.min(out.l[j], src.l[i]); out.c[j] = src.c[i];
+      if (vol) out.v[j] += src.v[i];
     }
   });
   return out;
@@ -492,16 +508,42 @@ function frameCandles(c, fr) {
     f = groupCandles(c.monthly, fr === "m" ? KEY.m : KEY.y);
     if (fr === "y" && f.first[0].slice(5, 7) !== "01") f = dropFirst(f);  // 1월부터가 아닌 첫 해는 빼요
   } else f = dropFirst(groupCandles(c, KEY[fr]));  // 월봉이 없는 예전 기록: 일봉을 묶어요
-  const n = c.dates.length;
-  const ma = (k) => {
-    const out = new Array(n).fill(null); let sum = 0;
-    for (let i = 0; i < n; i++) { sum += c.c[i]; if (i >= k) sum -= c.c[i - k]; if (i >= k - 1) out[i] = sum / k; }
-    return out;
-  };
-  const ma50 = ma(50), ma200 = ma(200), lastDay = new Map();
+  const ma50 = smaOf(c.c, 50), ma200 = smaOf(c.c, 200), lastDay = new Map();
   c.dates.forEach((dt, i) => lastDay.set(KEY[fr](dt), i));
   const pick = (vals) => f.keys.map((k) => (fr === "y" || !lastDay.has(k) ? null : vals[lastDay.get(k)]));
-  return { ...f, ma50: pick(ma50), ma200: pick(ma200), frame: fr };
+  return withIndicators({ ...f, ma50: pick(ma50), ma200: pick(ma200), frame: fr });
+}
+
+// 보조지표는 지금 보는 캔들로 계산해요 (주봉이면 20주 볼린저밴드, 14주 RSI). 앞쪽 계산이 모자란 캔들은 null.
+function smaOf(vals, k) {
+  const out = new Array(vals.length).fill(null); let sum = 0;
+  for (let i = 0; i < vals.length; i++) { sum += vals[i]; if (i >= k) sum -= vals[i - k]; if (i >= k - 1) out[i] = sum / k; }
+  return out;
+}
+// 볼린저밴드: 20개 평균 ± 표준편차 2배
+function bandsOf(cl, k = 20, m = 2) {
+  const mid = smaOf(cl, k), up = mid.slice(), lo = mid.slice();
+  for (let i = k - 1; i < cl.length; i++) {
+    let ss = 0;
+    for (let j = i - k + 1; j <= i; j++) ss += (cl[j] - mid[i]) ** 2;
+    const sd = Math.sqrt(ss / k);
+    up[i] = mid[i] + m * sd; lo[i] = mid[i] - m * sd;
+  }
+  return { mid, up, lo };
+}
+// RSI: 신호 계산(kr_swing_backtest.rsi)과 같은 방식 (오른 폭·내린 폭의 지수평균, 1/n씩 반영)
+function rsiOf(cl, n = 14) {
+  const out = new Array(cl.length).fill(null);
+  let g = null, l = null;
+  for (let i = 1; i < cl.length; i++) {
+    const d = cl[i] - cl[i - 1], up = Math.max(d, 0), dn = Math.max(-d, 0);
+    if (g == null) { g = up; l = dn; } else { g += (up - g) / n; l += (dn - l) / n; }
+    if (i >= n) out[i] = l === 0 ? (g === 0 ? 50 : 100) : 100 - 100 / (1 + g / l);
+  }
+  return out;
+}
+function withIndicators(f) {
+  return { ...f, bb: bandsOf(f.c), rsi: rsiOf(f.c), vma: f.v ? smaOf(f.v, 20) : null };
 }
 
 // 캔들 이름: axis = 아래 날짜 축, short = 최고·최저 표시, full = 눌렀을 때
@@ -642,23 +684,45 @@ function tradesCard(d) {
 
 function trendCard(d) {
   if (!d.signal) return "";
+  const cd = d.signal.candles;
   const buttons = FRAMES.map(([key, label]) =>
     `<button type="button" data-frame="${key}" aria-pressed="${key === frame}">${label}</button>`).join("");
   return `<section class="card"><h2>${esc(d.index_name)} 추세</h2>
-    ${d.signal.candles ? `<div class="period" role="group" aria-label="캔들 기간">${buttons}</div>` : ""}
+    ${cd ? `<div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips(cd)}` : ""}
     <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>
-    ${d.signal.candles ? `<div class="legend">
+    ${cd ? `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
       <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
-      <span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
-      <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span></div>` : `<div class="legend">
+      ${IND.ma ? `<span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
+      <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span>` : ""}
+      ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>` : `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--series-1)"></i>${esc(d.index_name)}</span>
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>50일선</span>
       <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
     <div class="chart candle" id="trend-chart"></div>
-    <p class="muted" style="margin:8px 0 0">${d.signal.candles
+    <p class="muted" style="margin:8px 0 0">${cd
       ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. "
-      : ""}${TREND_RULE[market]}</p></section>`;
+      : ""}${TREND_RULE[market]}</p>${cd ? indHelp() : ""}</section>`;
+}
+
+// 보조지표 버튼 (여러 개 같이 켤 수 있어요). 거래량 자료가 없는 예전 기록이면 거래량 버튼은 못 눌러요.
+function indChips(cd) {
+  const chips = IND_KEYS.map(([k, label]) => {
+    const off = k === "vol" && !(Array.isArray(cd.v) && cd.v.length);
+    return `<button type="button" class="chip" data-ind="${k}" aria-pressed="${IND[k] && !off}"${off ? " disabled" : ""}>${label}</button>`;
+  }).join("");
+  return `<div class="chips" role="group" aria-label="보조지표">${chips}</div>`;
+}
+
+const IND_HELP = {
+  bb: "볼린저밴드: 가운데 점선은 최근 20개 캔들 평균, 띠는 평소 움직이는 범위(표준편차 2배)예요. 띠 밖으로 나가면 평소보다 크게 움직인 거예요.",
+  vol: "거래량: 막대가 길수록 많이 사고판 날이에요. 막대가 평균선보다 훨씬 길면 평소보다 관심이 몰린 거예요.",
+  rsi: "RSI(14): 최근 14개 캔들 동안 오른 힘과 내린 힘을 0~100으로 나타내요. 70 위면 많이 올라 과열, 30 아래면 많이 내린 상태로 봐요.",
+};
+function indHelp() {
+  const items = IND_KEYS.filter(([k]) => IND[k] && IND_HELP[k]).map(([k]) => `<li>${IND_HELP[k]}</li>`);
+  if (!items.length) return "";
+  return `<ul class="help">${items.join("")}<li>보조지표는 지금 보는 캔들로 계산해요. 주봉이면 20주 평균, 14주 RSI예요.</li></ul>`;
 }
 
 // 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요).
@@ -702,23 +766,33 @@ function rulesCard(d) {
 // 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그 캔들 값.
 const VIEW = {};  // 차트별 보기 상태 (보이는 캔들 수, 마지막 캔들 위치)
 // c = frameCandles()가 만든 캔들 (일봉·주봉·월봉·년봉), show = 처음 보이는 캔들 수
-function candleChart(el, c, show, reset, onRange) {
+// opts: fmt = 가격 표시, name = 차트 이름, ind = 켜 둔 보조지표 (이동평균선·볼린저밴드는 캔들 위에,
+// 거래량·RSI는 캔들 아래 칸에 같은 날짜 축으로 그려요)
+function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", ind = IND } = {}) {
   if (!el) return;
   const n = c.keys.length;
-  const { ma50, ma200 } = c;
+  const { ma50, ma200, bb, rsi } = c;
   const key = el.id;
   if (reset || !VIEW[key] || VIEW[key].n !== n || VIEW[key].frame !== c.frame) {
     VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: c.frame, pick: null };
   }
   const v = VIEW[key];
-  const fmt = (x) => num(x);
-  let W = 0, H = 0, pad, iw, ih, cw, start, lo, hi;
+  let W = 0, H = 0, pad, iw, ih, cw, start, lo, hi, bottom;
+  let volOn = false;
 
   const draw = () => {
+    volOn = Boolean(ind.vol && c.v && c.v.some((x) => x > 0));
     W = Math.max(el.clientWidth, 260);
-    H = Math.round(Math.max(300, window.innerHeight * 0.55));
     pad = { l: 6, r: 62, t: 22, b: 22 };
-    iw = W - pad.l - pad.r; ih = H - pad.t - pad.b;
+    // 아래 칸(거래량·RSI)을 켜면 캔들 칸을 조금 줄여서 한 화면에 더 많이 보이게 해요
+    const paneH = (volOn ? 82 : 0) + (ind.rsi ? 90 : 0);
+    iw = W - pad.l - pad.r;
+    ih = Math.round(Math.max(paneH ? 260 : 300, window.innerHeight * 0.55 - paneH * 0.6)) - pad.t - pad.b;
+    const panes = [];
+    bottom = pad.t + ih;
+    if (volOn) { panes.push({ kind: "vol", top: bottom + 26, h: 56 }); bottom += 26 + 56; }
+    if (ind.rsi) { panes.push({ kind: "rsi", top: bottom + 26, h: 64 }); bottom += 26 + 64; }
+    H = bottom + pad.b;
     v.count = Math.max(Math.min(5, n), Math.min(n, v.count));
     v.end = Math.max(v.count - 1, Math.min(n - 1, v.end));
     const endI = Math.round(v.end);
@@ -727,6 +801,9 @@ function candleChart(el, c, show, reset, onRange) {
     let hiI = start, loI = start;
     for (let i = start; i <= endI; i++) { if (c.h[i] > c.h[hiI]) hiI = i; if (c.l[i] < c.l[loI]) loI = i; }
     hi = c.h[hiI]; lo = c.l[loI];
+    if (ind.bb) {  // 볼린저밴드가 잘리지 않게 세로 범위를 넓혀요
+      for (let i = start; i <= endI; i++) if (bb.up[i] != null) { hi = Math.max(hi, bb.up[i]); lo = Math.min(lo, bb.lo[i]); }
+    }
     const span = hi - lo || hi * 0.01; hi += span * 0.08; lo -= span * 0.08;
     const X = (i) => pad.l + (i - start + 0.5) * cw;
     const Y = (p) => pad.t + (1 - (p - lo) / (hi - lo)) * ih;
@@ -743,14 +820,27 @@ function candleChart(el, c, show, reset, onRange) {
       bodies += `<line class="wick ${cls}" x1="${x}" x2="${x}" y1="${Y(c.h[i])}" y2="${Y(c.l[i])}"/>`
         + (cw >= 3 ? `<rect class="body ${cls}" x="${x - bw / 2}" y="${top}" width="${bw}" height="${bh}"/>` : "");
     }
-    const line = (vals, cls) => {
+    const line = (vals, cls, Yf = Y) => {
       let dstr = "", pen = false;
       for (let i = start; i <= endI; i++) {
         const val = vals[i]; if (val == null) { pen = false; continue; }
-        dstr += `${pen ? "L" : "M"}${X(i).toFixed(1)},${Y(val).toFixed(1)}`; pen = true;
+        dstr += `${pen ? "L" : "M"}${X(i).toFixed(1)},${Yf(val).toFixed(1)}`; pen = true;
       }
-      return `<path class="${cls}" d="${dstr}"/>`;
+      return dstr ? `<path class="${cls}" d="${dstr}"/>` : "";
     };
+    // 볼린저밴드: 위·아래 선 사이를 옅게 칠하고 가운데(20개 평균)는 점선
+    let bands = "";
+    if (ind.bb) {
+      const idx = [];
+      for (let i = start; i <= endI; i++) if (bb.up[i] != null) idx.push(i);
+      if (idx.length > 1) {
+        const upper = idx.map((i) => `${X(i).toFixed(1)},${Y(bb.up[i]).toFixed(1)}`);
+        const lower = idx.slice().reverse().map((i) => `${X(i).toFixed(1)},${Y(bb.lo[i]).toFixed(1)}`);
+        bands = `<path class="bb-fill" d="M${upper.join("L")}L${lower.join("L")}Z"/>`
+          + line(bb.up, "bb") + line(bb.lo, "bb") + line(bb.mid, "bb bb-mid");
+      }
+    }
+    const mas = ind.ma ? line(ma200, "ma ma200") + line(ma50, "ma ma50") : "";
     // 최고·최저 표시 (캔들 옆에 가격, 화면 밖으로 안 나가게 좌우를 골라요)
     const mark = (i, price, label, above) => {
       const x = X(i), y = Y(price), right = x < pad.l + iw * 0.6;
@@ -764,16 +854,41 @@ function candleChart(el, c, show, reset, onRange) {
     const nowTag = `<line class="now ${lastCls}" x1="${pad.l}" x2="${pad.l + iw}" y1="${ly}" y2="${ly}"/>
       <rect class="tag ${lastCls}" x="${pad.l + iw + 1}" y="${ly - 9}" width="${pad.r - 2}" height="18" rx="3"/>
       <text class="tag-text" x="${pad.l + iw + 6}" y="${ly + 4}">${esc(fmt(last))}</text>`;
+    const clip = `cc-${key}`;
+    // 아래 칸: 거래량 막대(캔들 색) + 20개 평균선, RSI 선 + 70·30 기준선
+    const paneSvg = panes.map((p) => {
+      const head = `<text class="pane-label" x="${pad.l}" y="${p.top - 7}">${p.kind === "vol" ? "거래량 (선: 20개 평균)" : "RSI(14) · 70 위 과열, 30 아래 침체"}</text>
+        <line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${p.top + p.h}" y2="${p.top + p.h}"/>`;
+      if (p.kind === "vol") {
+        let vmax = 1;
+        for (let i = start; i <= endI; i++) vmax = Math.max(vmax, c.v[i] || 0, (c.vma && c.vma[i]) || 0);
+        const Yv = (x) => p.top + p.h - (x / vmax) * p.h;
+        let bars = "";
+        for (let i = start; i <= endI; i++) {
+          const cls = c.c[i] > c.o[i] ? "up" : c.c[i] < c.o[i] ? "down" : "flat", y = Yv(c.v[i] || 0);
+          bars += `<rect class="vol ${cls}" x="${X(i) - bw / 2}" y="${y}" width="${bw}" height="${p.top + p.h - y}"/>`;
+        }
+        return `${head}<g clip-path="url(#${clip}-p)">${bars}${c.vma ? line(c.vma, "vol-ma", Yv) : ""}</g>`;
+      }
+      const Yr = (x) => p.top + (1 - x / 100) * p.h;
+      const now = rsi[n - 1];
+      const guide = (lv) => `<line class="guide" x1="${pad.l}" x2="${pad.l + iw}" y1="${Yr(lv)}" y2="${Yr(lv)}"/>`
+        + (now != null && Math.abs(Yr(now) - Yr(lv)) < 14 ? "" : `<text x="${pad.l + iw + 6}" y="${Yr(lv) + 4}">${lv}</text>`);
+      // 지금 RSI는 가격처럼 오른쪽에 색 딱지로 (딱지와 겹치는 70·30 숫자는 빼요)
+      const tag = now == null ? "" : `<rect class="rsi-tag" x="${pad.l + iw + 1}" y="${Yr(now) - 8}" width="34" height="16" rx="3"/>
+        <text class="tag-text" x="${pad.l + iw + 6}" y="${Yr(now) + 4}">${Math.round(now)}</text>`;
+      return `${head}${guide(70)}${guide(30)}<g clip-path="url(#${clip}-p)">${line(rsi, "rsi", Yr)}</g>${tag}`;
+    }).join("");
     const xs = [start, Math.round((start + endI) / 2), endI];
     const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(frameLabel(c, i, "axis"))}</text>`).join("");
-    const clip = `cc-${key}`;
     let pickSvg = "";
     if (v.pick != null && v.pick >= start && v.pick <= endI) {
-      pickSvg = `<line class="cross" x1="${X(v.pick)}" x2="${X(v.pick)}" y1="${pad.t}" y2="${pad.t + ih}"/>`;
+      pickSvg = `<line class="cross" x1="${X(v.pick)}" x2="${X(v.pick)}" y1="${pad.t}" y2="${bottom}"/>`;
     }
-    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="지수 ${(FRAMES.find((x) => x[0] === c.frame) || FRAMES[0])[1]} 차트">
-      <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath></defs>
-      ${grid}<g clip-path="url(#${clip})">${line(ma200, "ma ma200")}${line(ma50, "ma ma50")}${bodies}${pickSvg}</g>
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(name)} ${(FRAMES.find((x) => x[0] === c.frame) || FRAMES[0])[1]} 차트">
+      <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath>
+        <clipPath id="${clip}-p"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${bottom - pad.t + 4}"/></clipPath></defs>
+      ${grid}<g clip-path="url(#${clip})">${bands}${mas}${bodies}</g>${paneSvg}${pickSvg}
       ${mark(hiI, c.h[hiI], "최고", true)}${mark(loI, c.l[loI], "최저", false)}${nowTag}${xl}</svg>
       <div class="tip" style="display:none"></div>`;
     const first = start > 0 ? c.c[start - 1] : c.o[start];
@@ -786,10 +901,15 @@ function candleChart(el, c, show, reset, onRange) {
   const showTip = (i, x) => {
     const tip = $(".tip", el);
     const prev = i > 0 ? c.c[i - 1] : c.o[i], ch = c.c[i] / prev - 1;
+    const row = (label, val) => `<div class="row">${label} <b>${val}</b></div>`;
+    let more = "";
+    if (ind.ma) more += (ma50[i] ? row("50일선", fmt(ma50[i])) : "") + (ma200[i] ? row("200일선", fmt(ma200[i])) : "");
+    if (ind.bb && bb.up[i] != null) more += row("볼린저 위", fmt(bb.up[i])) + row("볼린저 아래", fmt(bb.lo[i]));
+    if (volOn && c.vma && c.vma[i]) more += row("거래량", `평소의 ${(c.v[i] / c.vma[i]).toFixed(1)}배`);
+    if (ind.rsi && rsi[i] != null) more += row("RSI", Math.round(rsi[i]));
     tip.innerHTML = `<div class="muted">${esc(frameLabel(c, i, "full"))}</div>
-      <div class="row">시가 <b>${fmt(c.o[i])}</b></div><div class="row">고가 <b>${fmt(c.h[i])}</b></div>
-      <div class="row">저가 <b>${fmt(c.l[i])}</b></div><div class="row">종가 <b>${fmt(c.c[i])}</b> <span class="${sign(ch)}">${pct(ch, 2)}</span></div>
-      ${ma50[i] ? `<div class="row">50일선 <b>${fmt(ma50[i])}</b></div>` : ""}${ma200[i] ? `<div class="row">200일선 <b>${fmt(ma200[i])}</b></div>` : ""}`;
+      ${row("시가", fmt(c.o[i]))}${row("고가", fmt(c.h[i]))}${row("저가", fmt(c.l[i]))}
+      <div class="row">종가 <b>${fmt(c.c[i])}</b> <span class="${sign(ch)}">${pct(ch, 2)}</span></div>${more}`;
     tip.style.display = "";
     const r = el.getBoundingClientRect(), left = (x / W) * r.width, tw = tip.offsetWidth;
     tip.style.left = `${Math.max(0, Math.min(r.width - tw, left > r.width / 2 ? left - tw - 12 : left + 12))}px`;

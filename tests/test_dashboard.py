@@ -116,3 +116,6 @@ def test_monthly_ohlc_merges_duplicate_month_rows():
     m = ks.ohlc_payload(ks.monthly_ohlc(h), "%Y-%m")
     assert m == dict(dates=["2026-08", "2026-09", "2026-10"], o=[10, 20, 30], h=[15, 25, 40], l=[9, 19, 28],
                      c=[14, 24, 39])
+    # 거래량이 있으면 달별로 더해서 v로 (보조지표 거래량 막대)
+    h["Volume"] = [100, 200, 300, 50]
+    assert ks.ohlc_payload(ks.monthly_ohlc(h), "%Y-%m")["v"] == [100, 200, 350]

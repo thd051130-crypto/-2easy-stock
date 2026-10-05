@@ -261,11 +261,14 @@ def stock_summary(closes, market, days=60):
 
 
 def ohlc_payload(h, date_fmt="%Y-%m-%d"):
-    """Open·High·Low·Close 표를 대시보드 JSON 모양(dates, o, h, l, c)으로."""
+    """Open·High·Low·Close(·Volume) 표를 대시보드 JSON 모양(dates, o, h, l, c, v)으로. 거래량이 없으면 v는 빼요."""
     def col(name):
         return [round(float(x), 2) for x in h[name]]
 
-    return dict(dates=[f"{d:{date_fmt}}" for d in h.index], o=col("Open"), h=col("High"), l=col("Low"), c=col("Close"))
+    out = dict(dates=[f"{d:{date_fmt}}" for d in h.index], o=col("Open"), h=col("High"), l=col("Low"), c=col("Close"))
+    if "Volume" in h:
+        out["v"] = [int(x) for x in h["Volume"].fillna(0)]
+    return out
 
 
 def monthly_ohlc(h):
@@ -274,19 +277,25 @@ def monthly_ohlc(h):
     h.index = pd.to_datetime(h.index).tz_localize(None)
     g = h.groupby(h.index.to_period("M"))
     m = pd.DataFrame({"Open": g["Open"].first(), "High": g["High"].max(), "Low": g["Low"].min(), "Close": g["Close"].last()})
+    if "Volume" in h:
+        m["Volume"] = g["Volume"].sum()
     m.index = m.index.to_timestamp()
     return m
 
 
 def index_candles(symbol, years=5):
-    """대시보드 캔들 차트용 지수 일봉(시가·고가·저가·종가) years년치 + 월봉·년봉용 전체 기간 월봉(monthly).
+    """대시보드 캔들 차트용 지수 일봉(시가·고가·저가·종가·거래량) years년치 + 월봉·년봉용 전체 기간 월봉(monthly).
     일봉을 못 받으면 None (화면은 선 그래프로 대신해요). 월봉만 못 받으면 화면이 일봉을 묶어서 그려요."""
     cols = ["Open", "High", "Low", "Close"]
+
+    def table(h):  # 거래량은 있으면 같이 (보조지표 거래량 막대)
+        return h[cols + ["Volume"] if "Volume" in h else cols].dropna(subset=cols)
+
     try:
         import yfinance as yf
 
         ticker = yf.Ticker(symbol)
-        h = ticker.history(period=f"{years}y", auto_adjust=False)[cols].dropna()
+        h = table(ticker.history(period=f"{years}y", auto_adjust=False))
     except Exception as e:  # 네트워크, 레이트리밋 등
         print(f"지수 캔들 데이터를 못 받았어요: {e!r}")
         return None
@@ -295,7 +304,7 @@ def index_candles(symbol, years=5):
     h.index = pd.to_datetime(h.index).tz_localize(None)
     out = ohlc_payload(h)
     try:
-        mh = ticker.history(period="max", interval="1mo", auto_adjust=False)[cols].dropna()
+        mh = table(ticker.history(period="max", interval="1mo", auto_adjust=False))
         if not mh.empty:
             out["monthly"] = ohlc_payload(monthly_ohlc(mh), "%Y-%m")
     except Exception as e:

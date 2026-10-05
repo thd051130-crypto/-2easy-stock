@@ -12,6 +12,8 @@
   --series-3: #1baf7a;
   --ma50: #c98500;
   --ma200: #1baf7a;
+  --bb: #7b5ce0;
+  --rsi: #e0662f;
   /* 한국식: 오르면 빨강, 내리면 파랑 (항상 +/- 기호와 같이 써요) */
   --up: #d03b3a;
   --down: #2a6cc4;
@@ -20,6 +22,8 @@
   --wait-bg: #fbefd9;
   --wait-fg: #8a5300;
   --accent: #2a78d6;
+  --accent-bg: #e6f0fb;
+  --accent-fg: #1d5fae;
   --radius: 14px;
 }
 @media (prefers-color-scheme: dark) {
@@ -37,6 +41,8 @@
     --series-3: #199e70;
     --ma50: #eda100;
     --ma200: #199e70;
+    --bb: #a58cff;
+    --rsi: #f07e46;
     --up: #ff6b6a;
     --down: #6aa6f2;
     --good-bg: #173a26;
@@ -44,6 +50,8 @@
     --wait-bg: #3d2f12;
     --wait-fg: #f2c46b;
     --accent: #3987e5;
+    --accent-bg: #1b2a3d;
+    --accent-fg: #8ab8f5;
   }
 }
 :root[data-theme="dark"] {
@@ -51,8 +59,9 @@
   --surface-0: #111110; --surface-1: #1a1a19; --border: #2f2f2c; --grid: #2a2a27;
   --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #9a998f;
   --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ma50: #eda100; --ma200: #199e70;
+  --bb: #a58cff; --rsi: #f07e46;
   --up: #ff6b6a; --down: #6aa6f2; --good-bg: #173a26; --good-fg: #8fe0b0; --wait-bg: #3d2f12; --wait-fg: #f2c46b;
-  --accent: #3987e5;
+  --accent: #3987e5; --accent-bg: #1b2a3d; --accent-fg: #8ab8f5;
 }
 
 * { box-sizing: border-box; }
@@ -229,3 +238,24 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart .now.up { stroke: var(--up); } .chart .now.down { stroke: var(--down); }
 .chart .tag.up { fill: var(--up); } .chart .tag.down { fill: var(--down); }
 .chart text.tag-text { fill: #fff; font-weight: 700; }
+
+/* 보조지표 버튼과 그림 */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip {
+  border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px; min-height: 34px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-fg); }
+.chip:disabled { opacity: .45; cursor: default; }
+.chart .bb { fill: none; stroke: var(--bb); stroke-width: 1; }
+.chart .bb-mid { stroke-dasharray: 4 3; }
+.chart .bb-fill { fill: var(--bb); opacity: .1; stroke: none; }
+.chart .vol { opacity: .55; }
+.chart .vol.up { fill: var(--up); } .chart .vol.down { fill: var(--down); } .chart .vol.flat { fill: var(--text-muted); }
+.chart .vol-ma { fill: none; stroke: var(--text-secondary); stroke-width: 1.2; }
+.chart .rsi { fill: none; stroke: var(--rsi); stroke-width: 1.5; }
+.chart .guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart text.pane-label { fill: var(--text-secondary); font-weight: 600; }
+.chart .rsi-tag { fill: var(--rsi); }
+.help { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--text-secondary); }
+.help li + li { margin-top: 4px; }
