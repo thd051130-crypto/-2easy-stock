@@ -28,10 +28,12 @@ import tempfile
 import pandas as pd
 
 import departments
+import health
 import kr_swing_backtest as kb
 import rulebook
 import strategy
 import track
+import wide
 from markets import MARKETS
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -61,6 +63,7 @@ def compute_signals(closes, index_close):
     market = dict(day=day, kospi=float(index_close.iloc[-1]), kospi_ma200=float(index_ma200),
                   kospi_ma50=float(index_ma50), kospi_ok=bool(f["ok"].iloc[-1]), max_hold=max_hold,
                   trend_ok=bool(f.get("trend", f["ok"]).iloc[-1]), breadth_ok=bool(breadth),
+                  season=bool(f["season"].iloc[-1]) if "season" in f else False,
                   breadth=float(strategy.breadth(closes).iloc[-1]) if closes.shape[1] else None)
     return market, picks
 
@@ -75,8 +78,18 @@ def kr_pause_reason(market):
     """국장 신규 매수를 쉬는 이유."""
     if not market.get("trend_ok", False):
         return "코스피가 50일선이나 200일선 아래라 규칙상 새로 사지 않는 날이에요."
-    b = market.get("breadth")
-    share = f"{b:.0%}" if b is not None else "절반 미만"
+    if not market.get("breadth_ok", True):
+        b = market.get("breadth")
+        share = f"{b:.0%}" if b is not None else "절반 미만"
+        return breadth_reason(share)
+    end = strategy.season_end(market["day"]) if market.get("day") is not None else None
+    if end is not None:
+        return (f"실적 발표 시즌이라 {end:%m-%d}까지 새로 사지 않아요. 발표 충격을 피하려는 규칙이에요 "
+                "(백테스트 최대 낙폭 -4.4% → -3.1%). 이미 산 종목은 평소처럼 팔아요.")
+    return "오늘은 규칙상 새로 사지 않는 날이에요."
+
+
+def breadth_reason(share):
     return (f"코스피 추세는 괜찮지만 대형주 중 200일선 위 종목이 {share}로 "
             f"{strategy.KR_BREADTH_MIN:.0%} 미만이라(시장 폭이 좁음) 새로 사지 않는 날이에요.")
 
@@ -130,7 +143,7 @@ def format_message(market, picks, capital, today):
             lines.append(f"   {capital:,.0f}원 계좌 기준 종목당 {strategy.KR_WEIGHT:.0%}({slot:,.0f}원): {buy} (소수점 매수 가능)")
             lines.extend(kr_opinion(p, market))
     lines.append("")
-    lines.append("백테스트(2011~) 기준 연 +4.1%, 최대 낙폭 -4.4%, 최악의 해 -0.2%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
+    lines.append("백테스트(2011~) 기준 연 +4.2%, 최대 낙폭 -3.1%, 최악의 해 +1.1%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
                  "수익은 적게, 하락은 작게 고른 규칙이고 하락이 아예 없진 않아요. "
                  "과거 성과가 미래를 보장하진 않아요. 이 알림은 참고용이고 주문은 직접 판단해서 하세요.")
     return "\n".join(lines)
@@ -337,6 +350,18 @@ def rulebook_section(opens, closes, volumes, index_close, market):
     return "\n".join(lines), picks
 
 
+def usdkrw():
+    """원달러 환율 마지막 종가 (야후 KRW=X). 못 받으면 None."""
+    try:
+        import yfinance as yf
+
+        h = yf.Ticker("KRW=X").history(period="10d")
+        return round(float(h["Close"].dropna().iloc[-1]), 2)
+    except Exception as e:
+        print(f"환율을 못 받았어요: {e!r}")
+        return None
+
+
 def save_json(path, payload):
     payload = dict(payload, generated=dt.datetime.now(KST).isoformat(timespec="minutes"))
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -353,6 +378,9 @@ def add_departments(text, payload, market_key, closes, index_close, state, picks
             for row, p in zip(payload["picks"], picks):
                 row["fund"] = p["fund"]["grade"]
                 row["opinion"].append(f"펀더멘탈: {p['fund']['line']}")
+                line = departments.earnings_line(f"{p['code']}.KS", market["day"].date())
+                if line:
+                    row["opinion"].append(line)
             report = departments.kr_report(closes, index_close, state, picks, kb.MAX_POSITIONS)
     except Exception as e:
         print(f"부서별 보고 실패 (신호는 그대로 보내요): {e}")
@@ -393,11 +421,15 @@ def main():
         try:
             kb.download(path, start=f"{today - dt.timedelta(days=LOOKBACK_DAYS):%Y-%m-%d}", universe=universe,
                         index=m["index"], suffix=m["suffix"])
-        except SystemExit as e:
-            if not args.dry_run:
-                send_telegram(f"[{m['name']} 신호] 야후 시세를 못 받아서 오늘 신호를 계산하지 못했어요: {e}")
+        except SystemExit as e:  # 고장 알림(health.py fail)이 이 이유를 붙여서 보내요
+            health.record_error(f"{m['name']} 야후 시세를 못 받아서 오늘 신호를 계산하지 못했어요: {e}")
             raise
     opens, closes, index_close = kb.load_csv(path, m["index"])
+    codes = list(m["universe"]) + ([strategy.US_ETF] if args.market == "us" else [])
+    errors, warnings = health.check_data(closes, index_close, codes, today, m["universe"])
+    if errors:  # 엉터리 데이터로 신호를 내느니 멈추고 알려요 (가상매매도 이 단계에서 같이 멈춰요)
+        health.record_error(f"{m['name']} 시세 점검: " + " ".join(errors))
+        raise SystemExit(" ".join(errors))
     if args.market == "us":
         etf = closes[strategy.US_ETF].dropna() if strategy.US_ETF in closes else None
         etf_close = float(etf.iloc[-1]) if etf is not None else None
@@ -414,12 +446,32 @@ def main():
     payload["rulebook"] = rb_picks
     text, payload = add_departments(text, payload, args.market, closes, index_close,
                                     us if args.market == "us" else market, [] if args.market == "us" else picks)
+    wide_closes = None
+    if args.market == "kr":  # 넓은 범위 후보 (참고, wide.py). 실패해도 신호는 그대로 보내요
+        try:
+            names = wide.universe()
+            wpath = path.with_name("kr_wide_recent.csv")
+            if args.csv is None or not wpath.exists():
+                kb.download(wpath, start=f"{today - dt.timedelta(days=LOOKBACK_DAYS):%Y-%m-%d}", universe=names,
+                            index=m["index"], suffix=m["suffix"], pause=0.5)
+            _, wide_closes, _ = kb.load_csv(wpath, m["index"])
+            wide_closes = wide_closes[[c for c in wide_closes.columns if c in names]]
+            payload["wide"] = wide.compute(wide_closes, closes, index_close, names)
+            text += "\n" + wide.section(payload["wide"], len(names))
+        except (Exception, SystemExit) as e:
+            print(f"넓은 범위 후보 계산 실패 (신호는 그대로 보내요): {e!r}")
+            wide_closes = None
+    if warnings:
+        text += "\n\n[데이터 점검]\n" + "\n".join(f"- {w}" for w in warnings)
+        payload["data_warnings"] = warnings
     if args.save_json:
+        payload["usdkrw"] = usdkrw()  # 대시보드가 국장·미장 계좌를 원화로 합칠 때 써요
         payload["candles"] = index_candles(m["index"])
         payload["stocks"] = stock_summary(closes, args.market)
         try:  # 추천 종목 기록(paper/<시장>/picks.csv)과 추천일부터의 수익률. 실패해도 신호는 그대로 보내요
             rows = track.update(args.save_json.parent / "picks.csv", args.market, payload, closes, index_close, volumes)
-            payload["tracked"] = track.summary(rows, closes, index_close)
+            every = closes.join(wide_closes[[c for c in wide_closes if c not in closes]]) if wide_closes is not None else closes
+            payload["tracked"] = track.summary(rows, every, index_close)
         except Exception as e:
             print(f"추천 성과 계산 실패 (신호는 그대로 보내요): {e!r}")
         save_json(args.save_json, payload)

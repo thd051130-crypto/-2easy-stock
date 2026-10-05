@@ -18,6 +18,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
 
 concurrency:
   group: pages
@@ -49,3 +50,10 @@ jobs:
           path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow pages

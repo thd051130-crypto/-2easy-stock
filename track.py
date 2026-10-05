@@ -2,7 +2,8 @@
 
 paper/<시장>/picks.csv 에 날마다 알림이 고른 종목을 남겨요 (swing-signals가 저장소에 같이 커밋해요).
   date   : 신호를 낸 날 (그날 종가 기준으로 골라요)
-  src    : signal = 알림 규칙 (국장 매수 후보, 미장은 SPY 매수 신호), rulebook = 내 규칙표 후보
+  src    : signal = 알림 규칙 (국장 매수 후보, 미장은 SPY 매수 신호), rulebook = 내 규칙표 후보,
+           wide = 넓은 범위 후보 (wide.py, 참고용이라 지난 날짜를 다시 채우지 않아요)
   replay : 1이면 기록을 시작하기 전 날짜를 같은 규칙으로 다시 계산해서 채운 줄이에요 (그날 보낸 알림은 아님)
 
 수익률은 추천일 종가에서 그 뒤 종가까지예요 (야후 수정주가라 배당 포함). 실제 매수는 다음 날 시가라 조금 달라요.
@@ -19,7 +20,7 @@ import strategy
 from markets import MARKETS
 
 COLUMNS = ["date", "src", "code", "name", "close", "replay"]
-SOURCES = {"signal": "알림 규칙", "rulebook": "내 규칙표"}
+SOURCES = {"signal": "알림 규칙", "rulebook": "내 규칙표", "wide": "넓은 범위(참고)"}
 REPLAY_DAYS = 120  # 기록 파일이 처음 생길 때 같은 규칙으로 채우는 과거 거래일 수 (약 6개월)
 REPEAT_GAP = 10    # 같은 종목이 이 거래일 안에 다시 후보에 오르면 같은 추천으로 봐요
 PATH_DAYS = 20     # 평균 그래프: 추천 후 며칠까지
@@ -68,6 +69,7 @@ def today_rows(market, payload):
     elif payload.get("action") == "buy" and payload.get("etf_close"):
         rows.append(dict(src="signal", code=strategy.US_ETF, name=etf_name(), close=payload["etf_close"]))
     rows += [dict(src="rulebook", code=p["code"], name=p["name"], close=p["close"]) for p in payload.get("rulebook", [])]
+    rows += [dict(src="wide", code=p["code"], name=p["name"], close=p["close"]) for p in payload.get("wide", [])]
     return [dict(r, date=day, replay=0) for r in rows]
 
 
@@ -144,6 +146,8 @@ def summary(rows, closes, index_close):
         recent = [dict(date=p["date"], code=p["code"], name=p["name"], close=p["close"], last=_num(p["last"], 2),
                        ret=_num(p["now"]), days=last - p["i"], replay=p["replay"],
                        path=[_num(v) for v in p["path"]]) for p in picks[::-1][:RECENT]]
+        if src == "wide" and not picks:  # 넓은 범위 후보는 국장에만 있어요
+            continue
         out["srcs"][src] = dict(label=label, count=len(picks), first=picks[0]["date"] if picks else None,
                                 avg=avg, index=idx, n=n, horizons=horizons, recent=recent)
     return out

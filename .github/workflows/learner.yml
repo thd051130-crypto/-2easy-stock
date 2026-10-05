@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: write  # learning/ 기록을 커밋해요
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
 
 concurrency:
   group: learner
@@ -50,3 +51,10 @@ jobs:
           git commit -m "학습팀 기록 $(TZ=Asia/Seoul date +%F)"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow learner

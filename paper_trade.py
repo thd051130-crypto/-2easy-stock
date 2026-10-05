@@ -30,7 +30,9 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+import etf_backtest as etfb
 import kr_swing_backtest as kb
+import readiness
 import rulebook
 import strategy
 from markets import MARKETS, name_of
@@ -54,16 +56,18 @@ def money(market, x, sign=False):
     return f"{plus}{x:,.0f}원" if market == "kr" else f"{plus}{x:,.2f}달러"
 
 
-def advance(state, opens, closes, index_close):
+def advance(state, opens, closes, index_close, f=None, cost=None, names=None, exit_reason=None):
     """마지막으로 반영한 날 다음부터 데이터의 마지막 거래일까지 하루씩 진행해요 (kb.simulate와 같은 순서).
 
     처음이면 마지막 거래일 하나만 반영해요 (그날 신호를 다음 날 시가에 사는 것부터 시작).
     반환: (새로 끝난 거래 목록, 평가금액 행 목록, 이벤트 문장 목록)
+    f, cost, names, exit_reason: 다른 규칙 계좌(예: --rule etf)가 신호·비용·종목 이름·청산 이유를 바꿔 넣을 때
     """
     market = state["market"]
-    cost = MARKETS[market]["cost"]
+    cost = cost or MARKETS[market]["cost"]
     buy_mult, sell_mult = 1 + cost["fee"] + cost["slip"], 1 - cost["fee"] - cost["tax"] - cost["slip"]
-    f = strategy.FRAMES[market](closes, index_close)
+    f = f or strategy.FRAMES[market](closes, index_close)
+    name = (lambda code: names.get(code, code)) if names else (lambda code: name_of(market, code))
     max_hold, stop, weight = f["max_hold"], f["stop"], f["weight"] or 1 / kb.MAX_POSITIONS
     filled = closes.ffill()
     calendar = closes.index
@@ -132,7 +136,7 @@ def advance(state, opens, closes, index_close):
             elif max_hold and held_days(calendar, p["buy_date"], day, max_hold) >= max_hold:
                 reason = f"{max_hold}거래일 경과"
             elif bool(f["exit"].at[day, p["code"]]):
-                reason = EXIT_REASONS[market]
+                reason = exit_reason or EXIT_REASONS[market]
             else:
                 continue
             state["pending_sells"].append(dict(code=p["code"], reason=reason))
@@ -142,7 +146,7 @@ def advance(state, opens, closes, index_close):
         candidates = [code for code in closes.columns
                       if today_entry[code] and code not in held and not pd.isna(today_rank[code])]
         candidates.sort(key=lambda code: -today_rank[code])
-        state["pending_buys"] = [dict(code=code, name=name_of(market, code), signal_date=str(day.date()))
+        state["pending_buys"] = [dict(code=code, name=name(code), signal_date=str(day.date()))
                                  for code in candidates[:max(free, 0)]]
         state["last_day"] = str(day.date())
     return trades, equity_rows, events
@@ -170,6 +174,8 @@ def advance_rulebook(book, opens, closes, volumes, index_close):
 
 
 def title(state):
+    if state.get("rule") == "etf":
+        return "ETF(원화)"
     name = MARKETS[state["market"]]["name"]
     return f"규칙표 {name}" if state.get("version") == 2 else name
 
@@ -239,9 +245,27 @@ def weekly_summary(state, trades, equity, today, closes):
         names = {p["code"]: p["name"] for p in state["positions"]}
         lines.append("다음 거래일 시가 매도 예정: " + ", ".join(names.get(o["code"], o["code"])
                                                        for o in state["pending_sells"]))
+    key = readiness_key(state)
+    if key:
+        lines.append("")
+        lines += readiness.lines(readiness.evaluate(key, len(equity), float(dd.min()), len(trades), read_health()))
     lines.append("")
     lines.append(DISCLAIMER)
     return "\n".join(lines)
+
+
+def readiness_key(state):
+    """실전 전환 판정표(readiness.py)의 계좌 이름. 규칙표 검증 계좌는 판정하지 않아요 (백테스트가 손실이라)."""
+    if state.get("rule") == "etf":
+        return "etf"
+    return None if state.get("version") == 2 else state["market"]
+
+
+def read_health(path=pathlib.Path("paper/health.json")):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
 
 
 def load(folder, market, capital=None, fractional=True):
@@ -275,9 +299,11 @@ def append(df, rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--market", choices=sorted(MARKETS), default="kr")
-    parser.add_argument("--rule", choices=["main", "rulebook"], default="main",
-                        help="main=알림 규칙(strategy.py), rulebook=사용자 규칙표(rulebook.py)를 따로 검증")
-    parser.add_argument("--csv", type=pathlib.Path, required=True, help="date,ticker,open,close(,volume) 형식 일봉")
+    parser.add_argument("--rule", choices=["main", "rulebook", "etf"], default="main",
+                        help="main=알림 규칙(strategy.py), rulebook=사용자 규칙표(rulebook.py)를 따로 검증, "
+                             "etf=국내 상장 ETF 원화 계좌(etf_backtest.py, 국장 70만 원)")
+    parser.add_argument("--csv", type=pathlib.Path, required=True,
+                        help="date,ticker,open,close(,volume) 형식 일봉 (etf는 없으면 야후에서 받아 이 경로에 남겨요)")
     parser.add_argument("--dir", type=pathlib.Path, help="기록 폴더 (기본 paper/<시장>, 규칙표는 paper/<시장>/rulebook)")
     parser.add_argument("--capital", type=float, help="처음 만들 때 가상계좌 금액 (기본 국장 70만 원, 미장 500달러)")
     parser.add_argument("--whole-shares", action="store_true", help="처음 만들 때 정수 주식만 사는 계좌로 (기본은 소수점)")
@@ -289,9 +315,17 @@ def main():
     from realtime_monitor import send_telegram
 
     m = MARKETS[args.market]
-    folder = args.dir or pathlib.Path("paper") / args.market / ("rulebook" if args.rule == "rulebook" else "")
+    if args.rule == "etf":
+        args.market, m = "kr", MARKETS["kr"]  # 국내 상장 ETF라 국장 날짜·원화로 기록해요
+    folder = args.dir or (pathlib.Path("paper/etf") if args.rule == "etf" else
+                          pathlib.Path("paper") / args.market / ("rulebook" if args.rule == "rulebook" else ""))
     today = dt.datetime.now(TIMEZONES[args.market]).date()
-    opens, closes, index_close = kb.load_csv(args.csv, m["index"])
+    if args.rule == "etf":
+        if not args.csv.exists():
+            etfb.download_live(args.csv)
+        opens, closes, index_close, spx = etfb.load_live(args.csv)
+    else:
+        opens, closes, index_close = kb.load_csv(args.csv, m["index"])
     etf = [c for c in closes.columns if c == strategy.US_ETF]
     if args.rule == "rulebook":
         stocks = [c for c in closes.columns if c in m["universe"]]
@@ -301,6 +335,11 @@ def main():
         if state.get("version") != 2:
             state = rulebook.new_book(args.market, args.capital or m["capital"])
         new_trades, new_rows, events = advance_rulebook(state, opens[stocks], closes[stocks], volumes, index_close)
+    elif args.rule == "etf":
+        state, trades, equity = load(folder, "kr", args.capital, fractional=False)  # 국내 ETF는 1주 단위로
+        state["rule"] = "etf"
+        new_trades, new_rows, events = advance(state, opens, closes, index_close, f=etfb.live_frames(closes, index_close, spx),
+                                               cost=etfb.COST, names=etfb.NAMES, exit_reason="S&P500 추세 꺾임")
     else:
         if args.market == "us" and etf:  # 미장 알림 규칙은 SPY만 사고팔아요 (같은 파일에 규칙표용 개별주도 있어요)
             opens, closes = opens[etf], closes[etf]

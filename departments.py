@@ -93,6 +93,28 @@ def fundamental_line(name, g):
     return text
 
 
+def next_earnings(symbol):
+    """야후가 아는 다음 실적 발표일 (datetime.date). 모르면 None."""
+    try:
+        import yfinance as yf
+
+        dates = (yf.Ticker(symbol).calendar or {}).get("Earnings Date") or []
+        return min(dates) if dates else None
+    except Exception as e:
+        print(f"{symbol} 실적 발표일 못 받음: {e}")
+        return None
+
+
+def earnings_line(symbol, today, fetch=next_earnings):
+    """'실적: 10-28 발표 예정 (23일 뒤)'. 10일 안이면 경고를 붙여요. 모르면 None."""
+    day = fetch(symbol)
+    if day is None or day < today:
+        return None
+    left = (day - today).days
+    line = f"실적: {day:%m-%d} 발표 예정 ({left}일 뒤)"
+    return line + ". 발표 전후로 크게 움직일 수 있어요" if left <= 10 else line
+
+
 def check_picks(picks, suffix=".KS", fetch=fetch_info):
     """후보 종목마다 펀더멘탈 등급을 붙여요 (picks의 각 dict에 'fund' 추가)."""
     for p in picks:

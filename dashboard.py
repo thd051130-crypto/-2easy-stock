@@ -5,6 +5,8 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - signal.json : 오늘의 신호와 지수 추세 (kr_swing_signals.py --save-json)
   - state.json, equity.csv, trades.csv : 가상계좌 (paper_trade.py)
   - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
+  - paper/etf/ : 국내 상장 ETF 원화 가상계좌 (paper_trade.py --rule etf)
+  - paper/health.json : 주간 점검 (health.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
 
 사용법:
@@ -20,6 +22,8 @@ import json
 import pathlib
 import shutil
 
+import commands
+import readiness
 import strategy
 import watchlist
 from markets import MARKETS
@@ -34,7 +38,8 @@ RULES = {
         f"최근 20일 변동성이 연 {strategy.KR_STOCK_VOL_MAX:.0%} 넘게 출렁이는 종목은 건너뛰어요.",
         f"종목당 계좌의 {strategy.KR_WEIGHT:.0%}, 최대 5종목이라 다 차도 절반은 현금이에요.",
         f"종가가 5일선 위, 10거래일 경과, 매수가 대비 -{strategy.KR_STOP:.0%} 아래 마감 중 하나면 다음 날 시가에 팔아요.",
-        "백테스트(2011~): 연 +4.1%, 최대 낙폭 -4.4% (코스피 보유는 연 +8.3%, 최대 낙폭 -44%).",
+        "실적 발표 시즌(1·4·7·10월 20일 ~ 다음 달 중순)엔 새로 사지 않아요. 이미 산 종목은 평소처럼 팔아요.",
+        "백테스트(2011~): 연 +4.2%, 최대 낙폭 -3.1% (코스피 보유는 연 +8.3%, 최대 낙폭 -44%).",
         "펀더멘탈부 등급(ROE·부채·이익·PER)은 참고용이에요. 과거 재무 자료가 무료로 없어 검증하지 못해 규칙에는 안 넣었어요.",
     ],
     "us": [
@@ -114,8 +119,46 @@ RULEBOOK_RULES = [
 ]
 
 
+ETF_RULES = [
+    "미장 알림과 같은 신호를 국내 상장 ETF로 원화 계좌에서 따라 하는 가상계좌예요 (70만 원, 1주 단위).",
+    f"S&P500이 200일선 위이고 50일선도 200일선 위이며 20일 변동성이 연 {strategy.US_VOL_MAX:.0%} 이하면 계좌의 50%를 "
+    "TIGER 미국S&P500(360750)으로, 아니면 현금이에요.",
+    "국장 마감 뒤 신호를 보고 다음 거래일 시가에 사고팔아요. 국내 ETF라 ISA·연금저축 계좌에서 그대로 살 수 있어요.",
+    "백테스트(2011~, 원화): 연 +7.1%, 최대 낙폭 -8.4% (그냥 보유는 연 +15.0%, 최대 낙폭 -30.2%). "
+    "코스피 ETF를 더한 안은 낙폭이 커서 뺐어요 (docs/etf-backtest.md).",
+]
+
+
+def readiness_of(key, acct, health):
+    if not acct:
+        return None
+    return readiness.evaluate(key, len(acct["curve"]), acct["mdd"], acct["trade_count"], health)
+
+
+def total_assets(markets, etf_acct, fx):
+    """가상계좌 세 개(국장·미장·ETF)를 원화로 합친 내 자산. 계좌가 하나도 없거나 환율이 없으면 None."""
+    if not fx:
+        return None
+    parts = []
+    for label, acct, rate in (("국장", markets["kr"]["account"], 1.0), ("미장", markets["us"]["account"], fx),
+                              ("ETF", etf_acct, 1.0)):
+        if acct:
+            stocks = acct["equity"] - acct["cash"]
+            parts.append(dict(label=label, equity=round(acct["equity"] * rate), cash=round(acct["cash"] * rate),
+                              stocks=round(stocks * rate), capital=round(acct["capital"] * rate),
+                              usd=rate != 1.0))
+    if not parts:
+        return None
+    equity, capital = sum(p["equity"] for p in parts), sum(p["capital"] for p in parts)
+    cash = sum(p["cash"] for p in parts)
+    usd = sum(p["equity"] for p in parts if p["usd"])
+    return dict(equity=equity, capital=capital, gain=round(equity / capital - 1, 5), cash_share=round(cash / equity, 4),
+                usd_share=round(usd / equity, 4), fx=fx, parts=parts)
+
+
 def build(paper_dir):
     markets = {}
+    health = read_json(paper_dir / "health.json")
     watch, alerts = watchlist.load_watch(paper_dir), watchlist.load_alerts(paper_dir)["active"]
     for key, m in MARKETS.items():
         folder = paper_dir / key
@@ -125,8 +168,13 @@ def build(paper_dir):
                             rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES),
                             # 텔레그램으로 넣은 종목 (시세는 배포 때 stock_pages.py가 채워요), 기다리는 가격 알림
                             extras=watch[key], alerts=[a for a in alerts if a.get("market") == key])
+        markets[key]["readiness"] = readiness_of(key, markets[key]["account"], health)
+    etf_acct = account(paper_dir / "etf", "kr")
+    markets["kr"]["etf"] = dict(account=etf_acct, rules=ETF_RULES, readiness=readiness_of("etf", etf_acct, health))
+    fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
-                bot=watchlist.bot_username(paper_dir))
+                bot=watchlist.bot_username(paper_dir), health=health, memos=commands.summary(paper_dir),
+                total=total_assets(markets, etf_acct, fx))
 
 
 def site_version(site_dir):

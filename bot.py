@@ -26,6 +26,7 @@ import json
 import os
 import re
 
+import commands
 import symbols
 import watchlist
 from markets import MARKETS
@@ -40,6 +41,7 @@ HELP = ("이지스톡 봇이에요. 이렇게 보내 주세요.\n"
         "• 관심 빼기 카카오 / 관심 목록\n"
         "• 알림 삼성전자 300000 : 그 가격에 닿으면 알려 드려요 (30만, 250.5달러도 돼요)\n"
         "• 알림 목록 / 알림 삭제 2\n"
+        + commands.HELP + "\n"
         "15분마다 확인해서 답이 조금 늦을 수 있어요. 국장 시세는 20분쯤 늦게 들어와요.")
 
 
@@ -115,13 +117,15 @@ class Bot:
         self.watch = watchlist.load_watch(paper)
         self.alerts = watchlist.load_alerts(paper)
         self.username = watchlist.bot_username(paper)
+        self.memos = commands.load_memos(paper)  # 내 판단 기록장 (commands.py)
+        self.memo_prices = commands.refresh_prices
         self.added = []  # 이번에 넣은 종목 (재무를 바로 받으려고)
         self.saved = self.snapshot()
 
     # ------------------------------------------------------------ 기록
 
     def snapshot(self):
-        return json.dumps([self.watch, self.alerts, self.username], ensure_ascii=False, sort_keys=True)
+        return json.dumps([self.watch, self.alerts, self.username, self.memos], ensure_ascii=False, sort_keys=True)
 
     def changed(self):
         return self.snapshot() != self.saved
@@ -133,6 +137,8 @@ class Bot:
         watchlist.write(self.paper / "alerts.json", self.alerts)
         if self.username:
             watchlist.write(self.paper / "bot.json", dict(username=self.username))
+        if self.memos["items"] or (self.paper / "memos.json").exists():
+            watchlist.write(self.paper / "memos.json", self.memos)
         self.saved = self.snapshot()
         return True
 
@@ -180,6 +186,9 @@ class Bot:
         if kind == "help":
             return HELP
         if kind == "unknown":
+            reply = commands.handle(self, decode_start(text))  # 오늘·계좌·종목·메모
+            if reply:
+                return reply
             return "그 말은 몰라서, 아래 명령만 알아들어요.\n\n" + HELP
         if kind == "watch_list":
             return self.watch_list()
@@ -396,6 +405,10 @@ def run(tg, chat_id, bot):
         tg.send(chat_id, reply)
     for text in bot.check_alerts():
         tg.send(chat_id, text)
+    week = commands.report_week(bot.memos, bot.now())
+    if week:  # 금요일 저녁: 내 판단 주간 결산
+        tg.send(chat_id, commands.memo_report(bot.memos, refresh=bot.memo_prices))
+        bot.memos["last_report"] = week
     bot.save()
     return offset
 
