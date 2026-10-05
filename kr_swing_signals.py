@@ -3,7 +3,7 @@
 
 규칙은 하락을 줄이는 쪽으로 고른 보수적 규칙이에요 (strategy.py, docs/conservative-backtest.md).
   국장: 코스피가 50·200일선 위일 때만, 돌파 후 눌림(RSI2 < 10) 종목을 종목당 계좌 10%씩 최대 5종목
-        매도는 종가가 5일선 위, 10거래일 경과, 매수가 대비 -5% 손절 중 하나가 되면 다음 날 시가
+        매도는 종가가 5일선 위, 10거래일 경과, 매수가 대비 -7% 손절 중 하나가 되면 다음 날 시가
   미장: S&P500이 200일선 위이고 50일선도 200일선 위면 계좌 50%를 S&P500 ETF(SPY 등)로, 아니면 현금
 
 데이터는 야후 파이낸스 일봉(무료)이라 계좌나 증권사 API 키가 없어도 돌아가요.
@@ -85,7 +85,7 @@ def kr_pause_reason(market):
     end = strategy.season_end(market["day"]) if market.get("day") is not None else None
     if end is not None:
         return (f"실적 발표 시즌이라 {end:%m-%d}까지 새로 사지 않아요. 발표 충격을 피하려는 규칙이에요 "
-                "(백테스트 최대 낙폭 -4.4% → -3.1%). 이미 산 종목은 평소처럼 팔아요.")
+                "(백테스트 최대 낙폭 -4.8% → -3.2%). 이미 산 종목은 평소처럼 팔아요.")
     return "오늘은 규칙상 새로 사지 않는 날이에요."
 
 
@@ -143,7 +143,7 @@ def format_message(market, picks, capital, today):
             lines.append(f"   {capital:,.0f}원 계좌 기준 종목당 {strategy.KR_WEIGHT:.0%}({slot:,.0f}원): {buy} (소수점 매수 가능)")
             lines.extend(kr_opinion(p, market))
     lines.append("")
-    lines.append("백테스트(2011~) 기준 연 +4.2%, 최대 낙폭 -3.1%, 최악의 해 +1.1%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
+    lines.append("백테스트(2011~) 기준 연 +4.5%, 최대 낙폭 -3.2%, 최악의 해 +1.5%였어요 (코스피 보유는 연 +8.3%, 최대 낙폭 -44%). "
                  "수익은 적게, 하락은 작게 고른 규칙이고 하락이 아예 없진 않아요. "
                  "과거 성과가 미래를 보장하진 않아요. 이 알림은 참고용이고 주문은 직접 판단해서 하세요.")
     return "\n".join(lines)
