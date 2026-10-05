@@ -257,9 +257,10 @@ function sigLook(s) {
 
 const VIEWS = {
   home: (d) => [homeSignalCard(d), homeWatchCard(d), homePerfCard(d), homeIndexCard(d)],
-  signal: (d) => [signalCard(d), desksCard(d), rulebookPicksCard(d), rulesCard(d)],
+  signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
-  perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), rulebookAccountCard(d)],
+  perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
+    rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
   stock: (d) => [stockHeadCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
@@ -390,7 +391,7 @@ function homePerfCard(d) {
   const line = h ? `<div class="track-line"><span>추천 종목 ${h.days}거래일 뒤 평균 <small>${esc(s.label)} · ${h.n}개</small></span>
       <b class="${sign(h.avg)}">${cnt(h.avg, "pct", pct(h.avg))}</b><span class="muted">${esc(d.index_name)} ${pct(h.index)} · 오른 종목 ${Math.round(h.win * 100)}%</span></div>` : "";
   return `<section class="card"><h2>성과 <small>${a ? `${md(a.last_day)} 종가` : `${money(market, d.capital)}${market === "kr" ? "으로" : "로"} 시작`}</small></h2>
-    ${acc}${line}${more("perf", "성과 자세히 보기")}</section>`;
+    ${acc}${line}${totalLine()}${healthLine()}${more("perf", "성과 자세히 보기")}</section>`;
 }
 
 // ---------------------------------------------------------------- 관심종목
@@ -1097,6 +1098,91 @@ function rulebookAccountCard(d) {
       <p class="muted" style="margin:8px 0 0">${money(market, a.equity)} · 끝난 거래 ${a.trade_count}건${a.trade_count ? ` · 승률 ${Math.round(a.win_rate * 100)}%` : ""} · 보유 ${a.positions.length}종목</p>`
     : `<p class="empty">${NEXT_RUN[market]} 첫 자동 실행부터 기록해요.</p>`;
   return `<section class="card"><h2>내 규칙표 검증 <small>가상계좌</small></h2>${body}</section>`;
+}
+
+// ---------------------------------------------------------------- 내 자산 합계·실전 전환·ETF·메모·점검
+
+// 가상계좌 셋(국장·미장·ETF)을 원화로 합친 한 줄 (미장은 환율로 바꿔요)
+function totalLine() {
+  const t = DATA.total;
+  if (!t) return "";
+  return `<div class="track-line"><span>내 가상 자산 합계 <small>원화 · 환율 ${num(t.fx)}원</small></span>
+    <b class="${sign(t.gain)}">${num(t.equity)}원</b>
+    <span class="muted">시작 대비 ${pct(t.gain)} · 현금 ${Math.round(t.cash_share * 100)}% · 달러 ${Math.round(t.usd_share * 100)}%</span></div>`;
+}
+
+// 지난 주간 점검에서 문제가 있었으면 홈에 한 줄
+function healthLine() {
+  const h = DATA.health;
+  if (!h || h.ok) return "";
+  const bad = h.workflows.filter((w) => !w.ok).map((w) => esc(w.label)).join(", ");
+  return `<p class="caution">지난 주 자동 실행 확인 필요: ${bad}</p>`;
+}
+
+function readinessCard(d) {
+  const r = d.readiness;
+  const e = market === "kr" && d.etf && d.etf.readiness;
+  if (!r && !e) {
+    return `<section class="card"><h2>실전 전환 판정</h2><p class="empty">가상계좌 기록이 쌓이면 진짜 돈을 넣어도 되는 단계인지 여기서 판정해요.</p></section>`;
+  }
+  const block = (x) => `<p class="name" style="margin:14px 0 6px;font-weight:700">${esc(x.name)} · ${x.ready ? "통과 ✅" : "아직"}</p>
+    <ul class="list">${x.checks.map((c) => `<li><div class="l"><div class="name">${c.ok ? "✅" : "⬜"} ${esc(c.label)}</div>
+      <div class="meta">${esc(c.detail)}</div></div></li>`).join("")}</ul><p class="muted" style="margin:8px 0 0">${esc(x.verdict)}</p>`;
+  return `<section class="card"><h2>실전 전환 판정 <small>전부 통과하면 소액으로</small></h2>
+    ${[r, e].filter(Boolean).map(block).join("")}</section>`;
+}
+
+function etfAccountCard(d) {
+  if (market !== "kr" || !d.etf) return "";
+  const a = d.etf.account;
+  const body = a
+    ? `<p class="hero">${cnt(a.equity, "money", money("kr", a.equity))}</p>
+      <div class="stats">
+        <div class="stat"><span>ETF 계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
+        <div class="stat"><span>코스피</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
+        <div class="stat"><span>최대 낙폭</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
+      </div>
+      <p class="muted" style="margin:8px 0 0">${a.positions.length ? a.positions.map((p) => `${esc(p.name)} ${shares(p.qty)} ${pct(p.ret)}`).join(" · ") : "보유 없음 (현금)"}</p>
+      ${pendingLines(a)}`
+    : `<p class="empty">${NEXT_RUN.kr} 첫 자동 실행부터 기록해요.</p>`;
+  return `<section class="card"><h2>ETF(원화) 계좌 <small>ISA·연금저축용 · 70만 원</small></h2>${body}
+    <details style="margin-top:12px"><summary>규칙 보기</summary><ol>${d.etf.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
+}
+
+function widePicksCard(d) {
+  if (market !== "kr" || !d.signal || !d.signal.wide) return "";
+  const picks = d.signal.wide;
+  const items = picks.map((p, i) => `<li><div class="l"><div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
+      <div class="meta">RSI2 ${p.rsi2} · 손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("");
+  return `<section class="card"><h2>넓은 범위 후보 <small>참고 · 코스피 상위 100</small></h2>
+    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 넓은 범위에서도 조건에 맞는 종목이 없어요.</p>`}
+    <p class="muted" style="margin:10px 0 0">같은 조건을 2015년 이후 커진 회사까지 넓혀 봤어요. 검증 전이라 가상계좌엔 안 넣고 성과 화면 추천 성과로만 기록해요.</p></section>`;
+}
+
+// 내 판단 기록장 (텔레그램 '메모 삼성전자 산다')
+function memoCard() {
+  const m = DATA.memos;
+  if (!m) {
+    return `<section class="card"><h2>내 판단 기록장</h2><p class="empty">텔레그램 봇에 '메모 삼성전자 산다 (이유)'처럼 보내면 20거래일 뒤 맞혔는지 여기서 보여 줘요.</p></section>`;
+  }
+  const s = m.score;
+  const head = s ? `<div class="stats">
+      <div class="stat"><span>맞힌 비율</span><b>${Math.round(s.hit * 100)}%</b></div>
+      <div class="stat"><span>'산다' 평균</span><b class="${sign(s.buy_avg)}">${s.buy_avg == null ? "-" : pct(s.buy_avg)}</b></div>
+      <div class="stat"><span>'안 산다' 평균</span><b class="${sign(s.skip_avg)}">${s.skip_avg == null ? "-" : pct(s.skip_avg)}</b></div>
+    </div>` : `<p class="muted">아직 20거래일 지난 판단이 없어요.</p>`;
+  const items = m.recent.map((x) => `<li><div class="l"><div class="name">${esc(x.name)} ${x.view > 0 ? "산다" : "안 산다"}</div>
+      <div class="meta">${md(x.date)} · ${money(x.market, x.price)}${x.note ? ` · ${esc(x.note)}` : ""}</div></div>
+      <div class="r ${x.ret == null ? "" : sign(x.ret)}">${x.ret == null ? "-" : pct(x.ret)}</div></li>`).join("");
+  return `<section class="card"><h2>내 판단 기록장 <small>${m.count}개</small></h2>${head}<ul class="list" style="margin-top:12px">${items}</ul></section>`;
+}
+
+function healthCard() {
+  const h = DATA.health;
+  if (!h) return "";
+  const rows = h.workflows.map((w) => `<li><div class="l"><div class="name">${w.ok ? "✅" : "⚠️"} ${esc(w.label)}</div>
+      <div class="meta">성공 ${w.success}회${w.expected ? `/${w.expected}회 예정` : ""}${w.failure ? ` · 실패 ${w.failure}회` : ""}</div></div></li>`).join("");
+  return `<section class="card"><h2>자동 실행 점검 <small>${md(h.checked.slice(0, 10))} 기준 지난 7일</small></h2><ul class="list">${rows}</ul></section>`;
 }
 
 function rulesCard(d) {

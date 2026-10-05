@@ -1,0 +1,47 @@
+# 주간 점검: 일요일 아침에 지난 7일 자동 실행이 잘 돌았는지 세서 텔레그램으로 보내고 paper/health.json에 남겨요.
+#   실패는 그때그때 각 워크플로 마지막 단계(health.py fail)가 바로 알려 줘요. 이건 한 주 정리예요.
+#   폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → health → Run workflow
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+name: health
+
+on:
+  schedule:
+    - cron: "0 1 * * 0"  # UTC 일요일 01:00 = 한국 일요일 10:00
+  workflow_dispatch:
+
+permissions:
+  contents: write  # paper/health.json 저장
+  actions: write   # 실행 기록 읽기, pages 다시 올리기
+
+concurrency:
+  group: health
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python health.py weekly
+      - name: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper/health.json
+          if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
+          git commit -m "주간 점검 $(TZ=Asia/Seoul date +%F)"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: redeploy dashboard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

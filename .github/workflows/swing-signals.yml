@@ -23,6 +23,7 @@ on:
 
 permissions:
   contents: write  # paper/ 기록을 커밋해요
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
 
 concurrency:
   group: swing-signals  # 두 번 겹쳐 돌면 기록이 꼬이니까 하나씩
@@ -51,6 +52,12 @@ jobs:
             python paper_trade.py --market "$mk" --csv "data/${mk}_daily_recent.csv"
             python paper_trade.py --market "$mk" --rule rulebook --csv "data/${mk}_daily_recent.csv"
           done
+      # 국내 상장 ETF 원화 계좌 (미장 신호를 TIGER 미국S&P500으로, 국장 날짜). 실패해도 위 기록은 저장해요
+      - name: ETF account
+        id: etf
+        if: contains(env.MARKETS, 'kr')
+        continue-on-error: true
+        run: python paper_trade.py --rule etf --csv data/etf_daily_recent.csv
       - name: commit paper log
         run: |
           git config user.name "github-actions[bot]"
@@ -60,3 +67,17 @@ jobs:
           git commit -m "가상매매 기록 $(TZ=Asia/Seoul date +%F) ($MARKETS)"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow swing-signals
+      - name: ETF 계좌 고장 알림
+        if: steps.etf.outcome == 'failure'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow swing-signals --step "ETF 계좌" --always
