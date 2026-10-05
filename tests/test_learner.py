@@ -19,7 +19,7 @@ def test_pick_keeps_current_on_tie_and_never_picks_deeper_drawdown():
 
 
 def test_learn_on_synthetic_data_reports_gates(monkeypatch):
-    monkeypatch.setitem(learner.GRIDS, "kr", dict(breadth_min=[0.5], stock_vol_max=[0.45], stop=[0.03, 0.05],
+    monkeypatch.setitem(learner.GRIDS, "kr", dict(breadth_min=[0.4], stock_vol_max=[0.45], stop=[0.05, 0.07],
                                                   rsi_th=[10]))
     opens, closes, index_close = kb.synthetic(n_stocks=12)
     r = learner.learn("kr", opens, closes, index_close)

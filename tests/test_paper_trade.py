@@ -40,8 +40,8 @@ def test_day_by_day_matches_backtest_simulation(market, fractional):
 
 def test_kr_stop_loss_sells_next_open():
     idx = pd.bdate_range("2026-01-01", periods=3)
-    opens = pd.DataFrame({"005930": [50000.0, 47000.0, 46000.0]}, idx)
-    closes = pd.DataFrame({"005930": [50000.0, 47000.0, 46000.0]}, idx)
+    opens = pd.DataFrame({"005930": [50000.0, 46000.0, 45000.0]}, idx)
+    closes = pd.DataFrame({"005930": [50000.0, 46000.0, 45000.0]}, idx)  # -8%: 손절 -7% 아래
     index_close = pd.Series([3000.0] * 3, idx)
     state = pt.new_state("kr")
     state.update(last_day=str(idx[0].date()), start=str(idx[0].date()), index_start=3000.0, cash=250000.0,
@@ -50,7 +50,7 @@ def test_kr_stop_loss_sells_next_open():
     pt.advance(state, opens.iloc[:2], closes.iloc[:2], index_close.iloc[:2])
     assert state["pending_sells"][0]["reason"].startswith("손절")
     trades, _, events = pt.advance(state, opens, closes, index_close)
-    assert trades[0]["sell_price"] == 46000.0 and "손절" in events[0]
+    assert trades[0]["sell_price"] == 45000.0 and "손절" in events[0]
 
 
 def test_first_run_only_queues_todays_signals():

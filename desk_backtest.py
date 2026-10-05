@@ -27,18 +27,19 @@ import kr_swing_backtest as kb
 import strategy
 from markets import MARKETS
 
-BREADTH_MIN, INDEX_VOL_MAX, STOCK_VOL_MAX = strategy.KR_BREADTH_MIN, strategy.US_VOL_MAX, strategy.KR_STOCK_VOL_MAX
+# 2026-10-04 비교 당시 값 그대로 (지금 규칙은 학습팀 제안으로 시장 폭 40%, 손절 -7%로 바뀌었어요)
+BREADTH_MIN, INDEX_VOL_MAX, STOCK_VOL_MAX, OLD_STOP = 0.50, strategy.US_VOL_MAX, strategy.KR_STOCK_VOL_MAX, 0.05
 
 
 def kr_variants(closes, index_close):
     trend = strategy.kr_frames(closes, index_close)["trend"]
     entry, exit_, rank, max_hold = kb.dip_after_breakout(closes, strategy.broadcast(trend, closes))
-    base = dict(entry=entry, exit=exit_, rank=rank, max_hold=max_hold, stop=strategy.KR_STOP, weight=strategy.KR_WEIGHT)
+    base = dict(entry=entry, exit=exit_, rank=rank, max_hold=max_hold, stop=OLD_STOP, weight=strategy.KR_WEIGHT)
     b = dp.breadth(closes) >= BREADTH_MIN
     calm = dp.index_vol(index_close) <= INDEX_VOL_MAX
     stock_calm = strategy.volatility(closes) <= STOCK_VOL_MAX
 
-    def with_(mask=None, stop=strategy.KR_STOP):
+    def with_(mask=None, stop=OLD_STOP):
         entry = base["entry"] & mask if mask is not None else base["entry"]
         return dict(base, entry=entry, stop=stop)
 
