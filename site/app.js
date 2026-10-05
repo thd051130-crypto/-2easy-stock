@@ -31,15 +31,23 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "signal", "watch", "perf", "chart"];
+const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock"];
 let screen = "home";
-const fromHash = () => { const [m, s] = location.hash.slice(1).split("/"); return { m, s }; };
+// 종목 화면(#kr/stock/005930): 목록에서 종목을 누르면 열려요. 아래 버튼은 종목 화면을 연 화면에 불이 들어와요.
+let stockCode = null;
+let stockFrom = "watch";
+const fromHash = () => {
+  const [m, s, code] = location.hash.slice(1).split("/");
+  let c = null;
+  try { c = code ? decodeURIComponent(code) : null; } catch (e) { /* 이상한 주소 */ }
+  return { m, s, code: c };
+};
 {
   const h = fromHash();
   if (h.m === "kr" || h.m === "us") market = h.m;
-  if (SCREENS.includes(h.s)) screen = h.s;
+  if (SCREENS.includes(h.s) && (h.s !== "stock" || h.code)) { screen = h.s; stockCode = h.code; }
 }
-const hashFor = () => `#${market}${screen === "home" ? "" : `/${screen}`}`;
+const hashFor = () => `#${market}${screen === "home" ? "" : `/${screen}`}${screen === "stock" ? `/${encodeURIComponent(stockCode)}` : ""}`;
 
 // 관심종목(★)은 이 폰 브라우저에 시장별로 저장해요. 저장소를 못 쓰면 앱을 닫을 때까지만 기억해요.
 const WATCH = {};
@@ -102,6 +110,7 @@ async function load() {
     return;
   }
   siteVersion = siteVersion || data.site_version || null;
+  if (DATA && DATA.built !== data.built) { STOCK_DATA.clear(); STOCK_READY.clear(); }  // 새로 배포됐으면 종목 자료도 새로
   DATA = data;
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   render();
@@ -110,20 +119,30 @@ async function load() {
 function selectMarket(m) {
   market = m;
   try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ }
+  if (screen === "stock") screen = stockFrom;  // 종목 화면은 그 시장 종목이라, 시장을 바꾸면 보던 목록 화면으로
   history.replaceState(history.state, "", hashFor());
   render();
 }
 
-// 홈에서 다른 화면으로 갈 때만 기록을 하나 남겨요. 그래서 폰의 뒤로 가기를 누르면 앱이 꺼지지 않고 홈으로 돌아와요.
+// 기록(history) 층: 홈 = 0층, 홈에서 다른 화면으로 가면 1층, 종목 화면은 한 층 더 쌓아요. 화면끼리는 바꿔치기.
+// 그래서 폰의 뒤로 가기를 누르면 종목 → 보던 화면 → 홈 순서로 돌아오고, 앱이 바로 꺼지지 않아요.
+// (예전 버전이 남긴 기록 {screen}은 1층으로 쳐요)
+const depth = () => { const st = history.state; return st ? (st.depth ?? (st.screen ? 1 : 0)) : 0; };
 function go(s, fromBack) {
-  if (!SCREENS.includes(s)) s = "home";
+  if (!SCREENS.includes(s) || (s === "stock" && !stockCode)) s = "home";
   if (!fromBack) {
-    if (s === screen) { window.scrollTo(0, 0); return; }  // 지금 화면 버튼을 또 누르면 맨 위로
-    if (s === "home" && history.state && history.state.screen) { history.back(); return; }
-    const push = screen === "home";
-    screen = s;
-    if (push) history.pushState({ screen: s }, "", hashFor());
-    else history.replaceState(history.state, "", hashFor());
+    if (s === screen && s !== "stock") { window.scrollTo(0, 0); return; }  // 지금 화면 버튼을 또 누르면 맨 위로
+    if (s === "home" && depth() > 0) { history.go(-depth()); return; }
+    if (s === "stock") {
+      if (screen !== "stock") stockFrom = screen;
+      screen = s;
+      history.pushState({ depth: depth() + 1 }, "", hashFor());
+    } else {
+      const push = screen === "home";
+      screen = s;
+      if (push) history.pushState({ depth: 1 }, "", hashFor());
+      else history.replaceState(history.state, "", hashFor());
+    }
   } else {
     screen = s;
     history.replaceState(history.state, "", hashFor());
@@ -132,18 +151,30 @@ function go(s, fromBack) {
   render();
 }
 
+function openStock(code) {
+  stockCode = code;
+  go("stock");
+}
+// 종목 화면의 ‹ 뒤로: 쌓인 기록이 있으면 폰 뒤로 가기와 같고, 주소로 바로 열었으면 종목을 연 화면으로
+function back() {
+  if (depth() > 0) history.back();
+  else go(stockFrom === "stock" ? "watch" : stockFrom);
+}
+
 const VIEWS = {
   home: (d) => [homeSignalCard(d), homeWatchCard(d), homePerfCard(d), homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), rulebookAccountCard(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
+  stock: (d) => [stockHeadCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
 };
 
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
+  const lit = screen === "stock" ? stockFrom : screen;
   document.querySelectorAll(".nav button").forEach((b) => {
-    if (b.dataset.screen === screen) b.setAttribute("aria-current", "page");
+    if (b.dataset.screen === lit) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   });
   if (!DATA) return;
@@ -151,12 +182,11 @@ function render() {
   const app = $("#app");
   app.innerHTML = VIEWS[screen](d).join("");
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
+  app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") { drawTrack(d); drawEquity(d); }
   if (screen === "watch") bindWatch(d);
-  app.querySelectorAll("[data-star]").forEach((b) => b.addEventListener("click", (e) => {
-    e.stopPropagation();
-    starClicked(d, b);
-  }));
+  if (screen === "stock") bindStock();
+  bindRows(app, d);
   if (screen === "chart") {
     drawTrend(d);
     app.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
@@ -165,12 +195,12 @@ function render() {
       app.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       drawTrend(d, true);
     }));
-    app.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => {
-      IND[b.dataset.ind] = !IND[b.dataset.ind];
-      try { localStorage.setItem("ind", JSON.stringify(IND)); } catch (e) { /* 이번만 기억 */ }
-      render();  // 보던 구간·확대는 그대로 두고 지표만 다시 그려요
-    }));
   }
+  app.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => {
+    IND[b.dataset.ind] = !IND[b.dataset.ind];
+    try { localStorage.setItem("ind", JSON.stringify(IND)); } catch (e) { /* 이번만 기억 */ }
+    render();  // 보던 구간·확대는 그대로 두고 지표만 다시 그려요
+  }));
 }
 
 function drawEquity(d) {
@@ -227,7 +257,7 @@ function homeSignalCard(d) {
   } else {
     head = `매수 후보 ${s.picks.length}개`;
     sub = `다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.`;
-    extra = `<ul class="list" style="margin-top:12px">${s.picks.map((p, i) => `<li><div class="l">
+    extra = `<ul class="list" style="margin-top:12px">${s.picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
         <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
         <div class="meta">손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("")}</ul>`;
   }
@@ -274,7 +304,7 @@ function stockRow(s, d, { star = true, chart = false } = {}) {
   // 작은 추세선과 같은 기간(최근 3개월) 등락률이라 선 색과 숫자가 맞아요
   const c3 = s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
   const meta = [s.code, c3 == null ? "" : `3개월 ${pct(c3)}`].filter(Boolean).join(" · ");
-  return `<li class="stock${chart ? " spark-row" : ""}${star ? "" : " no-star"}">
+  return `<li class="stock${chart ? " spark-row" : ""}${star ? "" : " no-star"}" data-stock="${esc(s.code)}">
     <div class="name">${esc(s.name)}${badges.join("")}</div><div class="meta">${esc(meta)}</div>
     ${chart ? `<div class="mini">${spark(s.spark, `${s.name} 최근 3개월`)}</div>` : ""}
     <div class="price">${price(market, s.close)}</div><div class="chg ${sign(s.d1)}">${pct(s.d1, 2)}</div>
@@ -293,7 +323,7 @@ function watchCard(d) {
   return `<section class="card" id="watch-card"><h2>내 관심종목 <small>${mine.length}개 · ${md(all[0].day)} 종가</small></h2>
     ${mine.length ? `<ul class="list">${mine.map((s) => stockRow(s, d, { chart: true })).join("")}</ul>`
       : `<p class="empty">아래 전체 종목에서 ☆를 누르면 여기에 모여요.</p>`}
-    <p class="muted" style="margin:10px 0 0">★ 목록은 이 폰 브라우저에만 저장돼요.</p></section>`;
+    <p class="muted" style="margin:10px 0 0">종목을 누르면 차트와 재무제표가 나와요. ★ 목록은 이 폰 브라우저에만 저장돼요.</p></section>`;
 }
 
 function allStocksCard(d) {
@@ -315,11 +345,13 @@ function allRows(d) {
   return rows.length ? rows.map((s) => stockRow(s, d)).join("") : `<li><p class="empty">"${esc(watchQuery)}"에 맞는 종목이 없어요.</p></li>`;
 }
 
-function bindStars(el, d) {
+// ★는 관심종목 넣기·빼기, 줄의 나머지를 누르면 그 종목 화면(차트·재무제표)
+function bindRows(el, d) {
   el.querySelectorAll("[data-star]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
     starClicked(d, b);
   }));
+  el.querySelectorAll("[data-stock]").forEach((row) => row.addEventListener("click", () => openStock(row.dataset.stock)));
 }
 
 function bindWatch(d) {
@@ -329,7 +361,7 @@ function bindWatch(d) {
       watchQuery = input.value;
       const list = $("#all-list");
       list.innerHTML = allRows(d);
-      bindStars(list, d);
+      bindRows(list, d);
     });
   }
   document.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => {
@@ -338,7 +370,7 @@ function bindWatch(d) {
     document.querySelectorAll("[data-sort]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     const list = $("#all-list");
     list.innerHTML = allRows(d);
-    bindStars(list, d);
+    bindRows(list, d);
   }));
 }
 
@@ -398,7 +430,7 @@ function trackCard(d) {
         divider = true;
         pre = `<li class="divider">↓ ${md(live)} 전은 지금 규칙을 과거 날짜에 적용해서 채운 기록이에요</li>`;
       }
-      return `${pre}<li class="pick"><div class="name">${esc(p.name)}</div><b class="ret ${sign(p.ret)}">${pct(p.ret)}</b>
+      return `${pre}<li class="pick" data-stock="${esc(p.code)}"><div class="name">${esc(p.name)}</div><b class="ret ${sign(p.ret)}">${pct(p.ret)}</b>
         <div class="meta">${md(p.date)} ${px(market, p.close)} → ${px(market, p.last)} · ${p.days ? `${p.days}거래일` : "오늘"}</div>
         <div class="mini">${spark(p.path, `${p.name} 추천 뒤 수익률`, 0.01)}</div></li>`;
     });
@@ -600,7 +632,7 @@ function signalCard(d) {
   } else if (!s.picks.length) {
     body = `<p class="headline">오늘은 매수 신호 없음</p><p class="sub">조건에 맞게 눌린 종목이 없어요. 기다리는 것도 규칙이에요.</p>${idx}`;
   } else {
-    const items = s.picks.map((p, i) => `<li><div class="l">
+    const items = s.picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
         <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
         <div class="meta">RSI2 ${p.rsi2.toFixed(1)} · 5일선 ${num(p.ma5)}원 위로 마감하면 매도 · 손절 참고 ${num(p.stop)}원</div>
         ${opinion(p.opinion)}
@@ -662,7 +694,7 @@ function pendingLines(a) {
 function positionsCard(d) {
   const a = d.account;
   if (!a) return "";
-  const items = a.positions.map((p) => `<li><div class="l"><div class="name">${esc(p.name)}</div>
+  const items = a.positions.map((p) => `<li data-stock="${esc(p.code)}"><div class="l"><div class="name">${esc(p.name)}</div>
       <div class="meta">${shares(p.qty)} · ${md(p.buy_date)} ${price(market, p.buy_price)}에 매수 → 지금 ${price(market, p.price)}</div></div>
       <div class="r"><div class="${sign(p.ret)}">${pct(p.ret)}</div><div class="meta">${money(market, p.value)}</div></div></li>`).join("");
   return `<section class="card"><h2>보유 종목 <small>${a.positions.length}개</small></h2>
@@ -690,12 +722,7 @@ function trendCard(d) {
   return `<section class="card"><h2>${esc(d.index_name)} 추세</h2>
     ${cd ? `<div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips(cd)}` : ""}
     <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>
-    ${cd ? `<div class="legend">
-      <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
-      <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
-      ${IND.ma ? `<span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
-      <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span>` : ""}
-      ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>` : `<div class="legend">
+    ${cd ? candleLegend() : `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--series-1)"></i>${esc(d.index_name)}</span>
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>50일선</span>
       <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
@@ -703,6 +730,15 @@ function trendCard(d) {
     <p class="muted" style="margin:8px 0 0">${cd
       ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. "
       : ""}${TREND_RULE[market]}</p>${cd ? indHelp() : ""}</section>`;
+}
+
+function candleLegend() {
+  return `<div class="legend">
+      <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
+      <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
+      ${IND.ma ? `<span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
+      <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span>` : ""}
+      ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>`;
 }
 
 // 보조지표 버튼 (여러 개 같이 켤 수 있어요). 거래량 자료가 없는 예전 기록이면 거래량 버튼은 못 눌러요.
@@ -732,7 +768,7 @@ function rulebookPicksCard(d) {
   if (!rb) return "";
   const picks = (d.signal && d.signal.rulebook) || [];
   const unit = market === "kr" ? "원" : "달러";
-  const items = picks.map((p, i) => `<li><div class="l">
+  const items = picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
       <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${opinion(p.opinion)}</div>
       <div class="r">${num(p.close)}${unit}</div></li>`).join("");
   return `<section class="card"><h2>내 규칙표 후보 <small>${picks.length}개 · 검증용 가상계좌에 기록</small></h2>
@@ -760,6 +796,191 @@ function rulebookAccountCard(d) {
 function rulesCard(d) {
   return `<section class="card"><details><summary>${esc(d.name)} 규칙 보기</summary>
     <ol>${d.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
+}
+
+// ---------------------------------------------------------------- 종목 화면 (차트 + 재무제표)
+// 자료는 종목마다 stocks/<시장>/<코드>.json (배포 때 stock_pages.py가 만듦). 처음 열 때 받아서 앱을 닫을 때까지 기억해요.
+const STOCK_FRAMES = FRAMES.filter((f) => f[0] !== "y");  // 3년치 일봉이라 년봉은 빼요
+let stockFrame = "d";
+let fundMode = "annual";
+const STOCK_DATA = new Map();   // "kr/005930" → 받는 중인 Promise
+const STOCK_READY = new Map();  // "kr/005930" → 받은 자료
+let stockDrawn = null;          // 차트를 마지막으로 그린 종목 (바뀌면 보던 구간을 처음으로)
+
+function stockData(m, code) {
+  const key = `${m}/${code}`;
+  if (!STOCK_DATA.has(key)) {
+    STOCK_DATA.set(key, fetch(`stocks/${m}/${encodeURIComponent(code)}.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => {
+        if (x) STOCK_READY.set(key, x); else STOCK_DATA.delete(key);  // 못 받았으면 다음에 다시 받아요
+        return x;
+      }));
+  }
+  return STOCK_DATA.get(key);
+}
+
+function stockHeadCard(d) {
+  const code = stockCode;
+  const s = stocksOf(d).find((x) => x.code === code);
+  const x = STOCK_READY.get(`${market}/${code}`);
+  const name = (s && s.name) || (x && x.name) || code;
+  const on = WATCH[market].includes(code);
+  const sig = d.signal || {};
+  const badges = [];
+  if ((sig.picks || []).some((p) => p.code === code)) badges.push(`<span class="badge good">오늘 매수 후보</span>`);
+  if ((sig.rulebook || []).some((p) => p.code === code)) badges.push(`<span class="badge">규칙표 후보</span>`);
+  const kind = market === "kr" ? "코스피" : code === "SPY" ? "미국 ETF" : "미국 주식";
+  const c3 = s && s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
+  return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
+    <div class="stock-title"><div class="l"><h2 class="stock-name">${esc(name)}</h2>
+      <div class="meta">${esc(code)} · ${kind}${badges.join("")}</div></div>
+      <button type="button" class="star" data-star="${esc(code)}" aria-pressed="${on}"
+        aria-label="${esc(name)} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button></div>
+    ${s ? `<p class="hero">${price(market, s.close)}</p>
+      <p class="sub"><span class="nowrap"><b class="${sign(s.d1)}">${pct(s.d1, 2)}</b> 전일 대비</span>${c3 == null ? ""
+        : ` · <span class="nowrap">3개월 <b class="${sign(c3)}">${pct(c3)}</b></span>`} · <span class="nowrap">${md(s.day)} 종가</span></p>` : ""}
+  </section>`;
+}
+
+function stockChartCard() {
+  const x = STOCK_READY.get(`${market}/${stockCode}`);
+  const buttons = STOCK_FRAMES.map(([key, label]) =>
+    `<button type="button" data-sframe="${key}" aria-pressed="${key === stockFrame}">${label}</button>`).join("");
+  return `<section class="card"><h2>차트 <small>최근 3년</small></h2>
+    <div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips((x && x.candles) || { v: [1] })}
+    <p class="muted" id="stock-change" style="margin:8px 0 4px"></p>${candleLegend()}
+    <div class="chart candle" id="stock-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
+    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요.</p>${indHelp()}</section>`;
+}
+
+function bindStock() {
+  const key = `${market}/${stockCode}`;
+  const fill = (x) => {
+    if (screen !== "stock" || `${market}/${stockCode}` !== key) return;  // 받는 사이 다른 화면으로 갔으면 안 그려요
+    drawStock(x, false);
+  };
+  if (STOCK_READY.has(key)) fill(STOCK_READY.get(key));
+  else stockData(market, stockCode).then(fill);
+  document.querySelectorAll("[data-sframe]").forEach((b) => b.addEventListener("click", () => {
+    stockFrame = b.dataset.sframe;
+    document.querySelectorAll("[data-sframe]").forEach((y) => y.setAttribute("aria-pressed", String(y === b)));
+    if (STOCK_READY.has(key)) drawStock(STOCK_READY.get(key), true);
+  }));
+}
+
+function drawStock(x, reset) {
+  const el = $("#stock-chart");
+  if (!el) return;
+  const key = `${market}/${stockCode}`;
+  if (x && x.candles && x.candles.dates.length > 1) {
+    const f = frameCandles(x.candles, stockFrame);
+    const show = (STOCK_FRAMES.find((y) => y[0] === stockFrame) || STOCK_FRAMES[0])[2];
+    candleChart(el, f, show, reset || stockDrawn !== key, (txt) => { const r = $("#stock-change"); if (r) r.innerHTML = txt; },
+      { fmt: (v) => px(market, v), name: x.name });
+    stockDrawn = key;
+  } else {
+    el.innerHTML = `<p class="empty">${x ? "이 종목은 차트 자료를 못 받았어요." : "이 종목 자료를 아직 못 받았어요."} 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`;
+  }
+  fillFund(x && x.fund);
+}
+
+function fillFund(f) {
+  const card = $("#fund-card");
+  if (!card) return;
+  card.innerHTML = fundHtml(f);
+  card.querySelectorAll("[data-fund]").forEach((b) => b.addEventListener("click", () => {
+    fundMode = b.dataset.fund;
+    fillFund(f);
+  }));
+}
+
+// 큰 금액은 조·억 단위로 (원이든 달러든 숫자만, 단위는 따로 적어요)
+function bigNum(x) {
+  if (x == null) return "-";
+  const a = Math.abs(x);
+  if (a >= 1e12) return `${(x / 1e12).toLocaleString("ko-KR", { maximumFractionDigits: a >= 1e14 ? 0 : 1 })}조`;
+  if (a >= 1e8) return `${Math.round(x / 1e8).toLocaleString("ko-KR")}억`;
+  return `${Math.round(x / 1e4).toLocaleString("ko-KR")}만`;
+}
+const periodLabel = (p) => (p.length === 4 ? `${p}년` : `${p.slice(2, 4)}.${p.slice(5, 7)}`);  // 2025 → 2025년, 2026-06 → 26.06
+const hasOp = (s) => s.op.some((v) => v != null);
+
+function fundHtml(f) {
+  if (!f) return `<h2>재무제표</h2><p class="empty">재무 자료가 아직 없어요. 매주 토요일에 받아요.</p>`;
+  const usd = market === "us";
+  const tile = (label, value, note) => `<div class="stat"><span>${label}</span><b>${value}</b>${note ? `<small>${note}</small>` : ""}</div>`;
+  const tiles = [
+    tile("PER", f.loss ? "적자" : f.per != null ? `${f.per.toFixed(1)}배` : "-", "주가 ÷ 이익"),
+    tile("PBR", f.pbr != null ? `${f.pbr.toFixed(2)}배` : "-", "주가 ÷ 순자산"),
+    tile(`시가총액(${usd ? "달러" : "원"})`, bigNum(f.cap), ""),
+    tile("배당수익률", f.div != null ? `${f.div.toFixed(2)}%` : "-", "배당 ÷ 주가"),
+    tile("ROE", f.roe != null ? `${Math.round(f.roe * 100)}%` : "-", "이익 ÷ 자본"),
+    tile("부채비율", f.financial ? "금융사" : f.debt != null ? `${Math.round(f.debt)}%` : "-", f.financial ? "원래 높아서 안 봐요" : "부채 ÷ 자본"),
+  ].join("");
+  const g = f.grade || { checks: [] };
+  const good = g.checks.filter((c) => c[1]).map((c) => c[0]), bad = g.checks.filter((c) => !c[1]).map((c) => c[0]);
+  const gradeLine = g.score == null ? "펀더멘탈부: 자료가 부족해서 등급을 매기지 않았어요."
+    : `펀더멘탈부 등급 <b>${esc(g.grade)}</b> (${g.score}/${g.total})${good.length ? ` · 좋음: ${esc(good.join(", "))}` : ""}${bad.length ? ` · 약함: ${esc(bad.join(", "))}` : ""}`;
+  let body;
+  if (!f.annual && !f.quarterly) {
+    body = `<p class="muted" style="margin:12px 0 0">${stockCode === "SPY" ? "ETF라 매출·영업이익 같은 재무제표가 없어요." : "야후에 이 종목 재무제표가 없어요."}</p>`;
+  } else {
+    if (!f[fundMode]) fundMode = f.annual ? "annual" : "quarterly";
+    const s = f[fundMode];
+    const modes = [["annual", "연간"], ["quarterly", "분기"]].filter(([k]) => f[k])
+      .map(([k, label]) => `<button type="button" data-fund="${k}" aria-pressed="${k === fundMode}">${label}</button>`).join("");
+    const second = hasOp(s) ? ["fin-op", "영업이익"] : ["fin-net", "순이익"];
+    body = `<div class="period" role="group" aria-label="재무 기간" style="margin-top:14px">${modes}</div>
+      <div class="legend" style="margin:10px 0 0"><span class="key"><i class="sw fin-revenue"></i>매출</span>
+        <span class="key"><i class="sw ${second[0]}"></i>${second[1]}</span></div>
+      ${fundBars(s)}${fundTable(s, usd)}${growthLine(s)}`;
+  }
+  return `<h2>재무제표 <small>${md(f.asof)} 받음</small></h2><div class="stats">${tiles}</div>
+    <p class="sub" style="margin:12px 0 0">${gradeLine}</p>${body}
+    <p class="muted" style="margin:10px 0 0">야후 파이낸스 무료 자료라 늦거나 빠진 값이 있을 수 있어요. PER은 최근 4분기 순이익 기준이에요.</p>`;
+}
+
+// 매출과 영업이익(없으면 순이익) 막대. 적자는 0 아래로.
+function fundBars(s) {
+  const keys = ["revenue", hasOp(s) ? "op" : "net"];
+  const vals = keys.flatMap((k) => s[k]).filter((v) => v != null);
+  if (!vals.length) return "";
+  const hi = Math.max(0, ...vals), lo = Math.min(0, ...vals);
+  const W = 320, H = 140, t = 8, b = 20, ih = H - t - b, n = s.dates.length;
+  const Y = (v) => t + ((hi - v) / (hi - lo || 1)) * ih;
+  const gw = W / n, bw = Math.min(22, gw * 0.3);
+  let bars = "";
+  s.dates.forEach((p, i) => keys.forEach((k, j) => {
+    const v = s[k][i];
+    if (v == null) return;
+    const x = i * gw + gw / 2 + (j === 0 ? -bw - 1 : 1), y = Math.min(Y(v), Y(0));
+    bars += `<rect class="fin-${k}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(Y(v) - Y(0))).toFixed(1)}" rx="2"/>`;
+  }));
+  const labels = s.dates.map((p, i) => `<text x="${(i * gw + gw / 2).toFixed(1)}" y="${H - 5}" text-anchor="middle">${esc(periodLabel(p))}</text>`).join("");
+  return `<svg class="fin-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="매출과 ${keys[1] === "op" ? "영업이익" : "순이익"} 막대그래프">
+    <line class="gridline" x1="0" x2="${W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>${bars}${labels}</svg>`;
+}
+
+function fundTable(s, usd) {
+  const row = (label, vals, f) => `<tr><th scope="row">${label}</th>${vals.map((v, i) => `<td class="${v != null && v < 0 ? "down" : ""}">${f(v, i)}</td>`).join("")}</tr>`;
+  const margin = (v, i) => (v != null && s.revenue[i] ? `${((v / s.revenue[i]) * 100).toFixed(1)}%` : "-");
+  return `<div class="fin-wrap"><table class="fin"><thead><tr><th scope="col">${usd ? "달러" : "원"}</th>
+    ${s.dates.map((p) => `<th scope="col">${esc(periodLabel(p))}</th>`).join("")}</tr></thead><tbody>
+    ${row("매출", s.revenue, bigNum)}${hasOp(s) ? row("영업이익", s.op, bigNum) : ""}${row("순이익", s.net, bigNum)}
+    ${hasOp(s) ? row("영업이익률", s.op, margin) : ""}</tbody></table></div>`;
+}
+
+// 최근 기간이 바로 앞 기간보다 얼마나 늘었는지 (앞 기간이 적자면 비율이 의미 없어서 빼요)
+function growthLine(s) {
+  const n = s.dates.length;
+  if (n < 2) return "";
+  const g = (k) => { const a = s[k][n - 2], b = s[k][n - 1]; return a != null && b != null && a > 0 ? b / a - 1 : null; };
+  const parts = [["revenue", "매출"], hasOp(s) ? ["op", "영업이익"] : ["net", "순이익"]]
+    .map(([k, label]) => [label, g(k)]).filter(([, v]) => v != null)
+    .map(([label, v]) => `${label} <b class="${sign(v)}">${pct(v)}</b>`);
+  if (!parts.length) return "";
+  return `<p class="sub" style="margin:8px 0 0">${esc(periodLabel(s.dates[n - 1]))} ${fundMode === "annual" ? "전년 대비" : "직전 분기 대비"} ${parts.join(" · ")}</p>`;
 }
 
 // 캔들 차트 (SVG). 가격 축은 오른쪽, 보이는 구간의 최고·최저를 표시해요.
@@ -841,12 +1062,14 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
       }
     }
     const mas = ind.ma ? line(ma200, "ma ma200") + line(ma50, "ma ma50") : "";
-    // 최고·최저 표시 (캔들 옆에 가격, 화면 밖으로 안 나가게 좌우를 골라요)
+    // 최고·최저 표시 (캔들 옆에 가격). 글자 길이를 어림해서 오른쪽 가격 축을 덮지 않는 쪽에 써요.
     const mark = (i, price, label, above) => {
-      const x = X(i), y = Y(price), right = x < pad.l + iw * 0.6;
+      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`;
+      const w = [...text].reduce((sum, ch) => sum + (/[가-힣]/.test(ch) ? 11 : 6.5), 0);
+      const x = X(i), y = Y(price), right = x + 6 + w <= pad.l + iw || x - 6 - w < pad.l;
       const tx = right ? x + 6 : x - 6, ty = above ? y - 6 : y + 14;
       return `<line class="mark" x1="${x}" x2="${right ? x + 4 : x - 4}" y1="${y}" y2="${y}"/>
-        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${label} ${esc(fmt(price))} (${esc(frameLabel(c, i, "short"))})</text>`;
+        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${esc(text)}</text>`;
     };
     // 지금 값 표시 (오른쪽 축, 마지막 캔들 색)
     const last = c.c[n - 1], lastCls = last >= c.o[n - 1] ? "up" : "down";
@@ -1057,7 +1280,11 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => go(b.dataset.screen)));
-window.addEventListener("popstate", () => go(fromHash().s, true));
+window.addEventListener("popstate", () => {
+  const h = fromHash();
+  if (h.s === "stock" && h.code) stockCode = h.code;
+  go(h.s, true);
+});
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 render();  // 데이터가 오기 전에도 주소에 맞는 시장·화면 버튼을 표시해요

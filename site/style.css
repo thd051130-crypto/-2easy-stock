@@ -259,3 +259,27 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart .rsi-tag { fill: var(--rsi); }
 .help { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--text-secondary); }
 .help li + li { margin-top: 4px; }
+
+/* 종목 화면: 목록 줄을 누르면 열려요 */
+li[data-stock] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+li[data-stock]:active { background: var(--surface-0); }
+.back { border: 0; background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; padding: 4px 0; margin: -4px 0 6px; cursor: pointer; min-height: 32px; }
+.stock-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.stock-title .l { min-width: 0; }
+.card h2.stock-name { display: block; font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; letter-spacing: -0.01em; }
+.stock-title .meta { font-size: 13px; color: var(--text-muted); }
+.stock-title .star { font-size: 26px; }
+.fin-chart { display: block; width: 100%; height: auto; margin-top: 6px; }
+.fin-chart text { fill: var(--text-muted); font-size: 11px; }
+.fin-chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.fin-chart .fin-revenue { fill: var(--series-1); opacity: .35; }
+.fin-chart .fin-op { fill: var(--series-2); }
+.fin-chart .fin-net { fill: var(--series-3); }
+.sw.fin-revenue { background: var(--series-1); opacity: .35; }
+.sw.fin-op { background: var(--series-2); }
+.sw.fin-net { background: var(--series-3); }
+.fin-wrap { overflow-x: auto; margin-top: 8px; }
+table.fin { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+table.fin th, table.fin td { padding: 6px 4px; text-align: right; white-space: nowrap; border-top: 1px solid var(--border); }
+table.fin thead th { border-top: 0; color: var(--text-muted); font-weight: 600; }
+table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight: 600; }
