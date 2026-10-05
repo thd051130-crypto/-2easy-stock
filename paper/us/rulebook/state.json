@@ -1,0 +1,67 @@
+{
+  "version": 2,
+  "market": "us",
+  "capital": 500,
+  "cash": 500,
+  "equity": 500,
+  "start": "2026-10-05",
+  "index_start": 7773.9501953125,
+  "last_day": "2026-10-05",
+  "positions": [],
+  "orders": [
+    {
+      "side": "buy",
+      "code": "MDT",
+      "name": "메드트로닉",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "ABBV",
+      "name": "애브비",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "UNH",
+      "name": "유나이티드헬스",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "AMZN",
+      "name": "아마존",
+      "kind": "new"
+    }
+  ],
+  "halt_next": false,
+  "halt_week": null,
+  "halt_month": null,
+  "week": {
+    "key": "2026-W41",
+    "base": 500
+  },
+  "month": {
+    "key": "2026-10",
+    "base": 500
+  },
+  "pending_buys": [
+    {
+      "code": "MDT",
+      "name": "메드트로닉"
+    },
+    {
+      "code": "ABBV",
+      "name": "애브비"
+    },
+    {
+      "code": "UNH",
+      "name": "유나이티드헬스"
+    },
+    {
+      "code": "AMZN",
+      "name": "아마존"
+    }
+  ],
+  "pending_sells": []
+}

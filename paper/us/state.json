@@ -1,0 +1,19 @@
+{
+  "market": "us",
+  "capital": 500,
+  "fractional": true,
+  "start": "2026-10-05",
+  "index_start": 7773.9501953125,
+  "cash": 500,
+  "equity": 500,
+  "last_day": "2026-10-05",
+  "positions": [],
+  "pending_buys": [
+    {
+      "code": "SPY",
+      "name": "SPY",
+      "signal_date": "2026-10-05"
+    }
+  ],
+  "pending_sells": []
+}
