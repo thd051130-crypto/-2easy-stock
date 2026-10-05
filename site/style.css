@@ -241,12 +241,12 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 
 /* 보조지표 버튼과 그림 */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.chip {
+.chips button {
   border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600;
   padding: 6px 12px; border-radius: 999px; min-height: 34px; cursor: pointer;
 }
-.chip[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-fg); }
-.chip:disabled { opacity: .45; cursor: default; }
+.chips button[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-fg); }
+.chips button:disabled { opacity: .45; cursor: default; }
 .chart .bb { fill: none; stroke: var(--bb); stroke-width: 1; }
 .chart .bb-mid { stroke-dasharray: 4 3; }
 .chart .bb-fill { fill: var(--bb); opacity: .1; stroke: none; }

@@ -709,7 +709,7 @@ function trendCard(d) {
 function indChips(cd) {
   const chips = IND_KEYS.map(([k, label]) => {
     const off = k === "vol" && !(Array.isArray(cd.v) && cd.v.length);
-    return `<button type="button" class="chip" data-ind="${k}" aria-pressed="${IND[k] && !off}"${off ? " disabled" : ""}>${label}</button>`;
+    return `<button type="button" data-ind="${k}" aria-pressed="${IND[k] && !off}"${off ? " disabled" : ""}>${label}</button>`;
   }).join("");
   return `<div class="chips" role="group" aria-label="보조지표">${chips}</div>`;
 }
