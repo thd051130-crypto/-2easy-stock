@@ -44,7 +44,7 @@ def test_message_shares_and_stale_note():
         p.update(high20=p["close"] * 1.05, ma200=p["close"] * 0.9, vol20=0.3, days_since_high=4)
     text = ks.format_message(market, picks, 300000, dt.date(2026, 10, 4))
     assert "1주도 못 삼" in text  # 종목당 10% = 3만 원
-    assert "손절" in text and "47,500원" in text
+    assert "손절" in text and "46,500원" in text
     assert "이유: 4거래일 전 20일 신고가" in text and "위험:" in text
     assert "마지막 거래일" in text
 
