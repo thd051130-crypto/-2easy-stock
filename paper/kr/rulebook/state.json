@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "market": "kr",
+  "capital": 700000,
+  "cash": 700000,
+  "equity": 700000,
+  "start": "2026-10-02",
+  "index_start": 7003.740234375,
+  "last_day": "2026-10-02",
+  "positions": [],
+  "orders": [],
+  "halt_next": false,
+  "halt_week": null,
+  "halt_month": null,
+  "week": {
+    "key": "2026-W40",
+    "base": 700000
+  },
+  "month": {
+    "key": "2026-10",
+    "base": 700000
+  },
+  "pending_buys": [],
+  "pending_sells": []
+}
