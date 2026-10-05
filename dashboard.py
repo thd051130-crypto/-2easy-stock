@@ -4,6 +4,8 @@
 paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없음).
   - signal.json : 오늘의 신호와 지수 추세 (kr_swing_signals.py --save-json)
   - state.json, equity.csv, trades.csv : 가상계좌 (paper_trade.py)
+  - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
+  - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
 
 사용법:
     python dashboard.py                 # site/ 를 _site/ 로 복사하고 _site/data.json 생성
@@ -19,6 +21,7 @@ import pathlib
 import shutil
 
 import strategy
+import watchlist
 from markets import MARKETS
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -113,13 +116,17 @@ RULEBOOK_RULES = [
 
 def build(paper_dir):
     markets = {}
+    watch, alerts = watchlist.load_watch(paper_dir), watchlist.load_alerts(paper_dir)["active"]
     for key, m in MARKETS.items():
         folder = paper_dir / key
         markets[key] = dict(name=m["name"], index_name=m["index_name"], currency=m["currency"],
                             capital=m["capital"], signal=read_json(folder / "signal.json"),
                             account=account(folder, key), rules=RULES[key],
-                            rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES))
-    return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets)
+                            rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES),
+                            # 텔레그램으로 넣은 종목 (시세는 배포 때 stock_pages.py가 채워요), 기다리는 가격 알림
+                            extras=watch[key], alerts=[a for a in alerts if a.get("market") == key])
+    return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
+                bot=watchlist.bot_username(paper_dir))
 
 
 def site_version(site_dir):
@@ -154,6 +161,8 @@ def main():
         shutil.rmtree(args.out)
     shutil.copytree(args.site, args.out)
     stamp_assets(args.out)
+    if (args.paper / "symbols").is_dir():  # 검색용 전체 종목 목록
+        shutil.copytree(args.paper / "symbols", args.out / "symbols")
     data = dict(build(args.paper), site_version=site_version(args.site))
     (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     for key, m in data["markets"].items():

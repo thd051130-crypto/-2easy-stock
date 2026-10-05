@@ -95,6 +95,23 @@ def test_stocks_include_spy_for_us_only():
     assert fu.symbol("kr", "005930") == "005930.KS" and fu.symbol("us", "BRK-B") == "BRK-B"
 
 
+def test_telegram_extras_get_fundamentals_with_their_own_symbol(tmp_path, monkeypatch):
+    monkeypatch.setattr(fu.watchlist, "PAPER", tmp_path)
+    (tmp_path / "watch.json").write_text(json.dumps(dict(kr=[dict(code="293490", name="카카오게임즈", symbol="293490.KQ")])))
+    assert fu.stocks("kr")["293490"] == "카카오게임즈" and "293490" not in fu.stocks("kr", extras=False)
+    assert fu.symbol("kr", "293490") == "293490.KQ" and fu.symbol("kr", "005930") == "005930.KS"
+    assert fu.summarize("kr", "293490", dict(marketCap=1.0), None, None, None)["name"] == "카카오게임즈"
+
+
+def test_update_merge_keeps_other_stocks(tmp_path, monkeypatch):
+    monkeypatch.setattr(fu.time, "sleep", lambda s: None)
+    path = tmp_path / "fundamentals.json"
+    path.write_text(json.dumps(dict(stocks={"005930": dict(per=12.0)})))
+    got, failed = fu.update(path, "kr", ["293490"], fetch=lambda m, c: dict(code=c, per=30.0), merge=True)
+    assert (got, failed) == (1, []) and json.loads(path.read_text())["stocks"] == {"005930": dict(per=12.0),
+                                                                                      "293490": dict(code="293490", per=30.0)}
+
+
 @pytest.mark.parametrize("x, want", [("1.5", 1.5), (None, None), (float("nan"), None), ("abc", None), (float("inf"), None)])
 def test_num(x, want):
     assert fu.num(x) == want

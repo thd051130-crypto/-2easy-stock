@@ -1,5 +1,6 @@
 # 폰으로 보는 대시보드를 GitHub Pages에 올려요 (site/ 화면 + paper/ 기록으로 만든 data.json + 종목 화면 파일).
 #   - swing-signals·fundamentals가 끝날 때마다, main에 화면·기록이 바뀔 때마다 다시 올려요.
+#     텔레그램 봇(telegram-bot)은 관심종목·알림을 바꾸면 이 워크플로를 직접 돌려요.
 #   - 처음 한 번: 저장소 Settings → Pages → Source를 "GitHub Actions"로 바꿔야 올라가요.
 #   - 주소: https://<계정>.github.io/<저장소>/  (폰 브라우저에서 열고 "홈 화면에 추가")
 name: pages
@@ -10,7 +11,7 @@ on:
     types: [completed]
   push:
     branches: [main]
-    paths: ["site/**", "paper/**", "dashboard.py", "stock_pages.py", "fundamentals.py", "strategy.py", "markets.py", ".github/workflows/pages.yml"]
+    paths: ["site/**", "paper/**", "dashboard.py", "stock_pages.py", "fundamentals.py", "watchlist.py", "strategy.py", "markets.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:

@@ -31,11 +31,14 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock"];
+const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock", "search"];
 let screen = "home";
-// 종목 화면(#kr/stock/005930): 목록에서 종목을 누르면 열려요. 아래 버튼은 종목 화면을 연 화면에 불이 들어와요.
+// 종목 화면(#kr/stock/005930)과 검색 화면(#kr/search)은 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
+// 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
+const LAYERS = ["stock", "search"];
 let stockCode = null;
 let stockFrom = "watch";
+let searchQuery = "";
 const fromHash = () => {
   const [m, s, code] = location.hash.slice(1).split("/");
   let c = null;
@@ -55,11 +58,28 @@ for (const m of ["kr", "us"]) {
   try { WATCH[m] = JSON.parse(localStorage.getItem(`watch_${m}`) || "[]"); } catch (e) { WATCH[m] = []; }
   if (!Array.isArray(WATCH[m])) WATCH[m] = [];
 }
-function toggleWatch(code) {
-  const list = WATCH[market];
+function toggleWatch(code, m = market) {
+  const list = WATCH[m];
   const i = list.indexOf(code);
   if (i >= 0) list.splice(i, 1); else list.push(code);
-  try { localStorage.setItem(`watch_${market}`, JSON.stringify(list)); } catch (e) { /* 이번만 기억 */ }
+  try { localStorage.setItem(`watch_${m}`, JSON.stringify(list)); } catch (e) { /* 이번만 기억 */ }
+}
+// 텔레그램으로 넣은 종목(data.json의 extras)은 처음 보이면 ★에 자동으로 넣어요. 본 종목은 기억해서, ☆로 빼면 다시 안 넣어요.
+const SEEN = {};
+for (const m of ["kr", "us"]) {
+  try { SEEN[m] = JSON.parse(localStorage.getItem(`seen_extras_${m}`) || "[]"); } catch (e) { SEEN[m] = []; }
+  if (!Array.isArray(SEEN[m])) SEEN[m] = [];
+}
+function adoptExtras() {
+  for (const m of ["kr", "us"]) {
+    const fresh = ((DATA.markets[m] || {}).extras || []).map((e) => e.code).filter((c) => !SEEN[m].includes(c));
+    if (!fresh.length) continue;
+    for (const c of fresh) { SEEN[m].push(c); if (!WATCH[m].includes(c)) WATCH[m].push(c); }
+    try {
+      localStorage.setItem(`seen_extras_${m}`, JSON.stringify(SEEN[m]));
+      localStorage.setItem(`watch_${m}`, JSON.stringify(WATCH[m]));
+    } catch (e) { /* 이번만 기억 */ }
+  }
 }
 let watchQuery = "";
 let watchSort = "change";
@@ -112,6 +132,7 @@ async function load() {
   siteVersion = siteVersion || data.site_version || null;
   if (DATA && DATA.built !== data.built) { STOCK_DATA.clear(); STOCK_READY.clear(); }  // 새로 배포됐으면 종목 자료도 새로
   DATA = data;
+  adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   render();
 }
@@ -131,10 +152,11 @@ const depth = () => { const st = history.state; return st ? (st.depth ?? (st.scr
 function go(s, fromBack) {
   if (!SCREENS.includes(s) || (s === "stock" && !stockCode)) s = "home";
   if (!fromBack) {
+    if (s === "search" && screen === "search") { const i = $("#search-input"); if (i) i.focus(); return; }
     if (s === screen && s !== "stock") { window.scrollTo(0, 0); return; }  // 지금 화면 버튼을 또 누르면 맨 위로
     if (s === "home" && depth() > 0) { history.go(-depth()); return; }
-    if (s === "stock") {
-      if (screen !== "stock") stockFrom = screen;
+    if (LAYERS.includes(s)) {
+      if (!LAYERS.includes(screen)) stockFrom = screen;
       screen = s;
       history.pushState({ depth: depth() + 1 }, "", hashFor());
     } else {
@@ -152,13 +174,14 @@ function go(s, fromBack) {
 }
 
 function openStock(code) {
+  if (code !== stockCode) alertOpen = false;
   stockCode = code;
   go("stock");
 }
-// 종목 화면의 ‹ 뒤로: 쌓인 기록이 있으면 폰 뒤로 가기와 같고, 주소로 바로 열었으면 종목을 연 화면으로
+// 종목·검색 화면의 ‹ 뒤로: 쌓인 기록이 있으면 폰 뒤로 가기와 같고, 주소로 바로 열었으면 아래 깔린 화면으로
 function back() {
   if (depth() > 0) history.back();
-  else go(stockFrom === "stock" ? "watch" : stockFrom);
+  else go(LAYERS.includes(stockFrom) ? "watch" : stockFrom);
 }
 
 const VIEWS = {
@@ -168,11 +191,14 @@ const VIEWS = {
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), rulebookAccountCard(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
   stock: (d) => [stockHeadCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
+  search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
 };
 
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
-  const lit = screen === "stock" ? stockFrom : screen;
+  const sb = $(".search-btn");
+  if (sb) { if (screen === "search") sb.setAttribute("aria-current", "page"); else sb.removeAttribute("aria-current"); }
+  const lit = LAYERS.includes(screen) ? stockFrom : screen;
   document.querySelectorAll(".nav button").forEach((b) => {
     if (b.dataset.screen === lit) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
@@ -186,6 +212,7 @@ function render() {
   if (screen === "perf") { drawTrack(d); drawEquity(d); }
   if (screen === "watch") bindWatch(d);
   if (screen === "stock") bindStock();
+  if (screen === "search") bindSearch();
   bindRows(app, d);
   if (screen === "chart") {
     drawTrend(d);
@@ -300,6 +327,7 @@ function stockRow(s, d, { star = true, chart = false } = {}) {
   const badges = [];
   if ((sig.picks || []).some((p) => p.code === s.code)) badges.push(`<span class="badge good">오늘 매수 후보</span>`);
   if ((sig.rulebook || []).some((p) => p.code === s.code)) badges.push(`<span class="badge">규칙표 후보</span>`);
+  if (s.extra) badges.push(`<span class="badge">추가한 종목</span>`);
   const on = WATCH[market].includes(s.code);
   // 작은 추세선과 같은 기간(최근 3개월) 등락률이라 선 색과 숫자가 맞아요
   const c3 = s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
@@ -312,7 +340,12 @@ function stockRow(s, d, { star = true, chart = false } = {}) {
       aria-label="${esc(s.name)} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button>` : ""}</li>`;
 }
 
-const stocksOf = (d) => (d.signal && d.signal.stocks) || [];
+// 대시보드 종목: 알림이 보는 대형주 + 텔레그램으로 넣은 종목(extra)
+function stocksOf(d) {
+  const base = (d.signal && d.signal.stocks) || [];
+  const have = new Set(base.map((s) => s.code));
+  return base.concat((d.extras || []).filter((e) => !have.has(e.code)).map((e) => ({ ...e, extra: true })));
+}
 
 function watchCard(d) {
   const all = stocksOf(d);
@@ -323,19 +356,22 @@ function watchCard(d) {
   return `<section class="card" id="watch-card"><h2>내 관심종목 <small>${mine.length}개 · ${md(all[0].day)} 종가</small></h2>
     ${mine.length ? `<ul class="list">${mine.map((s) => stockRow(s, d, { chart: true })).join("")}</ul>`
       : `<p class="empty">아래 전체 종목에서 ☆를 누르면 여기에 모여요.</p>`}
-    <p class="muted" style="margin:10px 0 0">종목을 누르면 차트와 재무제표가 나와요. ★ 목록은 이 폰 브라우저에만 저장돼요.</p></section>`;
+    <p class="muted" style="margin:10px 0 0">종목을 누르면 차트와 재무제표가 나와요. ★ 목록은 이 폰 브라우저에만 저장돼요.
+      목록에 없는 종목은 위쪽 돋보기(검색)에서 찾아 텔레그램으로 넣을 수 있어요.</p></section>`;
 }
 
 function allStocksCard(d) {
   const all = stocksOf(d);
   if (!all.length) return "";
-  const what = market === "kr" ? `코스피 대형주 ${all.length}개` : `미국 대형주와 SPY ${all.length}개`;
+  const extra = all.filter((s) => s.extra).length, n = all.length - extra;
+  const what = (market === "kr" ? `코스피 대형주 ${n}개` : `미국 대형주와 SPY ${n}개`) + (extra ? ` + 추가한 종목 ${extra}개` : "");
   const sorts = [["change", "오늘 등락순"], ["name", "이름순"]].map(([k, label]) =>
     `<button type="button" data-sort="${k}" aria-pressed="${watchSort === k}">${label}</button>`).join("");
   return `<section class="card"><h2>전체 종목 <small>${what}</small></h2>
     <input class="search" type="search" placeholder="이름이나 코드로 찾기" aria-label="종목 찾기" value="${esc(watchQuery)}">
     <div class="period" role="group" aria-label="정렬" style="margin:10px 0 6px">${sorts}</div>
-    <ul class="list" id="all-list">${allRows(d)}</ul></section>`;
+    <ul class="list" id="all-list">${allRows(d)}</ul>
+    <button type="button" class="more" data-find>목록에 없는 종목 찾기 (국장·미장 전체)<span aria-hidden="true">›</span></button></section>`;
 }
 
 function allRows(d) {
@@ -355,6 +391,8 @@ function bindRows(el, d) {
 }
 
 function bindWatch(d) {
+  const find = $("[data-find]");
+  if (find) find.addEventListener("click", () => { searchQuery = watchQuery; go("search"); });
   const input = $(".search");
   if (input) {
     input.addEventListener("input", () => {
@@ -396,6 +434,199 @@ function homeWatchCard(d) {
   return `<section class="card"><h2>관심종목 <small>${md(all[0].day)} 종가</small></h2>
     <ul class="list">${mine.slice(0, 5).map((s) => stockRow(s, d, { star: false, chart: true })).join("")}</ul>
     ${more("watch", mine.length > 5 ? `관심종목 ${mine.length}개 모두 보기` : "관심종목 보기")}</section>`;
+}
+
+// ---------------------------------------------------------------- 종목 검색 (국장·미장 전체 상장 종목)
+// 목록은 symbols/<시장>.json (매주 symbols.py가 야후에서 받음). 찾는 규칙은 symbols.py와 똑같이 맞춰요.
+// 대시보드에 있는 종목은 바로 종목 화면으로, 없는 종목은 '추가'로 텔레그램 봇에게 넣어 달라고 보내요.
+const CORP = /\(주\)|㈜|주식회사|\(유\)|유한회사/g;
+const HANGUL = /[가-힣]/;
+const LETTERS = { a: "에이", b: "비", c: "씨", d: "디", e: "이", f: "에프", g: "지", h: "에이치", i: "아이", j: "제이", k: "케이",
+  l: "엘", m: "엠", n: "엔", o: "오", p: "피", q: "큐", r: "알", s: "에스", t: "티", u: "유", v: "브이", w: "더블유", x: "엑스", y: "와이", z: "지" };
+const BRAND_KO = { 코덱스: "kodex", 타이거: "tiger", 에이스: "ace", 라이즈: "rise", 플러스: "plus", 하나로: "hanaro",
+  아리랑: "arirang", 키움: "kiwoom", 코세프: "kosef", 쏠: "sol" };
+const norm = (s) => String(s || "").toLowerCase().replace(CORP, "").replace(/[^0-9a-z가-힣]/g, "");
+// 한글 바로 옆 영문은 한글 읽기로도: 'sk하이닉스' → '에스케이하이닉스'
+const spell = (s) => s.replace(/[a-z]+/g, (w, i) =>
+  (HANGUL.test(s.slice(Math.max(0, i - 1), i) + s.slice(i + w.length, i + w.length + 1)) ? [...w].map((c) => LETTERS[c]).join("") : w));
+const uniq = (a) => a.filter((k, i) => k && a.indexOf(k) === i);
+function queryKeys(q) {
+  const n = norm(q);
+  const keys = [n, spell(n)];
+  for (const [ko, en] of Object.entries(BRAND_KO)) if (n.includes(ko)) keys.push(n.split(ko).join(en));
+  return uniq(keys);
+}
+function nameKeys(row) {
+  const keys = [];
+  for (const name of [row[1], ...String(row[4] || "").split("|")]) {
+    const n = norm(name);
+    if (!n) continue;
+    keys.push(n, spell(n));
+    if (n.includes("자동차")) keys.push(n.split("자동차").join("차"));
+  }
+  return uniq(keys);
+}
+// 작을수록 잘 맞아요: 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부. 안 맞으면 null.
+function scoreOf(row, keys, qs) {
+  const code = row[0].toLowerCase();
+  if (qs.includes(code)) return 0;
+  let best = null;
+  for (const q of qs) {
+    for (const k of keys) {
+      const sc = k === q ? 1 : k.startsWith(q) ? 2 : k.includes(q) ? 4 : null;
+      if (sc != null && (best == null || sc < best)) best = sc;
+    }
+    if (code.startsWith(q) && (best == null || best > 3)) best = 3;
+  }
+  return best;
+}
+
+const SYM = { kr: null, us: null };  // [{ row, keys }]
+let symLoading = null;
+function loadSymbols() {
+  if (!symLoading) {
+    symLoading = Promise.all(["kr", "us"].map((m) => fetch(`symbols/${m}.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => { SYM[m] = x && Array.isArray(x.rows) ? x.rows.map((row) => ({ row, keys: nameKeys(row) })) : []; })))
+      .then(() => { if (!SYM.kr.length && !SYM.us.length) symLoading = null; });  // 둘 다 못 받았으면 다음에 다시
+  }
+  return symLoading;
+}
+
+// '추가'를 누른 종목 (이 폰에만 기억, 이틀 지나면 다시 '추가'로)
+const REQ = {};
+try { Object.assign(REQ, JSON.parse(localStorage.getItem("req") || "{}")); } catch (e) { /* 없음 */ }
+for (const [k, t] of Object.entries(REQ)) if (!(Date.now() - t < 2 * 864e5)) delete REQ[k];
+
+// 텔레그램 봇 시작 링크: 명령을 base64url로 담아요 (봇이 '/start c_…'로 받아서 그대로 처리)
+function tgLink(cmd) {
+  const bot = DATA && DATA.bot;
+  if (!bot) return null;
+  let bin = "";
+  new TextEncoder().encode(cmd).forEach((b) => { bin += String.fromCharCode(b); });
+  return `https://t.me/${encodeURIComponent(bot)}?start=c_${btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
+}
+const kindName = (m, row) => (m === "kr" ? (row[3] === "e" ? "국내 ETF" : row[2] === "KQ" ? "코스닥" : "코스피")
+  : (row[3] === "e" ? "미국 ETF" : "미국 주식"));
+const MK_NAME = { kr: "국장", us: "미장" };
+
+function searchCard() {
+  return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
+    <h2 class="stock-name">종목 검색</h2>
+    <input id="search-input" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off"
+      spellcheck="false" placeholder="종목 이름이나 코드" aria-label="종목 검색" value="${esc(searchQuery)}">
+    <p class="muted" style="margin:8px 0 0">국장·미장에 상장된 종목을 다 찾아요. 대시보드에 없는 종목은 '추가'를 누르면 텔레그램 봇이 넣어 줘요.</p></section>`;
+}
+
+// 대시보드에 있는 종목(시세 있음)과 다른 상장 종목으로 나눠서, 잘 맞는 순서(같으면 지금 시장, 시가총액 큰 순)로
+function findStocks(q) {
+  const qs = queryKeys(q);
+  const tracked = [], others = [];
+  if (!qs.length || !DATA) return { tracked, others };
+  for (const m of ["kr", "us"]) {
+    const mine = stocksOf(DATA.markets[m]);
+    const byCode = new Map(mine.map((x) => [x.code, x]));
+    const seen = new Set();
+    (SYM[m] || []).forEach((e, i) => {
+      const sc = scoreOf(e.row, e.keys, qs);
+      if (sc == null) return;
+      const x = byCode.get(e.row[0]);
+      seen.add(e.row[0]);
+      (x ? tracked : others).push({ m, sc, i, s: x, row: e.row });
+    });
+    mine.forEach((x) => {  // 목록 파일에 없거나 아직 못 받았을 때도 대시보드 종목은 찾아요
+      if (seen.has(x.code)) return;
+      const row = [x.code, x.name, x.exch || (m === "kr" ? "KS" : ""), x.kind || (x.code === "SPY" ? "e" : "s"), ""];
+      const sc = scoreOf(row, nameKeys(row), qs);
+      if (sc != null) tracked.push({ m, sc, i: -1, s: x, row });
+    });
+  }
+  const order = (a, b) => a.sc - b.sc || (a.m === market ? 0 : 1) - (b.m === market ? 0 : 1) || a.i - b.i;
+  return { tracked: tracked.sort(order), others: others.sort(order) };
+}
+
+function searchResults() {
+  const q = searchQuery.trim();
+  const loading = !SYM.kr || !SYM.us;
+  if (!q) {
+    return `<section class="card"><ul class="help" style="margin:0">
+      <li>이름 일부만 쳐도 돼요: '하이닉스', '삼성sdi', '코덱스 200', '슈드'</li>
+      <li>대시보드에 있는 종목은 누르면 차트와 재무제표가 나와요.</li>
+      <li>없는 종목은 '추가'를 누르면 텔레그램이 열려요. 봇 화면에서 시작(START)을 누르면 보통 30분 안에 대시보드에 생기고 ★에 들어가요.</li></ul></section>`;
+  }
+  const { tracked, others } = findStocks(q);
+  if (!tracked.length && !others.length && !loading) {
+    return `<section class="card"><p class="empty">"${esc(q)}"에 맞는 종목이 없어요. 이름을 조금만 쳐 보거나 코드로 찾아보세요.</p></section>`;
+  }
+  const cards = [];
+  if (tracked.length) {
+    cards.push(`<section class="card"><h2>대시보드 종목 <small>누르면 차트·재무제표</small></h2>
+      <ul class="list">${tracked.slice(0, 15).map(trackedRow).join("")}</ul></section>`);
+  }
+  if (others.length || loading) {
+    const bot = DATA && DATA.bot;
+    cards.push(`<section class="card"><h2>다른 상장 종목 <small>${others.length > 30 ? `${others.length}개 중 30개` : `${others.length}개`}</small></h2>
+      ${loading ? `<p class="muted">전체 종목 목록을 불러오는 중이에요…</p>` : ""}
+      ${others.length ? `<ul class="list">${others.slice(0, 30).map(otherRow).join("")}</ul>` : ""}
+      ${bot ? "" : `<p class="muted" style="margin:10px 0 0">텔레그램 봇이 아직 연결 전이라 '추가'를 못 눌러요. telegram-bot 워크플로가 한 번 돌면 켜져요.</p>`}
+      ${others.length > 30 ? `<p class="muted" style="margin:10px 0 0">더 자세히 쳐 보세요.</p>` : ""}</section>`);
+  }
+  return cards.join("");
+}
+
+function trackedRow(x) {
+  const { m, s } = x;
+  const on = WATCH[m].includes(s.code);
+  const meta = [s.code, kindName(m, x.row), m === market ? "" : MK_NAME[m]].filter(Boolean).join(" · ");
+  return `<li class="stock" data-open="${m}/${esc(s.code)}">
+    <div class="name">${esc(s.name)}${s.extra ? `<span class="badge">추가한 종목</span>` : ""}</div><div class="meta">${esc(meta)}</div>
+    <div class="price">${price(m, s.close)}</div><div class="chg ${sign(s.d1)}">${pct(s.d1, 2)}</div>
+    <button type="button" class="star" data-wstar="${m}/${esc(s.code)}" aria-pressed="${on}"
+      aria-label="${esc(s.name)} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button></li>`;
+}
+
+function otherRow(x) {
+  const { m, row } = x;
+  const key = `${m}/${row[0]}`;
+  const link = tgLink(`관심 ${m} ${row[0]}`);
+  const act = REQ[key] ? `<span class="asked">요청함</span>`
+    : link ? `<a class="add" href="${esc(link)}" target="_blank" rel="noopener" data-req="${esc(key)}" aria-label="${esc(row[1])} 텔레그램으로 추가">추가</a>`
+      : `<button type="button" class="add" disabled>추가</button>`;
+  const meta = [row[0], kindName(m, row), m === market ? "" : MK_NAME[m]].filter(Boolean).join(" · ");
+  return `<li class="stock other"><div class="name">${esc(row[1])}</div><div class="meta">${esc(meta)}</div><div class="act">${act}</div></li>`;
+}
+
+function bindSearch() {
+  const input = $("#search-input");
+  const list = $("#search-results");
+  if (!input || !list) return;
+  const refresh = () => { list.innerHTML = searchResults(); bindResults(list); };
+  input.addEventListener("input", () => { searchQuery = input.value; refresh(); });
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });  // 폰 키보드의 '검색'은 키보드만 내려요
+  bindResults(list);
+  if (!searchQuery) input.focus();
+  if (!SYM.kr || !SYM.us) loadSymbols().then(() => { if (screen === "search") refresh(); });
+}
+
+function bindResults(el) {
+  el.querySelectorAll("[data-open]").forEach((row) => row.addEventListener("click", () => {
+    const [m, code] = row.dataset.open.split("/");
+    if (m !== market) { market = m; try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ } }
+    openStock(code);
+  }));
+  el.querySelectorAll("[data-wstar]").forEach((b) => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const [m, code] = b.dataset.wstar.split("/");
+    toggleWatch(code, m);
+    const on = WATCH[m].includes(code);
+    b.setAttribute("aria-pressed", String(on));
+    b.textContent = on ? "★" : "☆";
+  }));
+  el.querySelectorAll("[data-req]").forEach((a) => a.addEventListener("click", () => {
+    REQ[a.dataset.req] = Date.now();
+    try { localStorage.setItem("req", JSON.stringify(REQ)); } catch (e) { /* 이번만 기억 */ }
+    setTimeout(() => { if (screen === "search") { const list = $("#search-results"); if (list) { list.innerHTML = searchResults(); bindResults(list); } } }, 300);
+  }));
 }
 
 // ---------------------------------------------------------------- 추천 종목 성과
@@ -806,6 +1037,7 @@ let fundMode = "annual";
 const STOCK_DATA = new Map();   // "kr/005930" → 받는 중인 Promise
 const STOCK_READY = new Map();  // "kr/005930" → 받은 자료
 let stockDrawn = null;          // 차트를 마지막으로 그린 종목 (바뀌면 보던 구간을 처음으로)
+let alertOpen = false;          // 종목 화면의 가격 알림 칸을 펼쳤는지
 
 function stockData(m, code) {
   const key = `${m}/${code}`;
@@ -830,17 +1062,83 @@ function stockHeadCard(d) {
   const badges = [];
   if ((sig.picks || []).some((p) => p.code === code)) badges.push(`<span class="badge good">오늘 매수 후보</span>`);
   if ((sig.rulebook || []).some((p) => p.code === code)) badges.push(`<span class="badge">규칙표 후보</span>`);
-  const kind = market === "kr" ? "코스피" : code === "SPY" ? "미국 ETF" : "미국 주식";
+  if (s && s.extra) badges.push(`<span class="badge">추가한 종목</span>`);
+  const kind = s && s.extra ? kindName(market, [code, name, s.exch || "", s.kind || "s"])
+    : market === "kr" ? "코스피" : code === "SPY" ? "미국 ETF" : "미국 주식";
   const c3 = s && s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
   return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
     <div class="stock-title"><div class="l"><h2 class="stock-name">${esc(name)}</h2>
       <div class="meta">${esc(code)} · ${kind}${badges.join("")}</div></div>
       <button type="button" class="star" data-star="${esc(code)}" aria-pressed="${on}"
         aria-label="${esc(name)} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button></div>
-    ${s ? `<p class="hero">${price(market, s.close)}</p>
+    ${s && s.close != null ? `<p class="hero">${price(market, s.close)}</p>
       <p class="sub"><span class="nowrap"><b class="${sign(s.d1)}">${pct(s.d1, 2)}</b> 전일 대비</span>${c3 == null ? ""
-        : ` · <span class="nowrap">3개월 <b class="${sign(c3)}">${pct(c3)}</b></span>`} · <span class="nowrap">${md(s.day)} 종가</span></p>` : ""}
+        : ` · <span class="nowrap">3개월 <b class="${sign(c3)}">${pct(c3)}</b></span>`} · <span class="nowrap">${md(s.day)} 종가</span></p>`
+      : s && s.extra ? `<p class="sub">시세는 대시보드가 다시 올라갈 때 받아요.</p>` : ""}
+    ${alertBox(d, code, s)}
   </section>`;
+}
+
+// 가격 알림: 텔레그램 봇이 15분마다 야후 5분봉을 보고, 정한 가격에 닿으면 텔레그램으로 알려 줘요.
+// 여기서는 봇에게 보낼 명령을 시작 링크로 만들어 줘요 (앱이 직접 알림을 저장하지는 못해요).
+function alertBox(d, code, s) {
+  const mine = (d.alerts || []).filter((a) => a.code === code);
+  const rows = mine.map((a) => {
+    const del = tgLink(`알림 삭제 ${a.id}`);
+    return `<li><span><b>${price(market, a.price)}</b> ${a.dir === "up" ? "이상" : "이하"}</span>
+      <small>${md(String(a.created || "").slice(0, 10))} 등록</small>${del ? `<a class="linkish" href="${esc(del)}" target="_blank" rel="noopener">지우기</a>` : ""}</li>`;
+  }).join("");
+  const drop = s && s.extra ? tgLink(`관심 빼기 ${market} ${code}`) : null;
+  return `<div class="alert-box">
+    <button type="button" class="alert-toggle" data-alert-toggle aria-expanded="${alertOpen}">
+      <span>가격 알림${mine.length ? ` <b>${mine.length}개</b>` : ""}</span><span class="pm" aria-hidden="true">${alertOpen ? "−" : "+"}</span></button>
+    ${mine.length ? `<ul class="alert-list">${rows}</ul>` : ""}
+    ${alertOpen ? alertForm(s) : ""}
+    ${drop ? `<p class="muted" style="margin:8px 0 0">텔레그램으로 넣은 종목이에요. <a class="linkish" href="${esc(drop)}" target="_blank" rel="noopener">대시보드에서 빼기</a></p>` : ""}
+  </div>`;
+}
+
+function alertForm(s) {
+  if (!(DATA && DATA.bot)) return `<p class="muted">텔레그램 봇이 연결되면(telegram-bot 워크플로가 한 번 돌면) 여기서 알림을 만들 수 있어요.</p>`;
+  const now = s && s.close != null ? s.close : null;
+  const v = now == null ? "" : market === "kr" ? String(Math.round(now)) : now.toFixed(2);
+  return `<div class="alert-form">
+      <label class="alert-input"><input id="alert-price" type="text" inputmode="decimal" autocomplete="off" value="${v}"
+        aria-label="알림 받을 가격"><span>${market === "kr" ? "원" : "달러"}</span></label>
+      <a class="add" id="alert-send" target="_blank" rel="noopener">텔레그램으로 알림 받기</a></div>
+    <p class="muted" id="alert-hint" style="margin:8px 0 0"></p>`;
+}
+
+// '30만', '300,000원', '$250.5' → 숫자
+function readPrice(t) {
+  const m = String(t || "").replace(/[,\s원$달러]/g, "").match(/^(\d+(?:\.\d+)?)(만|천)?$/);
+  return m ? parseFloat(m[1]) * (m[2] === "만" ? 1e4 : m[2] === "천" ? 1e3 : 1) : null;
+}
+
+function bindAlert(s) {
+  const toggle = $("[data-alert-toggle]");
+  if (toggle) toggle.addEventListener("click", () => { alertOpen = !alertOpen; render(); if (alertOpen) { const i = $("#alert-price"); if (i) i.focus(); } });
+  const input = $("#alert-price"), send = $("#alert-send"), hint = $("#alert-hint");
+  if (!input || !send || !hint) return;
+  const now = s && s.close != null ? s.close : null;
+  const update = () => {
+    const v = readPrice(input.value);
+    if (!(v > 0)) {
+      send.removeAttribute("href");
+      send.setAttribute("aria-disabled", "true");
+      hint.textContent = "가격을 숫자로 넣어 주세요. 30만처럼 써도 돼요.";
+      return;
+    }
+    const value = market === "kr" ? String(Math.round(v)) : String(Math.round(v * 100) / 100);
+    send.href = tgLink(`알림 ${market} ${stockCode} ${value}`);
+    send.removeAttribute("aria-disabled");
+    const where = now == null ? "" : v > now ? `최근 종가(${price(market, now)})보다 높아서, ${price(market, v)} 이상이 되면 알려 드려요. `
+      : v < now ? `최근 종가(${price(market, now)})보다 낮아서, ${price(market, v)} 이하가 되면 알려 드려요. ` : "최근 종가와 같아요. 조금 높거나 낮게 넣어 주세요. ";
+    hint.textContent = `${where}버튼을 누르면 텔레그램이 열려요. 시작(START)을 누르면 보통 30분 안에 등록되고 답장이 와요.`;
+  };
+  input.addEventListener("input", update);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
+  update();
 }
 
 function stockChartCard() {
@@ -856,6 +1154,7 @@ function stockChartCard() {
 
 function bindStock() {
   const key = `${market}/${stockCode}`;
+  bindAlert(stocksOf(DATA.markets[market]).find((x) => x.code === stockCode));
   const fill = (x) => {
     if (screen !== "stock" || `${market}/${stockCode}` !== key) return;  // 받는 사이 다른 화면으로 갔으면 안 그려요
     drawStock(x, false);
@@ -907,7 +1206,11 @@ const periodLabel = (p) => (p.length === 4 ? `${p}년` : `${p.slice(2, 4)}.${p.s
 const hasOp = (s) => s.op.some((v) => v != null);
 
 function fundHtml(f) {
-  if (!f) return `<h2>재무제표</h2><p class="empty">재무 자료가 아직 없어요. 매주 토요일에 받아요.</p>`;
+  const ent = stocksOf(DATA.markets[market]).find((x) => x.code === stockCode);
+  const etf = stockCode === "SPY" || !!(ent && ent.kind === "e");
+  if (!f) {
+    return `<h2>재무제표</h2><p class="empty">${etf ? "ETF라 매출·영업이익 같은 재무제표가 없어요." : "재무 자료가 아직 없어요. 매주 토요일에 받아요."}</p>`;
+  }
   const usd = market === "us";
   const tile = (label, value, note) => `<div class="stat"><span>${label}</span><b>${value}</b>${note ? `<small>${note}</small>` : ""}</div>`;
   const tiles = [
@@ -924,7 +1227,7 @@ function fundHtml(f) {
     : `펀더멘탈부 등급 <b>${esc(g.grade)}</b> (${g.score}/${g.total})${good.length ? ` · 좋음: ${esc(good.join(", "))}` : ""}${bad.length ? ` · 약함: ${esc(bad.join(", "))}` : ""}`;
   let body;
   if (!f.annual && !f.quarterly) {
-    body = `<p class="muted" style="margin:12px 0 0">${stockCode === "SPY" ? "ETF라 매출·영업이익 같은 재무제표가 없어요." : "야후에 이 종목 재무제표가 없어요."}</p>`;
+    body = `<p class="muted" style="margin:12px 0 0">${etf ? "ETF라 매출·영업이익 같은 재무제표가 없어요." : "야후에 이 종목 재무제표가 없어요."}</p>`;
   } else {
     if (!f[fundMode]) fundMode = f.annual ? "annual" : "quarterly";
     const s = f[fundMode];
@@ -1279,6 +1582,7 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 }
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
+$(".search-btn").addEventListener("click", () => go("search"));
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => go(b.dataset.screen)));
 window.addEventListener("popstate", () => {
   const h = fromHash();

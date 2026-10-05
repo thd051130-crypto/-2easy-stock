@@ -6,6 +6,8 @@ pages 워크플로가 dashboard.py 다음에 돌려요 (`python stock_pages.py -
     증권사 앱 차트와 같아요. 대시보드 다른 화면과 맞추려고 오늘 신호 날짜(signal.json의 day)까지만 넣어요.
   - fund: paper/<시장>/fundamentals.json(fundamentals.py가 매주 갱신)의 그 종목 재무 요약
 야후를 못 받은 종목은 재무만으로 파일을 만들어요 (화면엔 '차트 자료 없음').
+텔레그램으로 넣은 관심종목(paper/watch.json)도 만들고, 그 종목들의 종가·전일 대비·최근 60일 종가를
+<out>/data.json의 extras에 채워요 (알림 종목처럼 swing-signals가 시세를 받지 않아서요). 이 종목들을 먼저 받아요.
 실패해도 오류로 끝내지 않아요 (대시보드 배포가 멈추지 않게).
 """
 
@@ -17,6 +19,7 @@ import time
 import pandas as pd
 
 import fundamentals
+import watchlist
 from markets import MARKETS
 
 YEARS = 3
@@ -70,40 +73,68 @@ def read_json(path):
         return None
 
 
+def row_of(entry, c):
+    """관심 화면 한 줄: 넣을 때 적어 둔 정보 + 마지막 종가·전일 대비·최근 60일 종가 (알림 종목 줄과 같은 모양)."""
+    if not c:
+        return dict(entry)
+    closes = c["c"]
+    d1 = closes[-1] / closes[-2] - 1 if len(closes) > 1 and closes[-2] else None
+    return dict(entry, day=c["dates"][-1], close=closes[-1], d1=None if d1 is None else round(d1, 5), spark=closes[-60:])
+
+
 def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budget=None):
     """종목마다 파일 하나. budget초가 지나면 남은 종목은 시세를 받지 않고 재무만 넣어요 (배포가 늦어지지 않게).
-    반환: (차트까지 만든 수, 재무만 만든 수)."""
+    반환: (차트까지 만든 수, 재무만 만든 수, 텔레그램으로 넣은 종목 줄)."""
     fund = (read_json(paper / market / "fundamentals.json") or {}).get("stocks", {})
     until = (read_json(paper / market / "signal.json") or {}).get("day")
+    extra = watchlist.extras(market, paper)
+    names = {code: e.get("name") or code for code, e in extra.items()}
+    names.update({code: name for code, name in fundamentals.stocks(market, extras=False).items() if code not in extra})
     folder = out / "stocks" / market
     folder.mkdir(parents=True, exist_ok=True)
     full = only_fund = 0
+    rows = []
     start = time.monotonic()
-    for code, name in fundamentals.stocks(market).items():
+    for code, name in names.items():
         late = budget is not None and time.monotonic() - start > budget
-        c = None if late else candles(fetch(fundamentals.symbol(market, code)), market, until)
+        symbol = extra[code].get("symbol") if code in extra else None
+        c = None if late else candles(fetch(symbol or fundamentals.symbol(market, code)), market, until)
         f = fund.get(code)
-        if c is None and f is None:
-            continue
-        payload = dict(code=code, name=name, market=market, candles=c, fund=f)
-        (folder / f"{code}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
-        full += c is not None
-        only_fund += c is None
+        if code in extra:
+            rows.append(row_of(extra[code], c))
+        if c is not None or f is not None:
+            payload = dict(code=code, name=name, market=market, candles=c, fund=f)
+            (folder / f"{code}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+            full += c is not None
+            only_fund += c is None
         if not late:
             time.sleep(pause)  # 야후가 막지 않게 종목 사이에 잠깐 쉬어요
-    return full, only_fund
+    return full, only_fund, rows
+
+
+def fill_extras(out, market, rows):
+    """<out>/data.json의 그 시장 extras를 시세가 채워진 줄로 바꿔요."""
+    path = out / "data.json"
+    data = read_json(path)
+    if not data or market not in data.get("markets", {}):
+        return False
+    data["markets"][market]["extras"] = rows
+    path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    return True
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=pathlib.Path, default=pathlib.Path("_site"))
+    ap.add_argument("--paper", type=pathlib.Path, default=pathlib.Path("paper"), help="기록 폴더")
     ap.add_argument("--market", action="append", choices=sorted(MARKETS), help="여러 번 쓸 수 있어요 (기본: 둘 다)")
     ap.add_argument("--budget", type=float, default=150, help="시장마다 시세를 받는 최대 시간(초)")
     args = ap.parse_args()
     for market in args.market or ["kr", "us"]:
         try:
-            full, only_fund = build(args.out, market, budget=args.budget)
-            print(f"{MARKETS[market]['name']} 종목 화면 {full}개 (차트 없이 재무만 {only_fund}개)")
+            full, only_fund, rows = build(args.out, market, paper=args.paper, budget=args.budget)
+            fill_extras(args.out, market, rows)
+            print(f"{MARKETS[market]['name']} 종목 화면 {full}개 (차트 없이 재무만 {only_fund}개, 텔레그램으로 넣은 종목 {len(rows)}개)")
         except Exception as e:  # 배포는 계속해요
             print(f"{MARKETS[market]['name']} 종목 화면을 못 만들었어요: {e!r}")
 

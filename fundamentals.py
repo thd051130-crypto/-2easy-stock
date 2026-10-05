@@ -20,6 +20,7 @@ import time
 
 import departments
 import strategy
+import watchlist
 from markets import MARKETS
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -29,15 +30,23 @@ EQUITY = ["Common Stock Equity", "Stockholders Equity"]
 YEARS, QUARTERS = 4, 6
 
 
-def stocks(market):
-    """화면에 종목 화면이 있는 종목 (알림이 보는 종목 + 미장은 SPY)."""
+def stocks(market, extras=True):
+    """화면에 종목 화면이 있는 종목: 알림이 보는 종목 + 미장은 SPY (+ extras면 텔레그램으로 넣은 관심종목)."""
     out = dict(MARKETS[market]["universe"])
     if market == "us":
         out[strategy.US_ETF] = strategy.US_ETF
+    if extras:
+        for code, e in watchlist.extras(market).items():
+            out.setdefault(code, e.get("name") or code)
     return out
 
 
 def symbol(market, code):
+    """야후 종목 기호. 텔레그램으로 넣은 코스닥 종목은 .KQ라서 넣을 때 적어 둔 기호를 써요."""
+    if code not in MARKETS[market]["universe"]:
+        extra = watchlist.extras(market).get(code)
+        if extra and extra.get("symbol"):
+            return extra["symbol"]
     return f"{code}{MARKETS[market]['suffix']}"
 
 
@@ -136,11 +145,13 @@ def fetch(market, code):
                      latest(t.quarterly_balance_sheet, EQUITY))
 
 
-def update(path, market, codes=None, fetch=fetch, pause=0.4, retries=2):
-    """종목마다 받아서 저장. 못 받은 종목은 지난번 값을 둬요. 반환: (받은 수, 못 받은 코드)."""
+def update(path, market, codes=None, fetch=fetch, pause=0.4, retries=2, merge=False):
+    """종목마다 받아서 저장. 못 받은 종목은 지난번 값을 둬요. 반환: (받은 수, 못 받은 코드).
+    merge면 codes만 새로 받고 나머지 종목도 파일에 그대로 둬요 (봇이 관심종목 하나를 넣었을 때)."""
     old = json.loads(path.read_text()).get("stocks", {}) if path.exists() else {}
-    new, failed = {}, []
-    for code in codes or stocks(market):
+    new, failed = (dict(old) if merge else {}), []
+    todo = list(codes or stocks(market))
+    for code in todo:
         row = None
         for attempt in range(retries):
             try:
@@ -158,7 +169,7 @@ def update(path, market, codes=None, fetch=fetch, pause=0.4, retries=2):
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), stocks=new)
     path.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n")
-    return len(new) - len([c for c in failed if c in new]), failed
+    return len(todo) - len(failed), failed
 
 
 def main():

@@ -1,5 +1,6 @@
 # 종목 화면 재무제표(PER·PBR·매출·영업이익)를 매주 야후 파이낸스에서 받아 paper/<시장>/fundamentals.json에 저장해요.
-#   재무는 분기마다 바뀌어서 일주일에 한 번이면 충분해요. 저장(커밋)하면 pages가 대시보드를 다시 올려요.
+#   검색용 전체 종목 목록(paper/symbols/)도 같이 새로 받아요.
+#   재무·상장 종목은 자주 안 바뀌어서 일주일에 한 번이면 충분해요. 끝나면 pages가 대시보드를 다시 올려요.
 #   폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → fundamentals → Run workflow
 name: fundamentals
 
@@ -18,7 +19,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       PYTHONUNBUFFERED: "1"
     steps:
@@ -28,12 +29,14 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python fundamentals.py
+      - run: python symbols.py
+        continue-on-error: true  # 종목 목록을 못 받아도 재무는 저장해요 (지난번 목록을 그대로 써요)
       - name: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add paper/kr/fundamentals.json paper/us/fundamentals.json
+          git add paper/kr/fundamentals.json paper/us/fundamentals.json paper/symbols
           if git diff --cached --quiet; then echo "재무 변화 없음"; exit 0; fi
-          git commit -m "재무제표 $(TZ=Asia/Seoul date +%F)"
+          git commit -m "재무제표·종목 목록 $(TZ=Asia/Seoul date +%F)"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1
