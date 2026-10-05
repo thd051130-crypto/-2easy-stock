@@ -39,29 +39,31 @@ def volatility(close, n=20):
     return close.pct_change(fill_method=None).rolling(n).std() * 252 ** 0.5
 
 
-def kr_frames(closes, index_close):
+def kr_frames(closes, index_close, breadth_min=KR_BREADTH_MIN, stock_vol_max=KR_STOCK_VOL_MAX, stop=KR_STOP,
+              weight=KR_WEIGHT, rsi_th=10):
+    """기본값이 지금 규칙이에요. 학습팀(learner.py)은 값을 바꿔 가며 같은 함수로 시험해요."""
     trend = (index_close > index_close.rolling(200).mean()) & (index_close > index_close.rolling(50).mean())
-    wide = breadth(closes) >= KR_BREADTH_MIN
+    wide = breadth(closes) >= breadth_min
     ok = trend & wide
-    entry, exit_, rank, max_hold = kb.dip_after_breakout(closes, broadcast(ok, closes))
-    entry &= volatility(closes) <= KR_STOCK_VOL_MAX
-    return dict(entry=entry, exit=exit_, rank=rank, max_hold=max_hold, stop=KR_STOP, weight=KR_WEIGHT, ok=ok,
+    entry, exit_, rank, max_hold = kb.dip_after_breakout(closes, broadcast(ok, closes), th=rsi_th)
+    entry &= volatility(closes) <= stock_vol_max
+    return dict(entry=entry, exit=exit_, rank=rank, max_hold=max_hold, stop=stop, weight=weight, ok=ok,
                 trend=trend, wide=wide)
 
 
-def us_ok(index_close):
+def us_ok(index_close, vol_max=US_VOL_MAX, ma_long=200):
     """(보유 조건, 추세 조건, 변동성 조건)"""
-    ma50, ma200 = index_close.rolling(50).mean(), index_close.rolling(200).mean()
-    trend = (index_close > ma200) & (ma50 > ma200)
-    calm = volatility(index_close) <= US_VOL_MAX
+    ma50, ma_l = index_close.rolling(50).mean(), index_close.rolling(ma_long).mean()
+    trend = (index_close > ma_l) & (ma50 > ma_l)
+    calm = volatility(index_close) <= vol_max
     return trend & calm, trend, calm
 
 
-def us_frames(closes, index_close):
-    ok, trend, calm = us_ok(index_close)
+def us_frames(closes, index_close, vol_max=US_VOL_MAX, weight=US_WEIGHT, ma_long=200):
+    ok, trend, calm = us_ok(index_close, vol_max, ma_long)
     okdf = broadcast(ok, closes)
     return dict(entry=okdf, exit=~okdf, rank=pd.DataFrame(0.0, closes.index, closes.columns), max_hold=None,
-                stop=None, weight=US_WEIGHT, ok=ok, trend=trend, calm=calm)
+                stop=None, weight=weight, ok=ok, trend=trend, calm=calm)
 
 
 FRAMES = {"kr": kr_frames, "us": us_frames}

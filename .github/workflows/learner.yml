@@ -1,0 +1,52 @@
+# 학습팀: 매일 새벽 최신 시세로 규칙 값을 다시 맞춰 보고, 지금 규칙보다 확실히 나을 때만 바꾸자고 제안해요.
+#   매일 한국시간 05:00쯤 조용히 계산·기록 (새 제안이 나오면 그때만 텔레그램)
+#   토요일 한국시간 10:00쯤 주간 보고를 텔레그램으로
+# 규칙(strategy.py)은 자동으로 바꾸지 않아요. 결과는 learning/ 와 docs/learning-latest.md에 커밋해요.
+# 폰에서 바로 돌려 보기: Actions → learner → Run workflow
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+name: learner
+
+on:
+  schedule:
+    - cron: "0 20 * * *"  # UTC 20:00 = 한국 05:00, 매일
+    - cron: "0 1 * * 6"   # UTC 01:00 토 = 한국 10:00 토, 주간 보고
+  workflow_dispatch:
+    inputs:
+      report:
+        description: "결과를 지금 텔레그램으로 받기"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write  # learning/ 기록을 커밋해요
+
+concurrency:
+  group: learner
+  cancel-in-progress: false
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      REPORT: ${{ inputs.report || github.event.schedule == '0 1 * * 6' }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: learn
+        run: python learner.py --market both $([ "$REPORT" = "true" ] && echo --report)
+      - name: commit learning log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add learning docs/learning-latest.md
+          if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
+          git commit -m "학습팀 기록 $(TZ=Asia/Seoul date +%F)"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
