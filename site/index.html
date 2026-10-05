@@ -19,9 +19,12 @@
 <body>
 <header class="top">
   <div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28"><h1>이지스톡</h1></div>
-  <div class="tabs" role="tablist">
-    <button role="tab" data-market="kr" aria-selected="true">국장</button>
-    <button role="tab" data-market="us" aria-selected="false">미장</button>
+  <div class="top-r">
+    <button type="button" class="search-btn" aria-label="종목 검색"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></button>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-market="kr" aria-selected="true">국장</button>
+      <button role="tab" data-market="us" aria-selected="false">미장</button>
+    </div>
   </div>
 </header>
 <main id="app"><p class="muted center">불러오는 중…</p></main>

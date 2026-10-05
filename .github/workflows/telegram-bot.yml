@@ -1,0 +1,56 @@
+# 텔레그램 봇: 봇에게 보낸 명령(관심종목 넣기·빼기, 가격 알림)을 처리하고, 정한 가격에 닿으면 알려 줘요.
+#   서버가 없어서 15분마다 돌면서 그사이 온 메시지를 읽어요 (GitHub 사정으로 더 늦게 돌 때도 있어요).
+#   관심종목·알림이 바뀌면 기록을 저장(커밋)하고 pages(대시보드)를 다시 올려요.
+#   폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → telegram-bot → Run workflow
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+name: telegram-bot
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"  # 15분마다 (정각은 GitHub가 붐벼서 피했어요)
+  workflow_dispatch:
+
+permissions:
+  contents: write  # paper/watch.json·alerts.json·bot.json 저장
+  actions: write   # pages 다시 올리기
+
+concurrency:
+  group: telegram-bot  # 겹쳐 돌면 같은 메시지를 두 번 처리할 수 있어서 하나씩
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - id: bot
+        run: python bot.py
+      # 기록을 먼저 저장하고, 저장된 다음에만 텔레그램에 '처리했다'고 알려요 (저장이 실패하면 다음 번에 다시 처리)
+      - name: commit
+        if: steps.bot.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper
+          if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
+          git commit -m "텔레그램 봇 $(TZ=Asia/Seoul date '+%F %H:%M')"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: confirm messages
+        if: steps.bot.outputs.offset != ''
+        run: python bot.py --confirm "${{ steps.bot.outputs.offset }}"
+      - name: redeploy dashboard
+        if: steps.bot.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

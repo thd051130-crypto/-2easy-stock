@@ -15,9 +15,22 @@ def series(n=260, start=100.0, step=0.5):
 
 def test_build_without_records_shows_markets_not_started(tmp_path):
     data = dashboard.build(tmp_path)
-    assert set(data["markets"]) == {"kr", "us"}
+    assert set(data["markets"]) == {"kr", "us"} and data["bot"] is None
     for m in data["markets"].values():
         assert m["signal"] is None and m["account"] is None and m["rules"]
+        assert m["extras"] == [] and m["alerts"] == []
+
+
+def test_build_carries_telegram_extras_alerts_and_bot_name(tmp_path):
+    (tmp_path / "watch.json").write_text(json.dumps(dict(us=[dict(code="TSLA", name="테슬라", symbol="TSLA")])))
+    (tmp_path / "alerts.json").write_text(json.dumps(dict(next=3, active=[
+        dict(id=1, market="kr", code="005930", price=300000, dir="up"),
+        dict(id=2, market="us", code="TSLA", price=200.0, dir="down")], done=[dict(id=0)])))
+    (tmp_path / "bot.json").write_text(json.dumps(dict(username="Automarmae_bot")))
+    data = dashboard.build(tmp_path)
+    assert data["bot"] == "Automarmae_bot"
+    assert data["markets"]["us"]["extras"] == [dict(code="TSLA", name="테슬라", symbol="TSLA")]
+    assert [a["id"] for a in data["markets"]["kr"]["alerts"]] == [1] and [a["id"] for a in data["markets"]["us"]["alerts"]] == [2]
 
 
 def test_signal_payload_round_trip(tmp_path):
@@ -63,10 +76,15 @@ def test_main_copies_site_and_writes_data(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.argv", ["dashboard.py", "--paper", str(tmp_path / "paper"), "--site", str(site),
                                      "--out", str(out)])
     dashboard.main()
-    assert (out / "index.html").exists()
+    assert (out / "index.html").exists() and not (out / "symbols").exists()
     data = json.loads((out / "data.json").read_text())
     assert data["markets"]["kr"]["name"] == "국장"
     assert data["site_version"] == dashboard.site_version(site)
+    # 검색용 종목 목록이 있으면 같이 올려요
+    (tmp_path / "paper" / "symbols").mkdir(parents=True)
+    (tmp_path / "paper" / "symbols" / "kr.json").write_text('{"rows":[]}')
+    dashboard.main()
+    assert (out / "symbols" / "kr.json").read_text() == '{"rows":[]}'
 
 
 def test_stamp_assets_versions_script_and_style_urls(tmp_path):
@@ -116,3 +134,6 @@ def test_monthly_ohlc_merges_duplicate_month_rows():
     m = ks.ohlc_payload(ks.monthly_ohlc(h), "%Y-%m")
     assert m == dict(dates=["2026-08", "2026-09", "2026-10"], o=[10, 20, 30], h=[15, 25, 40], l=[9, 19, 28],
                      c=[14, 24, 39])
+    # 거래량이 있으면 달별로 더해서 v로 (보조지표 거래량 막대)
+    h["Volume"] = [100, 200, 300, 50]
+    assert ks.ohlc_payload(ks.monthly_ohlc(h), "%Y-%m")["v"] == [100, 200, 350]
