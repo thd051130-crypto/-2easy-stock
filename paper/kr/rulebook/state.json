@@ -6,20 +6,32 @@
   "equity": 700000,
   "start": "2026-10-02",
   "index_start": 7003.740234375,
-  "last_day": "2026-10-02",
+  "last_day": "2026-10-06",
   "positions": [],
-  "orders": [],
+  "orders": [
+    {
+      "side": "buy",
+      "code": "034730",
+      "name": "SK",
+      "kind": "new"
+    }
+  ],
   "halt_next": false,
   "halt_week": null,
   "halt_month": null,
   "week": {
-    "key": "2026-W40",
+    "key": "2026-W41",
     "base": 700000
   },
   "month": {
     "key": "2026-10",
     "base": 700000
   },
-  "pending_buys": [],
+  "pending_buys": [
+    {
+      "code": "034730",
+      "name": "SK"
+    }
+  ],
   "pending_sells": []
 }

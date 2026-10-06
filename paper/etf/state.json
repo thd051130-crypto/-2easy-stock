@@ -4,17 +4,21 @@
   "fractional": false,
   "start": "2026-10-02",
   "index_start": 7003.740234375,
-  "cash": 700000,
-  "equity": 700000,
-  "last_day": "2026-10-02",
-  "positions": [],
-  "pending_buys": [
+  "cash": 362430.7225,
+  "equity": 700105.7224999999,
+  "last_day": "2026-10-06",
+  "positions": [
     {
       "code": "360750",
       "name": "TIGER 미국S&P500",
-      "signal_date": "2026-10-02"
+      "qty": 13,
+      "buy_date": "2026-10-06",
+      "buy_price": 25950.0,
+      "cost": 337569.2775,
+      "last_price": 25975.0
     }
   ],
+  "pending_buys": [],
   "pending_sells": [],
   "rule": "etf"
 }
