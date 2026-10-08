@@ -292,6 +292,11 @@ function render() {
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") { drawTrack(d); drawEquity(d); }
+  app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    const card = $("#stock-sector");
+    if (card) { card.scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); }
+  }));
   app.querySelectorAll("[data-sector-go]").forEach((b) => b.addEventListener("click", () => {
     SECTOR[market] = b.dataset.sectorGo;
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
@@ -1355,7 +1360,7 @@ function stockHeadCard(d) {
   const c3 = s && s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
   return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
     <div class="stock-title"><div class="l"><h2 class="stock-name">${esc(name)}</h2>
-      <div class="meta">${esc(code)} · ${kind}${badges.join("")}</div></div>
+      <div class="meta">${esc(code)} · ${kind}${badges.join("")}</div>${sectorTags(d, code)}</div>
       <button type="button" class="star" data-star="${esc(code)}" aria-pressed="${on}"
         aria-label="${esc(name)} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button></div>
     ${s && s.close != null ? `<p class="hero">${cnt(s.close, "price", price(market, s.close))}</p>
@@ -1375,6 +1380,16 @@ function sectorLine(x, why) {
       ${n ? `<div class="meta">${tag}${esc(n.title)}</div>` : ""}</div>
       <div class="r ${sign(x.r5)}">${pct(x.r5)}<div class="meta">20일 ${pct(x.r20)}</div></div></li>`;
 }
+// 종목 이름 아래 작은 업종 키워드: #이 종목 업종 + 연관 업종 (누르면 아래 '업종과 연관 업종' 칸으로)
+function sectorTags(d, code) {
+  const sig = d.signal || {};
+  const name = (sig.sector_of || {})[code];
+  if (!name) return "";
+  const rel = ((sig.sector_links || {})[name] || []).map(([n]) => n);
+  const tag = (n, main) => `<span class="tag${main ? " main" : ""}">#${esc(n)}</span>`;
+  return `<a class="tags" href="#stock-sector" data-tags>${tag(name, true)}${rel.map((n) => tag(n)).join("")}</a>`;
+}
+
 function stockSectorCard(d) {
   const sig = d.signal || {};
   const secs = sig.sectors || [];

@@ -375,3 +375,8 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 @media (prefers-reduced-motion: reduce) {
   #app > *, .card.sig-pulse::before, .sig-pulse .chip::after, .sig-pulse .list li { animation: none !important; }
 }
+
+/* 종목 이름 아래 작은 업종 키워드 */
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; text-decoration: none; }
+.tag { font-size: 12px; line-height: 1.4; padding: 1px 7px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); }
+.tag.main { background: var(--accent-bg); color: var(--accent-fg); font-weight: 700; }
