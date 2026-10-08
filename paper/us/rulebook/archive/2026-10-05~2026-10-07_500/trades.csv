@@ -1,0 +1,2 @@
+code,name,qty,buy_date,buy_price,sell_date,sell_price,pnl,ret,days,reason
+AMZN,아마존,0.0354,2026-10-06,253.4,2026-10-07,254.07,-0.03,-0.0034,0,익절 +1%

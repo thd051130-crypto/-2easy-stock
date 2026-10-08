@@ -1,100 +1,42 @@
 {
   "version": 2,
   "market": "us",
-  "capital": 500,
-  "cash": 388.9695461041038,
-  "equity": 499.50356725755324,
-  "start": "2026-10-05",
-  "index_start": 7773.9501953125,
-  "last_day": "2026-10-07",
-  "positions": [
-    {
-      "code": "MDT",
-      "name": "메드트로닉",
-      "qty": 0.340005328832297,
-      "cost": 30.0,
-      "buy_price": 87.97000122070312,
-      "raw": 29.910269192422735,
-      "slot": 100.0,
-      "tranches": 1,
-      "tp": 0,
-      "days": 1,
-      "buy_date": "2026-10-06",
-      "last_buy": 87.97000122070312,
-      "last_price": 85.51000213623047
-    },
-    {
-      "code": "ABBV",
-      "name": "애브비",
-      "qty": 0.11171386525501775,
-      "cost": 30.0,
-      "buy_price": 267.739990234375,
-      "raw": 29.91026919242274,
-      "slot": 100.0,
-      "tranches": 1,
-      "tp": 0,
-      "days": 1,
-      "buy_date": "2026-10-06",
-      "last_buy": 267.739990234375,
-      "last_price": 271.3599853515625
-    },
-    {
-      "code": "UNH",
-      "name": "유나이티드헬스",
-      "qty": 0.07891266994367643,
-      "cost": 30.0,
-      "buy_price": 379.0299987792969,
-      "raw": 29.910269192422735,
-      "slot": 100.0,
-      "tranches": 1,
-      "tp": 0,
-      "days": 1,
-      "buy_date": "2026-10-06",
-      "last_buy": 379.0299987792969,
-      "last_price": 375.9800109863281
-    },
-    {
-      "code": "AMZN",
-      "name": "아마존",
-      "qty": 0.08262505500788961,
-      "cost": 21.0,
-      "buy_price": 253.3999938964844,
-      "raw": 29.910269192422735,
-      "slot": 100.0,
-      "tranches": 1,
-      "tp": 1,
-      "days": 1,
-      "buy_date": "2026-10-06",
-      "last_buy": 253.3999938964844,
-      "last_price": 259.9200134277344
-    }
-  ],
+  "capital": 7470,
+  "cash": 7470,
+  "equity": 7470,
+  "start": "2026-10-08",
+  "index_start": 7765.35986328125,
+  "last_day": "2026-10-08",
+  "positions": [],
   "orders": [
     {
-      "side": "sell",
+      "side": "buy",
       "code": "MDT",
-      "frac": 1.0,
-      "reason": "손절 (평균가 -2% 아래)",
-      "tp": 0
+      "name": "메드트로닉",
+      "kind": "new"
     },
     {
-      "side": "sell",
-      "code": "ABBV",
-      "frac": 0.3,
-      "reason": "익절 +1%",
-      "tp": 1
-    },
-    {
-      "side": "sell",
-      "code": "AMZN",
-      "frac": 0.4285714285714286,
-      "reason": "익절 +2%",
-      "tp": 2
+      "side": "buy",
+      "code": "DIS",
+      "name": "디즈니",
+      "kind": "new"
     },
     {
       "side": "buy",
       "code": "LLY",
       "name": "일라이릴리",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "PFE",
+      "name": "화이자",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "MA",
+      "name": "마스터카드",
       "kind": "new"
     }
   ],
@@ -103,30 +45,33 @@
   "halt_month": null,
   "week": {
     "key": "2026-W41",
-    "base": 500
+    "base": 7470
   },
   "month": {
     "key": "2026-10",
-    "base": 500
+    "base": 7470
   },
   "pending_buys": [
     {
+      "code": "MDT",
+      "name": "메드트로닉"
+    },
+    {
+      "code": "DIS",
+      "name": "디즈니"
+    },
+    {
       "code": "LLY",
       "name": "일라이릴리"
+    },
+    {
+      "code": "PFE",
+      "name": "화이자"
+    },
+    {
+      "code": "MA",
+      "name": "마스터카드"
     }
   ],
-  "pending_sells": [
-    {
-      "code": "MDT",
-      "reason": "손절 (평균가 -2% 아래)"
-    },
-    {
-      "code": "ABBV",
-      "reason": "익절 +1%"
-    },
-    {
-      "code": "AMZN",
-      "reason": "익절 +2%"
-    }
-  ]
+  "pending_sells": []
 }
