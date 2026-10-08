@@ -23,6 +23,26 @@ def test_candles_rounds_by_market_and_cuts_after_signal_day():
     assert sp.candles(None, "kr") is None
     assert sp.candles(h.drop(columns="High"), "kr") is None
     assert sp.candles(h, "kr", until="2026-01-01") is None
+    assert "full" not in kr and sp.candles(h, "kr", full=True)["full"] is True
+
+
+def test_daily_asks_yahoo_for_the_whole_history(monkeypatch):
+    import sys
+    import types
+
+    asked = []
+
+    class Ticker:
+        def __init__(self, symbol):
+            self.symbol = symbol
+
+        def history(self, **kw):
+            asked.append((self.symbol, kw))
+            return yahoo_daily(3)
+
+    monkeypatch.setitem(sys.modules, "yfinance", types.SimpleNamespace(Ticker=Ticker))
+    assert len(sp.daily("005930.KS", pause=0)) == 3
+    assert asked == [("005930.KS", dict(period="max", auto_adjust=False))]
 
 
 def test_build_writes_one_file_per_stock_with_fundamentals(tmp_path):
@@ -41,6 +61,7 @@ def test_build_writes_one_file_per_stock_with_fundamentals(tmp_path):
     assert full == 47 and only_fund == 1 and len(files) == 48 and rows == []
     sam = json.loads((out / "stocks" / "kr" / "005930.json").read_text())
     assert sam["name"] == "삼성전자" and sam["fund"]["per"] == 12.1 and sam["candles"]["dates"][-1] == "2026-10-01"
+    assert sam["candles"]["full"] is True  # 상장일부터 받은 일봉 (앱이 첫 주·첫 달 캔들을 버리지 않게)
     hynix = json.loads((out / "stocks" / "kr" / "000660.json").read_text())
     assert hynix["candles"] is None and hynix["fund"]["per"] == 8.0
     # 재무 파일·시세 둘 다 없으면 파일을 안 만들어요

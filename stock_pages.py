@@ -2,8 +2,10 @@
 """대시보드 종목 화면 파일을 만들어요: <out>/stocks/<시장>/<코드>.json
 
 pages 워크플로가 dashboard.py 다음에 돌려요 (`python stock_pages.py --out _site`).
-  - candles: 최근 3년 일봉(시가·고가·저가·종가·거래량). 야후 원래 가격(액면분할만 반영, 배당은 빼지 않음)이라
-    증권사 앱 차트와 같아요. 대시보드 다른 화면과 맞추려고 오늘 신호 날짜(signal.json의 day)까지만 넣어요.
+  - candles: 야후에 있는 첫날(보통 상장일. 야후 자료는 국장 2000년, 미장 1962년부터라 그 전 상장 종목은 그때)부터 일봉
+    (시가·고가·저가·종가·거래량). full=true면 처음부터라는 뜻이라 앱이 첫 주·첫 달 캔들을 버리지 않아요.
+    야후 원래 가격(액면분할만 반영, 배당은 빼지 않음)이라 증권사 앱 차트와 같아요.
+    대시보드 다른 화면과 맞추려고 오늘 신호 날짜(signal.json의 day)까지만 넣어요.
   - fund: paper/<시장>/fundamentals.json(fundamentals.py가 매주 갱신)의 그 종목 재무 요약
 야후를 못 받은 종목은 재무만으로 파일을 만들어요 (화면엔 '차트 자료 없음').
 텔레그램으로 넣은 관심종목(paper/watch.json)도 만들고, 그 종목들의 종가·전일 대비·최근 60일 종가를
@@ -22,16 +24,16 @@ import fundamentals
 import watchlist
 from markets import MARKETS
 
-YEARS = 3
+PERIOD = "max"  # 상장일부터 (오래된 종목도 한 종목에 1초 안팎, 폰으로 받는 파일은 압축해서 100KB 남짓)
 
 
-def daily(symbol, years=YEARS, retries=3, pause=0.5):
+def daily(symbol, period=PERIOD, retries=3, pause=0.5):
     """야후 일봉. 못 받으면 None."""
     import yfinance as yf
 
     for attempt in range(retries):
         try:
-            h = yf.Ticker(symbol).history(period=f"{years}y", auto_adjust=False)
+            h = yf.Ticker(symbol).history(period=period, auto_adjust=False)
             if h is not None and not h.empty:
                 return h
         except Exception as e:  # 네트워크·레이트리밋
@@ -40,8 +42,9 @@ def daily(symbol, years=YEARS, retries=3, pause=0.5):
     return None
 
 
-def candles(h, market, until=None):
-    """야후 일봉 표 → {"dates", "o", "h", "l", "c", "v"}. 국장은 원 단위 정수, 미장은 센트까지. until 날짜 뒤는 빼요."""
+def candles(h, market, until=None, full=False):
+    """야후 일봉 표 → {"dates", "o", "h", "l", "c", "v"}. 국장은 원 단위 정수, 미장은 센트까지. until 날짜 뒤는 빼요.
+    full: 처음(상장일)부터 받은 일봉이면 표시해 둬요."""
     cols = ["Open", "High", "Low", "Close"]
     if h is None or any(c not in h for c in cols):
         return None
@@ -63,6 +66,8 @@ def candles(h, market, until=None):
     out = dict(dates=[f"{d:%Y-%m-%d}" for d in h.index], o=col("Open"), h=col("High"), l=col("Low"), c=col("Close"))
     if "Volume" in h:
         out["v"] = [int(x) for x in h["Volume"].fillna(0)]
+    if full:
+        out["full"] = True
     return out
 
 
@@ -98,7 +103,7 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
     for code, name in names.items():
         late = budget is not None and time.monotonic() - start > budget
         symbol = extra[code].get("symbol") if code in extra else None
-        c = None if late else candles(fetch(symbol or fundamentals.symbol(market, code)), market, until)
+        c = None if late else candles(fetch(symbol or fundamentals.symbol(market, code)), market, until, full=True)
         f = fund.get(code)
         if code in extra:
             rows.append(row_of(extra[code], c))

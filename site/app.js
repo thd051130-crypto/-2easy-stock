@@ -904,13 +904,16 @@ const dropFirst = (f) => (f.keys.length > 1 ? Object.fromEntries(Object.entries(
 // 일봉(5년치)·월봉(전체 기간)으로 고른 기간의 캔들을 만들어요.
 // 50일선·200일선은 각 캔들 기간 마지막 거래일의 값이에요 (일봉이 있는 최근 몇 년만, 년봉엔 안 그려요).
 function frameCandles(c, fr) {
+  // 상장일부터 받은 일봉(full: 종목 화면)은 첫 주·첫 달·첫 해가 상장 직후라 그대로 둬요.
+  // 중간부터 자른 일봉(지수)은 첫 주가 중간부터일 수 있어서 빼요.
+  const cut = c.full ? (x) => x : dropFirst;
   let f;
   if (fr === "d") f = groupCandles(c, KEY.d);
-  else if (fr === "w") f = dropFirst(groupCandles(c, KEY.w));  // 첫 주는 중간부터일 수 있어서 빼요
+  else if (fr === "w") f = cut(groupCandles(c, KEY.w));
   else if (c.monthly && c.monthly.dates.length) {
     f = groupCandles(c.monthly, fr === "m" ? KEY.m : KEY.y);
     if (fr === "y" && f.first[0].slice(5, 7) !== "01") f = dropFirst(f);  // 1월부터가 아닌 첫 해는 빼요
-  } else f = dropFirst(groupCandles(c, KEY[fr]));  // 월봉이 없는 예전 기록: 일봉을 묶어요
+  } else f = cut(groupCandles(c, KEY[fr]));  // 월봉이 없으면 일봉을 묶어요
   const ma50 = smaOf(c.c, 50), ma200 = smaOf(c.c, 200), lastDay = new Map();
   c.dates.forEach((dt, i) => lastDay.set(KEY[fr](dt), i));
   const pick = (vals) => f.keys.map((k) => (fr === "y" || !lastDay.has(k) ? null : vals[lastDay.get(k)]));
@@ -1100,7 +1103,7 @@ function trendCard(d) {
       <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
     <div class="chart candle" id="trend-chart"></div>
     <p class="muted" style="margin:8px 0 0">${cd
-      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 세부정보가 손가락을 따라와요. "
+      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 세부정보가 손가락을 따라와요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려서 같은 비율로 오르면 같은 높이예요. "
       : ""}${TREND_RULE[market]}</p>${cd ? indHelp() : ""}</section>`;
 }
 
@@ -1374,7 +1377,7 @@ function rulesCard(d) {
 
 // ---------------------------------------------------------------- 종목 화면 (차트 + 재무제표)
 // 자료는 종목마다 stocks/<시장>/<코드>.json (배포 때 stock_pages.py가 만듦). 처음 열 때 받아서 앱을 닫을 때까지 기억해요.
-const STOCK_FRAMES = FRAMES.filter((f) => f[0] !== "y");  // 3년치 일봉이라 년봉은 빼요
+const STOCK_FRAMES = FRAMES;  // 상장일부터 받은 일봉이라 년봉까지 봐요
 let stockFrame = "d";
 let fundMode = "annual";
 const STOCK_DATA = new Map();   // "kr/005930" → 받는 중인 Promise
@@ -1526,11 +1529,33 @@ function stockChartCard() {
   const x = STOCK_READY.get(`${market}/${stockCode}`);
   const buttons = STOCK_FRAMES.map(([key, label]) =>
     `<button type="button" data-sframe="${key}" aria-pressed="${key === stockFrame}">${label}</button>`).join("");
-  return `<section class="card"><h2>차트 <small>최근 3년</small></h2>
+  return `<section class="card"><h2>차트 <small id="stock-since">${esc(sinceLabel(x && x.candles))}</small></h2>
     <div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips((x && x.candles) || { v: [1] })}
     <p class="muted" id="stock-change" style="margin:8px 0 4px"></p>${candleLegend()}
     <div class="chart candle" id="stock-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
-    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 손가락을 따라와요.</p>${indHelp()}</section>`;
+    <p class="muted" id="stock-all" style="margin:8px 0 0"></p>
+    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 손가락을 따라와요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려서 같은 비율로 오르면 같은 높이예요.</p>${indHelp()}</section>`;
+}
+
+// 차트 제목 옆: 자료가 시작하는 달. 보통 상장일이고, 야후 자료가 거기까지만 있는 오래된 종목
+// (국장 2000년 1월, 미장 1962년 1월)은 그때부터예요.
+function sinceLabel(c) {
+  if (!c || !c.dates || !c.dates.length) return "";
+  const first = c.dates[0], ym = `${first.slice(0, 4)}.${first.slice(5, 7)}`;
+  if (!c.full) return `${ym}부터`;
+  const oldest = market === "kr" ? first <= "2000-01-31" : first <= "1962-01-31";
+  return oldest ? `${ym}부터 전체 (야후 자료 시작)` : `${ym} 상장 이후 전체`;
+}
+
+// 차트 아래 한 줄: 자료 첫날부터 지금까지 오른 비율과 전체 최고·최저 (보이는 구간과 상관없이)
+function allTimeLine(c) {
+  const n = c.dates.length;
+  let hi = 0, lo = 0;
+  for (let i = 1; i < n; i++) { if (c.h[i] > c.h[hi]) hi = i; if (c.l[i] < c.l[lo]) lo = i; }
+  const ch = c.c[n - 1] / c.o[0] - 1, d = (s) => s.slice(2).replace(/-/g, ".");  // 첫날 시가부터 (차트 위 기간 수익률과 같은 기준)
+  return `<span class="nowrap">${d(c.dates[0])}부터 <b class="${sign(ch)}">${pct(ch)}</b></span>`
+    + ` · <span class="nowrap">전체 최고 ${px(market, c.h[hi])} (${d(c.dates[hi])})</span>`
+    + ` · <span class="nowrap">최저 ${px(market, c.l[lo])} (${d(c.dates[lo])})</span>`;
 }
 
 function bindStock() {
@@ -1559,6 +1584,9 @@ function drawStock(x, reset) {
     candleChart(el, f, show, reset || stockDrawn !== key, (txt) => { const r = $("#stock-change"); if (r) r.innerHTML = txt; },
       { fmt: (v) => px(market, v), name: x.name });
     stockDrawn = key;
+    const all = $("#stock-all"), since = $("#stock-since");
+    if (all) all.innerHTML = allTimeLine(x.candles);
+    if (since) since.textContent = sinceLabel(x.candles);
   } else {
     el.innerHTML = `<p class="empty">${x ? "이 종목은 차트 자료를 못 받았어요." : "이 종목 자료를 아직 못 받았어요."} 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`;
   }
@@ -1671,6 +1699,7 @@ function growthLine(s) {
 // 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그 캔들 값.
 // 길게 누른 채 움직이거나, 이미 뜬 세부정보 선을 잡고 밀면 세부정보가 손가락을 따라와요.
 const VIEW = {};  // 차트별 보기 상태 (보이는 캔들 수, 마지막 캔들 위치)
+const MAX_SHOW = 1300;  // 한 화면 최대 캔들 수 (상장일부터 일봉은 1만 개가 넘어서, 다 그리면 폰이 버벅여요. 더 길게는 주봉·월봉으로)
 // c = frameCandles()가 만든 캔들 (일봉·주봉·월봉·년봉), show = 처음 보이는 캔들 수
 // opts: fmt = 가격 표시, name = 차트 이름, ind = 켜 둔 보조지표 (이동평균선·볼린저밴드는 캔들 위에,
 // 거래량·RSI는 캔들 아래 칸에 같은 날짜 축으로 그려요)
@@ -1699,7 +1728,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     if (volOn) { panes.push({ kind: "vol", top: bottom + 26, h: 56 }); bottom += 26 + 56; }
     if (ind.rsi) { panes.push({ kind: "rsi", top: bottom + 26, h: 64 }); bottom += 26 + 64; }
     H = bottom + pad.b;
-    v.count = Math.max(Math.min(5, n), Math.min(n, v.count));
+    v.count = Math.max(Math.min(5, n), Math.min(n, MAX_SHOW, v.count));
     v.end = Math.max(v.count - 1, Math.min(n - 1, v.end));
     const endI = Math.round(v.end);
     start = endI - Math.round(v.count) + 1;
@@ -1710,10 +1739,16 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     if (ind.bb) {  // 볼린저밴드가 잘리지 않게 세로 범위를 넓혀요
       for (let i = start; i <= endI; i++) if (bb.up[i] != null) { hi = Math.max(hi, bb.up[i]); lo = Math.min(lo, bb.lo[i]); }
     }
-    const span = hi - lo || hi * 0.01; hi += span * 0.08; lo -= span * 0.08;
+    // 보이는 구간에서 값이 8배 넘게 차이 나면(상장 이후 전체처럼) 로그 눈금: 같은 비율로 오르면 같은 높이라
+    // 오래전 작은 값도 납작해지지 않아요. 가격은 0 아래로 내려가지 않게 해요.
+    const logY = lo > 0 && hi / lo >= 8;
+    if (logY) { const r = Math.log(hi / lo) * 0.08; hi *= Math.exp(r); lo /= Math.exp(r); } else {
+      const span = hi - lo || hi * 0.01; hi += span * 0.08; lo = lo >= 0 ? Math.max(0, lo - span * 0.08) : lo - span * 0.08;
+    }
+    const sc = logY ? (p) => Math.log(Math.max(p, lo / 10)) : (p) => p, sLo = sc(lo), sHi = sc(hi);
     const X = (i) => pad.l + (i - start + 0.5) * cw;
-    const Y = (p) => pad.t + (1 - (p - lo) / (hi - lo)) * ih;
-    const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => lo + (hi - lo) * (0.06 + 0.88 * f));
+    const Y = (p) => pad.t + (1 - (sc(p) - sLo) / (sHi - sLo)) * ih;
+    const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => sLo + (sHi - sLo) * (0.06 + 0.88 * f)).map((t) => (logY ? Math.exp(t) : t));
     const lastY = Y(c.c[n - 1]);
     const grid = ticks.map((t) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>
       ${Math.abs(Y(t) - lastY) < 16 ? "" : `<text x="${pad.l + iw + 6}" y="${Y(t) + 4}">${esc(fmt(t))}</text>`}`).join("");
@@ -1795,7 +1830,8 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
       <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath>
         <clipPath id="${clip}-p"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${bottom - pad.t + 4}"/></clipPath></defs>
       ${grid}<g clip-path="url(#${clip})">${bands}${mas}${bodies}</g>${paneSvg}${pickSvg}
-      ${mark(hiI, c.h[hiI], "최고", true)}${mark(loI, c.l[loI], "최저", false)}${nowTag}${xl}</svg>
+      ${mark(hiI, c.h[hiI], "최고", true)}${mark(loI, c.l[loI], "최저", false)}${nowTag}${xl}
+      ${logY ? `<text class="pane-label" x="${pad.l + iw + 6}" y="${pad.t - 8}">로그 눈금</text>` : ""}</svg>
       <div class="tip" style="display:none"></div>`;
     const first = start > 0 ? c.c[start - 1] : c.o[start];
     const ch = c.c[endI] / first - 1;
