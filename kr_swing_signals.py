@@ -30,6 +30,7 @@ import pandas as pd
 import departments
 import health
 import kr_swing_backtest as kb
+import macro
 import movers
 import rulebook
 import strategy
@@ -386,8 +387,17 @@ def add_departments(text, payload, market_key, closes, index_close, state, picks
     except Exception as e:
         print(f"부서별 보고 실패 (신호는 그대로 보내요): {e}")
         return text, payload
+    report = with_macro(report, macro.read_snapshot())
     text = text + "\n\n" + "\n".join(departments.report_lines(report))
     return text, dict(payload, desks=departments.report_payload(report))
+
+
+def with_macro(report, snap):
+    """리스크관리부 보고 끝에 경기 국면(macro.py, paper/macro.json)을 참고로 붙여요."""
+    line = macro.risk_line(snap)
+    if not line:
+        return report
+    return [(dept, f"{text}. {line}" if dept == "리스크관리부" else text) for dept, text in report]
 
 
 def add_movers(text, payload, args, path, today, closes, index_close, volumes, wide_closes):

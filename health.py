@@ -35,6 +35,7 @@ WORKFLOWS = {
     "learner": ("학습팀", 7),
     "pages": ("대시보드 배포", None),
     "fundamentals": ("재무·종목 목록", 1),
+    "macro": ("경기 리포트", 5),
 }
 
 

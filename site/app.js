@@ -256,7 +256,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), homeWatchCard(d), moversCard(d), homePerfCard(d), homeIndexCard(d)],
+  home: (d) => [homeSignalCard(d), macroCard(), homeWatchCard(d), moversCard(d), homePerfCard(d), homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
@@ -1147,6 +1147,29 @@ function etfAccountCard(d) {
     : `<p class="empty">${NEXT_RUN.kr} 첫 자동 실행부터 기록해요.</p>`;
   return `<section class="card"><h2>ETF(원화) 계좌 <small>ISA·연금저축용 · 70만 원</small></h2>${body}
     <details style="margin-top:12px"><summary>규칙 보기</summary><ol>${d.etf.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
+}
+
+// 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
+function macroCard() {
+  const m = DATA.macro;
+  if (!m) return "";
+  const chip = m.regime === "확장"
+    ? `<span class="chip good">● 확장</span>` : `<span class="chip wait">■ ${esc(m.regime)}</span>`;
+  const mark = (s) => (s.warn ? "⚠️" : s.near ? "🟡" : "✅");
+  const items = m.signals.map((s) => `<li><div class="l"><div class="name">${mark(s)} ${esc(s.name)}</div>
+      <div class="meta">${esc(s.now)}</div><div class="meta">경고 기준: ${esc(s.rule)}</div></div></li>`).join("");
+  const us = (m.us_economy || []).map((r) => `<li><div class="l"><div class="name">${r.warn ? "⚠️" : "·"} ${esc(r.name)}</div>
+      <div class="meta">${esc(r.value)} · ${esc(r.note)}</div></div></li>`).join("");
+  const hist = (m.history || []).slice(-12).map((h) => h.score).join(" ");
+  const change = m.month_ago !== m.score ? ` · 한 달 전 ${m.month_ago}개(${esc(m.prev_regime)})` : "";
+  return `<section class="card"><h2>경기 국면 <small>${md(m.day)} 기준 · 참고</small></h2>${chip}
+    <p class="headline">경고 ${m.score}/${m.total}개${change}</p><p class="sub">${esc(m.action)}</p>
+    <details style="margin-top:10px"><summary class="muted">지표 ${m.total}개 자세히 보기</summary>
+      <ul class="list" style="margin-top:8px">${items}</ul>
+      ${us ? `<h3 class="muted" style="margin:10px 0 4px">미국 경제 참고 (FRED)</h3><ul class="list">${us}</ul>` : ""}
+      ${hist ? `<p class="muted" style="margin:10px 0 0">최근 12주 경고 개수: ${hist}</p>` : ""}
+    </details>
+    <p class="muted" style="margin:10px 0 0">경고 0~1개 확장, 2~3개 둔화, 4개↑ 위축 경고. 백테스트에서 이걸로 매수를 줄여도 낙폭이 안 줄어서 규칙은 안 바꿔요.</p></section>`;
 }
 
 // 많이 오른·내린 종목과 추정 이유 (movers.py). 예전 기록엔 없을 수 있어요.
