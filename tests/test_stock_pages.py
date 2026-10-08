@@ -110,3 +110,18 @@ def test_extras_come_first_with_their_own_symbol_and_fill_data_json(tmp_path):
     assert sp.fill_extras(out, "kr", rows)
     assert json.loads((out / "data.json").read_text())["markets"]["kr"]["extras"] == rows
     assert not sp.fill_extras(tmp_path / "nowhere", "kr", rows)
+
+
+def test_build_indexes_writes_every_world_index(tmp_path):
+    asked = []
+
+    def fetch(sym):
+        asked.append(sym)
+        return None if sym == "^SOX" else yahoo_daily(3)
+
+    made = sp.build_indexes(tmp_path, fetch=fetch, pause=0)
+    assert "^KS11" in asked and "KRW=X" not in asked  # 환율은 빼요
+    assert made == len(asked) - 1 and not (tmp_path / "indexes" / "SOX.json").exists()
+    x = json.loads((tmp_path / "indexes" / "KS11.json").read_text())
+    assert x["name"] == "코스피" and x["candles"]["full"] is True and x["candles"]["h"][0] == 102.57
+    assert sp.index_file("000001.SS") == "000001.SS" and sp.index_file("^STOXX50E") == "STOXX50E"

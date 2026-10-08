@@ -28,6 +28,13 @@ try {
   const saved = JSON.parse(localStorage.getItem("ind") || "{}");
   for (const [k] of IND_KEYS) if (typeof (saved && saved[k]) === "boolean") IND[k] = saved[k];
 } catch (e) { /* 기본값 */ }
+// 차트 화면 지수 버튼: 시장마다 고른 지수 (이 폰 브라우저에 기억해요). 기본은 그 시장 매매 기준 지수.
+const OWN_IDX = { kr: "^KS11", us: "^GSPC" };
+const CHART_IDX = { ...OWN_IDX };
+try {
+  const saved = JSON.parse(localStorage.getItem("chart_idx") || "{}");
+  for (const m of ["kr", "us"]) if (typeof (saved && saved[m]) === "string") CHART_IDX[m] = saved[m];
+} catch (e) { /* 기본값 */ }
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
@@ -341,6 +348,16 @@ function render() {
   if (screen === "search") bindSearch();
   bindRows(app, d);
   if (screen === "chart") {
+    app.querySelectorAll("[data-idx]").forEach((b) => b.addEventListener("click", () => {
+      CHART_IDX[market] = b.dataset.idx;
+      if (IDX_READY.get(b.dataset.idx) === null) IDX_READY.delete(b.dataset.idx);  // 못 받았던 지수는 다시 받아 봐요
+      try { localStorage.setItem("chart_idx", JSON.stringify(CHART_IDX)); } catch (e) { /* 이번만 기억 */ }
+      const y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+    }));
+    const row = app.querySelector(".idx-chips"), on = row && row.querySelector('[aria-pressed="true"]');
+    if (on) row.scrollLeft = on.offsetLeft - row.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;  // 고른 지수 버튼이 보이게
     drawTrend(d);
     app.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
       frame = b.dataset.frame;
@@ -349,7 +366,7 @@ function render() {
       drawTrend(d, true);
     }));
   }
-  app.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => {
+  app.querySelectorAll(".chips button[data-ind]").forEach((b) => b.addEventListener("click", () => {
     IND[b.dataset.ind] = !IND[b.dataset.ind];
     try { localStorage.setItem("ind", JSON.stringify(IND)); } catch (e) { /* 이번만 기억 */ }
     render();  // 보던 구간·확대는 그대로 두고 지표만 다시 그려요
@@ -862,15 +879,41 @@ function homeIndexCard(d) {
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
 // 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프
 function drawTrend(d, reset) {
+  const r = d.signal ? chartIdx(d) : null;
+  if (r && r.sym !== OWN_IDX[market]) { drawOtherIndex(r, reset); return; }
   const c = d.signal && d.signal.candles;
   if (c && c.dates.length) {
     const f = frameCandles(c, frame);
     const show = (FRAMES.find((x) => x[0] === frame) || FRAMES[0])[2];
     document.querySelectorAll(".ma-key").forEach((k) => { k.style.display = frame === "y" ? "none" : ""; });
-    candleChart($("#trend-chart"), f, show, reset, (txt) => { $("#trend-change").innerHTML = txt; }, { name: d.index_name });
+    candleChart($("#trend-chart"), f, show, reset || idxDrawn !== OWN_IDX[market], (txt) => { $("#trend-change").innerHTML = txt; }, { name: d.index_name });
+    idxDrawn = OWN_IDX[market];
     return;
   }
   drawTrendLine(d);
+}
+
+function drawOtherIndex(r, reset) {
+  const el = $("#trend-chart");
+  if (!el) return;
+  if (!IDX_READY.has(r.sym)) {
+    idxData(r.sym).then(() => {
+      if (screen === "chart" && chartIdx(DATA.markets[market]).sym === r.sym) render();  // 받는 사이 다른 화면으로 갔으면 안 그려요
+    });
+    return;
+  }
+  const x = IDX_READY.get(r.sym), c = x && x.candles;
+  if (!c || c.dates.length < 2) {
+    el.innerHTML = `<p class="empty">이 지수는 차트 자료를 아직 못 받았어요. 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`;
+    return;
+  }
+  const f = frameCandles(c, frame);
+  const show = (FRAMES.find((y) => y[0] === frame) || FRAMES[0])[2];
+  candleChart(el, f, show, reset || idxDrawn !== r.sym, (txt) => { const t = $("#trend-change"); if (t) t.innerHTML = txt; },
+    { name: r.name, fmt: (v) => (Math.abs(v) >= 1000 ? num(v) : px("us", v)) });  // 큰 지수는 소수점 없이 (가격 축이 안 잘리게)
+  idxDrawn = r.sym;
+  const all = $("#trend-all");
+  if (all) all.innerHTML = allTimeLine(c);
 }
 
 // 묶는 열쇠: 주(그 주 월요일 날짜), 월(YYYY-MM), 년(YYYY)
@@ -1089,12 +1132,65 @@ function tradesCard(d) {
     ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">아직 끝난 거래가 없어요.</p>`}</section>`;
 }
 
+// 세계 지수·환율(world.json)에 있는 지수들. 매매 기준 지수가 맨 앞이에요.
+function chartIndexes(d) {
+  const w = DATA.world;
+  const all = w && w.groups ? w.groups.flatMap((g) => g.items).filter((r) => r.kind === "idx") : [];
+  const own = OWN_IDX[market];
+  return [{ sym: own, name: d.index_name || (all.find((r) => r.sym === own) || {}).name || own },
+    ...all.filter((r) => r.sym !== own).map((r) => ({ sym: r.sym, name: r.name }))];
+}
+function chartIdx(d) {
+  const list = chartIndexes(d);
+  return list.find((r) => r.sym === CHART_IDX[market]) || list[0];
+}
+function idxChips(d) {
+  const cur = chartIdx(d).sym;
+  return `<div class="chips idx-chips" role="group" aria-label="지수 고르기">${chartIndexes(d).map((r) =>
+    `<button type="button" data-idx="${esc(r.sym)}" aria-pressed="${r.sym === cur}">${esc(r.name)}</button>`).join("")}</div>`;
+}
+
+// 다른 지수 자료: indexes/<기호>.json (배포 때 stock_pages.py가 야후에서 처음부터 받은 일봉). 앱을 닫을 때까지 기억해요.
+const indexFile = (sym) => sym.replace(/[^A-Za-z0-9.]/g, "");  // stock_pages.index_file과 같은 규칙
+const IDX_DATA = new Map();   // 기호 → 받는 중인 Promise
+const IDX_READY = new Map();  // 기호 → 받은 자료 (못 받았으면 null)
+let idxDrawn = null;          // 마지막으로 그린 지수 (바뀌면 보던 구간을 처음으로)
+function idxData(sym) {
+  if (!IDX_DATA.has(sym)) {
+    IDX_DATA.set(sym, fetch(`indexes/${encodeURIComponent(indexFile(sym))}.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => {
+        IDX_READY.set(sym, x);
+        if (!x) IDX_DATA.delete(sym);  // 버튼을 다시 누르면 다시 받아요
+        return x;
+      }));
+  }
+  return IDX_DATA.get(sym);
+}
+
+// 매매 기준이 아닌 지수의 차트 칸 (참고용, 규칙 설명 없이)
+function otherIndexCard(d, r) {
+  const x = IDX_READY.get(r.sym), cd = x && x.candles;
+  const buttons = FRAMES.map(([key, label]) =>
+    `<button type="button" data-frame="${key}" aria-pressed="${key === frame}">${label}</button>`).join("");
+  const since = cd && cd.dates.length ? `${cd.dates[0].slice(0, 4)}.${cd.dates[0].slice(5, 7)}부터 전체` : "";
+  return `<section class="card">${idxChips(d)}<h2>${esc(r.name)} 추세 <small>${since}</small></h2>
+    <div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips(cd || { v: [1] })}
+    <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>${candleLegend()}
+    <div class="chart candle" id="trend-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
+    <p class="muted" id="trend-all" style="margin:8px 0 0"></p>
+    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려요.
+      이 지수는 참고로만 봐요. 매수 규칙은 ${esc(chartIndexes(d)[0].name)}만 봐요.</p>${indHelp()}</section>`;
+}
+
 function trendCard(d) {
   if (!d.signal) return "";
+  const r = chartIdx(d);
+  if (r.sym !== OWN_IDX[market]) return otherIndexCard(d, r);
   const cd = d.signal.candles;
   const buttons = FRAMES.map(([key, label]) =>
     `<button type="button" data-frame="${key}" aria-pressed="${key === frame}">${label}</button>`).join("");
-  return `<section class="card"><h2>${esc(d.index_name)} 추세</h2>
+  return `<section class="card">${idxChips(d)}<h2>${esc(d.index_name)} 추세</h2>
     ${cd ? `<div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips(cd)}` : ""}
     <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>
     ${cd ? candleLegend() : `<div class="legend">
