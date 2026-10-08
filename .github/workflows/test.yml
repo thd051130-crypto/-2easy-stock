@@ -14,5 +14,5 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: pip install pytest
+      - run: pip install pytest matplotlib koreanize-matplotlib
       - run: python -m pytest -v

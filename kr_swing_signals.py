@@ -23,6 +23,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import re
 import tempfile
 
 import pandas as pd
@@ -35,6 +36,8 @@ import movers
 import rulebook
 import sectors
 import strategy
+import tgchart
+import tgfmt
 import track
 import wide
 from markets import MARKETS
@@ -243,16 +246,17 @@ def kr_payload(market, picks, index_close):
                 picks=rows, max_positions=kb.MAX_POSITIONS, series=index_series(index_close))
 
 
+def us_payload_action(us):
+    if us["ok"] and not us["was_ok"]:
+        return "buy"
+    if us["ok"]:
+        return "hold"
+    return "sell" if us["was_ok"] else "cash"
+
+
 def us_payload(us, index_close, etf_close=None):
     """대시보드가 읽는 오늘의 미장 신호 (paper/us/signal.json)."""
-    if us["ok"] and not us["was_ok"]:
-        action = "buy"
-    elif us["ok"]:
-        action = "hold"
-    elif us["was_ok"]:
-        action = "sell"
-    else:
-        action = "cash"
+    action = us_payload_action(us)
     return dict(market="us", day=f"{us['day']:%Y-%m-%d}", index=round(us["spx"], 2), ma50=round(us["ma50"], 2),
                 ma200=round(us["ma200"], 2), ok=us["ok"], action=action, etf=strategy.US_ETF, opinion=us_opinion(us),
                 etf_close=round(etf_close, 2) if etf_close else None, series=index_series(index_close))
@@ -475,6 +479,107 @@ def split_message(text, limit=TELEGRAM_LIMIT):
     return parts + [current]
 
 
+def kr_summary(market, picks, capital):
+    """텔레그램 맨 위 요약 (HTML): 오늘 할 일 → 매수 후보 → 코스피."""
+    esc = tgfmt.esc
+    lines = [f"🇰🇷 <b>국장 신호</b> · {market['day']:%m/%d} 종가", tgfmt.DIVIDER]
+    if picks:
+        top = picks[:kb.MAX_POSITIONS]
+        slot = capital * strategy.KR_WEIGHT
+        lines.append(f"🟢 <b>매수 후보 {len(top)}개</b> · 내일 시가에 종목당 {slot / 10000:,.0f}만 원")
+        for i, p in enumerate(top, 1):
+            lines.append(f"{i}. <b>{esc(p['name'])}</b> {p['close']:,.0f}원 · 손절 {p['close'] * (1 - strategy.KR_STOP):,.0f}원")
+        if len(picks) > len(top):
+            lines.append(f"<i>(자리 없으면 건너뛰는 후보 {len(picks) - len(top)}개 더)</i>")
+    elif market["kospi_ok"]:
+        lines.append("⚪ <b>오늘은 매수 신호 없음</b>")
+    else:
+        lines.append("⏸ <b>오늘은 새로 안 사요</b>")
+        lines.append(f"<i>{esc(kr_pause_reason(market))}</i>")
+    gap50 = market["kospi"] / market["kospi_ma50"] - 1
+    gap200 = market["kospi"] / market["kospi_ma200"] - 1
+    lines.append(f"📈 코스피 <b>{market['kospi']:,.0f}</b> · 50일선 {gap50:+.1%} · 200일선 {gap200:+.1%}")
+    return lines
+
+
+US_ACTIONS = {"buy": ("🟢", "매수 신호", "다음 거래일 시가에 계좌 {w}를 {etf}로"),
+              "hold": ("🔵", "보유 유지", "계좌 {w}는 {etf}, 나머지 현금"),
+              "sell": ("🔴", "매도 신호", "다음 거래일 시가에 {etf} 전부 팔고 현금으로"),
+              "cash": ("⚪", "현금 유지", "추세가 약하거나 변동성이 커서 안 사요")}
+
+
+def us_summary(us, capital, etf_close=None):
+    action = us_payload_action(us)
+    mark, label, what = US_ACTIONS[action]
+    lines = [f"🇺🇸 <b>미장 신호</b> · {us['day']:%m/%d} (뉴욕) 종가", tgfmt.DIVIDER,
+             f"{mark} <b>{label}</b>: " + what.format(w=f"{strategy.US_WEIGHT:.0%}", etf=strategy.US_ETF)]
+    if etf_close and action in ("buy", "hold"):
+        amount = capital * strategy.US_WEIGHT
+        lines.append(f"💵 {capital:,.0f}달러 계좌 → {amount:,.0f}달러 ≈ {strategy.US_ETF} {amount / etf_close:.2f}주")
+    gap50 = us["spx"] / us["ma50"] - 1
+    gap200 = us["spx"] / us["ma200"] - 1
+    lines.append(f"📈 S&amp;P500 <b>{us['spx']:,.0f}</b> · 50일선 {gap50:+.1%} · 200일선 {gap200:+.1%}")
+    return lines
+
+
+def summary_extras(payload):
+    """요약 아래 한 줄씩: 규칙표 후보, 많이 오르고 내린 종목, 강하고 약한 업종, 데이터 경고, 앱 링크."""
+    lines = []
+
+    def esc(name):  # 요약 한 줄에 들어가게 긴 영문 회사명은 줄여요
+        name = re.split(r",| - | \(| (?:Inc|Corp|Corporation|Holdings|Company|plc|S\.A\.)\b", str(name))[0].strip()
+        return tgfmt.esc(name if len(name) <= 14 else name[:13] + "…")
+
+    def names(rows, n=4):
+        shown = " · ".join(esc(r["name"]) for r in rows[:n])
+        return shown + (f" 외 {len(rows) - n}개" if len(rows) > n else "")
+
+    def moves(rows, n=3):
+        return " · ".join(f"{esc(r['name'])} {r['r5']:+.0%}" for r in rows[:n])
+
+    rb = payload.get("rulebook") or []
+    if rb:
+        lines.append(f"📋 규칙표 후보 {len(rb)}개 <i>(가상 검증용)</i>: {names(rb)}")
+    wide_picks = payload.get("wide") or []
+    if wide_picks:
+        lines.append(f"🔭 넓은 범위 후보 {len(wide_picks)}개 <i>(참고)</i>: {names(wide_picks)}")
+    mv = payload.get("movers") or {}
+    if mv.get("up"):
+        lines.append(f"🔥 5일 급등: {moves(mv['up'])}")
+    if mv.get("down"):
+        lines.append(f"🧊 5일 급락: {moves(mv['down'])}")
+    sec = payload.get("sectors") or []
+    if sec:
+        strong, weak = sec[0], sec[-1]
+        line = f"🏭 강한 업종 {esc(strong['name'])} {strong['r5']:+.1%}"
+        if weak is not strong:
+            line += f" · 약한 업종 {esc(weak['name'])} {weak['r5']:+.1%}"
+        lines.append(line)
+    if payload.get("data_warnings"):
+        lines.append(f"⚠️ 데이터 점검 {len(payload['data_warnings'])}건 (아래 펼쳐 보기)")
+    lines.append(f"📱 {tgfmt.link('앱에서 차트·자세히 보기')}")
+    return lines
+
+
+def telegram_messages(summary_lines, payload, text):
+    """(사진 설명용 요약 HTML, 자세한 글) — 요약은 오늘 할 일만 짧게, 나머지는 접어서 보내요."""
+    summary = "\n".join(summary_lines + [""] + summary_extras(payload))
+    first, _, rest = text.partition("\n")
+    sub = tgfmt.HEADER.match(first)
+    detail = f"[신호 자세히] {sub.group(2) if sub else ''}\n{rest}"
+    return summary, detail
+
+
+def send_signal(summary, detail, chart):
+    """그림(요약을 설명으로) → 접힌 자세한 내용. 그림을 못 보내면 요약을 글 맨 위에 붙여요."""
+    from realtime_monitor import send_html, send_photo
+
+    photo_ok = bool(chart) and len(tgfmt.plain(summary)) <= tgfmt.CAPTION_LIMIT and send_photo(chart, summary)
+    parts = tgfmt.compose("" if photo_ok else summary, detail)
+    if not all([send_html(part) for part in parts]):
+        raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--market", choices=sorted(MARKETS), default="kr", help="kr=국장 스윙, us=미장 S&P500 추세")
@@ -483,9 +588,8 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="텔레그램으로 보내지 않고 출력만")
     parser.add_argument("--save-csv", type=pathlib.Path, help="받은 야후 데이터를 이 경로에 남겨요 (가상매매 기록이 같이 써요)")
     parser.add_argument("--save-json", type=pathlib.Path, help="오늘 신호를 대시보드용 JSON으로 저장")
+    parser.add_argument("--preview-dir", type=pathlib.Path, help="텔레그램에 보낼 요약·자세히·그림을 이 폴더에 저장 (미리보기)")
     args = parser.parse_args()
-
-    from realtime_monitor import send_telegram
 
     m = MARKETS[args.market]
     capital = args.capital or float(os.getenv(f"CAPITAL_{args.market.upper()}") or m["capital"])
@@ -554,10 +658,18 @@ def main():
             print(f"추천 성과 계산 실패 (신호는 그대로 보내요): {e!r}")
         save_json(args.save_json, payload)
     print(text)
+    head = us_summary(us, capital, etf_close) if args.market == "us" else kr_summary(market, picks, capital)
+    summary, detail = telegram_messages(head, payload, text)
+    state = "보유·매수 구간" if (us["ok"] if args.market == "us" else market["kospi_ok"]) else "쉬는 구간"
+    chart = tgchart.index_chart(index_close, m["index_name"], f"50·200일선 · 지금은 {state}")
+    if args.preview_dir:  # 보낼 모양 미리보기 (텔레그램 없이)
+        args.preview_dir.mkdir(parents=True, exist_ok=True)
+        (args.preview_dir / f"{args.market}_messages.json").write_text(
+            json.dumps(dict(caption=summary, messages=tgfmt.compose("", detail)), ensure_ascii=False, indent=1))
+        if chart:
+            (args.preview_dir / f"{args.market}_chart.png").write_bytes(chart)
     if not args.dry_run:
-        for part in split_message(text):
-            if not send_telegram(part):
-                raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
+        send_signal(summary, detail, chart)
 
 
 if __name__ == "__main__":

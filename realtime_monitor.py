@@ -26,6 +26,8 @@ import requests
 import websockets
 from dotenv import load_dotenv
 
+import tgfmt
+
 load_dotenv()
 
 ENVS = {
@@ -94,20 +96,47 @@ def parse_frame(raw, fields):
     return [dict(zip(fields, values[k * width:(k + 1) * width])) for k in range(count)]
 
 
-def send_telegram(text):
+def telegram_call(method, data=None, files=None, **params):
+    """텔레그램 봇 API 호출. 반환: (성공 여부, 응답 설명)."""
     token, chat_id = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip(), (os.getenv("TELEGRAM_CHAT_ID") or "").strip()
     if not token or not chat_id:
         print("(텔레그램 미설정: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)", flush=True)
-        return False
+        return False, "no token"
+    url = f"https://api.telegram.org/bot{token}/{method}"
     try:
-        resp = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", timeout=10,
-                             json={"chat_id": chat_id, "text": text})
+        if files:
+            resp = requests.post(url, timeout=30, data=dict(params, chat_id=chat_id), files=files)
+        else:
+            resp = requests.post(url, timeout=10, json=dict(params, chat_id=chat_id))
     except requests.RequestException as e:
-        print(f"텔레그램 전송 실패: {e!r}", flush=True)
-        return False
+        print(f"텔레그램 전송 실패: {str(e).replace(token, '***')}", flush=True)
+        return False, "network"
     if not resp.ok:
         print(f"텔레그램 전송 실패 {resp.status_code}: {resp.text[:200]}", flush=True)
-    return resp.ok
+    return resp.ok, resp.text[:200]
+
+
+def send_html(message):
+    """HTML 메시지 한 개. 태그 때문에 거절되면 태그를 뺀 보통 글로 다시 보내요."""
+    ok, why = telegram_call("sendMessage", text=message, parse_mode="HTML", disable_web_page_preview=True)
+    if not ok and "parse" in why.lower():
+        ok, _ = telegram_call("sendMessage", text=tgfmt.plain(message), disable_web_page_preview=True)
+    return ok
+
+
+def send_telegram(text, collapse=False):
+    """보통 글을 보기 좋게(tgfmt.py: 굵은 제목·이모지, collapse=True면 둘째 구획부터 접기) 바꿔서 보내요.
+    길면 여러 메시지로 나눠요."""
+    return all([send_html(part) for part in tgfmt.render(text, collapse)])
+
+
+def send_photo(png, caption=None):
+    """그림(PNG 바이트) 한 장. caption은 HTML (1024자 이하)."""
+    params = {"caption": caption, "parse_mode": "HTML"} if caption else {}
+    ok, why = telegram_call("sendPhoto", files={"photo": ("chart.png", png, "image/png")}, **params)
+    if not ok and caption and "parse" in why.lower():
+        ok, _ = telegram_call("sendPhoto", files={"photo": ("chart.png", png, "image/png")}, caption=tgfmt.plain(caption))
+    return ok
 
 
 def find_chat_id():
