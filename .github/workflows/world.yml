@@ -1,0 +1,48 @@
+# 세계 지수·환율: 나라별 대표 지수와 원화 환율을 야후 무료 일봉으로 모아 paper/world.json에 남겨요 (앱 홈 "세계 지수·환율" 칸).
+#   하루 두 번: 한국시간 07:05쯤(미국·유럽 마감 뒤), 16:10쯤(한국·일본·중국 마감 뒤)
+#   보기용이고 매매 규칙은 안 바꿔요. 폰에서 바로 받기: Actions → world → Run workflow
+name: world
+
+on:
+  schedule:
+    - cron: "5 22 * * 0-5"   # UTC 22:05 = 한국 다음 날 07:05, 화~토 (미장 마감 뒤)
+    - cron: "10 7 * * 1-5"   # UTC 07:10 = 한국 16:10, 평일 (아시아 마감 뒤)
+  workflow_dispatch:
+
+permissions:
+  contents: write  # paper/world.json을 커밋해요
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
+
+concurrency:
+  group: world
+  cancel-in-progress: false
+
+jobs:
+  world:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python world.py --save paper/world.json
+      - name: commit world log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper/world.json
+          if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
+          git commit -m "세계 지수·환율 기록 $(TZ=Asia/Seoul date '+%F %H:%M')"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow world

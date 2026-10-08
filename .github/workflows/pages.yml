@@ -7,11 +7,11 @@ name: pages
 
 on:
   workflow_run:
-    workflows: [swing-signals, fundamentals, macro]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
+    workflows: [swing-signals, fundamentals, macro, world]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
     types: [completed]
   push:
     branches: [main]
-    paths: ["site/**", "paper/**", "dashboard.py", "stock_pages.py", "fundamentals.py", "watchlist.py", "strategy.py", "markets.py", ".github/workflows/pages.yml"]
+    paths: ["site/**", "paper/**", "dashboard.py", "world.py", "stock_pages.py", "fundamentals.py", "watchlist.py", "strategy.py", "markets.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
