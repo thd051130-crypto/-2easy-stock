@@ -40,7 +40,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python dashboard.py --out _site
-      # 종목 화면(차트·재무제표) 파일: 야후에서 상장일부터 일봉을 받아요. 못 받아도 대시보드는 올려요
+      # 종목 화면(차트·재무제표)과 차트 화면 세계 지수 파일: 야후에서 처음부터 일봉을 받아요. 못 받아도 대시보드는 올려요
       - run: python stock_pages.py --out _site
         continue-on-error: true
         timeout-minutes: 6

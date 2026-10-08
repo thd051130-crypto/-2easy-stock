@@ -382,3 +382,8 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; text-decoration: none; }
 .tag { font-size: 12px; line-height: 1.4; padding: 1px 7px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); }
 .tag.main { background: var(--accent-bg); color: var(--accent-fg); font-weight: 700; }
+
+/* 차트 화면 지수 버튼: 옆으로 밀어서 골라요 (줄이 늘어나지 않게) */
+.idx-chips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -4px 10px; padding: 0 4px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.idx-chips::-webkit-scrollbar { display: none; }
+.idx-chips button { flex: none; white-space: nowrap; }

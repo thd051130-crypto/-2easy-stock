@@ -10,6 +10,7 @@ pages 워크플로가 dashboard.py 다음에 돌려요 (`python stock_pages.py -
 야후를 못 받은 종목은 재무만으로 파일을 만들어요 (화면엔 '차트 자료 없음').
 텔레그램으로 넣은 관심종목(paper/watch.json)도 만들고, 그 종목들의 종가·전일 대비·최근 60일 종가를
 <out>/data.json의 extras에 채워요 (알림 종목처럼 swing-signals가 시세를 받지 않아서요). 이 종목들을 먼저 받아요.
+세계 지수(world.py GROUPS의 지수들)도 <out>/indexes/<기호>.json으로 처음부터 일봉을 만들어요. 차트 화면 지수 버튼이 읽어요.
 실패해도 오류로 끝내지 않아요 (대시보드 배포가 멈추지 않게).
 """
 
@@ -18,10 +19,13 @@ import json
 import pathlib
 import time
 
+import re
+
 import pandas as pd
 
 import fundamentals
 import watchlist
+import world
 from markets import MARKETS
 
 PERIOD = "max"  # 상장일부터 (오래된 종목도 한 종목에 1초 안팎, 폰으로 받는 파일은 압축해서 100KB 남짓)
@@ -117,6 +121,29 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
     return full, only_fund, rows
 
 
+def index_file(sym):
+    """지수 기호 → 파일 이름 (^KS11 → KS11). 앱(indexFile)과 같은 규칙이에요."""
+    return re.sub(r"[^A-Za-z0-9.]", "", sym)
+
+
+def build_indexes(out, fetch=daily, pause=0.3):
+    """세계 지수마다 파일 하나 (<out>/indexes/<기호>.json). 값은 소수 둘째 자리까지. 반환: 만든 수."""
+    folder = out / "indexes"
+    folder.mkdir(parents=True, exist_ok=True)
+    made = 0
+    for _, items in world.GROUPS:
+        for sym, name, kind in items:
+            if kind != "idx":
+                continue
+            c = candles(fetch(sym), "us", full=True)
+            if c is not None:
+                payload = dict(sym=sym, name=name, candles=c)
+                (folder / f"{index_file(sym)}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+                made += 1
+            time.sleep(pause)
+    return made
+
+
 def fill_extras(out, market, rows):
     """<out>/data.json의 그 시장 extras를 시세가 채워진 줄로 바꿔요."""
     path = out / "data.json"
@@ -135,6 +162,10 @@ def main():
     ap.add_argument("--market", action="append", choices=sorted(MARKETS), help="여러 번 쓸 수 있어요 (기본: 둘 다)")
     ap.add_argument("--budget", type=float, default=150, help="시장마다 시세를 받는 최대 시간(초)")
     args = ap.parse_args()
+    try:  # 지수는 13개뿐이라 먼저 (종목은 시간이 모자라면 재무만 넣어요)
+        print(f"세계 지수 차트 {build_indexes(args.out)}개")
+    except Exception as e:
+        print(f"세계 지수 차트를 못 만들었어요: {e!r}")
     for market in args.market or ["kr", "us"]:
         try:
             full, only_fund, rows = build(args.out, market, paper=args.paper, budget=args.budget)
