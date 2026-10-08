@@ -82,6 +82,13 @@ function adoptExtras() {
   }
 }
 let watchQuery = "";
+// 고른 업종 (홈 '업종별 호재·악재'와 관심 화면 '전체 종목'이 같이 써요). 시장마다 따로
+const SECTOR = { kr: "", us: "" };
+try { Object.assign(SECTOR, JSON.parse(localStorage.getItem("sector") || "{}")); } catch (e) { /* 기본값 */ }
+function pickSector(name) {
+  SECTOR[market] = SECTOR[market] === name ? "" : name;
+  try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
+}
 let watchSort = "change";
 try { watchSort = localStorage.getItem("watchSort") || "change"; } catch (e) { /* 기본값 */ }
 const trackSrc = {};  // 추천 성과에서 고른 출처 (시장별)
@@ -256,7 +263,8 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), macroCard(), homeWatchCard(d), moversCard(d), homePerfCard(d), homeIndexCard(d)],
+  home: (d) => [homeSignalCard(d), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), homePerfCard(d),
+    homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
@@ -283,6 +291,13 @@ function render() {
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") { drawTrack(d); drawEquity(d); }
+  app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    pickSector(b.dataset.sector);
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
   if (screen === "watch") bindWatch(d);
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
@@ -445,15 +460,27 @@ function allStocksCard(d) {
   return `<section class="card"><h2>전체 종목 <small>${what}</small></h2>
     <input class="search" type="search" placeholder="이름이나 코드로 찾기" aria-label="종목 찾기" value="${esc(watchQuery)}">
     <div class="period" role="group" aria-label="정렬" style="margin:10px 0 6px">${sorts}</div>
+    ${secList(d).length ? sectorChips(secList(d), SECTOR[market]) : ""}
     <ul class="list" id="all-list">${allRows(d)}</ul>
     <button type="button" class="more" data-find>목록에 없는 종목 찾기 (국장·미장 전체)<span aria-hidden="true">›</span></button></section>`;
 }
 
+// 관심 화면 업종 버튼: 대시보드 종목에 있는 업종만 (업종 지도 paper/sectors.json 기준)
+function secList(d) {
+  const of = (d.signal && d.signal.sector_of) || {};
+  const have = new Set(stocksOf(d).map((s) => of[s.code]).filter(Boolean));
+  const order = ((d.signal && d.signal.sectors) || []).map((s) => s.name);
+  return order.filter((n) => have.has(n)).concat([...have].filter((n) => !order.includes(n)));
+}
 function allRows(d) {
   const q = watchQuery.trim().toLowerCase();
-  const rows = stocksOf(d).filter((s) => !q || s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q));
+  const of = (d.signal && d.signal.sector_of) || {};
+  const sec = secList(d).includes(SECTOR[market]) ? SECTOR[market] : "";
+  const rows = stocksOf(d).filter((s) => (!q || s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q))
+    && (!sec || of[s.code] === sec));
   rows.sort(watchSort === "name" ? (a, b) => a.name.localeCompare(b.name, "ko") : (a, b) => (b.d1 ?? -9) - (a.d1 ?? -9));
-  return rows.length ? rows.map((s) => stockRow(s, d)).join("") : `<li><p class="empty">"${esc(watchQuery)}"에 맞는 종목이 없어요.</p></li>`;
+  if (rows.length) return rows.map((s) => stockRow(s, d)).join("");
+  return `<li><p class="empty">${q ? `"${esc(watchQuery)}"에 맞는 종목이 없어요.` : `${esc(sec)} 종목이 없어요.`}</p></li>`;
 }
 
 // ★는 관심종목 넣기·빼기, 줄의 나머지를 누르면 그 종목 화면(차트·재무제표)
@@ -1172,6 +1199,51 @@ function macroCard() {
     <p class="muted" style="margin:10px 0 0">경고 0~1개 확장, 2~3개 둔화, 4개↑ 위축 경고. 백테스트에서 이걸로 매수를 줄여도 낙폭이 안 줄어서 규칙은 안 바꿔요.</p></section>`;
 }
 
+// 업종별 호재·악재 (sectors.py). 버튼으로 업종을 고르면 그 업종만 자세히, 관심 화면 전체 종목도 그 업종만 보여 줘요.
+function sectorChips(list, current) {
+  const btn = (name, label) => `<button type="button" data-sector="${esc(name)}" aria-pressed="${current === name}">${esc(label)}</button>`;
+  return `<div class="chips" role="group" aria-label="업종 고르기" style="margin-bottom:8px">${btn("", "전체")}${list.map((n) => btn(n, n)).join("")}</div>`;
+}
+function toneBadge(s) {
+  if (!s.news || !s.news.length) return "";
+  const cls = s.good > s.bad ? "good" : s.bad > s.good ? "bad" : "";
+  return `<span class="badge ${cls}">${esc(s.label)}</span>`;
+}
+function sectorsCard(d) {
+  const secs = d.signal && d.signal.sectors;
+  if (!secs || !secs.length) return "";
+  let cur = SECTOR[market];
+  const s = secs.find((x) => x.name === cur);
+  if (!s) cur = "";
+  const chips = sectorChips(secs.map((x) => x.name), cur);
+  let body;
+  if (!s) {
+    body = `<ul class="list" style="margin-top:10px">${secs.map((x) => `<li data-sector="${esc(x.name)}"><div class="l">
+        <div class="name">${esc(x.name)}${toneBadge(x)}</div>
+        <div class="meta">${x.count}종목${x.vs_index == null ? "" : ` · 지수보다 ${pct(x.vs_index)}p`}${x.r20 == null ? "" : ` · 20일 ${pct(x.r20)}`}</div></div>
+        <div class="r ${sign(x.r5)}">${pct(x.r5)}</div></li>`).join("")}</ul>`;
+  } else {
+    const names = new Map(stocksOf(d).map((x) => [x.code, x]));
+    const news = (s.news || []).map((n) => {
+      const tag = n.tone > 0 ? `<span class="badge good">호재</span>` : n.tone < 0 ? `<span class="badge bad">악재</span>` : "";
+      const title = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title);
+      return `<li><div class="l"><div class="meta">${tag} ${title}${n.source ? ` · ${esc(n.source)}` : ""}${n.date ? ` · ${md(n.date)}` : ""}</div></div></li>`;
+    }).join("");
+    const members = s.codes.map((c) => {
+      const st = names.get(c);
+      return st ? stockRow(st, d) : "";
+    }).join("");
+    body = `<p class="headline">${esc(s.name)} ${pct(s.r5)}${toneBadge(s)}</p>
+      <p class="sub">5거래일 중간값${s.vs_index == null ? "" : `, 지수보다 ${pct(s.vs_index)}p`}${s.r20 == null ? "" : ` · 20일 ${pct(s.r20)}`}${s.above200 == null ? "" : ` · 200일선 위 ${Math.round(s.above200 * 100)}%`}</p>
+      <p class="muted" style="margin:6px 0 0">가장 강한 종목 ${esc(s.best.name)} ${pct(s.best.r5)} · 가장 약한 종목 ${esc(s.worst.name)} ${pct(s.worst.r5)} (${s.count}종목 중)</p>
+      ${news ? `<h3 class="muted" style="margin:12px 0 4px">최근 7일 뉴스 제목 · 호재 ${s.good} · 악재 ${s.bad}</h3><ul class="list">${news}</ul>`
+        : `<p class="empty">최근 7일 뉴스 제목을 못 받았어요.</p>`}
+      ${members ? `<h3 class="muted" style="margin:12px 0 4px">이 업종 대형주</h3><ul class="list">${members}</ul>` : ""}`;
+  }
+  return `<section class="card" id="sectors-card"><h2>업종별 호재·악재 <small>최근 5거래일 · 참고</small></h2>${chips}${body}
+    <p class="muted" style="margin:10px 0 0">호재·악재는 뉴스 제목 낱말로 짐작한 거예요. 고른 업종은 관심 화면 전체 종목에도 똑같이 걸려요.</p></section>`;
+}
+
 // 많이 오른·내린 종목과 추정 이유 (movers.py). 예전 기록엔 없을 수 있어요.
 function moversCard(d) {
   const mv = d.signal && d.signal.movers;
@@ -1180,7 +1252,7 @@ function moversCard(d) {
     const n = (p.news || [])[0];
     const link = n && /^https:\/\//.test(n.link || "")
       ? `<div class="meta">📰 <a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>${n.source ? ` · ${esc(n.source)}` : ""}</div>` : "";
-    return `<li><div class="l"><div class="name">${esc(p.name)} <span class="meta">${esc(p.main)}</span></div>
+    return `<li><div class="l"><div class="name">${esc(p.name)}${p.sector ? `<span class="badge">${esc(p.sector)}</span>` : ""} <span class="meta">${esc(p.main)}</span></div>
       ${(p.reasons || []).slice(0, 2).map((r) => `<div class="meta">${esc(r)}</div>`).join("")}${link}</div>
       <div class="r ${sign(p.r5)}">${pct(p.r5)}<div class="meta">오늘 ${pct(p.r1)}</div></div></li>`;
   };

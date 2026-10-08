@@ -33,6 +33,7 @@ import kr_swing_backtest as kb
 import macro
 import movers
 import rulebook
+import sectors
 import strategy
 import track
 import wide
@@ -428,6 +429,42 @@ def add_movers(text, payload, args, path, today, closes, index_close, volumes, w
     return text + "\n" + movers.section(result, m["name"]), dict(payload, movers=result)
 
 
+def add_sectors(text, payload, args, path, closes, index_close):
+    """업종별 흐름과 뉴스 호재·악재(sectors.py)를 메시지 끝·매수 후보 의견·대시보드 JSON에 붙여요.
+    실패해도 신호는 그대로 보내요."""
+    m = MARKETS[args.market]
+    try:
+        smap = sectors.load()
+        names = dict(m["universe"])
+        every = closes.drop(columns=[strategy.US_ETF], errors="ignore")
+        wpath = path.with_name(f"{args.market}_wide_recent.csv")
+        if wpath.exists():
+            _, wide_closes, _ = kb.load_csv(wpath, m["index"])
+            wnames = wide.universe() if args.market == "kr" else wide.us_universe()
+            names.update(wnames)
+            every = every.join(wide_closes[[c for c in wide_closes if c in wnames and c not in every]])
+        result = sectors.compute(every, index_close, names, smap, args.market, lang="ko" if args.market == "kr" else "en",
+                                 fetch_news=movers.google_news)
+    except (Exception, SystemExit) as e:
+        print(f"업종별 호재·악재 계산 실패 (신호는 그대로 보내요): {e!r}")
+        return text, payload
+    extra = []
+    for row in payload.get("picks") or []:
+        line = sectors.pick_line(row["code"], result, smap, args.market)
+        if line:
+            row.setdefault("opinion", []).append(line)
+            extra.append(f"· {row['name']} → {line.removeprefix('업종: ')}")
+    for key in ("up", "down"):
+        for row in (payload.get("movers") or {}).get(key) or []:
+            row["sector"] = sectors.sector_of(smap, args.market, row["code"])
+    payload = dict(payload, sectors=result,
+                   sector_of={c: s for c in every.columns if (s := sectors.sector_of(smap, args.market, c))})
+    section = sectors.section(result, m["name"])
+    if extra:
+        section += "\n오늘 매수 후보의 업종\n" + "\n".join(extra)
+    return text + "\n" + section, payload
+
+
 def split_message(text, limit=TELEGRAM_LIMIT):
     parts, current = [], ""
     for line in text.split("\n"):
@@ -501,6 +538,7 @@ def main():
             print(f"넓은 범위 후보 계산 실패 (신호는 그대로 보내요): {e!r}")
             wide_closes = None
     text, payload = add_movers(text, payload, args, path, today, closes, index_close, volumes, wide_closes)
+    text, payload = add_sectors(text, payload, args, path, closes, index_close)
     if warnings:
         text += "\n\n[데이터 점검]\n" + "\n".join(f"- {w}" for w in warnings)
         payload["data_warnings"] = warnings

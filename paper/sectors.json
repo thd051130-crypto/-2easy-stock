@@ -1,0 +1,1607 @@
+{
+"kr": {
+"000100": [
+"바이오·헬스",
+"Drug Manufacturers - Specialty & Generic"
+],
+"000120": [
+"운송",
+"Integrated Freight & Logistics"
+],
+"000150": [
+"지주·기타",
+"Conglomerates"
+],
+"000240": [
+"자동차",
+"Auto Parts"
+],
+"000270": [
+"자동차",
+"Auto Manufacturers"
+],
+"000500": [
+"IT·전자",
+"Communication Equipment"
+],
+"000660": [
+"반도체",
+"Semiconductors"
+],
+"000720": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"000810": [
+"금융",
+"Insurance - Property & Casualty"
+],
+"000880": [
+"지주·기타",
+"Conglomerates"
+],
+"000990": [
+"반도체",
+"Semiconductors"
+],
+"001040": [
+"지주·기타",
+"Conglomerates"
+],
+"00104K": [
+"지주·기타",
+"Conglomerates"
+],
+"001120": [
+"지주·기타",
+"Conglomerates"
+],
+"001430": [
+"화학·소재",
+"Steel"
+],
+"001440": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"001450": [
+"금융",
+"Insurance - Property & Casualty"
+],
+"001800": [
+"소비재·유통",
+"Confectioners"
+],
+"001820": [
+"IT·전자",
+"Electronic Components"
+],
+"002380": [
+"화학·소재",
+"Chemicals"
+],
+"002790": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"003230": [
+"소비재·유통",
+"Packaged Foods"
+],
+"003490": [
+"운송",
+"Airlines"
+],
+"003540": [
+"금융",
+"Capital Markets"
+],
+"003550": [
+"지주·기타",
+"Consumer Electronics"
+],
+"003670": [
+"2차전지",
+"Electrical Equipment & Parts"
+],
+"003690": [
+"금융",
+"Insurance - Reinsurance"
+],
+"004020": [
+"화학·소재",
+"Steel"
+],
+"004170": [
+"소비재·유통",
+"Department Stores"
+],
+"004370": [
+"소비재·유통",
+"Packaged Foods"
+],
+"004800": [
+"지주·기타",
+"Conglomerates"
+],
+"004990": [
+"소비재·유통",
+"Confectioners"
+],
+"005070": [
+"2차전지",
+"Specialty Chemicals"
+],
+"005380": [
+"자동차",
+"Auto Manufacturers"
+],
+"005440": [
+"지주·기타",
+"Food Distribution"
+],
+"005490": [
+"화학·소재",
+"Steel"
+],
+"005830": [
+"금융",
+"Insurance - Property & Casualty"
+],
+"005850": [
+"자동차",
+"Auto Parts"
+],
+"005930": [
+"반도체",
+"Consumer Electronics"
+],
+"005940": [
+"금융",
+"Capital Markets"
+],
+"006040": [
+"소비재·유통",
+"Packaged Foods"
+],
+"006260": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"006280": [
+"바이오·헬스",
+"Drug Manufacturers - Specialty & Generic"
+],
+"006360": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"006400": [
+"2차전지",
+"Electrical Equipment & Parts"
+],
+"006800": [
+"금융",
+"Capital Markets"
+],
+"007070": [
+"소비재·유통",
+"Department Stores"
+],
+"007340": [
+"자동차",
+"Auto Parts"
+],
+"007660": [
+"IT·전자",
+"Electronic Components"
+],
+"007810": [
+"IT·전자",
+"Electronic Components"
+],
+"008770": [
+"소비재·유통",
+"Specialty Retail"
+],
+"008930": [
+"바이오·헬스",
+"Medical Distribution"
+],
+"009150": [
+"IT·전자",
+"Electronic Components"
+],
+"009420": [
+"바이오·헬스",
+"Drug Manufacturers - Specialty & Generic"
+],
+"009540": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"009830": [
+"전력·유틸리티",
+"Solar"
+],
+"009970": [
+"소비재·유통",
+"Apparel Manufacturing"
+],
+"010060": [
+"금융",
+"Asset Management"
+],
+"010120": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"010130": [
+"화학·소재",
+"Other Industrial Metals & Mining"
+],
+"010140": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"010950": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
+],
+"011070": [
+"IT·전자",
+"Electronic Components"
+],
+"011170": [
+"화학·소재",
+"Chemicals"
+],
+"011200": [
+"운송",
+"Marine Shipping"
+],
+"011210": [
+"자동차",
+"Auto Parts"
+],
+"011780": [
+"화학·소재",
+"Specialty Chemicals"
+],
+"011790": [
+"화학·소재",
+"Specialty Chemicals"
+],
+"012330": [
+"자동차",
+"Auto Parts"
+],
+"012450": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"0126Z0": [
+"바이오·헬스",
+"Biotechnology"
+],
+"012750": [
+"지주·기타",
+"Security & Protection Services"
+],
+"014680": [
+"화학·소재",
+"Chemicals"
+],
+"015760": [
+"전력·유틸리티",
+"Utilities - Regulated Electric"
+],
+"016360": [
+"금융",
+"Capital Markets"
+],
+"017670": [
+"통신·미디어",
+"Telecom Services"
+],
+"017800": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"018260": [
+"인터넷·게임·SW",
+"Information Technology Services"
+],
+"018670": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
+],
+"018880": [
+"자동차",
+"Auto Parts"
+],
+"020150": [
+"2차전지",
+"Electrical Equipment & Parts"
+],
+"020560": [
+"운송",
+"Airlines"
+],
+"021240": [
+"소비재·유통",
+"Furnishings, Fixtures & Appliances"
+],
+"022100": [
+"인터넷·게임·SW",
+"Information Technology Services"
+],
+"023530": [
+"소비재·유통",
+"Department Stores"
+],
+"023590": [
+"금융",
+"Capital Markets"
+],
+"024110": [
+"금융",
+"Banks - Regional"
+],
+"026960": [
+"지주·기타",
+"Food Distribution"
+],
+"028050": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"028260": [
+"지주·기타",
+"Engineering & Construction"
+],
+"028670": [
+"운송",
+"Marine Shipping"
+],
+"029780": [
+"금융",
+"Credit Services"
+],
+"030000": [
+"통신·미디어",
+"Advertising Agencies"
+],
+"030200": [
+"통신·미디어",
+"Telecom Services"
+],
+"031210": [
+"금융",
+"Insurance - Diversified"
+],
+"032640": [
+"통신·미디어",
+"Telecom Services"
+],
+"032830": [
+"금융",
+"Insurance - Life"
+],
+"033780": [
+"소비재·유통",
+"Tobacco"
+],
+"034020": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"034220": [
+"IT·전자",
+"Consumer Electronics"
+],
+"034730": [
+"지주·기타",
+"Conglomerates"
+],
+"035250": [
+"소비재·유통",
+"Resorts & Casinos"
+],
+"035420": [
+"인터넷·게임·SW",
+"Internet Content & Information"
+],
+"035720": [
+"인터넷·게임·SW",
+"Internet Content & Information"
+],
+"036460": [
+"전력·유틸리티",
+"Utilities - Regulated Gas"
+],
+"036570": [
+"인터넷·게임·SW",
+"Electronic Gaming & Multimedia"
+],
+"039490": [
+"금융",
+"Capital Markets"
+],
+"042660": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"042700": [
+"반도체",
+"Semiconductor Equipment & Materials"
+],
+"047040": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"047050": [
+"지주·기타",
+"Conglomerates"
+],
+"047810": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"051600": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"051900": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"051910": [
+"2차전지",
+"Chemicals"
+],
+"052690": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"055550": [
+"금융",
+"Banks - Regional"
+],
+"062040": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"064350": [
+"운송",
+"Railroads"
+],
+"064400": [
+"인터넷·게임·SW",
+"Information Technology Services"
+],
+"066570": [
+"IT·전자",
+"Consumer Electronics"
+],
+"066970": [
+"2차전지",
+"Electrical Equipment & Parts"
+],
+"068270": [
+"바이오·헬스",
+"Biotechnology"
+],
+"069960": [
+"소비재·유통",
+"Department Stores"
+],
+"071050": [
+"금융",
+"Capital Markets"
+],
+"071970": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"073240": [
+"자동차",
+"Auto Parts"
+],
+"078930": [
+"지주·기타",
+"Conglomerates"
+],
+"079550": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"081660": [
+"소비재·유통",
+"Leisure"
+],
+"082740": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"085620": [
+"금융",
+"Insurance - Life"
+],
+"086280": [
+"운송",
+"Integrated Freight & Logistics"
+],
+"086790": [
+"금융",
+"Banks - Regional"
+],
+"088350": [
+"금융",
+"Insurance - Life"
+],
+"088980": [
+"지주·기타",
+""
+],
+"089860": [
+"지주·기타",
+"Rental & Leasing Services"
+],
+"090430": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"093370": [
+"화학·소재",
+"Specialty Chemicals"
+],
+"096770": [
+"2차전지",
+"Oil & Gas Refining & Marketing"
+],
+"097230": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"097950": [
+"소비재·유통",
+"Packaged Foods"
+],
+"103140": [
+"화학·소재",
+"Metal Fabrication"
+],
+"103590": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"105560": [
+"금융",
+"Banks - Regional"
+],
+"111770": [
+"소비재·유통",
+"Apparel Manufacturing"
+],
+"112610": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"120110": [
+"화학·소재",
+"Chemicals"
+],
+"128940": [
+"바이오·헬스",
+"Drug Manufacturers - Specialty & Generic"
+],
+"138040": [
+"금융",
+"Capital Markets"
+],
+"138930": [
+"금융",
+"Banks - Regional"
+],
+"139130": [
+"금융",
+"Banks - Regional"
+],
+"139480": [
+"소비재·유통",
+"Discount Stores"
+],
+"161390": [
+"자동차",
+"Auto Parts"
+],
+"161890": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"175330": [
+"금융",
+"Banks - Regional"
+],
+"180640": [
+"건설·부동산",
+"Real Estate Services"
+],
+"181710": [
+"인터넷·게임·SW",
+"Electronic Gaming & Multimedia"
+],
+"192820": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"204320": [
+"자동차",
+"Auto Parts"
+],
+"207940": [
+"바이오·헬스",
+"Biotechnology"
+],
+"229640": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"241560": [
+"조선·방산·기계",
+"Farm & Heavy Construction Machinery"
+],
+"251270": [
+"인터넷·게임·SW",
+"Electronic Gaming & Multimedia"
+],
+"259960": [
+"인터넷·게임·SW",
+"Electronic Gaming & Multimedia"
+],
+"267250": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
+],
+"267260": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"267270": [
+"조선·방산·기계",
+"Farm & Heavy Construction Machinery"
+],
+"271560": [
+"소비재·유통",
+"Confectioners"
+],
+"272210": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"278470": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"279570": [
+"금융",
+"Banks - Regional"
+],
+"281820": [
+"반도체",
+"Semiconductor Equipment & Materials"
+],
+"282330": [
+"소비재·유통",
+"Grocery Stores"
+],
+"294870": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"298040": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"302440": [
+"바이오·헬스",
+"Biotechnology"
+],
+"307950": [
+"인터넷·게임·SW",
+"Information Technology Services"
+],
+"316140": [
+"금융",
+"Banks - Regional"
+],
+"322000": [
+"전력·유틸리티",
+"Solar"
+],
+"323410": [
+"금융",
+"Banks - Regional"
+],
+"326030": [
+"바이오·헬스",
+"Biotechnology"
+],
+"329180": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"336260": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"352820": [
+"통신·미디어",
+"Entertainment"
+],
+"353200": [
+"IT·전자",
+"Electronic Components"
+],
+"361610": [
+"IT·전자",
+"Electronic Components"
+],
+"373220": [
+"2차전지",
+"Electrical Equipment & Parts"
+],
+"375500": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"377300": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"383220": [
+"소비재·유통",
+"Apparel Manufacturing"
+],
+"395400": [
+"건설·부동산",
+"REIT - Office"
+],
+"402340": [
+"반도체",
+"Semiconductors"
+],
+"439260": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"443060": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"450080": [
+"2차전지",
+"Electrical Equipment & Parts"
+],
+"454910": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"457190": [
+"지주·기타",
+""
+],
+"462870": [
+"인터넷·게임·SW",
+"Electronic Gaming & Multimedia"
+],
+"475150": [
+"전력·유틸리티",
+"Utilities - Renewable"
+],
+"483650": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"489790": [
+"지주·기타",
+"Security & Protection Services"
+]
+},
+"updated": "2026-10-08T14:30+09:00",
+"us": {
+"AAPL": [
+"IT·전자",
+"Consumer Electronics"
+],
+"ABBV": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"ABNB": [
+"소비재·유통",
+"Travel Services"
+],
+"ABT": [
+"바이오·헬스",
+"Medical Devices"
+],
+"ACN": [
+"인터넷·게임·SW",
+"Information Technology Services"
+],
+"ADBE": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"ADI": [
+"반도체",
+"Semiconductors"
+],
+"ADP": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"AEM": [
+"화학·소재",
+"Gold"
+],
+"AMAT": [
+"반도체",
+"Semiconductor Equipment & Materials"
+],
+"AMD": [
+"반도체",
+"Semiconductors"
+],
+"AMGN": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"AMZN": [
+"인터넷·게임·SW",
+"Internet Retail"
+],
+"ANET": [
+"IT·전자",
+"Computer Hardware"
+],
+"APH": [
+"IT·전자",
+"Electronic Components"
+],
+"APP": [
+"통신·미디어",
+"Advertising Agencies"
+],
+"ARM": [
+"반도체",
+"Semiconductors"
+],
+"ASML": [
+"반도체",
+"Semiconductor Equipment & Materials"
+],
+"ASX": [
+"반도체",
+"Semiconductors"
+],
+"AVGO": [
+"반도체",
+"Semiconductors"
+],
+"AXP": [
+"금융",
+"Credit Services"
+],
+"AZN": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"BA": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"BABA": [
+"인터넷·게임·SW",
+"Internet Retail"
+],
+"BAC": [
+"금융",
+"Banks - Diversified"
+],
+"BBVA": [
+"금융",
+"Banks - Diversified"
+],
+"BE": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"BHP": [
+"화학·소재",
+"Other Industrial Metals & Mining"
+],
+"BKNG": [
+"소비재·유통",
+"Travel Services"
+],
+"BLK": [
+"금융",
+"Asset Management"
+],
+"BMO": [
+"금융",
+"Banks - Diversified"
+],
+"BMY": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"BNS": [
+"금융",
+"Banks - Diversified"
+],
+"BNY": [
+"금융",
+"Banks - Diversified"
+],
+"BP": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
+"BRK-B": [
+"금융",
+"Insurance - Diversified"
+],
+"BTI": [
+"소비재·유통",
+"Tobacco"
+],
+"BUD": [
+"소비재·유통",
+"Beverages - Brewers"
+],
+"BX": [
+"금융",
+"Asset Management"
+],
+"C": [
+"금융",
+"Banks - Diversified"
+],
+"CAT": [
+"조선·방산·기계",
+"Farm & Heavy Construction Machinery"
+],
+"CB": [
+"금융",
+"Insurance - Property & Casualty"
+],
+"CDNS": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"CEG": [
+"전력·유틸리티",
+"Utilities - Independent Power Producers"
+],
+"CM": [
+"금융",
+"Banks - Diversified"
+],
+"CMCSA": [
+"통신·미디어",
+"Telecom Services"
+],
+"CME": [
+"금융",
+"Financial Data & Stock Exchanges"
+],
+"CNQ": [
+"에너지·정유",
+"Oil & Gas E&P"
+],
+"COF": [
+"금융",
+"Credit Services"
+],
+"COP": [
+"에너지·정유",
+"Oil & Gas E&P"
+],
+"COST": [
+"소비재·유통",
+"Discount Stores"
+],
+"CRM": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"CRWD": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"CSCO": [
+"IT·전자",
+"Communication Equipment"
+],
+"CSX": [
+"운송",
+"Railroads"
+],
+"CVS": [
+"바이오·헬스",
+"Healthcare Plans"
+],
+"CVX": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
+"DDOG": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"DE": [
+"조선·방산·기계",
+"Farm & Heavy Construction Machinery"
+],
+"DELL": [
+"IT·전자",
+"Computer Hardware"
+],
+"DHR": [
+"바이오·헬스",
+"Diagnostics & Research"
+],
+"DIS": [
+"통신·미디어",
+"Entertainment"
+],
+"DUK": [
+"전력·유틸리티",
+"Utilities - Regulated Electric"
+],
+"EMR": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"ENB": [
+"에너지·정유",
+"Oil & Gas Midstream"
+],
+"EQIX": [
+"건설·부동산",
+"REIT - Specialty"
+],
+"EQNR": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
+"ETN": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"FCX": [
+"화학·소재",
+"Copper"
+],
+"FTNT": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"GD": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"GE": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"GEV": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"GILD": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"GLW": [
+"IT·전자",
+"Electronic Components"
+],
+"GOOGL": [
+"인터넷·게임·SW",
+"Internet Content & Information"
+],
+"GS": [
+"금융",
+"Capital Markets"
+],
+"GSK": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"HCA": [
+"바이오·헬스",
+"Medical Care Facilities"
+],
+"HD": [
+"소비재·유통",
+"Home Improvement Retail"
+],
+"HDB": [
+"금융",
+"Banks - Regional"
+],
+"HON": [
+"지주·기타",
+"Conglomerates"
+],
+"HOOD": [
+"금융",
+"Capital Markets"
+],
+"HPE": [
+"IT·전자",
+"Communication Equipment"
+],
+"HSBC": [
+"금융",
+"Banks - Diversified"
+],
+"HWM": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"IBM": [
+"인터넷·게임·SW",
+"Information Technology Services"
+],
+"IBN": [
+"금융",
+"Banks - Regional"
+],
+"ICE": [
+"금융",
+"Financial Data & Stock Exchanges"
+],
+"ING": [
+"금융",
+"Banks - Diversified"
+],
+"INTC": [
+"반도체",
+"Semiconductors"
+],
+"ISRG": [
+"바이오·헬스",
+"Medical Instruments & Supplies"
+],
+"ITUB": [
+"금융",
+"Banks - Regional"
+],
+"JCI": [
+"지주·기타",
+"Building Products & Equipment"
+],
+"JNJ": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"JPM": [
+"금융",
+"Banks - Diversified"
+],
+"KLAC": [
+"반도체",
+"Semiconductor Equipment & Materials"
+],
+"KO": [
+"소비재·유통",
+"Beverages - Non-Alcoholic"
+],
+"LIN": [
+"화학·소재",
+"Specialty Chemicals"
+],
+"LITE": [
+"IT·전자",
+"Communication Equipment"
+],
+"LLY": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"LMT": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"LOW": [
+"소비재·유통",
+"Home Improvement Retail"
+],
+"LRCX": [
+"반도체",
+"Semiconductor Equipment & Materials"
+],
+"MA": [
+"금융",
+"Credit Services"
+],
+"MAR": [
+"소비재·유통",
+"Lodging"
+],
+"MCD": [
+"소비재·유통",
+"Restaurants"
+],
+"MCK": [
+"바이오·헬스",
+"Medical Distribution"
+],
+"MDT": [
+"바이오·헬스",
+"Medical Devices"
+],
+"MELI": [
+"인터넷·게임·SW",
+"Internet Retail"
+],
+"META": [
+"인터넷·게임·SW",
+"Internet Content & Information"
+],
+"MFG": [
+"금융",
+"Banks - Regional"
+],
+"MMM": [
+"지주·기타",
+"Conglomerates"
+],
+"MNST": [
+"소비재·유통",
+"Beverages - Non-Alcoholic"
+],
+"MO": [
+"소비재·유통",
+"Tobacco"
+],
+"MPC": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
+],
+"MRK": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"MRVL": [
+"반도체",
+"Semiconductors"
+],
+"MS": [
+"금융",
+"Capital Markets"
+],
+"MSFT": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"MU": [
+"반도체",
+"Semiconductors"
+],
+"MUFG": [
+"금융",
+"Banks - Diversified"
+],
+"NEE": [
+"전력·유틸리티",
+"Utilities - Regulated Electric"
+],
+"NEM": [
+"화학·소재",
+"Gold"
+],
+"NET": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"NFLX": [
+"통신·미디어",
+"Entertainment"
+],
+"NOW": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"NVDA": [
+"반도체",
+"Semiconductors"
+],
+"NVO": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"NVS": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"ORCL": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"PANW": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"PBR": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
+"PDD": [
+"인터넷·게임·SW",
+"Internet Retail"
+],
+"PEP": [
+"소비재·유통",
+"Beverages - Non-Alcoholic"
+],
+"PFE": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"PG": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"PGR": [
+"금융",
+"Insurance - Property & Casualty"
+],
+"PH": [
+"조선·방산·기계",
+"Specialty Industrial Machinery"
+],
+"PLD": [
+"건설·부동산",
+"REIT - Industrial"
+],
+"PLTR": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"PM": [
+"소비재·유통",
+"Tobacco"
+],
+"PNC": [
+"금융",
+"Banks - Regional"
+],
+"PSX": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
+],
+"PWR": [
+"건설·부동산",
+"Engineering & Construction"
+],
+"QCOM": [
+"반도체",
+"Semiconductors"
+],
+"RIO": [
+"화학·소재",
+"Other Industrial Metals & Mining"
+],
+"RTX": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"RY": [
+"금융",
+"Banks - Diversified"
+],
+"SAN": [
+"금융",
+"Banks - Diversified"
+],
+"SAP": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"SBUX": [
+"소비재·유통",
+"Restaurants"
+],
+"SCCO": [
+"화학·소재",
+"Copper"
+],
+"SCHW": [
+"금융",
+"Capital Markets"
+],
+"SHEL": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
+"SHOP": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"SKHY": [
+"반도체",
+"Semiconductors"
+],
+"SLB": [
+"에너지·정유",
+"Oil & Gas Equipment & Services"
+],
+"SMFG": [
+"금융",
+"Banks - Diversified"
+],
+"SNDK": [
+"IT·전자",
+"Computer Hardware"
+],
+"SNOW": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"SNPS": [
+"인터넷·게임·SW",
+"Software - Infrastructure"
+],
+"SNY": [
+"바이오·헬스",
+"Drug Manufacturers - General"
+],
+"SO": [
+"전력·유틸리티",
+"Utilities - Regulated Electric"
+],
+"SONY": [
+"IT·전자",
+"Consumer Electronics"
+],
+"SPCX": [
+"조선·방산·기계",
+"Aerospace & Defense"
+],
+"SPGI": [
+"금융",
+"Financial Data & Stock Exchanges"
+],
+"SPOT": [
+"인터넷·게임·SW",
+"Internet Content & Information"
+],
+"STX": [
+"IT·전자",
+"Computer Hardware"
+],
+"SYK": [
+"바이오·헬스",
+"Medical Devices"
+],
+"T": [
+"통신·미디어",
+"Telecom Services"
+],
+"TD": [
+"금융",
+"Banks - Diversified"
+],
+"TJX": [
+"소비재·유통",
+"Apparel Retail"
+],
+"TM": [
+"자동차",
+"Auto Manufacturers"
+],
+"TMO": [
+"바이오·헬스",
+"Diagnostics & Research"
+],
+"TMUS": [
+"통신·미디어",
+"Telecom Services"
+],
+"TSLA": [
+"자동차",
+"Auto Manufacturers"
+],
+"TSM": [
+"반도체",
+"Semiconductors"
+],
+"TT": [
+"지주·기타",
+"Building Products & Equipment"
+],
+"TTE": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
+"TXN": [
+"반도체",
+"Semiconductors"
+],
+"UBER": [
+"인터넷·게임·SW",
+"Software - Application"
+],
+"UBS": [
+"금융",
+"Banks - Diversified"
+],
+"UL": [
+"소비재·유통",
+"Household & Personal Products"
+],
+"UNH": [
+"바이오·헬스",
+"Healthcare Plans"
+],
+"UNP": [
+"운송",
+"Railroads"
+],
+"USB": [
+"금융",
+"Banks - Regional"
+],
+"V": [
+"금융",
+"Credit Services"
+],
+"VLO": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
+],
+"VRT": [
+"전력·유틸리티",
+"Electrical Equipment & Parts"
+],
+"VRTX": [
+"바이오·헬스",
+"Biotechnology"
+],
+"VZ": [
+"통신·미디어",
+"Telecom Services"
+],
+"WDC": [
+"IT·전자",
+"Computer Hardware"
+],
+"WELL": [
+"바이오·헬스",
+"REIT - Healthcare Facilities"
+],
+"WFC": [
+"금융",
+"Banks - Diversified"
+],
+"WMB": [
+"에너지·정유",
+"Oil & Gas Midstream"
+],
+"WMT": [
+"소비재·유통",
+"Discount Stores"
+],
+"XOM": [
+"에너지·정유",
+"Oil & Gas Integrated"
+]
+}
+}
