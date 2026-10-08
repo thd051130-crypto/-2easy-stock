@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "market": "kr",
+  "capital": 700000,
+  "cash": 658000.0,
+  "equity": 700045.2094739455,
+  "start": "2026-10-02",
+  "index_start": 7003.740234375,
+  "last_day": "2026-10-07",
+  "positions": [
+    {
+      "code": "034730",
+      "name": "SK",
+      "qty": 0.07249174047231993,
+      "cost": 42000.0,
+      "buy_price": 579000.0,
+      "raw": 41972.71773347324,
+      "slot": 140000.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-07",
+      "last_buy": 579000.0,
+      "last_price": 580000.0
+    }
+  ],
+  "orders": [
+    {
+      "side": "buy",
+      "code": "034730",
+      "name": "SK",
+      "kind": "add"
+    },
+    {
+      "side": "buy",
+      "code": "066570",
+      "name": "LG전자",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "078930",
+      "name": "GS",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "090430",
+      "name": "아모레퍼시픽",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "005930",
+      "name": "삼성전자",
+      "kind": "new"
+    }
+  ],
+  "halt_next": false,
+  "halt_week": null,
+  "halt_month": null,
+  "week": {
+    "key": "2026-W41",
+    "base": 700000
+  },
+  "month": {
+    "key": "2026-10",
+    "base": 700000
+  },
+  "pending_buys": [
+    {
+      "code": "034730",
+      "name": "SK"
+    },
+    {
+      "code": "066570",
+      "name": "LG전자"
+    },
+    {
+      "code": "078930",
+      "name": "GS"
+    },
+    {
+      "code": "090430",
+      "name": "아모레퍼시픽"
+    },
+    {
+      "code": "005930",
+      "name": "삼성전자"
+    }
+  ],
+  "pending_sells": []
+}

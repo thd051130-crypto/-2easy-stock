@@ -1,0 +1,13 @@
+{
+  "market": "kr",
+  "capital": 700000,
+  "fractional": true,
+  "start": "2026-10-02",
+  "index_start": 7003.740234375,
+  "cash": 700000,
+  "equity": 700000,
+  "last_day": "2026-10-07",
+  "positions": [],
+  "pending_buys": [],
+  "pending_sells": []
+}
