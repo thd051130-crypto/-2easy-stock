@@ -457,7 +457,7 @@ def add_sectors(text, payload, args, path, closes, index_close):
     for key in ("up", "down"):
         for row in (payload.get("movers") or {}).get(key) or []:
             row["sector"] = sectors.sector_of(smap, args.market, row["code"])
-    payload = dict(payload, sectors=result,
+    payload = dict(payload, sectors=result, sector_links=sectors.RELATED,
                    sector_of={c: s for c in every.columns if (s := sectors.sector_of(smap, args.market, c))})
     section = sectors.section(result, m["name"])
     if extra:

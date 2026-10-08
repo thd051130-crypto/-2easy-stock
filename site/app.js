@@ -82,6 +82,7 @@ function adoptExtras() {
   }
 }
 let watchQuery = "";
+let jumpSectors = false;
 // 고른 업종 (홈 '업종별 호재·악재'와 관심 화면 '전체 종목'이 같이 써요). 시장마다 따로
 const SECTOR = { kr: "", us: "" };
 try { Object.assign(SECTOR, JSON.parse(localStorage.getItem("sector") || "{}")); } catch (e) { /* 기본값 */ }
@@ -270,7 +271,7 @@ const VIEWS = {
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
     rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
-  stock: (d) => [stockHeadCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
+  stock: (d) => [stockHeadCard(d), stockSectorCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
 };
 
@@ -291,6 +292,12 @@ function render() {
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") { drawTrack(d); drawEquity(d); }
+  app.querySelectorAll("[data-sector-go]").forEach((b) => b.addEventListener("click", () => {
+    SECTOR[market] = b.dataset.sectorGo;
+    try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
+    jumpSectors = true;  // 홈이 다시 그려지면 업종 칸으로 내려가요 (뒤로 가기로 돌아가는 경우가 있어서 render에서)
+    go("home");
+  }));
   app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
     pickSector(b.dataset.sector);
@@ -298,6 +305,11 @@ function render() {
     render();
     window.scrollTo(0, y);
   }));
+  if (screen === "home" && jumpSectors) {
+    jumpSectors = false;
+    const card = $("#sectors-card");
+    if (card) requestAnimationFrame(() => { card.scrollIntoView(); window.scrollBy(0, -70); });
+  }
   if (screen === "watch") bindWatch(d);
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
@@ -1352,6 +1364,34 @@ function stockHeadCard(d) {
       : s && s.extra ? `<p class="sub">시세는 대시보드가 다시 올라갈 때 받아요.</p>` : ""}
     ${alertBox(d, code, s)}
   </section>`;
+}
+
+// 종목 화면: 이 종목 업종과 연관 업종(공급망·수요)의 흐름·호재·악재를 한꺼번에 (sectors.py)
+function sectorLine(x, why) {
+  const n = (x.news || []).find((k) => k.tone) || (x.news || [])[0];
+  const tag = n && n.tone > 0 ? `<span class="badge good">호재</span> ` : n && n.tone < 0 ? `<span class="badge bad">악재</span> ` : "";
+  return `<li data-sector-go="${esc(x.name)}"><div class="l"><div class="name">${esc(x.name)}${toneBadge(x)}</div>
+      ${why ? `<div class="meta">${esc(why)}</div>` : ""}
+      ${n ? `<div class="meta">${tag}${esc(n.title)}</div>` : ""}</div>
+      <div class="r ${sign(x.r5)}">${pct(x.r5)}<div class="meta">20일 ${pct(x.r20)}</div></div></li>`;
+}
+function stockSectorCard(d) {
+  const sig = d.signal || {};
+  const secs = sig.sectors || [];
+  const name = (sig.sector_of || {})[stockCode];
+  const mine = secs.find((x) => x.name === name);
+  if (!mine) return "";
+  const links = ((sig.sector_links || {})[name] || [])
+    .map(([n, why]) => [secs.find((x) => x.name === n), why]).filter(([x]) => x);
+  const peers = mine.codes.filter((c) => c !== stockCode)
+    .map((c) => stocksOf(d).find((x) => x.code === c)).filter(Boolean).slice(0, 5);
+  return `<section class="card" id="stock-sector"><h2>업종과 연관 업종 <small>최근 5거래일 · 참고</small></h2>
+    <ul class="list">${sectorLine(mine, `이 종목 업종 · ${mine.count}종목 중간값${mine.vs_index == null ? "" : `, 지수보다 ${pct(mine.vs_index)}p`}`)}</ul>
+    ${links.length ? `<h3 class="muted" style="margin:12px 0 4px">같이 보면 좋은 연관 업종</h3>
+      <ul class="list">${links.map(([x, why]) => sectorLine(x, `${why}로 이어져요`)).join("")}</ul>` : ""}
+    ${peers.length ? `<h3 class="muted" style="margin:12px 0 4px">같은 업종 대형주</h3>
+      <ul class="list">${peers.map((x) => stockRow(x, d)).join("")}</ul>` : ""}
+    <p class="muted" style="margin:10px 0 0">업종을 누르면 홈 '업종별 호재·악재'에서 그 업종 뉴스와 종목을 자세히 봐요. 호재·악재는 뉴스 제목으로 짐작한 거예요.</p></section>`;
 }
 
 // 가격 알림: 텔레그램 봇이 15분마다 야후 5분봉을 보고, 정한 가격에 닿으면 텔레그램으로 알려 줘요.

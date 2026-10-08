@@ -119,4 +119,12 @@ def test_add_sectors_joins_signal(tmp_path, monkeypatch):
     assert out["picks"][0]["opinion"][-1].startswith("업종: 반도체")
     assert out["movers"]["up"][0]["sector"] == "반도체"
     assert out["sector_of"] == {"A1": "반도체", "B1": "자동차"}
+    assert out["sector_links"]["반도체"][0][0] == "IT·전자"
     assert out["sectors"][0]["label"] == "호재 우세"
+
+
+def test_related_sectors_point_to_real_sectors():
+    for name, links in sectors.RELATED.items():
+        assert name in sectors.NAMES
+        assert links and all(r in sectors.NAMES and r != name and why for r, why in links)
+    assert set(sectors.RELATED) == set(sectors.NAMES)  # 모든 업종에 연관 업종이 있어요
