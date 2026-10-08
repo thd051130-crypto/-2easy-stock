@@ -2,9 +2,9 @@
 """알림 규칙대로 실제로 샀다고 치고 가상계좌를 매일 기록해요. 진짜 주문은 하지 않아요.
 
 규칙은 strategy.py (알림과 같아요).
-  - 국장 70만 원: 신호가 나오면 다음 거래일 시가에 종목당 10%씩 매수, 최대 5종목.
+  - 국장 1,000만 원: 신호가 나오면 다음 거래일 시가에 종목당 10%씩 매수, 최대 5종목.
     종가가 5일선 위, 10거래일 경과, 매수가 대비 -7% 손절 중 하나면 다음 날 시가에 매도
-  - 미장 500달러: S&P500 추세가 살아 있으면 다음 거래일 시가에 계좌 50%를 SPY로, 꺾이면 다음 날 시가에 전부 매도
+  - 미장 7,470달러(약 1,000만 원): S&P500 추세가 살아 있으면 다음 거래일 시가에 계좌 50%를 SPY로, 꺾이면 다음 날 시가에 전부 매도
   - 계좌가 작아서 1주를 못 사는 경우가 많아 기본은 소수점 매수로 기록해요 (--whole-shares면 정수 주식만)
   - 수수료·세금·슬리피지는 백테스트와 같고, 현금 이자는 넣지 않았어요. 미장은 환율 변동을 빼고 달러로만 계산해요
 
@@ -269,11 +269,26 @@ def read_health(path=pathlib.Path("paper/health.json")):
 
 
 def load(folder, market, capital=None, fractional=True):
+    """기록을 읽어요. 시작 금액이 바뀌었으면 옛 기록을 archive/로 옮기고 새 금액으로 다시 시작해요."""
     path = folder / "state.json"
-    state = json.loads(path.read_text()) if path.exists() else new_state(market, capital, fractional)
+    state = json.loads(path.read_text()) if path.exists() else None
+    if state and state["capital"] != (capital or MARKETS[market]["capital"]):
+        archive(folder, state)
+        state = None
+    state = state or new_state(market, capital, fractional)
     trades = read_csv(folder / "trades.csv", TRADE_COLUMNS)
     equity = read_csv(folder / "equity.csv", EQUITY_COLUMNS)
     return state, trades, equity
+
+
+def archive(folder, state):
+    """옛 금액 기록을 folder/archive/<시작일>~<마지막 날>_<금액>/로 옮겨요 (지우지 않아요)."""
+    dest = folder / "archive" / f"{state.get('start')}~{state.get('last_day')}_{state['capital']:g}"
+    dest.mkdir(parents=True, exist_ok=True)
+    for name in ("state.json", "trades.csv", "equity.csv"):
+        if (folder / name).exists():
+            (folder / name).rename(dest / name)
+    print(f"시작 금액이 바뀌어 옛 기록을 {dest}로 옮기고 새로 시작해요.")
 
 
 def read_csv(path, columns):
@@ -301,11 +316,11 @@ def main():
     parser.add_argument("--market", choices=sorted(MARKETS), default="kr")
     parser.add_argument("--rule", choices=["main", "rulebook", "etf"], default="main",
                         help="main=알림 규칙(strategy.py), rulebook=사용자 규칙표(rulebook.py)를 따로 검증, "
-                             "etf=국내 상장 ETF 원화 계좌(etf_backtest.py, 국장 70만 원)")
+                             "etf=국내 상장 ETF 원화 계좌(etf_backtest.py, 국장 1,000만 원)")
     parser.add_argument("--csv", type=pathlib.Path, required=True,
                         help="date,ticker,open,close(,volume) 형식 일봉 (etf는 없으면 야후에서 받아 이 경로에 남겨요)")
     parser.add_argument("--dir", type=pathlib.Path, help="기록 폴더 (기본 paper/<시장>, 규칙표는 paper/<시장>/rulebook)")
-    parser.add_argument("--capital", type=float, help="처음 만들 때 가상계좌 금액 (기본 국장 70만 원, 미장 500달러)")
+    parser.add_argument("--capital", type=float, help="처음 만들 때 가상계좌 금액 (기본 국장 1,000만 원, 미장 7,470달러(약 1,000만 원))")
     parser.add_argument("--whole-shares", action="store_true", help="처음 만들 때 정수 주식만 사는 계좌로 (기본은 소수점)")
     parser.add_argument("--summary", action="store_true", default=os.getenv("PAPER_SUMMARY") == "true",
                         help="금요일이 아니어도 주간 결산 보내기")

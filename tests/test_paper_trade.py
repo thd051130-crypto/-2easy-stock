@@ -1,3 +1,4 @@
+import json
 import datetime as dt
 
 import pandas as pd
@@ -59,7 +60,7 @@ def test_first_run_only_queues_todays_signals():
     trades, rows, events = pt.advance(state, opens, closes, index_close)
     assert trades == [] and events == [] and len(rows) == 1
     assert state["start"] == state["last_day"] == str(closes.index[-1].date())
-    assert state["equity"] == 700000  # 기본 가상계좌: 국장 70만 원
+    assert state["equity"] == 10_000_000  # 기본 가상계좌: 국장 1,000만 원
     # 같은 데이터로 다시 돌려도 아무 일도 안 일어나요 (수동 재실행)
     assert pt.advance(state, opens, closes, index_close) == ([], [], [])
 
@@ -102,7 +103,7 @@ def test_weekly_summary_compares_with_index(tmp_path):
     assert "삼성전자 1주" in text
     assert "보장하지 않아요" in text
     pt.save(tmp_path, state, trades, equity)
-    s2, t2, e2 = pt.load(tmp_path, "kr")
+    s2, t2, e2 = pt.load(tmp_path, "kr", 300000)
     assert s2 == state and t2["code"].tolist() == ["105560"] and len(e2) == 2
 
 
@@ -126,6 +127,20 @@ def test_rulebook_paper_account_runs_and_exposes_pending_orders():
 
 
 def test_default_capital_per_market():
-    assert pt.new_state("kr")["capital"] == 700000
-    assert pt.new_state("us")["capital"] == 500
-    assert pt.rulebook.new_book("us", MARKETS["us"]["capital"])["cash"] == 500
+    assert pt.new_state("kr")["capital"] == 10_000_000
+    assert pt.new_state("us")["capital"] == 7470
+    assert pt.rulebook.new_book("us", MARKETS["us"]["capital"])["cash"] == 7470
+
+
+def test_changed_capital_archives_old_record_and_restarts(tmp_path):
+    old = pt.new_state("kr", 700000)
+    old.update(start="2026-10-02", last_day="2026-10-07", cash=650000.0, equity=701000.0)
+    equity = pd.DataFrame([dict(date="2026-10-07", cash=650000, stocks=51000, equity=701000, index=6800.0)],
+                          columns=pt.EQUITY_COLUMNS)
+    pt.save(tmp_path, old, pd.DataFrame(columns=pt.TRADE_COLUMNS), equity)
+    state, trades, equity = pt.load(tmp_path, "kr")
+    assert state["capital"] == state["cash"] == 10_000_000 and state["start"] is None
+    assert trades.empty and equity.empty
+    kept = tmp_path / "archive" / "2026-10-02~2026-10-07_700000"
+    assert json.loads((kept / "state.json").read_text())["equity"] == 701000.0
+    assert (kept / "equity.csv").exists() and not (tmp_path / "state.json").exists()
