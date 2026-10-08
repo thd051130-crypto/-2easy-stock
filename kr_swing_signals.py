@@ -30,6 +30,7 @@ import pandas as pd
 import departments
 import health
 import kr_swing_backtest as kb
+import movers
 import rulebook
 import strategy
 import track
@@ -389,6 +390,34 @@ def add_departments(text, payload, market_key, closes, index_close, state, picks
     return text, dict(payload, desks=departments.report_payload(report))
 
 
+def add_movers(text, payload, args, path, today, closes, index_close, volumes, wide_closes):
+    """많이 움직인 종목과 추정 이유(movers.py)를 메시지 끝과 대시보드 JSON에 붙여요. 실패해도 신호는 그대로 보내요."""
+    m = MARKETS[args.market]
+    try:
+        names = dict(m["universe"])
+        if args.market == "kr":
+            wpath, wnames = path.with_name("kr_wide_recent.csv"), wide.universe()
+        else:  # 미장은 넓은 범위 종목을 여기서 받아요 (신호에는 안 써요)
+            wpath, wnames = path.with_name("us_wide_recent.csv"), wide.us_universe()
+            if args.csv is None or not wpath.exists():
+                kb.download(wpath, start=f"{today - dt.timedelta(days=LOOKBACK_DAYS):%Y-%m-%d}", universe=wnames,
+                            index=m["index"], suffix=m["suffix"], pause=0.5)
+            _, wide_closes, _ = kb.load_csv(wpath, m["index"])
+        names.update(wnames)
+        every, vols = closes.drop(columns=[strategy.US_ETF], errors="ignore"), volumes
+        if wide_closes is not None and wpath.exists():
+            extra = [c for c in wide_closes if c in wnames and c not in every]
+            every = every.join(wide_closes[extra])
+            wvol = kb.load_volume(wpath, closes.index, m["index"])
+            if vols is not None and wvol is not None:
+                vols = vols.join(wvol[[c for c in extra if c in wvol]])
+        result = movers.compute(every, index_close, vols, names, m["index_name"], lang="ko")
+    except (Exception, SystemExit) as e:
+        print(f"많이 움직인 종목 이유 계산 실패 (신호는 그대로 보내요): {e!r}")
+        return text, payload
+    return text + "\n" + movers.section(result, m["name"]), dict(payload, movers=result)
+
+
 def split_message(text, limit=TELEGRAM_LIMIT):
     parts, current = [], ""
     for line in text.split("\n"):
@@ -461,6 +490,7 @@ def main():
         except (Exception, SystemExit) as e:
             print(f"넓은 범위 후보 계산 실패 (신호는 그대로 보내요): {e!r}")
             wide_closes = None
+    text, payload = add_movers(text, payload, args, path, today, closes, index_close, volumes, wide_closes)
     if warnings:
         text += "\n\n[데이터 점검]\n" + "\n".join(f"- {w}" for w in warnings)
         payload["data_warnings"] = warnings
