@@ -1,4 +1,4 @@
-"""넓은 범위 후보: 알림 규칙과 같은 조건을 지금 코스피 시가총액 상위 100개(우선주 제외)로 넓혀 본 참고 후보예요.
+"""넓은 범위 후보: 알림 규칙과 같은 조건을 지금 코스피 시가총액 상위 200개(우선주 제외)로 넓혀 본 참고 후보예요.
 
 알림 규칙의 종목 48개는 2015년 말 기준으로 고정해 뒀어요 (지금 잘나가는 종목만 골라 백테스트가 좋아 보이는 걸 막으려고).
 그래서 그 뒤 커진 회사(예: 한화에어로스페이스, HD현대일렉트릭)는 후보에 안 나와요. 여기서는 그 회사들까지 같은 조건으로 봐요.
@@ -16,7 +16,8 @@ import strategy
 import symbols
 from markets import MARKETS
 
-TOP_N = 100
+TOP_N = 200  # 2026-10 100개 → 200개로 늘렸어요
+US_TOP_N = 150  # 미장은 신호 대신 '왜 움직였나'(movers.py)에만 써요
 PREFERRED = re.compile(r"\d?우[A-C]?(\(.*\))?$")
 
 
@@ -26,6 +27,26 @@ def universe(n=TOP_N, rows=None):
     base = MARKETS["kr"]["universe"]
     top = [r for r in rows if r[3] == "s" and r[2] == "KS" and not PREFERRED.search(r[1])][:n]
     return {r[0]: r[1] for r in top if r[0] not in base}
+
+
+def us_universe(n=US_TOP_N, rows=None):
+    """{코드: 이름} 미장 주식 시가총액 상위 n개 중 알림 종목 48개에 없는 종목 (같은 회사 다른 주식(GOOG)은 빼요)."""
+    rows = symbols.load("us") if rows is None else rows
+    base = MARKETS["us"]["universe"]
+    def legal_of(r):  # 'Berkshire Hathaway Inc. New' = 'Berkshire Hathaway Inc.'
+        return re.sub(r"\s+New$", "", (r[4] or "").split("|")[0])
+
+    seen = {legal_of(r) for r in rows if r[0] in base}
+    out = {}
+    for r in rows:
+        if len(out) >= n:
+            break
+        legal = legal_of(r)
+        if r[3] != "s" or r[0] in base or (legal and legal in seen):
+            continue
+        seen.add(legal)
+        out[r[0]] = r[1]
+    return out
 
 
 def compute(wide_closes, closes, index_close, names):

@@ -256,7 +256,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), homeWatchCard(d), homePerfCard(d), homeIndexCard(d)],
+  home: (d) => [homeSignalCard(d), homeWatchCard(d), moversCard(d), homePerfCard(d), homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
@@ -1149,12 +1149,31 @@ function etfAccountCard(d) {
     <details style="margin-top:12px"><summary>규칙 보기</summary><ol>${d.etf.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
 }
 
+// 많이 오른·내린 종목과 추정 이유 (movers.py). 예전 기록엔 없을 수 있어요.
+function moversCard(d) {
+  const mv = d.signal && d.signal.movers;
+  if (!mv) return "";
+  const row = (p) => {
+    const n = (p.news || [])[0];
+    const link = n && /^https:\/\//.test(n.link || "")
+      ? `<div class="meta">📰 <a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>${n.source ? ` · ${esc(n.source)}` : ""}</div>` : "";
+    return `<li><div class="l"><div class="name">${esc(p.name)} <span class="meta">${esc(p.main)}</span></div>
+      ${(p.reasons || []).slice(0, 2).map((r) => `<div class="meta">${esc(r)}</div>`).join("")}${link}</div>
+      <div class="r ${sign(p.r5)}">${pct(p.r5)}<div class="meta">오늘 ${pct(p.r1)}</div></div></li>`;
+  };
+  const part = (rows, head) => rows && rows.length ? `<h3 class="muted" style="margin:10px 0 4px">${head}</h3><ul class="list">${rows.map(row).join("")}</ul>` : "";
+  const body = part(mv.up, "▲ 많이 오른 종목") + part(mv.down, "▼ 많이 내린 종목");
+  return `<section class="card"><h2>왜 움직였나 <small>최근 5거래일 · ${mv.count}개 종목 중</small></h2>
+    ${body || `<p class="empty">최근 5거래일 ±3% 넘게 움직인 종목이 없어요.</p>`}
+    <p class="muted" style="margin:10px 0 0">이유는 시장·같이 움직인 종목·거래량·뉴스 제목으로 짐작한 거예요. 사기 전에 기사 원문을 확인하세요.</p></section>`;
+}
+
 function widePicksCard(d) {
   if (market !== "kr" || !d.signal || !d.signal.wide) return "";
   const picks = d.signal.wide;
   const items = picks.map((p, i) => `<li><div class="l"><div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
       <div class="meta">RSI2 ${p.rsi2} · 손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("");
-  return `<section class="card"><h2>넓은 범위 후보 <small>참고 · 코스피 상위 100</small></h2>
+  return `<section class="card"><h2>넓은 범위 후보 <small>참고 · 코스피 상위 200</small></h2>
     ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 넓은 범위에서도 조건에 맞는 종목이 없어요.</p>`}
     <p class="muted" style="margin:10px 0 0">같은 조건을 2015년 이후 커진 회사까지 넓혀 봤어요. 검증 전이라 가상계좌엔 안 넣고 성과 화면 추천 성과로만 기록해요.</p></section>`;
 }
