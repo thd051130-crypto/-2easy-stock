@@ -1213,7 +1213,7 @@ function etfAccountCard(d) {
       <p class="muted" style="margin:8px 0 0">${a.positions.length ? a.positions.map((p) => `${esc(p.name)} ${shares(p.qty)} ${pct(p.ret)}`).join(" · ") : "보유 없음 (현금)"}</p>
       ${pendingLines(a)}`
     : `<p class="empty">${NEXT_RUN.kr} 첫 자동 실행부터 기록해요.</p>`;
-  return `<section class="card"><h2>ETF(원화) 계좌 <small>ISA·연금저축용 · 70만 원</small></h2>${body}
+  return `<section class="card"><h2>ETF(원화) 계좌 <small>ISA·연금저축용 · 1,000만 원</small></h2>${body}
     <details style="margin-top:12px"><summary>규칙 보기</summary><ol>${d.etf.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
 }
 

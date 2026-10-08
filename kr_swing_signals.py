@@ -479,7 +479,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--market", choices=sorted(MARKETS), default="kr", help="kr=국장 스윙, us=미장 S&P500 추세")
     parser.add_argument("--csv", type=pathlib.Path, help="date,ticker,open,close 형식 (없으면 야후에서 받아요)")
-    parser.add_argument("--capital", type=float, help="계좌 금액 (기본 국장 70만 원, 미장 500달러)")
+    parser.add_argument("--capital", type=float, help="계좌 금액 (기본 국장 1,000만 원, 미장 7,470달러(약 1,000만 원))")
     parser.add_argument("--dry-run", action="store_true", help="텔레그램으로 보내지 않고 출력만")
     parser.add_argument("--save-csv", type=pathlib.Path, help="받은 야후 데이터를 이 경로에 남겨요 (가상매매 기록이 같이 써요)")
     parser.add_argument("--save-json", type=pathlib.Path, help="오늘 신호를 대시보드용 JSON으로 저장")

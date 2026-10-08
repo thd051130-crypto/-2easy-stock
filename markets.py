@@ -18,11 +18,11 @@ US_UNIVERSE = {
 
 MARKETS = {
     "kr": dict(name="국장", index_name="코스피", universe=kb.UNIVERSE, index=kb.INDEX, suffix=".KS",
-               currency="원", capital=700000,
+               currency="원", capital=10_000_000,
                # 수수료(각 방향), 매도 시 거래세, 시가 슬리피지
                cost=kb.COSTS["기본"]),
     "us": dict(name="미장", index_name="S&P500", universe=US_UNIVERSE, index="^GSPC", suffix="",
-               currency="달러", capital=500,
+               currency="달러", capital=7470,  # 1,000만 원 ÷ 1,339원 (2026-10-08 환율)
                # 국내 증권사 미국주식 수수료 0.25% 가정(이벤트가 없을 때), 거래세 대신 SEC fee 수준만, 환전 비용은 빠짐
                cost=dict(fee=0.0025, tax=0.00003, slip=0.0005)),
 }
