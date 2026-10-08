@@ -294,7 +294,7 @@ def main():
     if should_send(snap, prev, args.report) and not args.dry_run:
         from realtime_monitor import send_telegram
 
-        if not send_telegram(text):
+        if not send_telegram(text, collapse=True):
             raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
 
 

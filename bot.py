@@ -28,6 +28,7 @@ import re
 
 import commands
 import symbols
+import tgfmt
 import watchlist
 from markets import MARKETS
 
@@ -374,7 +375,14 @@ class Telegram:
         return data["result"]
 
     def send(self, chat_id, text):
-        self.call("sendMessage", chat_id=chat_id, text=text[:4000], disable_web_page_preview=True)
+        """보기 좋게(tgfmt.py: 굵은 제목·이모지) HTML로. 태그 때문에 거절되면 보통 글로 다시 보내요."""
+        for part in tgfmt.render(text):
+            try:
+                self.call("sendMessage", chat_id=chat_id, text=part, parse_mode="HTML", disable_web_page_preview=True)
+            except RuntimeError as e:
+                if "parse" not in str(e).lower():
+                    raise
+                self.call("sendMessage", chat_id=chat_id, text=tgfmt.plain(part)[:4000], disable_web_page_preview=True)
 
 
 def output(**values):

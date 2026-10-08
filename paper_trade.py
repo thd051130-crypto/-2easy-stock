@@ -35,6 +35,7 @@ import kr_swing_backtest as kb
 import readiness
 import rulebook
 import strategy
+import tgchart
 from markets import MARKETS, name_of
 
 TIMEZONES = {"kr": ZoneInfo("Asia/Seoul"), "us": ZoneInfo("America/New_York")}
@@ -327,7 +328,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="텔레그램으로 보내지 않고 출력만")
     args = parser.parse_args()
 
-    from realtime_monitor import send_telegram
+    from realtime_monitor import send_photo, send_telegram
 
     m = MARKETS[args.market]
     if args.rule == "etf":
@@ -363,13 +364,17 @@ def main():
     trades, equity = append(trades, new_trades), append(equity, new_rows)
     save(folder, state, trades, equity)
 
-    messages = []
+    messages, chart = [], None
     if events:
         messages.append(daily_message(state, events))
     if (today.weekday() == 4 or args.summary) and len(equity):
         messages.append(weekly_summary(state, trades, equity, today, closes))
+        chart = tgchart.equity_chart(equity, state["capital"], state["index_start"], m["index_name"],
+                                     f"가상매매 {title(state)} 수익률")
     if not new_rows:
         print(f"새 거래일 데이터가 없어요 (마지막 반영일 {state['last_day']}).")
+    if chart and not args.dry_run:  # 주간 결산 그림은 글 앞에 (못 보내도 글은 보내요)
+        send_photo(chart)
     for text in messages:
         print(text + "\n")
         if not args.dry_run and not send_telegram(text):

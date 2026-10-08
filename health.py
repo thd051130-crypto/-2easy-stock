@@ -20,6 +20,8 @@ import pathlib
 import urllib.parse
 import urllib.request
 
+import tgfmt
+
 KST = dt.timezone(dt.timedelta(hours=9))
 API = "https://api.github.com"
 PATH = pathlib.Path("paper/health.json")
@@ -87,19 +89,27 @@ def gh_get(path, token, **params):
 
 
 def send_telegram(text):
+    """보기 좋게(tgfmt.py: 굵은 제목·이모지) HTML로 보내요. 거절되면 보통 글로 다시."""
     token, chat_id = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip(), (os.getenv("TELEGRAM_CHAT_ID") or "").strip()
     if not token or not chat_id:
         print("(텔레그램 미설정: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)")
         return False
-    body = json.dumps({"chat_id": chat_id, "text": text}).encode()
-    req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=body,
-                                 headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return resp.status == 200
-    except Exception as e:
-        print(f"텔레그램 전송 실패: {e!r}")
-        return False
+
+    def post(**params):
+        body = json.dumps(dict(params, chat_id=chat_id, disable_web_page_preview=True)).encode()
+        req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=body,
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return resp.status == 200
+        except Exception as e:
+            print(f"텔레그램 전송 실패: {str(e).replace(token, '***')}")
+            return False
+
+    ok = True
+    for part in tgfmt.render(text):
+        ok = (post(text=part, parse_mode="HTML") or post(text=tgfmt.plain(part))) and ok
+    return ok
 
 
 def runs_since(repo, token, workflow, since):
