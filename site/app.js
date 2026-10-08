@@ -83,6 +83,15 @@ function adoptExtras() {
 }
 let watchQuery = "";
 let jumpSectors = false;
+// 세계 지수·환율 칸에서 고른 기간과 '전체 보기'를 펼쳤는지 (이 폰 브라우저에 기억해요)
+const WORLD_P = [["d1", "오늘", 6, "1주"], ["w1", "1주", 22, "1개월"], ["m1", "1개월", 66, "3개월"], ["y1", "1년", 0, "1년"]];
+let worldP = "d1";
+let worldOpen = false;
+try {
+  worldP = localStorage.getItem("world_p") || "d1";
+  worldOpen = localStorage.getItem("world_open") === "1";
+} catch (e) { /* 기본값 */ }
+if (!WORLD_P.some((p) => p[0] === worldP)) worldP = "d1";
 // 고른 업종 (홈 '업종별 호재·악재'와 관심 화면 '전체 종목'이 같이 써요). 시장마다 따로
 const SECTOR = { kr: "", us: "" };
 try { Object.assign(SECTOR, JSON.parse(localStorage.getItem("sector") || "{}")); } catch (e) { /* 기본값 */ }
@@ -264,7 +273,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
@@ -310,6 +319,18 @@ function render() {
     render();
     window.scrollTo(0, y);
   }));
+  app.querySelectorAll("[data-world-p]").forEach((b) => b.addEventListener("click", () => {
+    worldP = b.dataset.worldP;
+    try { localStorage.setItem("world_p", worldP); } catch (e) { /* 이번만 기억 */ }
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
+  const wd = $("#world-all");
+  if (wd) wd.addEventListener("toggle", () => {
+    worldOpen = wd.open;
+    try { localStorage.setItem("world_open", worldOpen ? "1" : "0"); } catch (e) { /* 이번만 기억 */ }
+  });
   if (screen === "home" && jumpSectors) {
     jumpSectors = false;
     const card = $("#sectors-card");
@@ -1191,6 +1212,36 @@ function etfAccountCard(d) {
     : `<p class="empty">${NEXT_RUN.kr} 첫 자동 실행부터 기록해요.</p>`;
   return `<section class="card"><h2>ETF(원화) 계좌 <small>ISA·연금저축용 · 70만 원</small></h2>${body}
     <details style="margin-top:12px"><summary>규칙 보기</summary><ol>${d.etf.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
+}
+
+// 세계 지수·환율 (world.py, 국장·미장 같이). 보기용이고 매매 규칙엔 안 써요.
+const WORLD_MAIN = ["^KS11", "^GSPC", "^IXIC", "KRW=X"];  // 펼치지 않아도 늘 보이는 것
+function worldValue(r) {
+  const v = r.last.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return r.kind === "krw" ? `${v}원` : v;
+}
+function worldRow(r) {
+  const [key, , n, line] = WORLD_P.find((p) => p[0] === worldP);
+  const closes = n ? r.closes.slice(-n) : r.closes;
+  return `<li class="stock spark-row no-star"><div class="name">${esc(r.name)}</div>
+    <div class="meta">${md(r.day)} 종가${n && closes.length > 1 ? ` · ${line} ${pct(closes[closes.length - 1] / closes[0] - 1)}` : ""}</div>
+    <div class="mini">${spark(closes, `${r.name} 최근 ${line}`)}</div>
+    <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${pct(r[key], 2)}</div></li>`;
+}
+function worldCard() {
+  const w = DATA.world;
+  if (!w || !w.groups || !w.groups.length) return "";
+  const all = w.groups.flatMap((g) => g.items);
+  const main = WORLD_MAIN.map((s) => all.find((r) => r.sym === s)).filter(Boolean);
+  const [, label, , line] = WORLD_P.find((p) => p[0] === worldP);
+  const chips = `<div class="chips" role="group" aria-label="기간 고르기" style="margin:0 0 6px">${WORLD_P.map(([k, l]) =>
+    `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
+  const groups = w.groups.map((g) => `<h3 class="muted" style="margin:12px 0 4px">${esc(g.name)}</h3>
+    <ul class="list">${g.items.map(worldRow).join("")}</ul>`).join("");
+  return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
+    <ul class="list">${main.map(worldRow).join("")}</ul>
+    <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
+    <p class="muted" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
