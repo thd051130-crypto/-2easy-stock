@@ -166,7 +166,8 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
 
     capital이 없으면 소수 주식 허용(비율로만 계산), 있으면 그 금액으로 정수 주식만 매수해요.
     stop: 종가가 매수 시가보다 이 비율 넘게 빠지면 다음 날 시가에 손절 (예: 0.05)
-    weight: 종목당 평가금액 대비 비중 (기본 1/MAX_POSITIONS, 0.1이면 5종목 다 차도 절반은 현금)
+    weight: 종목당 평가금액 대비 비중 (기본 1/MAX_POSITIONS, 0.1이면 5종목 다 차도 절반은 현금).
+            날짜별 Series면 사는 날 전날 값을 써요 (경기 국면에 따라 비중 줄이기)
     반환: (자산 곡선(시작=1), 평균 투자 비중, 거래 목록[(수익률, 보유일)], 돈이 모자라 못 산 횟수)
     """
     buy_mult = 1 + cost["fee"] + cost["slip"]
@@ -175,6 +176,10 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
     o, c = opens.to_numpy(float), closes.ffill().to_numpy(float)
     ent, ext, rk = entry.fillna(False).to_numpy(bool), exit_.fillna(False).to_numpy(bool), rank.to_numpy(float)
     T, N = c.shape
+    if isinstance(weight, pd.Series):
+        weights = weight.reindex(closes.index).ffill().fillna(1 / MAX_POSITIONS).to_numpy(float)
+    else:
+        weights = np.full(T, weight or 1 / MAX_POSITIONS)
     start = float(capital) if capital else 1.0
     cash, shares, cost_basis, buy_day, buy_open = start, np.zeros(N), np.zeros(N), np.zeros(N, int), np.zeros(N)
     equity, invested = np.empty(T), np.empty(T)
@@ -186,7 +191,7 @@ def simulate(opens, closes, entry, exit_, rank, max_hold, cost, capital=None, ca
                 cash += proceeds
                 trades.append((proceeds / cost_basis[j] - 1, i - buy_day[j]))
                 shares[j] = 0.0
-        slot = (equity[i - 1] if i else start) * (weight or 1 / MAX_POSITIONS)
+        slot = (equity[i - 1] if i else start) * weights[i - 1 if i else 0]
         for j in to_buy:
             if np.isnan(o[i, j]) or cash <= 0:
                 continue

@@ -7,7 +7,7 @@ name: pages
 
 on:
   workflow_run:
-    workflows: [swing-signals, fundamentals]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
+    workflows: [swing-signals, fundamentals, macro]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
     types: [completed]
   push:
     branches: [main]

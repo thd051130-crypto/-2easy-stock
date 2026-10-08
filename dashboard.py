@@ -7,6 +7,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
   - paper/etf/ : 국내 상장 ETF 원화 가상계좌 (paper_trade.py --rule etf)
   - paper/health.json : 주간 점검 (health.py)
+  - paper/macro.json : 경기 국면 (macro.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
 
 사용법:
@@ -173,7 +174,8 @@ def build(paper_dir):
     markets["kr"]["etf"] = dict(account=etf_acct, rules=ETF_RULES, readiness=readiness_of("etf", etf_acct, health))
     fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
-                bot=watchlist.bot_username(paper_dir), health=health, memos=commands.summary(paper_dir),
+                bot=watchlist.bot_username(paper_dir), health=health,
+                macro=read_json(paper_dir / "macro.json"), memos=commands.summary(paper_dir),
                 total=total_assets(markets, etf_acct, fx))
 
 
