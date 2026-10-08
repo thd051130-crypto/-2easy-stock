@@ -1100,7 +1100,7 @@ function trendCard(d) {
       <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
     <div class="chart candle" id="trend-chart"></div>
     <p class="muted" style="margin:8px 0 0">${cd
-      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. "
+      ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 세부정보가 손가락을 따라와요. "
       : ""}${TREND_RULE[market]}</p>${cd ? indHelp() : ""}</section>`;
 }
 
@@ -1530,7 +1530,7 @@ function stockChartCard() {
     <div class="period" role="group" aria-label="캔들 기간">${buttons}</div>${indChips((x && x.candles) || { v: [1] })}
     <p class="muted" id="stock-change" style="margin:8px 0 4px"></p>${candleLegend()}
     <div class="chart candle" id="stock-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
-    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요.</p>${indHelp()}</section>`;
+    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 손가락을 따라와요.</p>${indHelp()}</section>`;
 }
 
 function bindStock() {
@@ -1669,6 +1669,7 @@ function growthLine(s) {
 
 // 캔들 차트 (SVG). 가격 축은 오른쪽, 보이는 구간의 최고·최저를 표시해요.
 // 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그 캔들 값.
+// 길게 누른 채 움직이거나, 이미 뜬 세부정보 선을 잡고 밀면 세부정보가 손가락을 따라와요.
 const VIEW = {};  // 차트별 보기 상태 (보이는 캔들 수, 마지막 캔들 위치)
 // c = frameCandles()가 만든 캔들 (일봉·주봉·월봉·년봉), show = 처음 보이는 캔들 수
 // opts: fmt = 가격 표시, name = 차트 이름, ind = 켜 둔 보조지표 (이동평균선·볼린저밴드는 캔들 위에,
@@ -1788,10 +1789,8 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     }).join("");
     const xs = [start, Math.round((start + endI) / 2), endI];
     const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(frameLabel(c, i, "axis"))}</text>`).join("");
-    let pickSvg = "";
-    if (v.pick != null && v.pick >= start && v.pick <= endI) {
-      pickSvg = `<line class="cross" x1="${X(v.pick)}" x2="${X(v.pick)}" y1="${pad.t}" y2="${bottom}"/>`;
-    }
+    const picked = v.pick != null && v.pick >= start && v.pick <= endI;
+    const pickSvg = `<line class="cross" x1="${picked ? X(v.pick) : 0}" x2="${picked ? X(v.pick) : 0}" y1="${pad.t}" y2="${bottom}"${picked ? "" : ' style="display:none"'}/>`;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(name)} ${(FRAMES.find((x) => x[0] === c.frame) || FRAMES[0])[1]} 차트">
       <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath>
         <clipPath id="${clip}-p"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${bottom - pad.t + 4}"/></clipPath></defs>
@@ -1802,7 +1801,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     const ch = c.c[endI] / first - 1;
     onRange(`${esc(frameLabel(c, start, "axis"))} ~ ${esc(frameLabel(c, endI, "axis"))} (${Math.round(v.count)}${UNIT[c.frame]}) `
       + `<b class="${sign(ch)}">${pct(ch)}</b> · 최고 ${fmt(c.h[hiI])} · 최저 ${fmt(c.l[loI])}`);
-    if (v.pick != null && v.pick >= start && v.pick <= endI) showTip(v.pick, X(v.pick));
+    if (picked) showTip(v.pick, X(v.pick));
   };
 
   const showTip = (i, x) => {
@@ -1825,14 +1824,44 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
 
   // 손가락·마우스 조작
   const pts = new Map();
-  let gesture = null, raf = 0;
+  let gesture = null, raf = 0, hold = 0;
+  const HOLD_MS = 280;  // 이만큼 가만히 누르고 있으면 세부정보가 손가락을 따라가요
   const redraw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
   const scale = () => el.getBoundingClientRect().width / W;
+  const svgX = (clientX) => (clientX - el.getBoundingClientRect().left) / scale();
+  const candleAt = (clientX) => Math.round(start + (svgX(clientX) - pad.l) / cw - 0.5);
+  const stopHold = () => { clearTimeout(hold); hold = 0; };
+  // 고른 캔들만 바꿔요 (차트 전체를 다시 그리지 않고 선과 세부정보만 옮겨서 손가락을 바로 따라가요)
+  const movePick = (clientX) => {
+    const i = Math.max(start, Math.min(Math.round(v.end), candleAt(clientX)));
+    if (i === v.pick && $(".tip", el).style.display !== "none") return;
+    v.pick = i;
+    const x = pad.l + (i - start + 0.5) * cw, cross = $("line.cross", el);
+    if (cross) { cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.style.display = ""; }
+    showTip(i, x);
+  };
+  const scrub = (clientX) => {
+    stopHold();
+    gesture.type = "scrub";
+    el.classList.add("scrubbing");
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch { /* 진동 없는 폰 */ }
+    movePick(clientX);
+  };
+  const endScrub = () => { el.classList.remove("scrubbing"); };
   el.onpointerdown = (e) => {
     el.setPointerCapture && el.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 1) gesture = { type: "tap", x0: e.clientX, y0: e.clientY, end0: v.end };
+    stopHold();
+    if (pts.size === 1) {
+      gesture = { type: "tap", x0: e.clientX, y0: e.clientY, end0: v.end };
+      // 세부정보가 떠 있으면 그 선 근처를 잡고 밀어서 바로 옮길 수 있어요
+      const onLine = v.pick != null && v.pick >= start && v.pick <= Math.round(v.end)
+        && Math.abs(svgX(e.clientX) - (pad.l + (v.pick - start + 0.5) * cw)) <= Math.max(cw, 28 / scale());
+      if (onLine) gesture.grab = true;
+      else hold = setTimeout(() => { if (gesture && gesture.type === "tap" && pts.size === 1) scrub(pts.values().next().value.x); }, HOLD_MS);
+    }
     if (pts.size === 2) {
+      endScrub();
       const [a, b] = [...pts.values()];
       gesture = { type: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, count0: v.count };
     }
@@ -1844,26 +1873,38 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
       const [a, b] = [...pts.values()];
       v.count = gesture.count0 * gesture.d0 / (Math.hypot(a.x - b.x, a.y - b.y) || 1);
       redraw();
+    } else if (gesture.type === "scrub") {
+      movePick(e.clientX);
     } else if (gesture.type !== "pinch") {
-      const dx = e.clientX - gesture.x0;
+      const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
+      if (gesture.type === "tap" && gesture.grab && Math.hypot(dx, dy) > 4) { scrub(e.clientX); return; }
+      if (gesture.type === "tap" && Math.hypot(dx, dy) > 6) stopHold();
       if (gesture.type === "tap" && Math.abs(dx) > 6) gesture.type = "pan";
       if (gesture.type === "pan") { v.end = gesture.end0 - dx / (cw * scale()); redraw(); }
     }
   };
+  // 세부정보가 손가락을 따라가는 동안(또는 선을 잡은 동안)은 화면이 위아래로 움직이지 않게 해요
+  el._lockScroll = () => Boolean(gesture && (gesture.type === "scrub" || (gesture.type === "tap" && gesture.grab)));
+  if (!el._noScroll) {
+    el._noScroll = true;
+    el.addEventListener("touchmove", (e) => { if (e.cancelable && el._lockScroll()) e.preventDefault(); }, { passive: false });
+  }
   const up = (e) => {
+    stopHold();
     if (gesture && gesture.type === "tap" && pts.size === 1) {
-      const r = el.getBoundingClientRect(), px = (e.clientX - r.left) / scale();
-      const i = Math.round(start + (px - pad.l) / cw - 0.5);
+      const i = candleAt(e.clientX);
       v.pick = i >= start && i <= Math.round(v.end) && v.pick !== i ? i : null;
       if (v.pick == null) $(".tip", el).style.display = "none";
       draw();
     }
+    // 손을 떼도 마지막 캔들의 세부정보는 남겨 둬요 (다시 누르면 닫혀요)
+    if (gesture && gesture.type === "scrub") endScrub();
     pts.delete(e.pointerId);
     if (pts.size === 0) gesture = null;
     else if (pts.size === 1) { const [p] = [...pts.values()]; gesture = { type: "pan", x0: p.x, y0: p.y, end0: v.end }; }
   };
   el.onpointerup = up;
-  el.onpointercancel = (e) => { pts.delete(e.pointerId); if (!pts.size) gesture = null; };
+  el.onpointercancel = (e) => { stopHold(); endScrub(); pts.delete(e.pointerId); if (!pts.size) gesture = null; };
   el.onwheel = (e) => { e.preventDefault(); v.count *= e.deltaY > 0 ? 1.15 : 1 / 1.15; redraw(); };
   draw();
   // 화면 폭이 바뀌면(폰 돌리기) 지금 고른 기간으로 다시 그려요. 탭을 바꿔 사라진 예전 차트는 다시 그리지 않아요

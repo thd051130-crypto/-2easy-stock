@@ -233,7 +233,9 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 }
 .period button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
 
-.chart.candle { touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+.chart.candle { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.chart.candle.scrubbing { cursor: crosshair; }
+.chart.candle.scrubbing .cross { stroke: var(--text-secondary); }
 .chart .wick { stroke-width: 1; }
 .chart .wick.up, .chart .body.up { stroke: var(--up); fill: var(--up); }
 .chart .wick.down, .chart .body.down { stroke: var(--down); fill: var(--down); }
