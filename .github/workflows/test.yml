@@ -16,3 +16,5 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pip install pytest matplotlib koreanize-matplotlib
       - run: python -m pytest -v
+      - run: python _probe/probe.py
+        continue-on-error: true
