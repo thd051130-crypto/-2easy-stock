@@ -292,7 +292,7 @@ const VIEWS = {
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
     rulebookAccountCard(d), memoCard(), healthCard()],
-  chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
+  chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
   stock: (d) => [stockHeadCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
@@ -377,10 +377,11 @@ function render() {
     const row = app.querySelector(".idx-chips"), on = row && row.querySelector('[aria-pressed="true"]');
     if (on) row.scrollLeft = on.offsetLeft - row.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;  // 고른 지수 버튼이 보이게
     drawTrend(d);
-    app.querySelectorAll(".period button").forEach((b) => b.addEventListener("click", () => {
+    bindCompare(d);
+    app.querySelectorAll(".period button[data-frame]").forEach((b) => b.addEventListener("click", () => {
       frame = b.dataset.frame;
       try { localStorage.setItem("frame", frame); } catch (e) { /* 무시 */ }
-      app.querySelectorAll(".period button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      app.querySelectorAll(".period button[data-frame]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       drawTrend(d, true);
     }));
   }
@@ -1721,6 +1722,101 @@ function idxChips(d) {
   const cur = chartIdx(d).sym;
   return `<div class="chips idx-chips" role="group" aria-label="지수 고르기">${chartIndexes(d).map((r) =>
     `<button type="button" data-idx="${esc(r.sym)}" aria-pressed="${r.sym === cur}">${esc(r.name)}</button>`).join("")}</div>`;
+}
+
+// 비교 차트 (TradingView·토스처럼): 지수·종목을 최대 4개까지 같은 출발점(0%)에서 겹쳐 그려요.
+// 항목 키: "i:^KS11"(지수) / "s:005930"(지금 시장 종목). 시장마다 따로 기억해요.
+const CMP_P = [["m1", "1개월", 21], ["m3", "3개월", 63], ["y1", "1년", 252], ["y3", "3년", 756], ["y10", "10년", 2520]];
+const CMP_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--bb)"];
+const CMP_MAX = 4;
+const COMPARE = { kr: null, us: null };
+let cmpP = "y1";
+try { Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}")); cmpP = localStorage.getItem("cmp_p") || "y1"; } catch (e) { /* 처음 */ }
+function cmpItems(d) {
+  if (!COMPARE[market]) {
+    const first = WATCH[market][0] || (stocksOf(d)[0] || {}).code;
+    COMPARE[market] = [`i:${OWN_IDX[market]}`].concat(first ? [`s:${first}`] : []);
+  }
+  return COMPARE[market];
+}
+function cmpName(d, key) {
+  const id = key.slice(2);
+  if (key[0] === "i") return (chartIndexes(d).find((r) => r.sym === id) || { name: id }).name;
+  return (stocksOf(d).find((x) => x.code === id) || { name: id }).name;
+}
+// 지수·종목 일봉 (종목 화면·지수 버튼과 같은 파일)
+const cmpLoad = (key) => (key[0] === "i" ? idxData(key.slice(2)) : stockData(market, key.slice(2)));
+const cmpReady = (key) => (key[0] === "i" ? IDX_READY.get(key.slice(2)) : STOCK_READY.get(`${market}/${key.slice(2)}`));
+function compareCard(d) {
+  if (!d.signal) return "";
+  const items = cmpItems(d);
+  const chips = items.map((k, i) => `<button type="button" class="cmp-chip" data-cmp-del="${esc(k)}" aria-label="${esc(cmpName(d, k))} 빼기">
+    <i class="sw" style="background:${CMP_COLORS[i]}"></i>${esc(cmpName(d, k))} <span aria-hidden="true">×</span></button>`).join("");
+  const opt = (k, label) => (items.includes(k) ? "" : `<option value="${esc(k)}">${esc(label)}</option>`);
+  const watch = WATCH[market].map((c) => opt(`s:${c}`, cmpName(d, `s:${c}`))).join("");
+  const others = stocksOf(d).filter((x) => !WATCH[market].includes(x.code)).sort((a, b) => a.name.localeCompare(b.name, "ko"))
+    .map((x) => opt(`s:${x.code}`, x.name)).join("");
+  const idx = chartIndexes(d).map((r) => opt(`i:${r.sym}`, r.name)).join("");
+  const add = items.length < CMP_MAX ? `<select class="cmp-add" aria-label="비교할 지수·종목 더하기"><option value="">+ 더하기</option>
+      ${watch ? `<optgroup label="내 관심종목">${watch}</optgroup>` : ""}<optgroup label="지수">${idx}</optgroup>
+      <optgroup label="전체 종목">${others}</optgroup></select>` : "";
+  const periods = CMP_P.map(([k, label]) => `<button type="button" data-cmp-p="${k}" aria-pressed="${k === cmpP}">${label}</button>`).join("");
+  return `<section class="card" id="cmp-card"><h2>비교 차트 <small>같은 날 0%에서 출발</small></h2>
+    <div class="chips">${chips}${add}</div>
+    <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 4px">${periods}</div>
+    <div class="chart" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
+    <p class="muted" id="cmp-note" style="margin:8px 0 0">고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
+}
+function drawCompare(d) {
+  const el = $("#cmp-chart");
+  if (!el) return;
+  const items = cmpItems(d);
+  if (!items.length) { el.innerHTML = `<p class="empty">위 '+ 더하기'에서 지수나 종목을 골라 주세요.</p>`; return; }
+  const want = items.join(",") + cmpP + market;
+  Promise.all(items.map(cmpLoad)).then(() => {
+    if (screen !== "chart" || cmpItems(d).join(",") + cmpP + market !== want) return;  // 받는 사이 바뀌었으면 안 그려요
+    const got = items.map((k) => { const x = cmpReady(k); return x && x.candles && x.candles.dates && x.candles.dates.length ? x.candles : null; });
+    const base = got.find(Boolean);
+    if (!base) { el.innerHTML = `<p class="empty">자료를 못 받았어요. 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`; return; }
+    // 모든 날짜를 합쳐서 기간 길이만큼 자르고, 쉬는 날은 직전 값으로 이어요 (국장·미장 휴일이 달라서)
+    const n = (CMP_P.find((x) => x[0] === cmpP) || CMP_P[2])[2];
+    const allDates = [...new Set(got.filter(Boolean).flatMap((c) => c.dates))].sort();
+    const last = allDates[allDates.length - 1];
+    const dates = allDates.filter((x) => x >= base.dates[Math.max(0, base.dates.length - 1 - n)] && x <= last);
+    const step = Math.max(1, Math.ceil(dates.length / 400));  // 점이 너무 많으면 폰이 버벅여서 솎아요
+    const shown = dates.filter((_, i) => i % step === 0 || i === dates.length - 1);
+    const series = items.map((k, j) => {
+      const c = got[j];
+      if (!c) return { name: cmpName(d, k), color: CMP_COLORS[j], values: shown.map(() => null) };
+      const at = new Map(c.dates.map((x, i) => [x, c.c[i]]));
+      let prev = null, start = null;
+      const values = shown.map((x) => {
+        if (at.has(x)) prev = at.get(x);
+        if (prev == null) return null;
+        if (start == null) start = prev;
+        return prev / start - 1;
+      });
+      return { name: cmpName(d, k), color: CMP_COLORS[j], values };
+    });
+    lineChart(el, { dates: shown, series, fmt: (v) => pct(v), zero: true });
+    const missing = items.filter((_, j) => !got[j]).map((k) => cmpName(d, k));
+    const late = series.filter((s) => s.values[0] == null && s.values.some((v) => v != null)).map((s) => s.name);
+    const note = $("#cmp-note");
+    if (note) note.textContent = (missing.length ? `${missing.join(", ")} 자료를 못 받았어요. ` : "")
+      + (late.length ? `${late.join(", ")}은(는) 이 기간 중간에 상장해서 상장일부터 0%예요. ` : "")
+      + "고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요.";
+  });
+}
+function bindCompare(d) {
+  const save = () => { try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_p", cmpP); } catch (e) { /* 이번만 */ } };
+  const redraw = () => { save(); const y = window.scrollY; render(); window.scrollTo(0, y); };
+  document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
+    COMPARE[market] = cmpItems(d).filter((k) => k !== b.dataset.cmpDel); redraw();
+  }));
+  const sel = $(".cmp-add");
+  if (sel) sel.addEventListener("change", () => { if (sel.value) { COMPARE[market] = cmpItems(d).concat(sel.value).slice(0, CMP_MAX); redraw(); } });
+  document.querySelectorAll("[data-cmp-p]").forEach((b) => b.addEventListener("click", () => { cmpP = b.dataset.cmpP; redraw(); }));
+  drawCompare(d);
 }
 
 // 다른 지수 자료: indexes/<기호>.json (배포 때 stock_pages.py가 야후에서 처음부터 받은 일봉). 앱을 닫을 때까지 기억해요.

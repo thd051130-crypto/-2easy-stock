@@ -476,3 +476,8 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .heat-tile span { font-size: 12px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .heat-tile b { font-size: 12px; font-variant-numeric: tabular-nums; }
 .heat-tile.strong { color: #fff; }
+
+/* 비교 차트 */
+.cmp-chip { display: inline-flex; align-items: center; gap: 6px; }
+.cmp-chip span { color: var(--text-muted); }
+.cmp-add { font: inherit; font-size: 13px; border: 1px dashed var(--border); background: var(--surface-1); color: var(--accent); border-radius: 999px; padding: 6px 10px; min-height: 32px; max-width: 100%; }
