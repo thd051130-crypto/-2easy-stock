@@ -289,7 +289,7 @@ const VIEWS = {
   home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
-  watch: (d) => [watchCard(d), allStocksCard(d)],
+  watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
     rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
@@ -478,7 +478,7 @@ function homePerfCard(d) {
 // ---------------------------------------------------------------- 관심종목
 
 // 종목 한 줄: 이름·코드·3개월 등락, 종가·전일 대비, ★. chart면 3개월 추세선도 (내 관심종목처럼 몇 개 안 될 때)
-function stockRow(s, d, { star = true, chart = false } = {}) {
+function stockRow(s, d, { star = true, chart = false, meta: extraMeta = "" } = {}) {
   const sig = d.signal || {};
   const badges = [];
   if ((sig.picks || []).some((p) => p.code === s.code)) badges.push(`<span class="badge good">오늘 매수 후보</span>`);
@@ -487,7 +487,7 @@ function stockRow(s, d, { star = true, chart = false } = {}) {
   const on = WATCH[market].includes(s.code);
   // 작은 추세선과 같은 기간(최근 3개월) 등락률이라 선 색과 숫자가 맞아요
   const c3 = s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
-  const meta = [s.code, c3 == null ? "" : `3개월 ${pct(c3)}`].filter(Boolean).join(" · ");
+  const meta = extraMeta || [s.code, c3 == null ? "" : `3개월 ${pct(c3)}`].filter(Boolean).join(" · ");
   return `<li class="stock${chart ? " spark-row" : ""}${star ? "" : " no-star"}" data-stock="${esc(s.code)}">
     <div class="name">${esc(s.name)}${badges.join("")}</div><div class="meta">${esc(meta)}</div>
     ${chart ? `<div class="mini">${spark(s.spark, `${s.name} 최근 3개월`)}</div>` : ""}
@@ -531,6 +531,67 @@ function allStocksCard(d) {
     <button type="button" class="more" data-find>목록에 없는 종목 찾기 (국장·미장 전체)<span aria-hidden="true">›</span></button></section>`;
 }
 
+// 조건 검색 (영웅문 조건검색처럼): 고른 조건을 모두 만족하는 종목만. 재무는 매주, 주가 조건은 매일 갱신
+const FILTERS = [
+  ["ma", "200일선 위", (s) => s.ma200 != null && s.ma200 > 0, (s) => `200일선 ${pct(s.ma200)}`],
+  ["near", "52주 고점 -10% 안", (s) => s.hi52 != null && s.hi52 >= -0.1, (s) => `고점 대비 ${pct(s.hi52)}`],
+  ["dip", "고점서 -20% 넘게 빠짐", (s) => s.hi52 != null && s.hi52 <= -0.2, (s) => `고점 대비 ${pct(s.hi52)}`],
+  ["rsi", "RSI 30 미만", (s) => s.rsi14 != null && s.rsi14 < 30, (s) => `RSI ${Math.round(s.rsi14)}`],
+  ["per", "PER 15배 미만", (s, f) => f.per != null && !f.loss && f.per < 15, (s, f) => `PER ${f.per.toFixed(1)}`],
+  ["pbr", "PBR 1배 미만", (s, f) => f.pbr != null && f.pbr < 1, (s, f) => `PBR ${f.pbr.toFixed(2)}`],
+  ["div", "배당 3% 이상", (s, f) => f.div != null && f.div >= 3, (s, f) => `배당 ${f.div.toFixed(1)}%`],
+  ["roe", "ROE 10% 이상", (s, f) => f.roe != null && f.roe >= 0.1, (s, f) => `ROE ${Math.round(f.roe * 100)}%`],
+  ["debt", "부채비율 100% 이하", (s, f) => !f.financial && f.debt != null && f.debt <= 100, (s, f) => `부채 ${Math.round(f.debt)}%`],
+  ["tgt", "목표가 +20% 이상", (s, f) => !!(f.target && s.close && f.target.mean / s.close - 1 >= 0.2), (s, f) => `목표가 ${pct(f.target.mean / s.close - 1)}`],
+  ["grade", "펀더멘탈 등급 75%+", (s, f) => !!(f.grade && f.grade[2] && f.grade[1] / f.grade[2] >= 0.75), (s, f) => `등급 ${f.grade[1]}/${f.grade[2]}`],
+];
+let FILTER_ON = [];
+try { FILTER_ON = JSON.parse(localStorage.getItem("filters") || "[]").filter((k) => FILTERS.some((x) => x[0] === k)); } catch (e) { /* 처음 */ }
+function screenerCard(d) {
+  const funds = d.funds || {};
+  const all = stocksOf(d).filter((s) => !s.extra);
+  if (!all.length) return "";
+  const chips = FILTERS.map(([k, label]) => `<button type="button" data-filter="${k}" aria-pressed="${FILTER_ON.includes(k)}">${label}</button>`).join("");
+  const on = FILTERS.filter((x) => FILTER_ON.includes(x[0]));
+  let body = `<p class="sub" style="margin:10px 0 0">조건을 하나 이상 누르면 모두 만족하는 종목만 보여요.</p>`;
+  if (on.length) {
+    const hits = all.filter((s) => on.every(([, , ok]) => ok(s, funds[s.code] || {})));
+    hits.sort((a, b) => (b.d1 ?? -9) - (a.d1 ?? -9));
+    body = `<p class="sub" style="margin:10px 0 4px"><b>${hits.length}개</b> / ${all.length}개 종목</p>`
+      + (hits.length ? `<ul class="list">${hits.map((s) => stockRow(s, d, { meta: on.map(([, , , show]) => show(s, funds[s.code] || {})).join(" · ") })).join("")}</ul>`
+        : `<p class="empty">조건을 모두 만족하는 종목이 없어요. 조건을 하나 빼 보세요.</p>`);
+  }
+  const noPrice = !all.some((s) => s.ma200 != null);
+  return `<section class="card" id="screener"><h2>조건 검색 <small>${all.length}개 대형주 중</small></h2>
+    <div class="chips">${chips}</div>${body}
+    <p class="muted" style="margin:10px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
+}
+
+// 배당 달력: 관심종목(없으면 배당 주는 대형주 전체)의 배당락일·지급일·1주당 배당금 (야후 무료 자료, 매주 갱신)
+function dividendCard(d) {
+  const funds = d.funds || {};
+  const all = stocksOf(d);
+  const pick = WATCH[market].length ? all.filter((s) => WATCH[market].includes(s.code)) : all;
+  const rows = pick.map((s) => ({ s, f: funds[s.code] || {}, e: (funds[s.code] || {}).events || {} }))
+    .filter((r) => r.e.exdiv || r.e.div_rate);
+  if (!rows.length) {
+    return Object.keys(funds).length ? "" : `<section class="card"><h2>배당 달력</h2><p class="empty">배당 자료는 매주 토요일에 받아요.</p></section>`;
+  }
+  const today = TODAY();
+  const next = rows.filter((r) => r.e.exdiv && r.e.exdiv >= today).sort((a, b) => a.e.exdiv.localeCompare(b.e.exdiv));
+  const past = rows.filter((r) => !(r.e.exdiv && r.e.exdiv >= today)).sort((a, b) => (b.f.div ?? 0) - (a.f.div ?? 0));
+  const cash = (v) => (v == null ? "-" : market === "kr" ? `${num(v)}원` : `$${v.toFixed(2)}`);
+  const row = ({ s, f, e }, upcoming) => `<li data-stock="${esc(s.code)}"><div class="l"><div class="name">${esc(s.name)}</div>
+      <div class="meta">${upcoming ? `배당락 ${ymd(e.exdiv)} (${dday(e.exdiv)})${e.paydiv && e.paydiv >= e.exdiv ? ` · 지급 ${ymd(e.paydiv)}` : ""}`
+        : e.exdiv ? `지난 배당락 ${ymd(e.exdiv)}` : "배당락일 미정"}</div></div>
+      <div class="r">${cash(e.div_last)}<div class="meta">1회 · 연 ${cash(e.div_rate)}${f.div != null ? ` (${f.div.toFixed(1)}%)` : ""}</div></div></li>`;
+  return `<section class="card" id="div-card"><h2>배당 달력 <small>${WATCH[market].length ? "내 관심종목" : "대형주 전체 (☆ 누르면 관심종목만)"}</small></h2>
+    ${next.length ? `<h3 class="muted" style="margin:6px 0 4px">다가오는 배당락</h3><ul class="list">${next.slice(0, 12).map((r) => row(r, true)).join("")}</ul>` : ""}
+    ${past.length ? `<details${next.length ? "" : " open"}><summary class="muted" style="margin:10px 0 4px">배당 주는 종목 · 배당수익률 순 (${past.length}개)</summary>
+      <ul class="list">${past.slice(0, 20).map((r) => row(r, false)).join("")}</ul></details>` : ""}
+    <p class="muted" style="margin:10px 0 0">배당락일 전날까지 갖고 있어야 배당을 받아요(국장은 결산·이사회에 따라 기준일이 달라질 수 있어요). 1회 배당은 가장 최근 지급액이에요. 야후 무료 자료라 날짜가 늦게 바뀔 수 있어요.</p></section>`;
+}
+
 // 관심 화면 업종 버튼: 대시보드 종목에 있는 업종만 (업종 지도 paper/sectors.json 기준)
 function secList(d) {
   const of = (d.signal && d.signal.sector_of) || {};
@@ -559,6 +620,14 @@ function bindRows(el, d) {
 }
 
 function bindWatch(d) {
+  document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.filter;
+    FILTER_ON = FILTER_ON.includes(k) ? FILTER_ON.filter((x) => x !== k) : FILTER_ON.concat(k);
+    try { localStorage.setItem("filters", JSON.stringify(FILTER_ON)); } catch (e) { /* 이번만 기억 */ }
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
   const find = $("[data-find]");
   if (find) find.addEventListener("click", () => { searchQuery = watchQuery; go("search"); });
   const input = $(".search");
