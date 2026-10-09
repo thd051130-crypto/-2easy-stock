@@ -33,6 +33,7 @@ import health
 import kr_swing_backtest as kb
 import macro
 import movers
+import quiet_volume
 import rulebook
 import sectors
 import strategy
@@ -430,7 +431,13 @@ def add_movers(text, payload, args, path, today, closes, index_close, volumes, w
     except (Exception, SystemExit) as e:
         print(f"많이 움직인 종목 이유 계산 실패 (신호는 그대로 보내요): {e!r}")
         return text, payload
-    return text + "\n" + movers.section(result, m["name"]), dict(payload, movers=result)
+    text, payload = text + "\n" + movers.section(result, m["name"]), dict(payload, movers=result)
+    try:  # 주가는 그대로인데 거래량만 급증한 종목 (참고, quiet_volume.py)
+        quiet = quiet_volume.compute(every, vols, names)
+    except Exception as e:
+        print(f"거래량 급증 종목 계산 실패 (신호는 그대로 보내요): {e!r}")
+        return text, payload
+    return text + "\n" + quiet_volume.section(quiet, m["name"]), dict(payload, quiet_volume=quiet)
 
 
 def add_sectors(text, payload, args, path, closes, index_close):
@@ -523,7 +530,7 @@ def us_summary(us, capital, etf_close=None):
 
 
 def summary_extras(payload):
-    """요약 아래 한 줄씩: 규칙표 후보, 많이 오르고 내린 종목, 강하고 약한 업종, 데이터 경고, 앱 링크."""
+    """요약 아래 한 줄씩: 규칙표 후보, 많이 오르고 내린 종목, 거래량만 급증한 종목, 강하고 약한 업종, 데이터 경고, 앱 링크."""
     lines = []
 
     def esc(name):  # 요약 한 줄에 들어가게 긴 영문 회사명은 줄여요
@@ -548,6 +555,9 @@ def summary_extras(payload):
         lines.append(f"🔥 5일 급등: {moves(mv['up'])}")
     if mv.get("down"):
         lines.append(f"🧊 5일 급락: {moves(mv['down'])}")
+    quiet = quiet_volume.summary_line(payload.get("quiet_volume"), esc)
+    if quiet:
+        lines.append(quiet)
     sec = payload.get("sectors") or []
     if sec:
         strong, weak = sec[0], sec[-1]
