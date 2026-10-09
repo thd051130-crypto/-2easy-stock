@@ -16,5 +16,3 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pip install pytest matplotlib koreanize-matplotlib
       - run: python -m pytest -v
-      - run: python econ_calendar.py --save /tmp/cal.json --dry-run && python -c "import json;d=json.load(open('/tmp/cal.json'));print(d['fomc']);print(d['bok']);print([e for e in d['events'] if e['kind']=='rate'])"
-        continue-on-error: true
