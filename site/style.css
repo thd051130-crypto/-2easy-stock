@@ -481,3 +481,9 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .cmp-chip { display: inline-flex; align-items: center; gap: 6px; }
 .cmp-chip span { color: var(--text-muted); }
 .cmp-add { font: inherit; font-size: 13px; border: 1px dashed var(--border); background: var(--surface-1); color: var(--accent); border-radius: 999px; padding: 6px 10px; min-height: 32px; max-width: 100%; }
+
+/* 적립식 복리 계산기 */
+.sav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.sav-in { display: grid; gap: 4px; font-size: 12px; color: var(--text-muted); min-width: 0; }
+.sav-in .alert-input { min-width: 0; }
+.sav-in input { min-width: 0; width: 100%; }
