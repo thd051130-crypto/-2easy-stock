@@ -387,3 +387,8 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .idx-chips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -4px 10px; padding: 0 4px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .idx-chips::-webkit-scrollbar { display: none; }
 .idx-chips button { flex: none; white-space: nowrap; }
+
+/* 문장 검색 테마 칸: 국장·미장 소제목 */
+.theme-card .theme-mk { margin: 16px 0 4px; font-size: 15px; }
+.theme-card .theme-mk small { color: var(--text-secondary); font-weight: 400; font-size: 12px; margin-left: 4px; }
+.theme-card > .sub { font-size: 14px; }

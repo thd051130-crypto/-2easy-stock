@@ -10,6 +10,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/macro.json : 경기 국면 (macro.py)
   - paper/world.json : 세계 지수·환율 (world.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
+  - themes.py : 문장 검색용 테마 사전 → <out>/themes.json
 
 사용법:
     python dashboard.py                 # site/ 를 _site/ 로 복사하고 _site/data.json 생성
@@ -27,6 +28,7 @@ import shutil
 import commands
 import readiness
 import strategy
+import themes
 import watchlist
 from markets import MARKETS
 
@@ -214,6 +216,9 @@ def main():
     stamp_assets(args.out)
     if (args.paper / "symbols").is_dir():  # 검색용 전체 종목 목록
         shutil.copytree(args.paper / "symbols", args.out / "symbols")
+    # 문장 검색용 테마 사전 ('전력 관련 종목 찾아줘')
+    (args.out / "themes.json").write_text(json.dumps(themes.build(args.paper / "symbols", args.paper / "sectors.json"),
+                                                     ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     data = dict(build(args.paper), site_version=site_version(args.site))
     (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     for key, m in data["markets"].items():
