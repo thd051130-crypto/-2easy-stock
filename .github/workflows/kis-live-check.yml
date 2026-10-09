@@ -19,6 +19,9 @@ on:
         description: "live 모드에서 몇 분 동안 받을지"
         default: "5"
 
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -36,6 +39,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - run: pip install -r requirements.txt
       - name: run ${{ inputs.mode }}
         env:
