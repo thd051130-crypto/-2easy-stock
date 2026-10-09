@@ -392,3 +392,61 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .theme-card .theme-mk { margin: 16px 0 4px; font-size: 15px; }
 .theme-card .theme-mk small { color: var(--text-secondary); font-weight: 400; font-size: 12px; margin-left: 4px; }
 .theme-card > .sub { font-size: 14px; }
+
+/* 산업 연관 지도: 묶음 색은 점·테두리에만, 글자는 늘 본문 색 */
+:root { --g-tech: var(--series-1); --g-energy: var(--series-2); --g-industry: var(--series-3); --g-consumer: #c98500; --g-finance: #d55181; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --g-consumer: #eda100; --g-finance: #e87ba4; } }
+:root[data-theme="dark"] { --g-consumer: #eda100; --g-finance: #e87ba4; }
+.imap-wrap { margin: 10px -8px 0; }
+.imap { display: block; width: 100%; height: auto; max-height: 72vh; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.imap .edge { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-opacity: .28; transition: stroke-opacity .3s, stroke-width .3s; }
+.imap .edge.k-c { stroke-dasharray: 4 3; }
+.imap .edge.k-n { stroke-dasharray: 4 3; }
+.imap .edge.k-h { stroke-dasharray: 1.5 3; stroke-linecap: round; }
+.imap .edge.off { stroke-opacity: 0; }
+.imap .edge.lit { stroke-opacity: .9; stroke-width: 1.8; }
+.imap .edge.lit.k-s { stroke: var(--accent); }
+.imap .edge.lit.k-n { stroke: var(--wait-fg); }
+.imap .edge.lit.k-h { stroke: var(--bb); stroke-width: 2.2; }
+.imap marker path { fill: var(--accent); }
+.imap .node { cursor: pointer; transition: opacity .3s; outline: none; }
+.imap .node .hit { fill: transparent; }
+.imap .node .pill rect { fill: var(--surface-1); stroke: var(--gc, var(--border)); stroke-width: 1.2; }
+.imap .node circle { fill: var(--gc, var(--text-muted)); }
+.imap .node text { font-size: 12px; font-weight: 600; fill: var(--text-primary); text-anchor: middle; }
+.imap .node .flow { paint-order: stroke; stroke: var(--surface-1); stroke-width: 4px; stroke-linejoin: round; font-size: 11px; font-weight: 600; opacity: 0; transition: opacity .3s; font-variant-numeric: tabular-nums; }
+.imap .node .flow.up { fill: var(--up); } .imap .node .flow.down { fill: var(--down); } .imap .node .flow:not(.up):not(.down) { fill: var(--text-muted); }
+.imap.focused .node.near .flow, .imap.focused .node.center .flow { opacity: 1; }
+.imap .node .pill { transition: transform .3s; }
+.imap .node.center .pill { transform: scale(1.18); }
+.imap .node.center .pill rect { stroke-width: 2.2; }
+.imap .node.dim { opacity: .07; cursor: default; }
+.imap .node:focus-visible .pill rect { stroke: var(--accent); stroke-width: 2.4; }
+.imap .node.heat .pill rect { stroke: var(--border); }
+.imap .node.heat.up.h1 .pill rect { fill: color-mix(in srgb, var(--up) 14%, var(--surface-1)); }
+.imap .node.heat.up.h2 .pill rect { fill: color-mix(in srgb, var(--up) 30%, var(--surface-1)); }
+.imap .node.heat.up.h3 .pill rect { fill: color-mix(in srgb, var(--up) 48%, var(--surface-1)); }
+.imap .node.heat.down.h1 .pill rect { fill: color-mix(in srgb, var(--down) 14%, var(--surface-1)); }
+.imap .node.heat.down.h2 .pill rect { fill: color-mix(in srgb, var(--down) 30%, var(--surface-1)); }
+.imap .node.heat.down.h3 .pill rect { fill: color-mix(in srgb, var(--down) 48%, var(--surface-1)); }
+.g-tech { --gc: var(--g-tech); } .g-energy { --gc: var(--g-energy); } .g-industry { --gc: var(--g-industry); }
+.g-consumer { --gc: var(--g-consumer); } .g-finance { --gc: var(--g-finance); }
+.map-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12px; color: var(--text-secondary); align-items: center; }
+.map-legend .lg i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--gc); margin-right: 5px; vertical-align: -0.5px; }
+.map-legend .lg i.up { background: var(--up); } .map-legend .lg i.down { background: var(--down); }
+.map-legend.lines span { display: inline-flex; align-items: center; gap: 5px; }
+.map-legend.lines svg { width: 28px; height: 8px; }
+.map-legend.lines path { stroke-width: 2; fill: none; }
+.map-legend.lines .k-s { stroke: var(--accent); }
+.map-legend.lines .k-c { stroke: var(--text-muted); stroke-dasharray: 4 3; }
+.map-legend.lines .k-n { stroke: var(--wait-fg); stroke-dasharray: 4 3; }
+.map-legend.lines .k-h { stroke: var(--bb); stroke-dasharray: 1.5 3; stroke-linecap: round; }
+.map-tools { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.map-all { margin-left: auto; border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; font-weight: 600; padding: 6px 0; cursor: pointer; min-height: 36px; }
+.map-all[hidden] { display: none; }
+.badge.k-s { color: var(--accent-fg); background: var(--accent-bg); }
+.badge.k-c { color: var(--text-secondary); }
+.badge.k-n { color: var(--wait-fg); background: var(--wait-bg); }
+.badge.k-h { color: var(--bb); }
+.list li[data-mapgo], .list li[data-mapsearch] { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .imap .edge, .imap .node, .imap .node .pill, .imap .node .flow { transition: none; } }
