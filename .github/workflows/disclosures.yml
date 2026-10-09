@@ -1,0 +1,59 @@
+# 관심종목 공시 알림: 금감원 전자공시(오픈DART)에서 우리 국장 종목 공시를 골라요 (disclosures.py).
+#   평일 한국시간 08:10~19:10 한 시간마다. 유상증자·전환사채·최대주주 변경 같은 '주의' 공시는 바로 텔레그램으로.
+#   기록은 paper/kr/disclosures.json (앱 종목 화면·홈 '최근 공시').
+# 필요한 저장소 Secrets: DART_API_KEY (opendart.fss.or.kr에서 무료로 받아요), TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+#   DART_API_KEY가 없으면 아무것도 안 하고 성공으로 끝나요.
+name: disclosures
+
+on:
+  schedule:
+    - cron: "10 23 * * 0-4"   # UTC 23:10 = 한국 다음 날 08:10 (월~금)
+    - cron: "10 0-10 * * 1-5" # UTC 00:10~10:10 = 한국 09:10~19:10
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "며칠 전 공시까지 볼지 (처음엔 3~7)"
+        default: "1"
+
+permissions:
+  contents: write  # paper/kr/disclosures.json 저장
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
+
+concurrency:
+  group: disclosures
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DART_API_KEY: ${{ secrets.DART_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python disclosures.py --days "${{ inputs.days || '1' }}"
+      - name: commit
+        run: |
+          [ -f paper/kr/disclosures.json ] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper/kr/disclosures.json
+          if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
+          git commit -m "공시 기록 $(TZ=Asia/Seoul date '+%F %H:%M')"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow disclosures

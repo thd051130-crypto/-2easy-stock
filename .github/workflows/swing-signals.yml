@@ -59,6 +59,11 @@ jobs:
         if: contains(env.MARKETS, 'kr')
         continue-on-error: true
         run: python paper_trade.py --rule etf --csv data/etf_daily_recent.csv
+      # 국장 외국인·기관 수급 (네이버 무료 자료, 앱 종목 화면·홈 경고용). 못 받아도 위 기록은 저장해요
+      - name: KR flows
+        if: contains(env.MARKETS, 'kr')
+        continue-on-error: true
+        run: python flows.py
       - name: commit paper log
         run: |
           git config user.name "github-actions[bot]"

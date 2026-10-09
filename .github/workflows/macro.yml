@@ -1,6 +1,7 @@
 # 경기 리포트: 무료 지표(미국 금리·유가·환율·신용·구리/금·VIX, 참고로 FRED 실업률·물가)로 경기 국면을 판정해요.
 #   매일 한국시간 06:50쯤 판정을 paper/macro.json에 기록 (앱 홈 "경기 국면" 칸, 신호 알림의 리스크관리부 보고)
 #   월요일 아침엔 텔레그램 "[경기 리포트]", 판정이 바뀐 날엔 "[경기 판정 바뀜]"
+#   경제 일정(econ_calendar.py)도 매일 paper/calendar.json에 (앱 홈 "다가오는 일정"), 월요일엔 "[이번 주 일정]"
 # 매매 규칙은 안 바꿔요 (docs/macro-backtest.md). 폰에서 바로 받기: Actions → macro → Run workflow
 # 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 name: macro
@@ -44,11 +45,16 @@ jobs:
           # 한국시간 월요일이면 주간 리포트
           if [ "$(TZ=Asia/Seoul date +%u)" = "1" ]; then REPORT=true; fi
           python macro.py --save paper/macro.json $([ "$REPORT" = "true" ] && echo --report)
+      # 경제 일정 (FOMC·금통위·만기일·실적 발표). 월요일엔 텔레그램 [이번 주 일정]. 못 받아도 경기 판정은 저장해요
+      - name: economic calendar
+        continue-on-error: true
+        run: python econ_calendar.py --save paper/calendar.json $([ "$(TZ=Asia/Seoul date +%u)" = "1" ] || [ "$REPORT" = "true" ] && echo --report)
       - name: commit macro log
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add paper/macro.json
+          [ -f paper/calendar.json ] && git add paper/calendar.json
           if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
           git commit -m "경기 판정 기록 $(TZ=Asia/Seoul date +%F)"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done

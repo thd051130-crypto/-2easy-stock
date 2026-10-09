@@ -82,4 +82,8 @@ def test_stock_summary_for_watchlist():
     assert r["name"] == "삼성전자" and r["close"] == 359.0 and r["day"] == f"{days[-1]:%Y-%m-%d}"
     assert r["d1"] == round(359 / 358 - 1, 4)
     assert len(r["spark"]) == 30 and r["spark"][-1] == 359 and r["spark"][0] == 330
+    # 꾸준히 오르는 종목: 200일선 위, RSI 100, 52주 최고가 그대로
+    assert r["ma200"] == round(359 / np.mean(np.linspace(100, 359, 260)[-200:]) - 1, 4) and r["rsi14"] == 100.0 and r["hi52"] == 0.0
     json.dumps(out, allow_nan=False)
+    short = ks.stock_summary(closes.iloc[:20], "kr", days=30)[0]
+    assert "ma200" not in short and "rsi14" in short

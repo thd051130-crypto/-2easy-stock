@@ -9,6 +9,9 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
   - paper/world.json : 세계 지수·환율 (world.py)
+  - paper/calendar.json : 경제 일정 (econ_calendar.py)
+  - paper/kr/disclosures.json : 국장 종목 공시 (disclosures.py, 오픈DART 키가 있을 때만)
+  - paper/kr/flows.json : 국장 외국인·기관 수급 (flows.py) → 홈 경고·요약만 (종목별 막대는 stock_pages.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
   - themes.py : 문장 검색용 테마 사전 → <out>/themes.json
   - industry_map.py : 산업 지도 점·선 → <out>/industry.json (시세·주가 동행은 pages 워크플로가 이어서 채워요)
@@ -27,6 +30,7 @@ import pathlib
 import shutil
 
 import commands
+import flows
 import industry_map
 import readiness
 import strategy
@@ -135,6 +139,23 @@ ETF_RULES = [
 ]
 
 
+FUND_KEYS = ("name", "per", "loss", "pbr", "div", "roe", "debt", "financial", "cap", "target", "events")
+
+
+def fund_table(path):
+    """조건 검색·배당 달력·히트맵·실적 일정용 종목별 재무 한 줄 (fundamentals.json에서 화면에 쓰는 것만).
+    등급은 [등급, 점수, 만점]으로 줄여요. 종목 화면의 연간·분기 재무제표는 stock_pages.py가 따로 붙여요."""
+    stocks = (read_json(path) or {}).get("stocks") or {}
+    out = {}
+    for code, f in stocks.items():
+        row = {k: f.get(k) for k in FUND_KEYS if f.get(k) not in (None, {}, False)}
+        g = f.get("grade") or {}
+        if g.get("score") is not None:
+            row["grade"] = [g.get("grade"), g["score"], g.get("total")]
+        out[code] = row
+    return out
+
+
 def readiness_of(key, acct, health):
     if not acct:
         return None
@@ -173,14 +194,19 @@ def build(paper_dir):
                             account=account(folder, key), rules=RULES[key],
                             rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES),
                             # 텔레그램으로 넣은 종목 (시세는 배포 때 stock_pages.py가 채워요), 기다리는 가격 알림
-                            extras=watch[key], alerts=[a for a in alerts if a.get("market") == key])
+                            extras=watch[key], alerts=[a for a in alerts if a.get("market") == key],
+                            funds=fund_table(folder / "fundamentals.json"))
         markets[key]["readiness"] = readiness_of(key, markets[key]["account"], health)
+    fl = read_json(paper_dir / "kr" / "flows.json")
+    markets["kr"]["disclosures"] = (read_json(paper_dir / "kr" / "disclosures.json") or {}).get("items")
+    markets["kr"]["flows"] = dict(day=fl.get("day"), warn=flows.warnings(fl), **flows.top_flows(fl)) if fl else None
     etf_acct = account(paper_dir / "etf", "kr")
     markets["kr"]["etf"] = dict(account=etf_acct, rules=ETF_RULES, readiness=readiness_of("etf", etf_acct, health))
     fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
                 bot=watchlist.bot_username(paper_dir), health=health,
-                macro=read_json(paper_dir / "macro.json"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
+                macro=read_json(paper_dir / "macro.json"),
+                calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
                 total=total_assets(markets, etf_acct, fx))
 
 
