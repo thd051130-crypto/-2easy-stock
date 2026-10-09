@@ -148,6 +148,9 @@ const TERMS = {
   "백테스트": "규칙을 과거 주가에 그대로 적용해 봤다면 어땠을지 계산한 것. 과거에 잘 됐다고 앞으로도 그렇다는 보장은 없어요.",
   "가상계좌": "진짜 돈 없이 규칙대로 사고팔았다고 치고 기록하는 연습 계좌. 실제 체결 차이·수수료는 비슷하게 넣었어요.",
   "복리": "번 돈을 다시 넣어 그 돈도 같이 불어나는 것. 기간이 길수록 차이가 커져요.",
+  "총보수": "ETF 회사가 해마다 떼 가는 운용 비용. 0.07%면 1,000만 원에 1년 7,000원. 잔고에서 조금씩 빠져요.",
+  "커버드콜": "주식을 들고 '오르면 넘겨줄 권리'를 팔아 그 값을 분배금으로 나눠 주는 상품. 매달 돈이 많이 나오는 대신 크게 오를 땐 덜 오르고, 내릴 땐 거의 같이 내려요.",
+  "레버리지": "지수가 하루 1% 움직이면 2% 움직이는 상품. 오르내림을 반복하면 손실이 쌓여서(음의 복리) 오래 들면 2배가 안 나와요.",
   "히트맵": "종목을 네모 칸으로 그린 지도. 칸이 크면 큰 회사, 빨강은 오름, 파랑은 내림, 진할수록 많이 움직였어요.",
 };
 const term = (t, label) => (TERMS[t] ? `${label ?? esc(t)}<button type="button" class="q" data-term="${esc(t)}" aria-label="${esc(t)} 뜻">?</button>` : (label ?? esc(t)));
@@ -2008,87 +2011,225 @@ function healthLine() {
   return `<p class="caution">지난 주 자동 실행 확인 필요: ${bad}</p>`;
 }
 
-// 적립식 복리 계산기: 매달 N만 원씩 넣으면 몇 년 뒤 얼마? 예금·우리 ETF 규칙·그냥 보유·내 가정을 나란히, 세금(일반·ISA) 반영.
-// 수익률은 docs/etf-backtest.md 2011~ 원화 백테스트 값이에요. 과거 수익률이 미래를 보장하지 않아요.
-const SAV_PLANS = [
-  { key: "dep", name: "예금", rate: 0.03, mdd: 0, color: "var(--text-muted)", note: "연 3% 가정" },
-  { key: "rule", name: "우리 ETF 규칙", rate: 0.071, mdd: -0.084, color: "var(--series-1)", note: "S&P500 ETF 50%+현금, 2011~ 백테스트" },
-  { key: "hold", name: "S&P500 ETF 그냥 보유", rate: 0.15, mdd: -0.302, color: "var(--series-2)", note: "2011~ 백테스트. 미국 주식이 유난히 좋았던 기간이에요" },
-  { key: "mine", name: "내 가정", rate: null, mdd: null, color: "var(--series-3)", note: "아래에서 바꿔요" },
+// 적립식 복리 계산기: 상품(예금·채권·주식 ETF·배당·커버드콜·레버리지·직접 입력)을 3개까지 골라 매달 N만 원씩 넣으면 몇 년 뒤 얼마인지 나란히 봐요.
+// 세금(ISA·일반 계좌, 끌 수도 있어요)과 배당 재투자(안 하면 배당은 현금으로 쌓여요)를 고를 수 있어요.
+// 수익률은 상품마다 과거 대략값으로 잡은 가정이에요(우리 ETF 규칙만 docs/etf-backtest.md 백테스트). 미래를 보장하지 않아요.
+// tax: dep(예금 이자) · kr(국내 주식형, 매매차익 비과세) · other(해외·채권·커버드콜 등, 차익도 15.4%)
+const SAV_PRODUCTS = [
+  { key: "dep", group: "안전", name: "예금", price: 0, div: 3, mdd: 0, fee: 0, tax: "dep", note: "이자 연 3% 가정" },
+  { key: "krbond", group: "채권", name: "국고채 ETF", price: 0, div: 3, mdd: -5, fee: 0.05, tax: "other", note: "한국 국채 3년물형. 이자 3%, 금리 오르면 조금 내려요" },
+  { key: "usbond", group: "채권", name: "미국 장기채 ETF", price: 0, div: 4, mdd: -50, fee: 0.05, tax: "other", note: "미국 30년 국채형. 2020~2023 금리 급등 때 약 -50%" },
+  { key: "kospi", group: "주식 ETF", name: "코스피200 ETF", price: 4, div: 1.8, mdd: -50, fee: 0.15, tax: "kr", note: "국내 대형주 200개. 2008년 -50%, 사고팔 때 차익 세금 없음" },
+  { key: "sp500", group: "주식 ETF", name: "S&P500 ETF", price: 9, div: 1.3, mdd: -34, fee: 0.07, tax: "other", note: "미국 대형주 500개, 원화로 투자. 2020년 -34%" },
+  { key: "ndx", group: "주식 ETF", name: "나스닥100 ETF", price: 12, div: 0.6, mdd: -55, fee: 0.07, tax: "other", note: "미국 기술주 100개. 2008년 -55% (2000년 닷컴 땐 -83%)" },
+  { key: "divg", group: "배당", name: "미국 배당 ETF", price: 7, div: 3.5, mdd: -33, fee: 0.01, tax: "other", note: "배당 늘려 온 회사들(SCHD형). 2020년 -33%" },
+  { key: "cc", group: "커버드콜", name: "나스닥 커버드콜 ETF", price: -3, div: 11, mdd: -25, fee: 0.4, tax: "other", note: "분배금이 큰 대신 오를 때 덜 오르고 주가는 조금씩 내려요" },
+  { key: "lev", group: "레버리지", name: "S&P500 2배 ETF", price: 12, div: 0, mdd: -84, fee: 0.9, tax: "other", note: "매일 2배라 오래 들면 2배가 안 돼요. 2008년 -84%" },
+  { key: "kolev", group: "레버리지", name: "코스피200 2배 ETF", price: 3, div: 0, mdd: -70, fee: 0.64, tax: "kr", note: "출렁임 손실이 커서 10년 넘게 들면 코스피보다 못했어요" },
+  { key: "rule", group: "우리 규칙", name: "우리 ETF 규칙", price: 7.1, div: 0, mdd: -8.4, fee: 0.07, tax: "other", note: "S&P500 ETF 50%+현금, 2011~ 백테스트" },
+  { key: "mine", group: "직접", name: "직접 입력", price: null, div: null, mdd: null, fee: 0, tax: "other", note: "아래에서 바꿔요" },
 ];
-const SAV = { monthly: 50, years: 10, start: 0, acct: "isa", rate: 8, mdd: 30 };
-try { Object.assign(SAV, JSON.parse(localStorage.getItem("savings") || "{}")); } catch (e) { /* 처음 */ }
+const SAV_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
+const SAV = { monthly: 50, years: 10, start: 0, acct: "isa", taxOn: true, reinvest: true, picks: ["dep", "sp500", "cc"], price: 6, div: 2, mdd: 30 };
+try {
+  const s = JSON.parse(localStorage.getItem("savings") || "{}") || {};
+  if (s.rate != null) { if (s.price == null) s.price = s.rate; delete s.rate; }  // 예전 계산기 '내 가정' 수익률 → 직접 입력 주가 상승
+  Object.assign(SAV, s);
+  SAV.picks = (SAV.picks || []).filter((k) => SAV_PRODUCTS.some((p) => p.key === k)).slice(0, 3);
+  if (!SAV.picks.length) SAV.picks = ["sp500"];
+} catch (e) { /* 처음 */ }
 const TAX = 0.154;  // 이자·배당소득세 (국내 상장 해외 ETF 매매차익도 배당소득으로 15.4%)
-// 한 계획의 해마다 잔고(세전)와 마지막 세후 금액. 돈은 원 단위, 매달 초에 넣어요.
-function savSim(plan, { monthly, years, start, acct }) {
-  const m = Math.round(years * 12), dep = plan.key === "dep";
-  const net = dep && acct !== "isa" ? plan.rate * (1 - TAX) : plan.rate;  // 일반 계좌 예금은 이자에 매년 세금
-  const g = Math.pow(1 + net, 1 / 12);
-  let bal = start, paid = start;
-  const byYear = [bal];
+function savProduct(key) {
+  const p = SAV_PRODUCTS.find((x) => x.key === key);
+  return p.key === "mine" ? { ...p, price: +SAV.price || 0, div: +SAV.div || 0, mdd: -(+SAV.mdd || 0),
+    note: `주가 연 ${SAV.price}% · 배당 ${SAV.div}% · 최대 낙폭 -${SAV.mdd}% 가정` } : p;
+}
+// 한 상품을 매달 시뮬레이션. 돈은 원 단위, 매달 초에 넣고 그달 오른 만큼·배당을 받아요.
+// 반환: 넣은 돈, 마지막 잔고(세전), 받은 배당, 세금, 세후 금액, 매달 잔고(series)와 넣은 돈(paidSeries)
+function savSim(p, { monthly, years, start, acct, taxOn, reinvest }) {
+  const m = Math.round(years * 12);
+  const g = Math.pow(1 + p.price / 100, 1 / 12) * Math.pow(1 - p.fee / 100, 1 / 12);
+  const dy = p.div / 100 / 12;
+  const isa = acct === "isa", payTax = taxOn && !isa;  // 일반 계좌만 배당 받을 때 바로 떼요
+  let val = start, cash = 0, paid = start, basis = start, divs = 0, divTax = 0;
+  const series = [val], paidSeries = [paid];
   for (let i = 1; i <= m; i++) {
-    bal = (bal + monthly) * g; paid += monthly;
-    if (i % 12 === 0 || i === m) byYear.push(bal);
+    val += monthly; paid += monthly; basis += monthly;
+    val *= g;
+    const d = val * dy, dt = payTax ? d * TAX : 0;
+    divs += d; divTax += dt;
+    if (reinvest) { val += d - dt; basis += d - dt; } else cash += d - dt;
+    series.push(val + cash); paidSeries.push(paid);
   }
-  const gain = Math.max(0, bal - paid);
-  let tax = 0;
-  if (acct === "isa") tax = Math.max(0, gain - 2e6) * 0.099;  // ISA 일반형: 200만 원까지 비과세, 넘는 부분 9.9%
-  else if (!dep) tax = gain * TAX;                              // 일반 계좌 ETF: 팔 때 차익에 15.4%
-  return { paid, bal, tax, after: bal - tax, byYear };
+  let saleTax = 0;
+  if (taxOn) {
+    if (isa) saleTax = Math.max(0, val + cash - paid - 2e6) * 0.099;  // ISA 일반형: 이익(배당 포함) 200만 원까지 비과세, 넘는 부분 9.9%
+    else if (p.tax === "other") saleTax = Math.max(0, val - basis) * TAX;  // 팔 때 차익에 15.4% (국내 주식형은 비과세)
+  }
+  const bal = val + cash;  // 배당 세금은 받을 때 이미 뗐어요
+  return { paid, bal, divs, divTax, cash, tax: divTax + saleTax, after: bal - saleTax, series, paidSeries };
 }
-function savPlans() {
-  return SAV_PLANS.map((p) => (p.key === "mine" ? { ...p, rate: SAV.rate / 100, mdd: -SAV.mdd / 100, note: `연 ${SAV.rate}% · 최대 낙폭 -${SAV.mdd}% 가정` } : p));
+function savRun() {
+  const o = { monthly: (+SAV.monthly || 0) * 1e4, start: (+SAV.start || 0) * 1e4, years: SAV.years, acct: SAV.acct, taxOn: SAV.taxOn, reinvest: SAV.reinvest };
+  return { o, list: SAV.picks.map((k, i) => { const p = savProduct(k); return { p, color: SAV_COLORS[i], r: savSim(p, o) }; }) };
 }
+const savWon = (x) => {
+  const a = Math.abs(x), s = x < 0 ? "-" : "";
+  if (a >= 1e8) { const man = Math.round((a % 1e8) / 1e4); return `${s}${Math.floor(a / 1e8)}억${man ? ` ${man.toLocaleString("ko-KR")}만` : ""}원`; }
+  return `${s}${Math.round(a / 1e4).toLocaleString("ko-KR")}만원`;
+};
 function savingsCard() {
-  const inp = (k, label, unit, attrs) => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-sav="${k}" type="text" inputmode="decimal" value="${SAV[k]}" ${attrs || ""}><span>${unit}</span></span></label>`;
-  const yrs = [1, 3, 5, 10, 20].map((y) => `<button type="button" data-sav-y="${y}" aria-pressed="${SAV.years === y}">${y}년</button>`).join("");
+  const inp = (k, label, unit) => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-sav="${k}" type="text" inputmode="decimal" value="${SAV[k]}"><span>${unit}</span></span></label>`;
+  const yrs = [1, 3, 5, 10, 20, 30].map((y) => `<button type="button" data-sav-y="${y}" aria-pressed="${SAV.years === y}">${y}년</button>`).join("");
+  const groups = [...new Set(SAV_PRODUCTS.map((p) => p.group))].map((gname) => `<div class="sav-group"><span>${TERMS[gname] ? term(gname) : esc(gname)}</span><div class="chips">${
+    SAV_PRODUCTS.filter((p) => p.group === gname).map((p) => `<button type="button" data-sav-p="${p.key}" aria-pressed="${SAV.picks.includes(p.key)}">${esc(p.name)}</button>`).join("")}</div></div>`).join("");
+  const tog = (k, label, sub) => `<label class="sav-tog"><input type="checkbox" data-sav-c="${k}" ${SAV[k] ? "checked" : ""}><span class="sw-t" aria-hidden="true"></span><span><b>${label}</b><small>${sub}</small></span></label>`;
   const accts = [["isa", "ISA"], ["normal", "일반 계좌"]].map(([k, l]) => `<button type="button" data-sav-a="${k}" aria-pressed="${SAV.acct === k}">${l}</button>`).join("");
-  return `<section class="card" id="sav-card"><h2>적립식 ${term("복리")} 계산기 <small>매달 넣으면 얼마가 될까</small></h2>
+  return `<section class="card" id="sav-card"><h2>적립식 ${term("복리")} 계산기 <small>무엇에 매달 넣으면 얼마가 될까</small></h2>
     <div class="sav-grid">${inp("monthly", "매달", "만 원")}${inp("start", "처음에", "만 원")}</div>
     <div class="period" role="group" aria-label="기간" style="margin:10px 0 0">${yrs}</div>
-    <div class="period" role="group" aria-label="계좌" style="margin:8px 0 0">${accts}</div>
+    <h3 class="sav-h">상품 고르기 <small class="muted">3개까지 비교</small></h3>
+    <div class="sav-groups">${groups}</div>
+    <details class="sav-mine" ${SAV.picks.includes("mine") ? "open" : ""}><summary>직접 입력 값 바꾸기</summary>
+      <div class="sav-grid sav-grid3" style="margin-top:8px">${inp("price", "주가 상승", "%/년")}${inp("div", "배당·이자", "%/년")}${inp("mdd", "최대 낙폭", "%")}</div></details>
+    <div class="sav-togs">${tog("reinvest", "배당 재투자", "받은 배당·이자로 다시 사요")}${tog("taxOn", "세금 반영", "배당·이자·차익 세금을 떼요")}</div>
+    <div class="period" role="group" aria-label="계좌" id="sav-acct" style="margin:8px 0 0;${SAV.taxOn ? "" : "display:none"}">${accts}</div>
     <div id="sav-out">${savOut()}</div>
-    <details style="margin-top:10px"><summary>내 가정 바꾸기</summary>
-      <div class="sav-grid" style="margin-top:8px">${inp("rate", "연 수익률", "%")}${inp("mdd", "최대 낙폭", "%")}</div></details>
-    <p class="muted" style="margin:10px 0 0">${term("ISA")}(일반형)는 3년 이상 유지하면 이익 200만 원까지 세금이 없고, 넘는 부분은 9.9%예요. 한 해 2,000만 원까지 넣을 수 있어요.
-      일반 계좌는 예금 이자·ETF 차익에 15.4%. 금융소득이 한 해 2,000만 원을 넘을 때 붙는 종합과세는 빼고 계산했어요.
-      수익률은 과거 백테스트라 앞으로도 그렇다는 보장이 없어요. 매달 같은 비율로 오른다고 단순하게 셌어요.</p></section>`;
+    <p class="muted" style="margin:12px 0 0">${term("ISA")}(일반형)는 3년 이상 유지하면 이익 200만 원까지 세금이 없고, 넘는 부분은 9.9%예요. 한 해 2,000만 원까지 넣을 수 있어요.
+      일반 계좌는 배당·이자를 받을 때 15.4%, 해외·채권·커버드콜 ETF는 팔 때 차익에도 15.4%예요. 국내 주식형(코스피200) ETF 차익은 세금이 없어요.
+      금융소득 2,000만 원 넘을 때 종합과세, 환율 변화는 빼고 계산했어요.
+      수익률은 상품마다 과거 대략값으로 잡은 가정이고, 매달 같은 비율로 오른다고 단순하게 셌어요. 앞으로도 그렇다는 보장이 없어요.</p></section>`;
 }
 function savOut() {
-  const o = { monthly: (+SAV.monthly || 0) * 1e4, start: (+SAV.start || 0) * 1e4, years: SAV.years, acct: SAV.acct };
-  const plans = savPlans(), res = plans.map((p) => savSim(p, o));
-  const won = (x) => (Math.abs(x) >= 1e8 ? `${Math.floor(x / 1e8)}억${Math.round((x % 1e8) / 1e4) ? ` ${Math.round((x % 1e8) / 1e4).toLocaleString("ko-KR")}만` : ""}원` : `${bigNum(x)}원`);
-  const rows = plans.map((p, i) => {
-    const r = res[i], profit = r.after - r.paid;
-    const worst = p.mdd ? `<div class="meta">나쁜 때 잔고가 잠깐 ${won(r.bal * (1 + p.mdd))}까지 (${Math.round(p.mdd * 100)}%)</div>` : "";
-    return `<li><div class="l"><div class="name"><i class="sw" style="background:${p.color}"></i> ${esc(p.name)}</div>
-      <div class="meta">${esc(p.note)}${p.key === "dep" ? (SAV.acct === "isa" ? ", ISA라 이자 세금은 끝에 한 번" : ", 이자에 매년 15.4%") : ""}</div>${worst}</div>
-      <div class="r"><b>${won(r.after)}</b><div class="meta ${sign(profit)}">${profit >= 0 ? "+" : ""}${won(profit)}${r.tax > 0 ? ` · 세금 ${won(r.tax)}` : ""}</div></div></li>`;
+  const { o, list } = savRun();
+  if (!list.length) return `<p class="muted" style="margin:12px 0 0">위에서 상품을 하나 이상 골라 주세요.</p>`;
+  const paid = list[0].r.paid, perYear = o.monthly * 12 + o.start;
+  const warn = [];
+  if (SAV.taxOn && SAV.acct === "isa" && perYear > 2e7) warn.push("ISA는 한 해 2,000만 원까지만 넣을 수 있어요. 넘는 돈은 일반 계좌로 계산하는 게 맞아요.");
+  if (SAV.taxOn && SAV.acct === "isa" && SAV.years < 3) warn.push("ISA는 3년 전에 깨면 비과세 혜택이 없어요.");
+  if (list.some((x) => x.p.group === "레버리지")) warn.push("레버리지 ETF는 폭락 때 회복이 아주 느리고, 낙폭 최소화 원칙과 맞지 않아요. 비교용으로만 보세요.");
+  const max = Math.max(...list.map(({ r }) => r.paid + Math.max(0, r.bal - r.paid - (r.divs - r.divTax)) + r.divs - r.divTax));
+  const rows = list.map(({ p, color, r }) => {
+    const profit = r.after - r.paid;
+    const divNet = r.divs - r.divTax;
+    const priceGain = r.bal - r.paid - divNet;  // 재투자로 불어난 몫은 '주가 상승'에 같이 들어가요
+    const seg = (v, cls, label) => (v > 0 ? `<i class="${cls}" style="width:${(v / max) * 100}%" title="${label} ${savWon(v)}"></i>` : "");
+    const lossW = priceGain < 0 ? Math.min(-priceGain, r.paid) : 0;
+    const bar = `<div class="sav-bar" role="img" aria-label="넣은 돈 ${savWon(r.paid)}, 주가 ${savWon(priceGain)}, 배당 ${savWon(divNet)}, 세금 ${savWon(r.tax)}">
+      ${seg(r.paid - lossW, "b-paid", "넣은 돈")}${seg(lossW, "b-loss", "주가 하락")}${seg(Math.max(0, priceGain), "b-gain", "주가 상승")}${seg(divNet, "b-div", "배당")}</div>`;
+    const worst = p.mdd ? `<div class="meta">나쁜 때 잔고가 잠깐 ${savWon(r.bal * (1 + p.mdd / 100))}까지 (${Math.round(p.mdd)}%)</div>` : "";
+    const cash = !SAV.reinvest && r.cash > 0 ? ` · 쌓인 배당 현금 ${savWon(r.cash)}` : "";
+    return `<li class="sav-row" style="--c:${color}"><div class="sav-top"><div class="name"><i class="sw" style="background:${color}"></i> ${esc(p.name)}</div>
+        <div class="r"><b>${savWon(r.after)}</b><div class="meta ${sign(profit)}">${profit >= 0 ? "+" : ""}${savWon(profit)} (${r.paid ? `${profit >= 0 ? "+" : ""}${Math.round((profit / r.paid) * 100)}%` : "-"})</div></div></div>
+      ${bar}
+      <div class="meta">${[r.divs > 0 ? `배당·이자 ${savWon(r.divs)}` : "배당 없음", cash.slice(3), r.tax > 0 ? `세금 ${savWon(r.tax)}` : "",
+        p.fee ? `${term("총보수")} 연 ${p.fee}%` : ""].filter(Boolean).join(" · ")}</div>
+      <div class="meta">${esc(p.note)}</div>${worst}</li>`;
   }).join("");
-  const paid = res[0].paid, perYear = o.monthly * 12 + o.start;
-  const over = SAV.acct === "isa" && perYear > 2e7 ? `<p class="muted" style="margin:6px 0 0">⚠️ ISA는 한 해 2,000만 원까지만 넣을 수 있어요. 넘는 돈은 일반 계좌로 계산하는 게 맞아요.</p>` : "";
-  return `<p class="hero" style="margin:12px 0 0">${won(paid)} <small class="muted" style="font-size:14px">넣은 돈 (${SAV.years}년)</small></p>${over}
-    <ul class="list">${rows}</ul>
-    <div class="chart" id="sav-chart"></div>`;
+  return `<div class="sav-hero"><div><small>넣은 돈 (${SAV.years}년)</small><b>${savWon(paid)}</b></div>
+      <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 최고</small><b class="${sign(Math.max(...list.map((x) => x.r.after)) - paid)}">${savWon(Math.max(...list.map((x) => x.r.after)))}</b></div></div>
+    ${warn.map((w) => `<p class="caution" style="margin:8px 0 0">⚠️ ${w}</p>`).join("")}
+    <div class="chart sav-chart" id="sav-chart"></div>
+    <div class="legend sav-legend"><span class="key"><i class="sw b-paid"></i>넣은 돈</span><span class="key"><i class="sw b-gain"></i>주가 상승</span><span class="key"><i class="sw b-div"></i>배당·이자</span><span class="key"><i class="sw b-loss"></i>주가 하락</span></div>
+    <ul class="list sav-list">${rows}</ul>`;
+}
+// 부드러운 곡선(단조 3차): 값이 튀지 않게 이어요
+function smoothPath(pts) {
+  const n = pts.length;
+  if (n < 3) return pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
+  const d = [], m = [];
+  for (let i = 0; i < n - 1; i++) d.push((pts[i + 1][1] - pts[i][1]) / (pts[i + 1][0] - pts[i][0]));
+  m.push(d[0]);
+  for (let i = 1; i < n - 1; i++) m.push(d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2);
+  m.push(d[n - 2]);
+  let s = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = (pts[i + 1][0] - pts[i][0]) / 3;
+    s += `C${(pts[i][0] + h).toFixed(1)},${(pts[i][1] + m[i] * h).toFixed(1)} ${(pts[i + 1][0] - h).toFixed(1)},${(pts[i + 1][1] - m[i + 1] * h).toFixed(1)} ${pts[i + 1][0].toFixed(1)},${pts[i + 1][1].toFixed(1)}`;
+  }
+  return s;
 }
 function drawSavings() {
   const el = $("#sav-chart");
   if (!el) return;
-  const o = { monthly: (+SAV.monthly || 0) * 1e4, start: (+SAV.start || 0) * 1e4, years: SAV.years, acct: SAV.acct };
-  const plans = savPlans(), res = plans.map((p) => savSim(p, o));
-  const n = res[0].byYear.length;
-  lineChart(el, {
-    dates: Array.from({ length: n }, (_, i) => (i === 0 ? "지금" : `${i}년 뒤`)), xfmt: (x) => x,
-    series: plans.map((p, i) => ({ name: p.name, color: p.color, values: res[i].byYear })),
-    fmt: (v) => bigNum(v),
+  const { list } = savRun();
+  if (!list.length) return;
+  const draw = () => {
+    const W = Math.max(el.clientWidth, 260), H = 230;
+    const pad = { l: 8, r: 82, t: 14, b: 24 };
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+    const n = list[0].r.series.length, months = n - 1;
+    const step = Math.max(1, Math.ceil(months / 120));  // 점이 너무 많으면 솎아요 (끝점은 꼭)
+    const idx = [...Array(n).keys()].filter((i) => i % step === 0 || i === n - 1);
+    const hi = Math.max(...list.flatMap((x) => x.r.series), list[0].r.paidSeries[n - 1]) * 1.06 || 1;
+    const x = (i) => pad.l + (months ? (i / months) * iw : iw / 2);
+    const y = (v) => pad.t + (1 - v / hi) * ih;
+    const nice = (v) => { const e = Math.pow(10, Math.floor(Math.log10(v))); return [1, 2, 2.5, 5, 10].map((k) => k * e).find((k) => k >= v); };
+    const tick = nice(hi / 4);
+    const ticks = []; for (let v = tick; v < hi; v += tick) ticks.push(v);
+    const grid = ticks.map((v) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${y(v)}" y2="${y(v)}"/>
+      <text x="${pad.l + 2}" y="${y(v) - 4}">${esc(bigNum(v))}</text>`).join("");
+    const yrs = SAV.years, yStep = yrs <= 5 ? 1 : yrs <= 10 ? 2 : yrs <= 20 ? 5 : 10;
+    const xl = [...Array(Math.floor(yrs / yStep) + 1).keys()].map((k) => k * yStep).map((yv) =>
+      `<text x="${x(yv * 12)}" y="${H - 6}" text-anchor="${yv === 0 ? "start" : yv === yrs ? "end" : "middle"}">${yv === 0 ? "지금" : `${yv}년`}</text>`).join("");
+    const pts = (arr) => idx.map((i) => [x(i), y(arr[i])]);
+    const uid = Math.random().toString(36).slice(2, 8);
+    const grads = list.map((s, k) => `<linearGradient id="sg${uid}${k}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${s.color}" stop-opacity="${k ? 0.10 : 0.28}"/><stop offset="1" stop-color="${s.color}" stop-opacity="0"/></linearGradient>`).join("");
+    const base = y(0);
+    const areas = list.map((s, k) => { const p = pts(s.r.series), line = smoothPath(p);
+      return `<path class="sav-area" d="${line}L${p[p.length - 1][0].toFixed(1)},${base}L${p[0][0].toFixed(1)},${base}Z" fill="url(#sg${uid}${k})"/>`; }).reverse().join("");
+    const lines = list.map((s) => `<path class="sav-line" d="${smoothPath(pts(s.r.series))}" stroke="${s.color}"/>`).reverse().join("");
+    const paidLine = `<path class="sav-paid" d="${pts(list[0].r.paidSeries).map(([a, b], i) => `${i ? "L" : "M"}${a.toFixed(1)},${b.toFixed(1)}`).join("")}"/>`;
+    // 끝 점 + 값 알약 (겹치면 벌려요)
+    const ends = list.map((s) => ({ s, v: s.r.series[n - 1], y: y(s.r.series[n - 1]) })).sort((a, b) => a.y - b.y);
+    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 20) ends[k].y = ends[k - 1].y + 20;
+    const short = (v) => savWon(v).replace(/원$/, "");
+    const pills = ends.map((e) => { const t = short(e.v), w = Math.min(pad.r - 8, t.length * 7 + 12), px = pad.l + iw + 6;
+      return `<circle cx="${x(n - 1)}" cy="${y(e.v)}" r="4" fill="${e.s.color}" stroke="var(--surface-1)" stroke-width="2"/>
+        <g transform="translate(${px},${Math.max(0, Math.min(pad.t + ih - 18, e.y - 9))})"><rect width="${w}" height="18" rx="9" fill="${e.s.color}"/>
+        <text x="${w / 2}" y="13" text-anchor="middle" class="sav-pill">${esc(t)}</text></g>`; }).join("");
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.p.name).join(", "))} 적립 잔고 차트">
+      <defs>${grads}</defs>${grid}<line class="sav-base" x1="${pad.l}" x2="${pad.l + iw}" y1="${base}" y2="${base}"/>
+      ${areas}${paidLine}${lines}${pills}${xl}
+      <g class="hover" style="display:none"><line class="cross" y1="${pad.t}" y2="${pad.t + ih}"/>
+        ${list.map((s) => `<circle r="5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2"/>`).join("")}</g>
+      <rect x="${pad.l}" y="0" width="${iw}" height="${H}" fill="transparent"/></svg><div class="tip" style="display:none"></div>`;
+    const svg = $("svg", el), g = $(".hover", el), tip = $(".tip", el);
+    const show = (ev) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((ev.clientX - r.left) / r.width) * W;
+      const i = Math.max(0, Math.min(months, Math.round(((px - pad.l) / iw) * months)));
+      const cx = x(i);
+      g.style.display = "";
+      $("line", g).setAttribute("x1", cx); $("line", g).setAttribute("x2", cx);
+      g.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", cx); c.setAttribute("cy", y(list[k].r.series[i])); });
+      const when = i === 0 ? "지금" : `${Math.floor(i / 12) ? `${Math.floor(i / 12)}년` : ""}${i % 12 ? ` ${i % 12}개월` : ""} 뒤`.trim();
+      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(list[0].r.paidSeries[i]))}</div>` + list.map((s) =>
+        `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.p.name)} <b>${esc(savWon(s.r.series[i]))}</b></div>`).join("");
+      tip.style.display = "";
+      const tw = tip.offsetWidth, left = (cx / W) * r.width;
+      tip.style.left = `${Math.max(0, Math.min(r.width - tw, left > r.width / 2 ? left - tw - 12 : left + 12))}px`;
+    };
+    const hide = () => { g.style.display = "none"; tip.style.display = "none"; };
+    svg.addEventListener("pointermove", show);
+    svg.addEventListener("pointerdown", show);
+    svg.addEventListener("pointerleave", hide);
+  };
+  draw();
+  let w = el.clientWidth;
+  const ro = new ResizeObserver(() => {
+    if (!el.isConnected) { ro.disconnect(); return; }
+    if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; draw(); }
   });
+  ro.observe(el);
 }
 function bindSavings() {
   const save = () => { try { localStorage.setItem("savings", JSON.stringify(SAV)); } catch (e) { /* 이번만 */ } };
   const refresh = () => { save(); const out = $("#sav-out"); if (out) { out.innerHTML = savOut(); drawSavings(); } };
   document.querySelectorAll("[data-sav]").forEach((i) => i.addEventListener("input", () => {
     const v = parseFloat(i.value.replace(/[,\s]/g, ""));
-    SAV[i.dataset.sav] = Number.isFinite(v) && v >= 0 ? Math.min(v, i.dataset.sav === "mdd" ? 99 : 1e6) : 0;
+    const k = i.dataset.sav, neg = k === "price";  // 주가 상승은 마이너스도 돼요
+    SAV[k] = Number.isFinite(v) && (neg || v >= 0) ? Math.max(-50, Math.min(v, k === "mdd" ? 99 : k === "price" || k === "div" ? 50 : 1e6)) : 0;
     refresh();
   }));
   const pick = (attr, key, cast) => document.querySelectorAll(`[${attr}]`).forEach((b) => b.addEventListener("click", () => {
@@ -2098,6 +2239,19 @@ function bindSavings() {
   }));
   pick("data-sav-y", "years", Number);
   pick("data-sav-a", "acct", String);
+  // 상품: 눌러서 넣고 빼요. 3개가 차 있으면 가장 먼저 고른 것을 빼요
+  document.querySelectorAll("[data-sav-p]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.savP, at = SAV.picks.indexOf(k);
+    if (at >= 0) { if (SAV.picks.length > 1) SAV.picks.splice(at, 1); } else { SAV.picks.push(k); if (SAV.picks.length > 3) SAV.picks.shift(); }
+    document.querySelectorAll("[data-sav-p]").forEach((x) => x.setAttribute("aria-pressed", String(SAV.picks.includes(x.dataset.savP))));
+    if (k === "mine" && SAV.picks.includes("mine")) { const d = $(".sav-mine"); if (d) d.open = true; }
+    refresh();
+  }));
+  document.querySelectorAll("[data-sav-c]").forEach((c) => c.addEventListener("change", () => {
+    SAV[c.dataset.savC] = c.checked;
+    const a = $("#sav-acct"); if (a) a.style.display = SAV.taxOn ? "" : "none";
+    refresh();
+  }));
   drawSavings();
 }
 
