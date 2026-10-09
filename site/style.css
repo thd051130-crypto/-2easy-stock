@@ -457,3 +457,12 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip-link { border: 1px solid var(--border); background: var(--surface-0); border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; min-height: 32px; font-variant-numeric: tabular-nums; }
 .chip-link.up { color: var(--up); } .chip-link.down { color: var(--down); }
+
+/* 애널리스트 목표주가 */
+.tgt-bar { position: relative; height: 10px; background: var(--surface-0); border-radius: 999px; margin: 14px 8px 4px; }
+.tgt-range { position: absolute; top: 0; bottom: 0; background: var(--accent-bg); border-radius: 999px; }
+.tgt-mark { position: absolute; top: -4px; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; }
+.tgt-mark.mean, .dot.mean { background: var(--series-2); }
+.tgt-mark.now, .dot.now { background: var(--text-primary); }
+.tgt-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: 0; }

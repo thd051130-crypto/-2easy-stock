@@ -137,3 +137,16 @@ def test_monthly_ohlc_merges_duplicate_month_rows():
     # 거래량이 있으면 달별로 더해서 v로 (보조지표 거래량 막대)
     h["Volume"] = [100, 200, 300, 50]
     assert ks.ohlc_payload(ks.monthly_ohlc(h), "%Y-%m")["v"] == [100, 200, 350]
+
+
+def test_fund_table_keeps_screen_fields_only(tmp_path):
+    import dashboard as db
+    path = tmp_path / "fundamentals.json"
+    path.write_text(json.dumps(dict(stocks={"005930": dict(
+        name="삼성전자", per=11.8, loss=False, pbr=3.06, div=0.56, cap=1.5e15, roe=0.12, debt=40.0, financial=False,
+        grade=dict(grade="B", score=3, total=4, checks=[]), annual=dict(dates=["2025"]), target=dict(mean=478905.62, n=36),
+        events=dict(exdiv="2026-06-29", earn="2026-10-28"))})))
+    t = db.fund_table(path)["005930"]
+    assert t["grade"] == ["B", 3, 4] and t["target"]["n"] == 36 and t["events"]["earn"] == "2026-10-28"
+    assert "annual" not in t and "loss" not in t and "financial" not in t and t["per"] == 11.8
+    assert db.fund_table(tmp_path / "없음.json") == {}

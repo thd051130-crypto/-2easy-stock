@@ -137,6 +137,23 @@ ETF_RULES = [
 ]
 
 
+FUND_KEYS = ("name", "per", "loss", "pbr", "div", "roe", "debt", "financial", "cap", "target", "events")
+
+
+def fund_table(path):
+    """조건 검색·배당 달력·히트맵·실적 일정용 종목별 재무 한 줄 (fundamentals.json에서 화면에 쓰는 것만).
+    등급은 [등급, 점수, 만점]으로 줄여요. 종목 화면의 연간·분기 재무제표는 stock_pages.py가 따로 붙여요."""
+    stocks = (read_json(path) or {}).get("stocks") or {}
+    out = {}
+    for code, f in stocks.items():
+        row = {k: f.get(k) for k in FUND_KEYS if f.get(k) not in (None, {}, False)}
+        g = f.get("grade") or {}
+        if g.get("score") is not None:
+            row["grade"] = [g.get("grade"), g["score"], g.get("total")]
+        out[code] = row
+    return out
+
+
 def readiness_of(key, acct, health):
     if not acct:
         return None
@@ -175,7 +192,8 @@ def build(paper_dir):
                             account=account(folder, key), rules=RULES[key],
                             rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES),
                             # 텔레그램으로 넣은 종목 (시세는 배포 때 stock_pages.py가 채워요), 기다리는 가격 알림
-                            extras=watch[key], alerts=[a for a in alerts if a.get("market") == key])
+                            extras=watch[key], alerts=[a for a in alerts if a.get("market") == key],
+                            funds=fund_table(folder / "fundamentals.json"))
         markets[key]["readiness"] = readiness_of(key, markets[key]["account"], health)
     fl = read_json(paper_dir / "kr" / "flows.json")
     markets["kr"]["flows"] = dict(day=fl.get("day"), warn=flows.warnings(fl), **flows.top_flows(fl)) if fl else None

@@ -277,7 +277,21 @@ def stock_summary(closes, market, days=60):
             continue
         spark = [round(float(x)) if market == "kr" else round(float(x), 2) for x in s.iloc[-days:]]
         out.append(dict(code=code, name=name, day=f"{s.index[-1]:%Y-%m-%d}", close=round(float(s.iloc[-1]), 2),
-                        d1=round(float(s.iloc[-1] / s.iloc[-2] - 1), 4), spark=spark))
+                        d1=round(float(s.iloc[-1] / s.iloc[-2] - 1), 4), spark=spark, **screen_stats(s)))
+    return out
+
+
+def screen_stats(s):
+    """조건 검색용: 200일선 대비(%), RSI14, 52주(252거래일) 최고가 대비(%). 기간이 모자라면 그 값은 빼요."""
+    out = {}
+    last = float(s.iloc[-1])
+    if len(s) >= 200:
+        out["ma200"] = round(last / float(s.iloc[-200:].mean()) - 1, 4)
+    if len(s) >= 15:
+        d = s.diff().iloc[-14:]
+        up, down = float(d.clip(lower=0).mean()), float(-d.clip(upper=0).mean())
+        out["rsi14"] = round(100.0 if down == 0 else 100 - 100 / (1 + up / down), 1)
+    out["hi52"] = round(last / float(s.iloc[-252:].max()) - 1, 4)
     return out
 
 

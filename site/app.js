@@ -2313,8 +2313,41 @@ function fundHtml(f) {
       ${fundBars(s)}${fundTable(s, usd)}${growthLine(s)}`;
   }
   return `<h2>재무제표 <small>${md(f.asof)} 받음</small></h2><div class="stats">${tiles}</div>
-    <p class="sub" style="margin:12px 0 0">${gradeLine}</p>${body}
+    <p class="sub" style="margin:12px 0 0">${gradeLine}</p>${eventsLine(f)}${targetBox(f, ent)}${body}
     <p class="muted" style="margin:10px 0 0">야후 파이낸스 무료 자료라 늦거나 빠진 값이 있을 수 있어요. PER은 최근 4분기 순이익 기준이에요.</p>`;
+}
+
+// 다음 실적 발표일·배당 일정 한 줄 (야후 무료 자료, 매주 토요일 갱신)
+const TODAY = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);  // 한국 날짜
+const dday = (d) => { const n = Math.round((Date.parse(d) - Date.parse(TODAY())) / 864e5); return n === 0 ? "오늘" : n > 0 ? `D-${n}` : `${-n}일 전`; };
+const ymd = (d) => `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}`;
+function eventsLine(f) {
+  const e = f.events || {};
+  const parts = [];
+  if (e.earn) parts.push(`실적 발표 <b>${ymd(e.earn)}</b> (${dday(e.earn)})`);
+  if (e.exdiv) parts.push(`배당락 ${ymd(e.exdiv)}${e.exdiv >= TODAY() ? ` (${dday(e.exdiv)})` : ""}`);
+  if (e.div_rate) parts.push(`1주당 연 배당 ${market === "kr" ? `${num(e.div_rate)}원` : `$${e.div_rate.toFixed(2)}`}`);
+  return parts.length ? `<p class="sub" style="margin:8px 0 0">📅 ${parts.join(" · ")}</p>` : "";
+}
+
+// 애널리스트 목표주가 (야후 무료 컨센서스): 최저~최고 막대 위에 지금 가격과 평균 목표가
+function targetBox(f, ent) {
+  const t = f.target;
+  if (!t || !t.mean) return "";
+  const x = STOCK_READY.get(`${market}/${stockCode}`);
+  const cc = x && x.candles && x.candles.c;
+  const now = ent && ent.close != null ? ent.close : cc && cc.length ? cc[cc.length - 1] : null;
+  const up = now ? t.mean / now - 1 : null;
+  const lo = Math.min(t.low ?? t.mean, now ?? t.mean), hi = Math.max(t.high ?? t.mean, now ?? t.mean);
+  const at = (v) => `${(((v - lo) / (hi - lo || 1)) * 100).toFixed(1)}%`;
+  const bar = t.low != null && t.high != null ? `<div class="tgt-bar" aria-hidden="true">
+      <span class="tgt-range" style="left:${at(t.low)};right:${(100 - parseFloat(at(t.high))).toFixed(1)}%"></span>
+      <span class="tgt-mark mean" style="left:${at(t.mean)}"></span>${now ? `<span class="tgt-mark now" style="left:${at(now)}"></span>` : ""}</div>
+    <div class="tgt-ends"><span>최저 ${px(market, t.low)}</span><span>최고 ${px(market, t.high)}</span></div>` : "";
+  return `<div class="tgt"><h3 class="muted" style="margin:14px 0 6px">애널리스트 목표주가 <small>${t.n}명 평균</small></h3>
+    <p class="sub" style="margin:0"><b>${price(market, t.mean)}</b>${up == null ? "" : ` · 지금보다 <b class="${sign(up)}">${pct(up)}</b>`}${t.rec ? ` · 의견 <b>${esc(t.rec)}</b>` : ""}</p>
+    ${bar}<div class="legend" style="margin:4px 0 0"><span class="key"><i class="dot now"></i>지금 가격</span><span class="key"><i class="dot mean"></i>평균 목표가</span></div>
+    <p class="muted" style="margin:6px 0 0">증권사 목표가는 대체로 낙관적이고 늦게 바뀌어요. 참고만 하세요.</p></div>`;
 }
 
 // 매출과 영업이익(없으면 순이익) 막대. 적자는 0 아래로.
