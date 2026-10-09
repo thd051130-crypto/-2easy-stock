@@ -9,6 +9,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
   - paper/world.json : 세계 지수·환율 (world.py)
+  - paper/kr/flows.json : 국장 외국인·기관 수급 (flows.py) → 홈 경고·요약만 (종목별 막대는 stock_pages.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
   - themes.py : 문장 검색용 테마 사전 → <out>/themes.json
   - industry_map.py : 산업 지도 점·선 → <out>/industry.json (시세·주가 동행은 pages 워크플로가 이어서 채워요)
@@ -27,6 +28,7 @@ import pathlib
 import shutil
 
 import commands
+import flows
 import industry_map
 import readiness
 import strategy
@@ -175,6 +177,8 @@ def build(paper_dir):
                             # 텔레그램으로 넣은 종목 (시세는 배포 때 stock_pages.py가 채워요), 기다리는 가격 알림
                             extras=watch[key], alerts=[a for a in alerts if a.get("market") == key])
         markets[key]["readiness"] = readiness_of(key, markets[key]["account"], health)
+    fl = read_json(paper_dir / "kr" / "flows.json")
+    markets["kr"]["flows"] = dict(day=fl.get("day"), warn=flows.warnings(fl), **flows.top_flows(fl)) if fl else None
     etf_acct = account(paper_dir / "etf", "kr")
     markets["kr"]["etf"] = dict(account=etf_acct, rules=ETF_RULES, readiness=readiness_of("etf", etf_acct, health))
     fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))

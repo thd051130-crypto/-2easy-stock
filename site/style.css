@@ -450,3 +450,10 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .badge.k-h { color: var(--bb); }
 .list li[data-mapgo], .list li[data-mapsearch] { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .imap .edge, .imap .node, .imap .node .pill, .imap .node .flow { transition: none; } }
+
+/* 외국인·기관 수급 */
+.fin-chart .flow-frg, .sw.flow-frg { fill: var(--series-1); background: var(--series-1); }
+.fin-chart .flow-inst, .sw.flow-inst { fill: var(--series-2); background: var(--series-2); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-link { border: 1px solid var(--border); background: var(--surface-0); border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; min-height: 32px; font-variant-numeric: tabular-nums; }
+.chip-link.up { color: var(--up); } .chip-link.down { color: var(--down); }

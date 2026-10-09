@@ -7,6 +7,7 @@ pages 워크플로가 dashboard.py 다음에 돌려요 (`python stock_pages.py -
     야후 원래 가격(액면분할만 반영, 배당은 빼지 않음)이라 증권사 앱 차트와 같아요.
     대시보드 다른 화면과 맞추려고 오늘 신호 날짜(signal.json의 day)까지만 넣어요.
   - fund: paper/<시장>/fundamentals.json(fundamentals.py가 매주 갱신)의 그 종목 재무 요약
+  - flows: 국장만, paper/kr/flows.json(flows.py가 평일마다 갱신)의 최근 20일 외국인·기관 순매수
 야후를 못 받은 종목은 재무만으로 파일을 만들어요 (화면엔 '차트 자료 없음').
 텔레그램으로 넣은 관심종목(paper/watch.json)도 만들고, 그 종목들의 종가·전일 대비·최근 60일 종가를
 <out>/data.json의 extras에 채워요 (알림 종목처럼 swing-signals가 시세를 받지 않아서요). 이 종목들을 먼저 받아요.
@@ -23,6 +24,7 @@ import re
 
 import pandas as pd
 
+import flows
 import fundamentals
 import watchlist
 import world
@@ -95,6 +97,7 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
     """종목마다 파일 하나. budget초가 지나면 남은 종목은 시세를 받지 않고 재무만 넣어요 (배포가 늦어지지 않게).
     반환: (차트까지 만든 수, 재무만 만든 수, 텔레그램으로 넣은 종목 줄)."""
     fund = (read_json(paper / market / "fundamentals.json") or {}).get("stocks", {})
+    flow = read_json(paper / market / "flows.json") if market == "kr" else None
     until = (read_json(paper / market / "signal.json") or {}).get("day")
     extra = watchlist.extras(market, paper)
     names = {code: e.get("name") or code for code, e in extra.items()}
@@ -109,10 +112,11 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
         symbol = extra[code].get("symbol") if code in extra else None
         c = None if late else candles(fetch(symbol or fundamentals.symbol(market, code)), market, until, full=True)
         f = fund.get(code)
+        fl = flows.for_stock(flow, code)
         if code in extra:
             rows.append(row_of(extra[code], c))
-        if c is not None or f is not None:
-            payload = dict(code=code, name=name, market=market, candles=c, fund=f)
+        if c is not None or f is not None or fl is not None:
+            payload = dict(code=code, name=name, market=market, candles=c, fund=f, flows=fl)
             (folder / f"{code}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
             full += c is not None
             only_fund += c is None

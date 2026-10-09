@@ -286,14 +286,16 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d),
     rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
-  stock: (d) => [stockHeadCard(d), stockSectorCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
+  stock: (d) => [stockHeadCard(d), stockSectorCard(d), stockChartCard(),
+    market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
+    `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
 };
@@ -1926,6 +1928,61 @@ function moversCard(d) {
     <p class="muted" style="margin:10px 0 0">이유는 시장·같이 움직인 종목·거래량·뉴스 제목으로 짐작한 거예요. 사기 전에 기사 원문을 확인하세요.</p></section>`;
 }
 
+// 외국인·기관 수급 (flows.py, 네이버 무료 자료). 국장만. 홈은 '같이 파는 종목' 경고와 5일 많이 산·판 종목
+const won = (x) => `${x < 0 ? "-" : "+"}${bigNum(Math.abs(x))}원`;
+function flowsCard(d) {
+  const f = market === "kr" && d.flows;
+  if (!f) return "";
+  const warn = (f.warn || []).map((r) => `<li data-stock="${esc(r.code)}"><div class="l"><div class="name">${esc(r.name)}</div>
+      <div class="meta">외국인 ${r.frg_streak}일 연속 순매도 · 기관도 5일 순매도${r.hold == null ? "" : ` · 외국인 보유 ${r.hold.toFixed(1)}%`}</div></div>
+      <div class="r down">${won(-r.sold)}<div class="meta">5일 합계</div></div></li>`).join("");
+  const line = (rows, cls) => rows.map((r) => `<button type="button" class="chip-link ${cls}" data-stock="${esc(r.code)}">${esc(r.name)} ${won(r.won)}</button>`).join("");
+  return `<section class="card"><h2>외국인·기관 수급 <small>${md(f.day)}까지 5거래일 · 참고</small></h2>
+    ${warn ? `<h3 class="muted" style="margin:6px 0 4px">⚠️ 외국인·기관이 같이 파는 종목</h3><ul class="list">${warn}</ul>`
+      : `<p class="sub" style="margin:6px 0 0">외국인이 3일 넘게 팔면서 기관도 파는 종목은 없어요.</p>`}
+    ${(f.buy || []).length ? `<h3 class="muted" style="margin:12px 0 4px">많이 산 종목 (외국인+기관)</h3><div class="chip-row">${line(f.buy, "up")}</div>` : ""}
+    ${(f.sell || []).length ? `<h3 class="muted" style="margin:12px 0 4px">많이 판 종목</h3><div class="chip-row">${line(f.sell, "down")}</div>` : ""}
+    <p class="muted" style="margin:10px 0 0">금액은 순매수 주식 수 × 그날 종가로 어림한 값이에요. 큰손이 판다고 꼭 내리는 건 아니라서 매매 규칙은 안 바꿨어요.</p></section>`;
+}
+
+function flowBars(x) {
+  const n = x.dates.length;
+  const vals = [...x.frg, ...x.inst];
+  const hi = Math.max(1, ...vals.map(Math.abs));
+  const W = 320, H = 130, t = 6, b = 18, mid = t + (H - t - b) / 2, half = (H - t - b) / 2;
+  const gw = W / n, bw = Math.max(2, Math.min(6, gw * 0.36));
+  let bars = "";
+  x.dates.forEach((_, i) => [["frg", -bw - 0.5], ["inst", 0.5]].forEach(([k, dx]) => {
+    const v = x[k][i], h = Math.max(1, (Math.abs(v) / hi) * half);
+    bars += `<rect class="flow-${k}" x="${(i * gw + gw / 2 + dx).toFixed(1)}" y="${(v >= 0 ? mid - h : mid).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1"/>`;
+  }));
+  const lab = [[0, 0, "start"], [Math.floor((n - 1) / 2), null, "middle"], [n - 1, W, "end"]]
+    .map(([i, at, a]) => `<text x="${(at ?? i * gw + gw / 2).toFixed(1)}" y="${H - 4}" text-anchor="${a}">${md(x.dates[i])}</text>`).join("");
+  return `<svg class="fin-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${n}거래일 외국인·기관 순매수 막대">
+    <line class="gridline" x1="0" x2="${W}" y1="${mid}" y2="${mid}"/><text x="2" y="${t + 9}">순매수 ↑</text><text x="2" y="${H - b - 2}">순매도 ↓</text>${bars}${lab}</svg>`;
+}
+
+function fillFlows(x) {
+  const card = $("#flow-card");
+  if (!card) return;
+  if (!x || !x.dates || !x.dates.length) {
+    card.innerHTML = `<h2>외국인·기관 수급</h2><p class="empty">수급 자료가 아직 없어요. 평일 장 마감 뒤(17:30쯤) 받아요.</p>`;
+    return;
+  }
+  const m = x.sum || {};
+  const qty = (q) => `${q < 0 ? "-" : "+"}${Math.abs(q) >= 1e4 ? `${Math.round(Math.abs(q) / 1e4).toLocaleString("ko-KR")}만` : Math.abs(q).toLocaleString("ko-KR")}주`;
+  const st = (v) => (!v ? "-" : `${Math.abs(v)}일 연속 ${v > 0 ? "순매수" : "순매도"}`);
+  const tile = (label, w, q, sk) => `<div class="stat"><span>${label}</span><b class="${sign(w)}">${won(w)}</b><small>${qty(q)} · ${st(sk)}</small></div>`;
+  card.innerHTML = `<h2>외국인·기관 수급 <small>${md(m.day)}까지 · 참고</small></h2>
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">${tile("외국인 5일", m.frg5_won, m.frg5, m.frg_streak)}${tile("기관 5일", m.inst5_won, m.inst5, m.inst_streak)}
+      <div class="stat"><span>외국인 20일</span><b class="${sign(m.frg20_won)}">${won(m.frg20_won)}</b></div>
+      <div class="stat"><span>기관 20일</span><b class="${sign(m.inst20_won)}">${won(m.inst20_won)}</b></div></div>
+    ${m.hold == null ? "" : `<p class="sub" style="margin:10px 0 0">외국인 보유율 <b>${m.hold.toFixed(2)}%</b>${m.hold_chg == null ? "" : ` (20일 전보다 <b class="${sign(m.hold_chg)}">${m.hold_chg > 0 ? "+" : ""}${m.hold_chg.toFixed(2)}%p</b>)`}</p>`}
+    <div class="legend" style="margin:10px 0 0"><span class="key"><i class="sw flow-frg"></i>외국인</span><span class="key"><i class="sw flow-inst"></i>기관</span></div>
+    ${flowBars(x)}
+    <p class="muted" style="margin:8px 0 0">하루 순매수 주식 수 막대예요. 금액은 주식 수 × 그날 종가로 어림했어요. 네이버 증권 무료 자료예요.</p>`;
+}
+
 // 주가는 그대로인데 거래량만 크게 늘어난 종목 (quiet_volume.py). 예전 기록엔 없을 수 있어요.
 function quietVolumeCard(d) {
   const q = d.signal && d.signal.quiet_volume;
@@ -2197,6 +2254,7 @@ function drawStock(x, reset) {
     el.innerHTML = `<p class="empty">${x ? "이 종목은 차트 자료를 못 받았어요." : "이 종목 자료를 아직 못 받았어요."} 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`;
   }
   fillFund(x && x.fund);
+  fillFlows(x && x.flows);
 }
 
 function fillFund(f) {
