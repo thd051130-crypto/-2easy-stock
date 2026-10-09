@@ -7,7 +7,7 @@ name: pages
 
 on:
   workflow_run:
-    workflows: [swing-signals, fundamentals, macro, world]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
+    workflows: [swing-signals, fundamentals, macro, world, all-stocks]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
     types: [completed]
   push:
     branches: [main]
@@ -41,6 +41,20 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python dashboard.py --out _site
+      # 전 종목 종목 화면(all-stocks 워크플로가 올린 최근 2년 일봉 + 월봉). 대시보드 종목은 다음 줄이 상장일부터 받은 파일로 덮어써요
+      - name: 전 종목 차트 파일
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for m in kr us; do
+            id=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=stocks-$m&per_page=20" \
+              --jq '[.artifacts[] | select(.expired | not)] | sort_by(.created_at) | last | .id // empty')
+            if [ -z "$id" ]; then echo "$m 전 종목 파일 없음 (all-stocks가 아직 안 돌았어요)"; continue; fi
+            gh api "repos/${{ github.repository }}/actions/artifacts/$id/zip" > "/tmp/$m.zip"
+            mkdir -p "_site/stocks/$m" && unzip -o -q "/tmp/$m.zip" -d "/tmp/$m" && tar xzf "/tmp/$m/stocks-$m.tgz" -C "_site/stocks/$m"
+            echo "$m 전 종목 파일 $(ls "_site/stocks/$m" | wc -l)개"
+          done
       # 종목 화면(차트·재무제표)과 차트 화면 세계 지수 파일: 야후에서 처음부터 일봉을 받아요. 못 받아도 대시보드는 올려요
       - run: python stock_pages.py --out _site
         continue-on-error: true

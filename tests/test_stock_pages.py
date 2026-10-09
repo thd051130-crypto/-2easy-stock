@@ -125,3 +125,19 @@ def test_build_indexes_writes_every_world_index(tmp_path):
     x = json.loads((tmp_path / "indexes" / "KS11.json").read_text())
     assert x["name"] == "코스피" and x["candles"]["full"] is True and x["candles"]["h"][0] == 102.57
     assert sp.index_file("000001.SS") == "000001.SS" and sp.index_file("^STOXX50E") == "STOXX50E"
+
+
+def test_build_keeps_lite_chart_when_yahoo_is_late(tmp_path, monkeypatch):
+    """시간이 모자라 시세를 못 받은 대시보드 종목은 전 종목 파일(all_stocks.py)의 차트를 그대로 써요."""
+    paper = tmp_path / "paper"
+    (paper / "symbols").mkdir(parents=True)
+    (paper / "symbols" / "kr_returns.json").write_text(json.dumps({"s": {"005930": ["2000-01", 23.1, 2.5, -62, 10.0, [], []]}}))
+    out = tmp_path / "_site"
+    folder = out / "stocks" / "kr"
+    folder.mkdir(parents=True)
+    lite = {"dates": ["2026-10-07", "2026-10-08"], "o": [1, 2], "h": [1, 2], "l": [1, 2], "c": [1, 2]}
+    (folder / "005930.json").write_text(json.dumps({"code": "005930", "lite": True, "candles": lite}))
+    monkeypatch.setattr(sp.fundamentals, "stocks", lambda market, extras=False: {"005930": "삼성전자"})
+    full, only_fund, rows = sp.build(out, "kr", paper=paper, fetch=lambda s: None, pause=0, budget=-1)
+    x = json.loads((folder / "005930.json").read_text())
+    assert (full, only_fund) == (1, 0) and x["candles"] == lite and x["ret"][1] == 23.1 and "lite" not in x

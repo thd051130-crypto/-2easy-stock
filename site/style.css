@@ -298,15 +298,13 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 /* 종목 검색 */
 .stack { display: grid; gap: 12px; min-width: 0; }
 .stack:empty { display: none; }
-.list li.stock.other { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name act" "meta act"; }
-.stock .act { grid-area: act; }
+.list li.stock.other { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name star" "meta star"; }
 .add {
   display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: var(--accent-bg); color: var(--accent-fg); font: inherit; font-size: 14px; font-weight: 700;
   text-decoration: none; cursor: pointer; white-space: nowrap;
 }
 .add:disabled { opacity: .45; cursor: default; }
-.asked { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 
 /* 종목 화면: 가격 알림 */
 .alert-box { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }

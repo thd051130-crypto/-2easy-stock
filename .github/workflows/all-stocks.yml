@@ -1,0 +1,58 @@
+# 전 종목(국장 약 4천·미장 약 5천) 종목 화면 파일: 검색에서 아무 종목이나 눌러 차트를 보고 ☆로 관심종목에 넣을 수 있게 해요.
+#   야후 무료 시세를 묶음으로 받아(all_stocks.py, 시장마다 15분쯤) 아티팩트 stocks-<시장>으로 올리면, 끝날 때 pages가 받아서 앱에 넣어요.
+#   국장: 평일 한국시간 16:20쯤 / 미장: 화~토 한국시간 06:20쯤. 저장소에는 커밋하지 않아요 (파일이 커서).
+#   보기 전용이고 매매 규칙·가상계좌 신호는 안 바꿔요. 폰에서 바로 돌려 보기: Actions → all-stocks → Run workflow
+name: all-stocks
+
+on:
+  schedule:
+    - cron: "20 7 * * 1-5"   # UTC 07:20 = 한국 16:20, 평일 → 국장
+    - cron: "20 21 * * 1-5"  # UTC 21:20 = 한국 다음 날 06:20, 뉴욕 월~금 장 마감 뒤 → 미장
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "kr=국장, us=미장, both=둘 다"
+        type: choice
+        options: [both, kr, us]
+        default: both
+
+permissions:
+  contents: read
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
+
+concurrency:
+  group: all-stocks-${{ github.event.schedule || inputs.market }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        market: ${{ fromJSON(inputs.market == 'both' && '["kr","us"]' || inputs.market && format('["{0}"]', inputs.market) || (github.event.schedule == '20 21 * * 1-5' && '["us"]' || '["kr"]')) }}
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python all_stocks.py --market ${{ matrix.market }} --out _all
+      - run: tar czf stocks-${{ matrix.market }}.tgz -C _all .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stocks-${{ matrix.market }}
+          path: stocks-${{ matrix.market }}.tgz
+          retention-days: 7
+          compression-level: 0  # 이미 압축했어요
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow all-stocks
