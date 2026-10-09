@@ -567,17 +567,51 @@ function stocksOf(d) {
   return base.concat((d.extras || []).filter((e) => !have.has(e.code)).map((e) => ({ ...e, extra: true })));
 }
 
+// 전 종목 파일(all_stocks.py, 최근 2년 일봉)로 만든 종목 줄: 대시보드 종목이 아닌 ☆ 종목도 종가·추세선을 보여요.
+function liteStock(m, code) {
+  const x = STOCK_READY.get(`${m}/${code}`);
+  const c = x && x.candles;
+  if (!c || !c.c || c.c.length < 2) return null;
+  const n = c.c.length;
+  return { code, name: x.name || code, day: c.dates[n - 1], close: c.c[n - 1], d1: c.c[n - 2] ? c.c[n - 1] / c.c[n - 2] - 1 : null,
+    spark: c.c.slice(-64), lite: true };
+}
+// 대시보드 종목이 아닌 ☆ 종목은 종목 파일을 한 번씩 받아서 다시 그려요 (못 받은 종목은 다시 안 받아요).
+const LITE_TRIED = new Set();
+function loadLite(m, codes) {
+  const todo = codes.filter((c) => !STOCK_READY.has(`${m}/${c}`) && !LITE_TRIED.has(`${m}/${c}`));
+  if (!todo.length) return;
+  todo.forEach((c) => LITE_TRIED.add(`${m}/${c}`));
+  Promise.all(todo.map((c) => stockData(m, c))).then((got) => {
+    if (!got.some(Boolean) || m !== market || !["home", "watch"].includes(screen)) return;
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  });
+}
+// 내 관심종목(★) 줄: 대시보드 종목은 그 시세로, 나머지 상장 종목은 전 종목 파일로
+function myStocks(d) {
+  const all = stocksOf(d);
+  const out = [], wait = [];
+  for (const c of WATCH[market]) {
+    const s = all.find((x) => x.code === c) || liteStock(market, c);
+    if (s) out.push(s); else wait.push(c);
+  }
+  loadLite(market, wait);
+  return out;
+}
+
 function watchCard(d) {
   const all = stocksOf(d);
   if (!all.length) {
     return `<section class="card"><h2>관심종목</h2><p class="empty">종목 시세가 아직 없어요. ${NEXT_RUN[market]} 자동 실행 뒤에 생겨요.</p></section>`;
   }
-  const mine = WATCH[market].map((c) => all.find((s) => s.code === c)).filter(Boolean);
+  const mine = myStocks(d);
   return `<section class="card" id="watch-card"><h2>내 관심종목 <small>${mine.length}개 · ${md(all[0].day)} 종가</small></h2>
     ${mine.length ? `<ul class="list">${mine.map((s) => stockRow(s, d, { chart: true })).join("")}</ul>`
       : `<p class="empty">아래 전체 종목에서 ☆를 누르면 여기에 모여요.</p>`}
     <p class="muted note" style="margin:10px 0 0">종목을 누르면 차트와 재무제표가 나와요. ★ 목록은 이 폰 브라우저에만 저장돼요.
-      목록에 없는 종목은 위쪽 돋보기(검색)에서 찾아 텔레그램으로 넣을 수 있어요.</p></section>`;
+      아래 목록에 없는 종목도 위쪽 돋보기(검색)에서 찾아 ☆만 누르면 여기에 들어와요 (국장·미장 상장 종목 전부).</p></section>`;
 }
 
 function allStocksCard(d) {
@@ -611,23 +645,56 @@ const FILTERS = [
 ];
 let FILTER_ON = [];
 try { FILTER_ON = JSON.parse(localStorage.getItem("filters") || "[]").filter((k) => FILTERS.some((x) => x[0] === k)); } catch (e) { /* 처음 */ }
+// 조건 검색 범위: 대형주(대시보드 종목) 또는 전 종목(all_stocks.py가 매일 만드는 stocks/<시장>/_quotes.json, 주가 조건만)
+let scrAll = false;
+try { scrAll = localStorage.getItem("scr_all") === "1"; } catch (e) { /* 처음 */ }
+const QUOTES = { kr: null, us: null };  // {day, q: {코드: [종가, 전일 대비, 3개월, 200일선 대비, 52주 고점 대비, RSI14]}}
+const quoteLoading = {};
+function loadQuotes(m) {
+  if (!quoteLoading[m]) {
+    quoteLoading[m] = fetch(`stocks/${m}/_quotes.json`, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => { QUOTES[m] = x && x.q ? x : { q: {} }; if (!x) quoteLoading[m] = null; });
+  }
+  return quoteLoading[m];
+}
+function quoteStocks(m) {
+  const q = (QUOTES[m] || {}).q || {};
+  const names = new Map((SYM[m] || []).map((e) => [e.row[0], e.row[1]]));
+  return Object.entries(q).map(([code, v]) => ({ code, name: names.get(code) || code, day: QUOTES[m].day, close: v[0], d1: v[1],
+    c3: v[2], ma200: v[3], hi52: v[4], rsi14: v[5] }));
+}
+
 function screenerCard(d) {
   const funds = d.funds || {};
-  const all = stocksOf(d).filter((s) => !s.extra);
-  if (!all.length) return "";
+  const big = stocksOf(d).filter((s) => !s.extra);
+  if (!big.length) return "";
+  const wide = scrAll && QUOTES[market] && Object.keys(QUOTES[market].q).length && SYM[market];
+  if (scrAll && !wide) {
+    Promise.all([loadQuotes(market), loadSymbols()]).then(() => {
+      if (screen === "watch" && Object.keys((QUOTES[market] || { q: {} }).q).length) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+    });
+  }
+  const all = wide ? quoteStocks(market) : big;
+  const scope = [["big", `대형주 ${big.length}개`], ["all", "전 종목"]].map(([k, label]) =>
+    `<button type="button" data-scope="${k}" aria-pressed="${(k === "all") === scrAll}">${label}</button>`).join("");
   const chips = FILTERS.map(([k, label]) => `<button type="button" data-filter="${k}" aria-pressed="${FILTER_ON.includes(k)}">${label}</button>`).join("");
   const on = FILTERS.filter((x) => FILTER_ON.includes(x[0]));
   let body = `<p class="sub note" style="margin:10px 0 0">조건을 하나 이상 누르면 모두 만족하는 종목만 보여요.</p>`;
-  if (on.length) {
+  if (scrAll && !wide) {
+    body = `<p class="muted" style="margin:10px 0 0">전 종목 시세를 불러오는 중이에요… (처음 한 번은 몇 초 걸려요. 계속 안 뜨면 all-stocks 작업이 아직 안 돈 거예요)</p>`;
+  } else if (on.length) {
     const hits = all.filter((s) => on.every(([, , ok]) => ok(s, funds[s.code] || {})));
     hits.sort((a, b) => (b.d1 ?? -9) - (a.d1 ?? -9));
-    body = `<p class="sub" style="margin:10px 0 4px"><b>${hits.length}개</b> / ${all.length}개 종목</p>`
-      + (hits.length ? `<ul class="list">${hits.map((s) => stockRow(s, d, { meta: on.map(([, , , show]) => show(s, funds[s.code] || {})).join(" · ") })).join("")}</ul>`
+    const cap = 50;
+    body = `<p class="sub" style="margin:10px 0 4px"><b>${hits.length.toLocaleString("ko-KR")}개</b> / ${all.length.toLocaleString("ko-KR")}개 종목${hits.length > cap ? ` · 오늘 많이 오른 ${cap}개만 보여요` : ""}</p>`
+      + (hits.length ? `<ul class="list">${hits.slice(0, cap).map((s) => stockRow(s, d, { meta: on.map(([, , , show]) => show(s, funds[s.code] || {})).join(" · ") })).join("")}</ul>`
         : `<p class="empty">조건을 모두 만족하는 종목이 없어요. 조건을 하나 빼 보세요.</p>`);
   }
   const noPrice = !all.some((s) => s.ma200 != null);
-  return `<section class="card" id="screener"><h2>조건 검색 <small>${all.length}개 대형주 중</small></h2>
+  return `<section class="card" id="screener"><h2>조건 검색 <small>${wide ? `상장 ${all.length.toLocaleString("ko-KR")}종목 중` : `${all.length}개 대형주 중`}</small></h2>
+    <div class="period" role="group" aria-label="찾을 범위" style="margin:0 0 10px">${scope}</div>
     <div class="chips">${chips}</div>${body}
+    ${scrAll ? `<p class="muted note" style="margin:10px 0 0">전 종목은 주가 조건(200일선·52주 고점·RSI)을 다 봐요. PER·배당 같은 재무 조건은 재무를 받는 대형주만 남아요.</p>` : ""}
     <p class="muted note" style="margin:10px 0 0">뜻이 궁금하면: ${["200일선", "52주 고점", "RSI", "PER", "PBR", "배당수익률", "ROE", "부채비율", "목표주가"].map((t) => term(t)).join(" · ")}</p>
     <p class="muted note" style="margin:6px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
 }
@@ -685,6 +752,13 @@ function bindRows(el, d) {
 }
 
 function bindWatch(d) {
+  document.querySelectorAll("[data-scope]").forEach((b) => b.addEventListener("click", () => {
+    scrAll = b.dataset.scope === "all";
+    try { localStorage.setItem("scr_all", scrAll ? "1" : "0"); } catch (e) { /* 이번만 기억 */ }
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
   document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.filter;
     FILTER_ON = FILTER_ON.includes(k) ? FILTER_ON.filter((x) => x !== k) : FILTER_ON.concat(k);
@@ -730,17 +804,16 @@ function starClicked(d, b) {
 }
 
 function homeWatchCard(d) {
-  const all = stocksOf(d);
-  const mine = WATCH[market].map((c) => all.find((s) => s.code === c)).filter(Boolean);
+  const mine = myStocks(d);
   if (!mine.length) return "";
-  return `<section class="card"><h2>관심종목 <small>${md(all[0].day)} 종가</small></h2>
+  return `<section class="card"><h2>관심종목 <small>${md(mine[0].day)} 종가</small></h2>
     <ul class="list">${mine.slice(0, 5).map((s) => stockRow(s, d, { star: false, chart: true })).join("")}</ul>
     ${more("watch", mine.length > 5 ? `관심종목 ${mine.length}개 모두 보기` : "관심종목 보기")}</section>`;
 }
 
 // ---------------------------------------------------------------- 종목 검색 (국장·미장 전체 상장 종목)
 // 목록은 symbols/<시장>.json (매주 symbols.py가 야후에서 받음). 찾는 규칙은 symbols.py와 똑같이 맞춰요.
-// 대시보드에 있는 종목은 바로 종목 화면으로, 없는 종목은 '추가'로 텔레그램 봇에게 넣어 달라고 보내요.
+// 대시보드 종목은 상장일부터 차트·재무제표, 나머지 상장 종목은 전 종목 파일(최근 2년 일봉 + 월봉)로 바로 열고 ☆로 관심종목에 넣어요.
 const CORP = /\(주\)|㈜|주식회사|\(유\)|유한회사/g;
 const HANGUL = /[가-힣]/;
 const LETTERS = { a: "에이", b: "비", c: "씨", d: "디", e: "이", f: "에프", g: "지", h: "에이치", i: "아이", j: "제이", k: "케이",
@@ -796,10 +869,6 @@ function loadSymbols() {
   return symLoading;
 }
 
-// '추가'를 누른 종목 (이 폰에만 기억, 이틀 지나면 다시 '추가'로)
-const REQ = {};
-try { Object.assign(REQ, JSON.parse(localStorage.getItem("req") || "{}")); } catch (e) { /* 없음 */ }
-for (const [k, t] of Object.entries(REQ)) if (!(Date.now() - t < 2 * 864e5)) delete REQ[k];
 
 // 텔레그램 봇 시작 링크: 명령을 base64url로 담아요 (봇이 '/start c_…'로 받아서 그대로 처리)
 function tgLink(cmd) {
@@ -862,8 +931,8 @@ function searchResults() {
     return `<section class="card"><ul class="help" style="margin:0">
       <li>이름 일부만 쳐도 돼요: '하이닉스', '삼성sdi', '코덱스 200', '슈드'</li>
       <li>문장으로 쳐도 돼요: '전력 관련분야 종목 찾아줘', '미국 원전주', '화장품 대장주'</li>
-      <li>대시보드에 있는 종목은 누르면 차트와 재무제표가 나와요.</li>
-      <li>없는 종목은 '추가'를 누르면 텔레그램이 열려요. 봇 화면에서 시작(START)을 누르면 보통 30분 안에 대시보드에 생기고 ★에 들어가요.</li></ul></section>
+      <li>어떤 상장 종목이든 누르면 차트가 나오고, ☆를 누르면 바로 관심종목에 들어가요. 하나씩 추가할 필요 없어요.</li>
+      <li>대형주(대시보드 종목)는 재무제표·수급까지 나와요.</li></ul></section>
       ${themeChips("테마로 찾기")}`;
   }
   const ask = parseAsk(q);
@@ -890,16 +959,14 @@ function nameCards({ tracked, others }, loading) {
       <ul class="list">${tracked.slice(0, 15).map(trackedRow).join("")}</ul></section>`);
   }
   if (others.length) {
-    cards.push(`<section class="card"><h2>다른 상장 종목 <small>${others.length > 30 ? `${others.length}개 중 30개` : `${others.length}개`}</small></h2>
-      <ul class="list">${others.slice(0, 30).map(otherRow).join("")}</ul>${botNote()}
+    cards.push(`<section class="card"><h2>다른 상장 종목 <small>${others.length > 30 ? `${others.length}개 중 30개` : `${others.length}개`} · 누르면 차트</small></h2>
+      <ul class="list">${others.slice(0, 30).map(otherRow).join("")}</ul>
       ${others.length > 30 ? `<p class="muted" style="margin:10px 0 0">더 자세히 쳐 보세요.</p>` : ""}</section>`);
   } else if (loading) {
     cards.push(`<section class="card"><p class="muted">전체 종목 목록을 불러오는 중이에요…</p></section>`);
   }
   return cards;
 }
-const botNote = () => (DATA && DATA.bot ? ""
-  : `<p class="muted" style="margin:10px 0 0">텔레그램 봇이 아직 연결 전이라 '추가'를 못 눌러요. telegram-bot 워크플로가 한 번 돌면 켜져요.</p>`);
 
 // ---------------------------------------------------------------- 문장 검색 ('전력 관련분야 종목 찾아줘')
 // themes.json (themes.py): 테마 낱말 → 미리 고른 국장·미장 대표 종목. 유료 AI 없이 문장에서 테마 낱말을 찾아요.
@@ -1019,7 +1086,6 @@ function themeCard(t, only) {
   return `<section class="card theme-card"><h2>${esc(t.name)} <small>테마 · 참고</small></h2>
     <p class="sub">${esc(t.why)}</p>${parts || `<p class="empty">이 시장엔 골라 둔 종목이 없어요.</p>`}
     <button type="button" class="more" data-map="${esc(t.name)}">산업 지도에서 이어진 산업 보기<span aria-hidden="true">›</span></button>
-    ${botNote()}
     <p class="muted note" style="margin:10px 0 0">미리 골라 둔 대표 종목이에요 (큰 회사부터). 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
 }
 
@@ -1034,15 +1100,14 @@ function trackedRow(x) {
       aria-label="${esc(s.name)} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button></li>`;
 }
 
+// 대시보드 밖 상장 종목: 누르면 종목 화면(전 종목 파일), ☆는 바로 관심종목
 function otherRow(x) {
   const { m, row } = x;
-  const key = `${m}/${row[0]}`;
-  const link = tgLink(`관심 ${m} ${row[0]}`);
-  const act = REQ[key] ? `<span class="asked">요청함</span>`
-    : link ? `<a class="add" href="${esc(link)}" target="_blank" rel="noopener" data-req="${esc(key)}" aria-label="${esc(row[1])} 텔레그램으로 추가">추가</a>`
-      : `<button type="button" class="add" disabled>추가</button>`;
+  const on = WATCH[m].includes(row[0]);
   const meta = [row[0], kindName(m, row), m === market ? "" : MK_NAME[m]].filter(Boolean).join(" · ");
-  return `<li class="stock other"><div class="name">${esc(row[1])}</div><div class="meta">${esc(meta)}</div><div class="act">${act}</div></li>`;
+  return `<li class="stock other" data-open="${m}/${esc(row[0])}"><div class="name">${esc(row[1])}</div><div class="meta">${esc(meta)}</div>
+    <button type="button" class="star" data-wstar="${m}/${esc(row[0])}" aria-pressed="${on}"
+      aria-label="${esc(row[1])} ${on ? "관심종목에서 빼기" : "관심종목에 넣기"}">${on ? "★" : "☆"}</button></li>`;
 }
 
 function bindSearch() {
@@ -1087,11 +1152,6 @@ function bindResults(el) {
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
     jumpSectors = true;
     go("home");
-  }));
-  el.querySelectorAll("[data-req]").forEach((a) => a.addEventListener("click", () => {
-    REQ[a.dataset.req] = Date.now();
-    try { localStorage.setItem("req", JSON.stringify(REQ)); } catch (e) { /* 이번만 기억 */ }
-    setTimeout(() => { if (screen === "search") { const list = $("#search-results"); if (list) { list.innerHTML = searchResults(); bindResults(list); } } }, 300);
   }));
 }
 
@@ -2758,10 +2818,12 @@ function stockData(m, code) {
   return STOCK_DATA.get(key);
 }
 
+let headHad = null;  // 종목 파일을 받은 뒤 머리 칸을 그린 종목 (대시보드 밖 종목은 받고 나서 이름·종가를 채워 한 번 더 그려요)
 function stockHeadCard(d) {
   const code = stockCode;
-  const s = stocksOf(d).find((x) => x.code === code);
   const x = STOCK_READY.get(`${market}/${code}`);
+  if (x) headHad = `${market}/${code}`;
+  const s = stocksOf(d).find((y) => y.code === code) || liteStock(market, code);
   const name = (s && s.name) || (x && x.name) || code;
   const on = WATCH[market].includes(code);
   const sig = d.signal || {};
@@ -2770,7 +2832,8 @@ function stockHeadCard(d) {
   if ((sig.rulebook || []).some((p) => p.code === code)) badges.push(`<span class="badge">규칙표 후보</span>`);
   if (s && s.extra) badges.push(`<span class="badge">추가한 종목</span>`);
   const kind = s && s.extra ? kindName(market, [code, name, s.exch || "", s.kind || "s"])
-    : market === "kr" ? "코스피" : code === "SPY" ? "미국 ETF" : "미국 주식";
+    : x && x.lite ? kindName(market, [code, name, x.exch || "", x.kind || "s"])
+      : market === "kr" ? "코스피" : code === "SPY" ? "미국 ETF" : "미국 주식";
   const c3 = s && s.spark && s.spark.length > 1 ? s.spark[s.spark.length - 1] / s.spark[0] - 1 : null;
   return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
     <div class="stock-title"><div class="l"><h2 class="stock-name">${esc(name)}</h2>
@@ -2901,8 +2964,9 @@ function stockChartCard() {
 // (국장 2000년 1월, 미장 1962년 1월)은 그때부터예요.
 function sinceLabel(c) {
   if (!c || !c.dates || !c.dates.length) return "";
-  const first = c.dates[0], ym = `${first.slice(0, 4)}.${first.slice(5, 7)}`;
-  if (!c.full) return `${ym}부터`;
+  const mo = c.monthly && c.monthly.dates.length ? c.monthly : null;  // 전 종목 파일: 일봉은 2년, 월봉은 처음부터
+  const first = (mo || c).dates[0], ym = `${first.slice(0, 4)}.${first.slice(5, 7)}`;
+  if (!c.full && !mo) return `${ym}부터`;
   const oldest = market === "kr" ? first <= "2000-01-31" : first <= "1962-01-31";
   return oldest ? `${ym}부터 전체 (야후 자료 시작)` : `${ym} 상장 이후 전체`;
 }
@@ -2920,9 +2984,11 @@ function allTimeLine(c) {
 
 function bindStock() {
   const key = `${market}/${stockCode}`;
-  bindAlert(stocksOf(DATA.markets[market]).find((x) => x.code === stockCode));
+  const dash = stocksOf(DATA.markets[market]).find((x) => x.code === stockCode);
+  bindAlert(dash || liteStock(market, stockCode));
   const fill = (x) => {
     if (screen !== "stock" || `${market}/${stockCode}` !== key) return;  // 받는 사이 다른 화면으로 갔으면 안 그려요
+    if (!dash && x && headHad !== key) { render(); return; }  // 대시보드 밖 종목: 이름·종목 종류·종가를 채워서 다시
     drawStock(x, false);
     fillCheck();
   };
@@ -2946,23 +3012,36 @@ function drawStock(x, reset) {
       { fmt: (v) => px(market, v), name: x.name });
     stockDrawn = key;
     const all = $("#stock-all"), since = $("#stock-since");
-    if (all) all.innerHTML = allTimeLine(x.candles);
+    if (all) all.innerHTML = allTimeLine(x.candles.monthly && x.candles.monthly.dates.length ? x.candles.monthly : x.candles);
     if (since) since.textContent = sinceLabel(x.candles);
   } else {
     el.innerHTML = `<p class="empty">${x ? "이 종목은 차트 자료를 못 받았어요." : "이 종목 자료를 아직 못 받았어요."} 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`;
   }
-  fillFund(x && x.fund);
-  fillFlows(x && x.flows);
+  fillFund(x && x.fund, x);
+  if (x && x.lite) { const fc = $("#flow-card"); if (fc) fc.remove(); }  // 수급은 대형주(대시보드 종목)만 받아요
+  else fillFlows(x && x.flows);
 }
 
-function fillFund(f) {
+function fillFund(f, x) {
   const card = $("#fund-card");
   if (!card) return;
-  card.innerHTML = fundHtml(f);
+  card.innerHTML = fundHtml(f, x) + retHtml(x && x.ret);
   card.querySelectorAll("[data-fund]").forEach((b) => b.addEventListener("click", () => {
     fundMode = b.dataset.fund;
-    fillFund(f);
+    fillFund(f, x);
   }));
+}
+
+// 오래 들고 있었다면: returns.py(매주)가 월봉으로 계산한 최근 10년(짧으면 상장 뒤) 주가 상승률·배당률과 상장 뒤 최대 낙폭
+function retHtml(r) {
+  if (!r) return "";
+  const [start, up, div, mdd, years] = r;
+  const tile = (label, value, note) => `<div class="stat"><span>${label}</span><b>${value}</b><small>${note}</small></div>`;
+  const signed = (v) => `${v > 0 ? "+" : ""}${v}%`;
+  return `<h3 style="margin:16px 0 6px">오래 들고 있었다면 <small class="muted">최근 ${years}년 · 1년 평균</small></h3>
+    <div class="stats">${tile("주가 상승", `<span class="${sign(up)}">${signed(up)}</span>`, "연 복리")}${tile("배당", `${div}%`, "연 평균")}
+      ${tile(term("최대 낙폭"), `<span class="down">${mdd}%</span>`, `${start.replace("-", ".")} 이후`)}</div>
+    <p class="muted note" style="margin:8px 0 0">월말 종가 기준이고 앞으로도 그렇다는 뜻은 아니에요. 적립식 계산기와 같은 숫자예요.</p>`;
 }
 
 // 큰 금액은 조·억 단위로 (원이든 달러든 숫자만, 단위는 따로 적어요)
@@ -2976,11 +3055,13 @@ function bigNum(x) {
 const periodLabel = (p) => (p.length === 4 ? `${p}년` : `${p.slice(2, 4)}.${p.slice(5, 7)}`);  // 2025 → 2025년, 2026-06 → 26.06
 const hasOp = (s) => s.op.some((v) => v != null);
 
-function fundHtml(f) {
-  const ent = stocksOf(DATA.markets[market]).find((x) => x.code === stockCode);
-  const etf = stockCode === "SPY" || !!(ent && ent.kind === "e");
+function fundHtml(f, x) {
+  const ent = stocksOf(DATA.markets[market]).find((y) => y.code === stockCode);
+  const etf = stockCode === "SPY" || !!(ent && ent.kind === "e") || !!(x && x.lite && x.kind === "e");
   if (!f) {
-    return `<h2>재무제표</h2><p class="empty">${etf ? "ETF라 매출·영업이익 같은 재무제표가 없어요." : "재무 자료가 아직 없어요. 매주 토요일에 받아요."}</p>`;
+    return `<h2>재무제표</h2><p class="empty">${etf ? "ETF라 매출·영업이익 같은 재무제표가 없어요."
+      : x && x.lite ? "재무제표는 대형주(대시보드 종목)만 매주 받아요. 이 종목은 차트와 아래 숫자만 봐요."
+        : "재무 자료가 아직 없어요. 매주 토요일에 받아요."}</p>`;
   }
   const usd = market === "us";
   const tile = (label, value, note) => `<div class="stat"><span>${term(label.replace(/\(.*\)$/, ""), esc(label))}</span><b>${value}</b>${note ? `<small>${note}</small>` : ""}</div>`;
