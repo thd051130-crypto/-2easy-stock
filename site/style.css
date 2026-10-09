@@ -497,7 +497,7 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .sav-pick small { color: var(--text-muted); font-weight: 400; }
 .sav-pick .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
 .sav-pick button { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; }
-.sav-pick.empty { border: 1.5px dashed var(--border); background: transparent; color: var(--text-muted); font-weight: 400; padding-right: 10px; }
+.sav-clear { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; text-decoration: underline; padding: 4px 6px; min-height: 34px; cursor: pointer; }
 .sav-res { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .sav-res li + li { border-top: 1px solid var(--border); }
 .sav-res button { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }

@@ -2011,7 +2011,7 @@ function healthLine() {
   return `<p class="caution">지난 주 자동 실행 확인 필요: ${bad}</p>`;
 }
 
-// 적립식 복리 계산기: 국장·미장 아무 종목·ETF나 검색해서 3개까지 넣고, 매달 N만 원씩 넣으면 몇 년 뒤 얼마인지 나란히 봐요.
+// 적립식 복리 계산기: 국장·미장 아무 종목·ETF나 검색해서 원하는 만큼 넣고, 매달 N만 원씩 넣으면 몇 년 뒤 얼마인지 나란히 봐요.
 // 종목 숫자는 symbols/<시장>_returns.json (returns.py가 매주 야후 월봉으로 계산): 최근 10년 실제 주가 상승률·배당률, 상장 뒤 최대 낙폭.
 // 세금(ISA·일반 계좌, 끌 수도 있어요)과 배당 재투자(안 하면 배당은 현금으로 쌓여요)를 고를 수 있어요. 과거 값이라 미래를 보장하지 않아요.
 // tax: dep(예금 이자) · kr(국내 주식·국내 주식형 ETF, 매매차익 비과세) · other(국내 상장 해외·채권 ETF 등, 차익도 15.4%) · us(미국 상장, ISA 안 됨)
@@ -2024,14 +2024,16 @@ const SAV_FIXED = [
 const SAV_QUICK = ["kr:360750", "kr:069500", "kr:133690", "kr:458730", "kr:441680", "us:SCHD", "us:JEPI", "us:QYLD", "us:TLT", "us:TQQQ"];
 const SAV_OLD = { sp500: "kr:360750", kospi: "kr:069500", ndx: "kr:133690", divg: "kr:458730", cc: "kr:441680", lev: "us:SSO",
   kolev: "kr:122630", krbond: "kr:114260", usbond: "us:TLT" };  // 예전 버튼 → 실제 종목
-const SAV_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
+// 종목 색: 앞 8개는 정해진 색, 그 뒤로는 색상환을 황금각(137.5°)씩 돌려 서로 멀게
+const SAV_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--bb)", "var(--ma50)", "#d6457a", "#1f9fb8", "#8a6d3b"];
+const savColor = (i) => SAV_COLORS[i] || `hsl(${Math.round((i * 137.5) % 360)} 60% 50%)`;
 const SAV = { monthly: 50, years: 10, start: 0, acct: "isa", taxOn: true, reinvest: true, picks: ["dep", "kr:360750", "us:SCHD"], price: 6, div: 2, mdd: 30 };
 const savOk = (k) => SAV_FIXED.some((p) => p.key === k) || /^(kr|us):[0-9A-Z.\-^=]+$/.test(k);
 try {
   const s = JSON.parse(localStorage.getItem("savings") || "{}") || {};
   if (s.rate != null) { if (s.price == null) s.price = s.rate; delete s.rate; }  // 예전 계산기 '내 가정' 수익률 → 직접 입력 주가 상승
   Object.assign(SAV, s);
-  SAV.picks = [...new Set((SAV.picks || []).map((k) => SAV_OLD[k] || k))].filter(savOk).slice(0, 3);
+  SAV.picks = [...new Set((SAV.picks || []).map((k) => SAV_OLD[k] || k))].filter(savOk);
   if (!SAV.picks.length) SAV.picks = ["kr:360750"];
 } catch (e) { /* 처음 */ }
 const TAX = 0.154;  // 이자·배당소득세 (국내 상장 해외 ETF 매매차익도 배당소득으로 15.4%)
@@ -2092,7 +2094,7 @@ function savSim(p, { monthly, years, start, acct, taxOn, reinvest }) {
 }
 function savRun() {
   const o = { monthly: (+SAV.monthly || 0) * 1e4, start: (+SAV.start || 0) * 1e4, years: SAV.years, acct: SAV.acct, taxOn: SAV.taxOn, reinvest: SAV.reinvest };
-  const all = SAV.picks.map((k, i) => ({ p: savProduct(k), color: SAV_COLORS[i] }));
+  const all = SAV.picks.map((k, i) => ({ p: savProduct(k), color: savColor(i) }));
   return { o, all, list: all.filter((x) => !x.p.missing).map((x) => ({ ...x, r: savSim(x.p, o) })) };
 }
 const savWon = (x) => {
@@ -2104,9 +2106,9 @@ let savQuery = "";
 // 고른 종목 (× 로 빼요)
 function savPicked() {
   return SAV.picks.map((k, i) => { const p = savProduct(k);
-    return `<span class="sav-pick" style="--c:${SAV_COLORS[i]}"><i class="sw"></i><span>${esc(p.name)}${p.code ? ` <small>${esc(p.code)}</small>` : ""}</span>
+    return `<span class="sav-pick" style="--c:${savColor(i)}"><i class="sw"></i><span>${esc(p.name)}${p.code ? ` <small>${esc(p.code)}</small>` : ""}</span>
       <button type="button" data-sav-x="${esc(k)}" aria-label="${esc(p.name)} 빼기">×</button></span>`; }).join("")
-    + (SAV.picks.length < 3 ? `<span class="sav-pick empty">${3 - SAV.picks.length}개 더 넣을 수 있어요</span>` : "");
+    + (SAV.picks.length > 1 ? `<button type="button" class="sav-clear" data-sav-clear>모두 빼기</button>` : "");
 }
 function savQuick() {
   const btn = (k, label) => `<button type="button" data-sav-p="${esc(k)}" aria-pressed="${SAV.picks.includes(k)}">${esc(label)}</button>`;
@@ -2135,7 +2137,7 @@ function savingsCard() {
   return `<section class="card" id="sav-card"><h2>적립식 ${term("복리")} 계산기 <small>무엇에 매달 넣으면 얼마가 될까</small></h2>
     <div class="sav-grid">${inp("monthly", "매달", "만 원")}${inp("start", "처음에", "만 원")}</div>
     <div class="period" role="group" aria-label="기간" style="margin:10px 0 0">${yrs}</div>
-    <h3 class="sav-h">종목 넣기 <small class="muted">3개까지 비교</small></h3>
+    <h3 class="sav-h">종목 넣기 <small class="muted">몇 개든 같이 비교</small></h3>
     <div class="sav-picked" id="sav-picked">${savPicked()}</div>
     <input id="sav-q" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="종목·ETF 검색 (예: 슈드, 코덱스 200, 삼성전자, TQQQ)" aria-label="계산기에 넣을 종목 검색" value="${esc(savQuery)}">
@@ -2229,20 +2231,22 @@ function drawSavings() {
       `<text x="${x(yv * 12)}" y="${H - 6}" text-anchor="${yv === 0 ? "start" : yv === yrs ? "end" : "middle"}">${yv === 0 ? "지금" : `${yv}년`}</text>`).join("");
     const pts = (arr) => idx.map((i) => [x(i), y(arr[i])]);
     const uid = Math.random().toString(36).slice(2, 8);
-    const grads = list.map((s, k) => `<linearGradient id="sg${uid}${k}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${s.color}" stop-opacity="${k ? 0.10 : 0.28}"/><stop offset="1" stop-color="${s.color}" stop-opacity="0"/></linearGradient>`).join("");
+    const grads = list.map((s, k) => `<linearGradient id="sg${uid}${k}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${s.color}" stop-opacity="${k ? (list.length > 3 ? 0 : 0.10) : 0.28}"/><stop offset="1" stop-color="${s.color}" stop-opacity="0"/></linearGradient>`).join("");
     const base = y(0);
     const areas = list.map((s, k) => { const p = pts(s.r.series), line = smoothPath(p);
       return `<path class="sav-area" d="${line}L${p[p.length - 1][0].toFixed(1)},${base}L${p[0][0].toFixed(1)},${base}Z" fill="url(#sg${uid}${k})"/>`; }).reverse().join("");
     const lines = list.map((s) => `<path class="sav-line" d="${smoothPath(pts(s.r.series))}" stroke="${s.color}"/>`).reverse().join("");
     const paidLine = `<path class="sav-paid" d="${pts(list[0].r.paidSeries).map(([a, b], i) => `${i ? "L" : "M"}${a.toFixed(1)},${b.toFixed(1)}`).join("")}"/>`;
     // 끝 점 + 값 알약 (겹치면 벌려요)
-    const ends = list.map((s) => ({ s, v: s.r.series[n - 1], y: y(s.r.series[n - 1]) })).sort((a, b) => a.y - b.y);
-    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 20) ends[k].y = ends[k - 1].y + 20;
+    // 종목이 많으면 금액 알약은 큰 순서로 6개까지만 (점은 다 찍어요). 아래로 넘치면 위로 밀어 올려요
+    const dots = list.map((s) => `<circle cx="${x(n - 1)}" cy="${y(s.r.series[n - 1])}" r="3.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="1.5"/>`).join("");
+    const ends = list.map((s) => ({ s, v: s.r.series[n - 1], y: y(s.r.series[n - 1]) - 9 })).sort((a, b) => b.v - a.v).slice(0, 6).sort((a, b) => a.y - b.y);
+    for (let k = 0; k < ends.length; k++) ends[k].y = Math.max(k ? ends[k - 1].y + 20 : 0, ends[k].y);
+    for (let k = ends.length - 1; k >= 0; k--) ends[k].y = Math.min(k < ends.length - 1 ? ends[k + 1].y - 20 : pad.t + ih - 18, ends[k].y);
     const short = (v) => savWon(v).replace(/원$/, "");
     const pills = ends.map((e) => { const t = short(e.v), w = Math.min(pad.r - 8, t.length * 7 + 12), px = pad.l + iw + 6;
-      return `<circle cx="${x(n - 1)}" cy="${y(e.v)}" r="4" fill="${e.s.color}" stroke="var(--surface-1)" stroke-width="2"/>
-        <g transform="translate(${px},${Math.max(0, Math.min(pad.t + ih - 18, e.y - 9))})"><rect width="${w}" height="18" rx="9" fill="${e.s.color}"/>
-        <text x="${w / 2}" y="13" text-anchor="middle" class="sav-pill">${esc(t)}</text></g>`; }).join("");
+      return `<g transform="translate(${px},${e.y.toFixed(1)})"><rect width="${w}" height="18" rx="9" fill="${e.s.color}"/>
+        <text x="${w / 2}" y="13" text-anchor="middle" class="sav-pill">${esc(t)}</text></g>`; }).join("") + dots;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.p.name).join(", "))} 적립 잔고 차트">
       <defs>${grads}</defs>${grid}<line class="sav-base" x1="${pad.l}" x2="${pad.l + iw}" y1="${base}" y2="${base}"/>
       ${areas}${paidLine}${lines}${pills}${xl}
@@ -2259,7 +2263,7 @@ function drawSavings() {
       $("line", g).setAttribute("x1", cx); $("line", g).setAttribute("x2", cx);
       g.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", cx); c.setAttribute("cy", y(list[k].r.series[i])); });
       const when = i === 0 ? "지금" : `${Math.floor(i / 12) ? `${Math.floor(i / 12)}년` : ""}${i % 12 ? ` ${i % 12}개월` : ""} 뒤`.trim();
-      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(list[0].r.paidSeries[i]))}</div>` + list.map((s) =>
+      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(list[0].r.paidSeries[i]))}</div>` + [...list].sort((a, b) => b.r.series[i] - a.r.series[i]).map((s) =>
         `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.p.name)} <b>${esc(savWon(s.r.series[i]))}</b></div>`).join("");
       tip.style.display = "";
       const tw = tip.offsetWidth, left = (cx / W) * r.width;
@@ -2304,14 +2308,16 @@ function bindSavings() {
   }));
   pick("data-sav-y", "years", Number);
   pick("data-sav-a", "acct", String);
-  // 종목 넣기·빼기: 검색 결과·자주 찾는 버튼은 눌러서 넣고 다시 누르면 빼요. 3개가 차 있으면 가장 먼저 넣은 것을 빼요
+  // 종목 넣기·빼기: 검색 결과·자주 찾는 버튼은 눌러서 넣고 다시 누르면 빼요
   card.addEventListener("click", (e) => {
     const x = e.target.closest("[data-sav-x]"), p = e.target.closest("[data-sav-p]");
-    if (x) {
+    if (e.target.closest("[data-sav-clear]")) {
+      SAV.picks = [];
+    } else if (x) {
       SAV.picks = SAV.picks.filter((k) => k !== x.dataset.savX);
     } else if (p) {
       const k = p.dataset.savP, at = SAV.picks.indexOf(k);
-      if (at >= 0) SAV.picks.splice(at, 1); else { SAV.picks.push(k); if (SAV.picks.length > 3) SAV.picks.shift(); }
+      if (at >= 0) SAV.picks.splice(at, 1); else SAV.picks.push(k);
     } else return;
     redrawPicks(); refresh();
   });
