@@ -487,3 +487,7 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .sav-in { display: grid; gap: 4px; font-size: 12px; color: var(--text-muted); min-width: 0; }
 .sav-in .alert-input { min-width: 0; }
 .sav-in input { min-width: 0; width: 100%; }
+
+/* 다가오는 일정 */
+.list.cal li.cal-day { border-top: 0; padding: 12px 0 2px; font-size: 13px; color: var(--text-secondary); }
+.list.cal li.cal-day + li { border-top: 0; }

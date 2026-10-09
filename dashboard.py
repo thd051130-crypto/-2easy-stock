@@ -9,6 +9,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
   - paper/world.json : 세계 지수·환율 (world.py)
+  - paper/calendar.json : 경제 일정 (econ_calendar.py)
   - paper/kr/flows.json : 국장 외국인·기관 수급 (flows.py) → 홈 경고·요약만 (종목별 막대는 stock_pages.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
   - themes.py : 문장 검색용 테마 사전 → <out>/themes.json
@@ -202,7 +203,8 @@ def build(paper_dir):
     fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
                 bot=watchlist.bot_username(paper_dir), health=health,
-                macro=read_json(paper_dir / "macro.json"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
+                macro=read_json(paper_dir / "macro.json"),
+                calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
                 total=total_assets(markets, etf_acct, fx))
 
 

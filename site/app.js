@@ -286,7 +286,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), calendarCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
@@ -331,6 +331,12 @@ function render() {
   app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
     pickSector(b.dataset.sector);
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
+  app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
+    calAll = !calAll;
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -2138,6 +2144,34 @@ function toneBadge(s) {
   const cls = s.good > s.bad ? "good" : s.bad > s.good ? "bad" : "";
   return `<span class="badge ${cls}">${esc(s.label)}</span>`;
 }
+// 다가오는 일정 (econ_calendar.py): 금리 결정·만기일·실적 시즌은 다 보여 주고, 종목 실적 발표·배당락은
+// 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만. 나머지 대형주 실적은 개수만.
+const CAL_DAYS = 14;
+const CAL_ICON = { rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
+let calAll = false;
+function calendarCard(d) {
+  const ev = (DATA && DATA.calendar) || [];
+  if (!ev.length) return "";
+  const today = TODAY(), end = new Date(Date.parse(today) + CAL_DAYS * 864e5).toISOString().slice(0, 10);
+  const mineOf = (e) => e.mine || (e.code && WATCH[e.market].includes(e.code));
+  const near = ev.filter((e) => e.date >= today && e.date < end);
+  const shown = near.filter((e) => !["earn", "exdiv"].includes(e.kind) || mineOf(e) || (calAll && e.kind === "earn"));
+  const hidden = near.filter((e) => e.kind === "earn" && !mineOf(e)).length;
+  const flag = { kr: "🇰🇷", us: "🇺🇸" }, days = "일월화수목금토";
+  let last = "";
+  const rows = shown.map((e) => {
+    const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
+    last = e.date;
+    const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
+    return `${head}<li${tap}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
+      ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
+  }).join("");
+  const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
+  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 국장·미장</small></h2>
+    ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}${more}
+    <p class="muted" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 월요일 아침엔 텔레그램으로도 와요. 미국 물가·고용 발표일은 아직 못 넣었어요.</p></section>`;
+}
+
 // 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)
 const HEAT_P = [["d1", "오늘", 1], ["r5", "5일", 5], ["r20", "20일", 20]];
 let heatP = "d1";
