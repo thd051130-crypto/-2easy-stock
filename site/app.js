@@ -571,7 +571,7 @@ function watchCard(d) {
   return `<section class="card" id="watch-card"><h2>내 관심종목 <small>${mine.length}개 · ${md(all[0].day)} 종가</small></h2>
     ${mine.length ? `<ul class="list">${mine.map((s) => stockRow(s, d, { chart: true })).join("")}</ul>`
       : `<p class="empty">아래 전체 종목에서 ☆를 누르면 여기에 모여요.</p>`}
-    <p class="muted" style="margin:10px 0 0">종목을 누르면 차트와 재무제표가 나와요. ★ 목록은 이 폰 브라우저에만 저장돼요.
+    <p class="muted note" style="margin:10px 0 0">종목을 누르면 차트와 재무제표가 나와요. ★ 목록은 이 폰 브라우저에만 저장돼요.
       목록에 없는 종목은 위쪽 돋보기(검색)에서 찾아 텔레그램으로 넣을 수 있어요.</p></section>`;
 }
 
@@ -612,7 +612,7 @@ function screenerCard(d) {
   if (!all.length) return "";
   const chips = FILTERS.map(([k, label]) => `<button type="button" data-filter="${k}" aria-pressed="${FILTER_ON.includes(k)}">${label}</button>`).join("");
   const on = FILTERS.filter((x) => FILTER_ON.includes(x[0]));
-  let body = `<p class="sub" style="margin:10px 0 0">조건을 하나 이상 누르면 모두 만족하는 종목만 보여요.</p>`;
+  let body = `<p class="sub note" style="margin:10px 0 0">조건을 하나 이상 누르면 모두 만족하는 종목만 보여요.</p>`;
   if (on.length) {
     const hits = all.filter((s) => on.every(([, , ok]) => ok(s, funds[s.code] || {})));
     hits.sort((a, b) => (b.d1 ?? -9) - (a.d1 ?? -9));
@@ -623,8 +623,8 @@ function screenerCard(d) {
   const noPrice = !all.some((s) => s.ma200 != null);
   return `<section class="card" id="screener"><h2>조건 검색 <small>${all.length}개 대형주 중</small></h2>
     <div class="chips">${chips}</div>${body}
-    <p class="muted" style="margin:10px 0 0">뜻이 궁금하면: ${["200일선", "52주 고점", "RSI", "PER", "PBR", "배당수익률", "ROE", "부채비율", "목표주가"].map((t) => term(t)).join(" · ")}</p>
-    <p class="muted" style="margin:6px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">뜻이 궁금하면: ${["200일선", "52주 고점", "RSI", "PER", "PBR", "배당수익률", "ROE", "부채비율", "목표주가"].map((t) => term(t)).join(" · ")}</p>
+    <p class="muted note" style="margin:6px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
 }
 
 // 배당 달력: 관심종목(없으면 배당 주는 대형주 전체)의 배당락일·지급일·1주당 배당금 (야후 무료 자료, 매주 갱신)
@@ -649,7 +649,7 @@ function dividendCard(d) {
     ${next.length ? `<h3 class="muted" style="margin:6px 0 4px">다가오는 배당락</h3><ul class="list">${next.slice(0, 12).map((r) => row(r, true)).join("")}</ul>` : ""}
     ${past.length ? `<details${next.length ? "" : " open"}><summary class="muted" style="margin:10px 0 4px">배당 주는 종목 · 배당수익률 순 (${past.length}개)</summary>
       <ul class="list">${past.slice(0, 20).map((r) => row(r, false)).join("")}</ul></details>` : ""}
-    <p class="muted" style="margin:10px 0 0">배당락일 전날까지 갖고 있어야 배당을 받아요(국장은 결산·이사회에 따라 기준일이 달라질 수 있어요). 1회 배당은 가장 최근 지급액이에요. 야후 무료 자료라 날짜가 늦게 바뀔 수 있어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">배당락일 전날까지 갖고 있어야 배당을 받아요(국장은 결산·이사회에 따라 기준일이 달라질 수 있어요). 1회 배당은 가장 최근 지급액이에요. 야후 무료 자료라 날짜가 늦게 바뀔 수 있어요.</p></section>`;
 }
 
 // 관심 화면 업종 버튼: 대시보드 종목에 있는 업종만 (업종 지도 paper/sectors.json 기준)
@@ -813,14 +813,14 @@ function searchCard() {
     <h2 class="stock-name">종목 검색</h2>
     <input id="search-input" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off"
       spellcheck="false" placeholder="종목 이름, 또는 '전력 관련주'" aria-label="종목 검색" value="${esc(searchQuery)}">
-    <p class="muted" style="margin:8px 0 0">국장·미장에 상장된 종목을 다 찾아요. '원전 관련주', '미국 AI 반도체'처럼 문장으로 치면 연관 종목을 모아 보여 줘요.</p></section>`;
+    <p class="muted note" style="margin:8px 0 0">국장·미장에 상장된 종목을 다 찾아요. '원전 관련주', '미국 AI 반도체'처럼 문장으로 치면 연관 종목을 모아 보여 줘요.</p></section>`;
 }
 
 // 용어 사전 (검색 화면 맨 아래). 누르면 펼쳐져요
 function glossaryCard() {
   const rows = Object.entries(TERMS).map(([t, txt]) => `<details class="gloss"><summary>${esc(t)}</summary><p>${esc(txt)}</p></details>`).join("");
   return `<section class="card" id="glossary"><h2>용어 사전 <small>${Object.keys(TERMS).length}개</small></h2>${rows}
-    <p class="muted" style="margin:10px 0 0">앱 곳곳의 작은 ? 버튼을 눌러도 같은 설명이 나와요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">앱 곳곳의 작은 ? 버튼을 눌러도 같은 설명이 나와요.</p></section>`;
 }
 
 // 대시보드에 있는 종목(시세 있음)과 다른 상장 종목으로 나눠서, 잘 맞는 순서(같으면 지금 시장, 시가총액 큰 순)로
@@ -1015,7 +1015,7 @@ function themeCard(t, only) {
     <p class="sub">${esc(t.why)}</p>${parts || `<p class="empty">이 시장엔 골라 둔 종목이 없어요.</p>`}
     <button type="button" class="more" data-map="${esc(t.name)}">산업 지도에서 이어진 산업 보기<span aria-hidden="true">›</span></button>
     ${botNote()}
-    <p class="muted" style="margin:10px 0 0">미리 골라 둔 대표 종목이에요 (큰 회사부터). 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">미리 골라 둔 대표 종목이에요 (큰 회사부터). 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
 }
 
 function trackedRow(x) {
@@ -1323,7 +1323,7 @@ function mapDetailCard() {
       <h3 class="muted" style="margin:12px 0 4px">많이 내린 산업</h3><ul class="list">${ranked.slice(-3).reverse().map(row).join("")}</ul>`
       : `<p class="empty">${MK_NAME[market]} 산업 흐름 자료가 아직 없어요. 다음 배포 때 생겨요.</p>`;
     return `<section class="card"><h2>${MK_NAME[market]} 산업 흐름 <small>최근 5거래일${day ? ` · ${md(day)}` : ""}</small></h2>${body}
-      <p class="muted" style="margin:10px 0 0">산업마다 대표 종목 5개의 5일 등락률 중간값이에요. 누르면 지도에서 그 산업의 연결을 보여 줘요.
+      <p class="muted note" style="margin:10px 0 0">산업마다 대표 종목 5개의 5일 등락률 중간값이에요. 누르면 지도에서 그 산업의 연결을 보여 줘요.
       연결은 사람이 정리한 참고 자료라 매매 규칙은 안 바꿔요.</p></section>`;
   }
   const node = IMAP.nodes[IMAP.at.get(mapFocus)];
@@ -1346,7 +1346,7 @@ function mapDetailCard() {
     ${stocks ? `<h3 class="muted" style="margin:12px 0 4px">${MK_NAME[market]} 대표 종목${day ? ` · ${md(day)} 종가` : ""}</h3><ul class="list">${stocks}</ul>`
       : `<p class="muted" style="margin:10px 0 0">${MK_NAME[market]} 대표 종목 시세가 아직 없어요.</p>`}
     <button type="button" class="more" data-mapq="${esc(node.q)}">${esc(mapFocus)} 관련 종목 전체 보기 (국장·미장)<span aria-hidden="true">›</span></button>
-    <p class="muted" style="margin:10px 0 0">주가 동행은 최근 120거래일 하루 등락률의 상관계수(1이면 똑같이, 0이면 따로)예요.
+    <p class="muted note" style="margin:10px 0 0">주가 동행은 최근 120거래일 하루 등락률의 상관계수(1이면 똑같이, 0이면 따로)예요.
       연결은 사람이 정리한 참고 자료라 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
 }
 
@@ -1465,7 +1465,7 @@ function trackCard(d) {
       <p class="sub" style="margin:14px 0 6px">최근 추천 <small class="muted">작은 그래프 = 추천일부터 날마다 수익률</small></p>
       <ul class="list">${shown}</ul>
       ${rest ? `<details class="more-list"><summary>${s.recent.length - 10}개 더 보기</summary><ul class="list">${rest}</ul></details>` : ""}
-      <p class="muted" style="margin:10px 0 0">같은 종목이 ${t.gap}거래일 안에 다시 후보에 오르면 처음 추천만 세요. 실제로는 다음 날 시가에 사서 조금 달라요.
+      <p class="muted note" style="margin:10px 0 0">같은 종목이 ${t.gap}거래일 안에 다시 후보에 오르면 처음 추천만 세요. 실제로는 다음 날 시가에 사서 조금 달라요.
         ${live ? "" : "아직은 전부 지금 규칙을 과거 날짜에 적용해서 채운 기록이에요."}</p>`;
   }
   return `<section class="card"><h2>추천 종목 성과 <small>추천일 종가 기준</small></h2>
@@ -1689,7 +1689,7 @@ function signalCard(d) {
         ${i >= s.max_positions ? `<div class="meta">${s.max_positions}종목이 차면 건너뛰어요</div>` : ""}
       </div><div class="r">${num(p.close)}원</div></li>`).join("");
     body = `<p class="headline">매수 후보 ${s.picks.length}개</p>
-      <p class="sub">다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.</p>${idx}
+      <p class="sub note">다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.</p>${idx}
       <ul class="list" style="margin-top:12px">${items}</ul>`;
   }
   const look = sigLook(s);
@@ -1824,7 +1824,7 @@ function compareCard(d) {
     <div class="chips">${chips}${add}</div>
     <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 4px">${periods}</div>
     <div class="chart" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
-    <p class="muted" id="cmp-note" style="margin:8px 0 0">고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
+    <p class="muted note" id="cmp-note" style="margin:8px 0 0">고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
 }
 function drawCompare(d) {
   const el = $("#cmp-chart");
@@ -1907,7 +1907,7 @@ function otherIndexCard(d, r) {
     <p class="muted" id="trend-change" style="margin:8px 0 4px"></p>${candleLegend()}
     <div class="chart candle" id="trend-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
     <p class="muted" id="trend-all" style="margin:8px 0 0"></p>
-    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려요.
+    <p class="muted note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려요.
       이 지수는 참고로만 봐요. 매수 규칙은 ${esc(chartIndexes(d)[0].name)}만 봐요.</p>${indHelp()}</section>`;
 }
 
@@ -1926,7 +1926,7 @@ function trendCard(d) {
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>50일선</span>
       <span class="key"><i class="sw" style="background:var(--series-3)"></i>200일선</span></div>`}
     <div class="chart candle" id="trend-chart"></div>
-    <p class="muted" style="margin:8px 0 0">${cd
+    <p class="muted note" style="margin:8px 0 0">${cd
       ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 세부정보가 손가락을 따라와요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려서 같은 비율로 오르면 같은 높이예요. "
       : ""}${TREND_RULE[market]}</p>${cd ? indHelp() : ""}</section>`;
 }
@@ -2148,7 +2148,7 @@ function savingsCard() {
     <div class="sav-togs">${tog("reinvest", "배당 재투자", "받은 배당·이자로 다시 사요")}${tog("taxOn", "세금 반영", "배당·이자·차익 세금을 떼요")}</div>
     <div class="period" role="group" aria-label="계좌" id="sav-acct" style="margin:8px 0 0;${SAV.taxOn ? "" : "display:none"}">${accts}</div>
     <div id="sav-out">${savOut()}</div>
-    <p class="muted" style="margin:12px 0 0">종목 숫자는 최근 10년(상장이 더 짧으면 상장 뒤) 실제 주가 상승률과 배당률이고, 최대 낙폭은 상장 뒤 월말 기준이에요. ETF 보수는 가격에 이미 빠져 있어요.
+    <p class="muted note" style="margin:12px 0 0">종목 숫자는 최근 10년(상장이 더 짧으면 상장 뒤) 실제 주가 상승률과 배당률이고, 최대 낙폭은 상장 뒤 월말 기준이에요. ETF 보수는 가격에 이미 빠져 있어요.
       ${term("ISA")}(일반형)는 3년 이상 유지하면 이익 200만 원까지 세금이 없고, 넘는 부분은 9.9%예요. 한 해 2,000만 원까지 넣을 수 있어요.
       일반 계좌는 배당·이자를 받을 때 15.4%, 해외·채권·커버드콜 ETF는 팔 때 차익에도 15.4%예요. 국내 주식과 국내 주식형 ETF 차익은 세금이 없어요.
       미국 상장 종목은 ISA로 못 사서 일반 계좌로 계산해요(배당 15%, 한 해 250만 원 넘는 차익 22%). 달러 기준이라 환율 변화는 빠져 있어요.
@@ -2358,7 +2358,7 @@ function firstAccountCard(d) {
   return `<section class="card" id="first-card"><h2>실전 첫 계좌 체크리스트 <small>${n}/${FIRST_STEPS.length}</small></h2>
     <div class="bar" aria-hidden="true"><i style="width:${Math.round((n / FIRST_STEPS.length) * 100)}%"></i></div>
     <ul class="list steps">${rows}</ul>
-    <p class="muted" style="margin:10px 0 0">체크는 이 폰 브라우저에만 저장돼요. 계좌 개설 조건·세금 혜택은 바뀔 수 있어서 만들 때 증권사 안내를 꼭 확인하세요.
+    <p class="muted note" style="margin:10px 0 0">체크는 이 폰 브라우저에만 저장돼요. 계좌 개설 조건·세금 혜택은 바뀔 수 있어서 만들 때 증권사 안내를 꼭 확인하세요.
       복무 중이면 장병내일준비적금 같은 정부 매칭 적금이 예금 중에선 가장 유리할 수 있어요.</p></section>`;
 }
 
@@ -2419,7 +2419,7 @@ function worldCard() {
   return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
     <ul class="list">${main.map(worldRow).join("")}</ul>
     <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
-    <p class="muted" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
@@ -2442,7 +2442,7 @@ function macroCard() {
       ${us ? `<h3 class="muted" style="margin:10px 0 4px">미국 경제 참고 (FRED)</h3><ul class="list">${us}</ul>` : ""}
       ${hist ? `<p class="muted" style="margin:10px 0 0">최근 12주 경고 개수: ${hist}</p>` : ""}
     </details>
-    <p class="muted" style="margin:10px 0 0">경고 0~1개 확장, 2~3개 둔화, 4개↑ 위축 경고. 백테스트에서 이걸로 매수를 줄여도 낙폭이 안 줄어서 규칙은 안 바꿔요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">경고 0~1개 확장, 2~3개 둔화, 4개↑ 위축 경고. 백테스트에서 이걸로 매수를 줄여도 낙폭이 안 줄어서 규칙은 안 바꿔요.</p></section>`;
 }
 
 // 업종별 호재·악재 (sectors.py). 버튼으로 업종을 고르면 그 업종만 자세히, 관심 화면 전체 종목도 그 업종만 보여 줘요.
@@ -2467,7 +2467,7 @@ function discloseStockCard(d) {
   const mine = d.disclosures.filter((x) => x.code === stockCode);
   if (!mine.length) return "";
   return `<section class="card"><h2>최근 공시 <small>30일 · 금감원 전자공시</small></h2><ul class="list">${mine.map((x) => disRow(x, false)).join("")}</ul>
-    <p class="muted" style="margin:8px 0 0">⚠️ ${term("유상증자")}·${term("전환사채")}·최대주주 변경 같은 공시는 주가가 내릴 때가 많아요. 👍 ${term("자사주 매입")}·배당은 좋은 소식일 때가 많아요. 제목을 누르면 원문이 열려요.</p></section>`;
+    <p class="muted note" style="margin:8px 0 0">⚠️ ${term("유상증자")}·${term("전환사채")}·최대주주 변경 같은 공시는 주가가 내릴 때가 많아요. 👍 ${term("자사주 매입")}·배당은 좋은 소식일 때가 많아요. 제목을 누르면 원문이 열려요.</p></section>`;
 }
 function discloseHomeCard(d) {
   if (market !== "kr" || !d.disclosures) return "";
@@ -2476,7 +2476,7 @@ function discloseHomeCard(d) {
   const rows = d.disclosures.filter((x) => x.day >= since && (x.tone === "warn" || x.tone === "check" || mine.has(x.code)));
   return `<section class="card"><h2>최근 공시 <small>7일 · 주의 공시와 내 종목</small></h2>
     ${rows.length ? `<ul class="list">${rows.slice(0, 8).map((x) => disRow(x, true)).join("")}</ul>` : `<p class="empty">최근 7일 동안 주의할 공시가 없어요.</p>`}
-    <p class="muted" style="margin:8px 0 0">평일 한 시간마다 금감원 전자공시를 봐요. ⚠️ 공시는 텔레그램으로 바로 와요.</p></section>`;
+    <p class="muted note" style="margin:8px 0 0">평일 한 시간마다 금감원 전자공시를 봐요. ⚠️ 공시는 텔레그램으로 바로 와요.</p></section>`;
 }
 
 // 다가오는 일정 (econ_calendar.py): 금리 결정·만기일·실적 시즌은 다 보여 주고, 종목 실적 발표·배당락은
@@ -2505,7 +2505,7 @@ function calendarCard(d) {
   const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
   return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 국장·미장</small></h2>
     ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}${more}
-    <p class="muted" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 월요일 아침엔 텔레그램으로도 와요. 미국 물가·고용 발표일은 아직 못 넣었어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 월요일 아침엔 텔레그램으로도 와요. 미국 물가·고용 발표일은 아직 못 넣었어요.</p></section>`;
 }
 
 // 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)
@@ -2549,7 +2549,7 @@ function heatmapCard(d) {
   const chips = HEAT_P.map(([k, label]) => `<button type="button" data-heat="${k}" aria-pressed="${k === heatP}">${label}</button>`).join("");
   return `<section class="card" id="heat-card"><h2>시장 ${term("히트맵")} <small>${all.length}개 대형주 · ${md(all[0].day)}</small></h2>
     <div class="period" role="group" aria-label="기간" style="margin:4px 0 10px">${chips}</div>${rows}
-    <p class="muted" style="margin:10px 0 0">칸이 클수록 시가총액이 크고, 진할수록 많이 움직였어요. 누르면 종목 화면이에요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">칸이 클수록 시가총액이 크고, 진할수록 많이 움직였어요. 누르면 종목 화면이에요.</p></section>`;
 }
 
 function sectorsCard(d) {
@@ -2584,7 +2584,7 @@ function sectorsCard(d) {
       ${members ? `<h3 class="muted" style="margin:12px 0 4px">이 업종 대형주</h3><ul class="list">${members}</ul>` : ""}`;
   }
   return `<section class="card" id="sectors-card"><h2>업종별 호재·악재 <small>최근 5거래일 · 참고</small></h2>${chips}${body}
-    <p class="muted" style="margin:10px 0 0">호재·악재는 뉴스 제목 낱말로 짐작한 거예요. 고른 업종은 관심 화면 전체 종목에도 똑같이 걸려요.</p>
+    <p class="muted note" style="margin:10px 0 0">호재·악재는 뉴스 제목 낱말로 짐작한 거예요. 고른 업종은 관심 화면 전체 종목에도 똑같이 걸려요.</p>
     <button type="button" class="more" data-map="">산업 연관 지도 (어떤 산업끼리 이어져 있나)<span aria-hidden="true">›</span></button></section>`;
 }
 
@@ -2604,7 +2604,7 @@ function moversCard(d) {
   const body = part(mv.up, "▲ 많이 오른 종목") + part(mv.down, "▼ 많이 내린 종목");
   return `<section class="card"><h2>왜 움직였나 <small>최근 5거래일 · ${mv.count}개 종목 중</small></h2>
     ${body || `<p class="empty">최근 5거래일 ±3% 넘게 움직인 종목이 없어요.</p>`}
-    <p class="muted" style="margin:10px 0 0">이유는 시장·같이 움직인 종목·거래량·뉴스 제목으로 짐작한 거예요. 사기 전에 기사 원문을 확인하세요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">이유는 시장·같이 움직인 종목·거래량·뉴스 제목으로 짐작한 거예요. 사기 전에 기사 원문을 확인하세요.</p></section>`;
 }
 
 // 외국인·기관 수급 (flows.py, 네이버 무료 자료). 국장만. 홈은 '같이 파는 종목' 경고와 5일 많이 산·판 종목
@@ -2621,7 +2621,7 @@ function flowsCard(d) {
       : `<p class="sub" style="margin:6px 0 0">외국인이 3일 넘게 팔면서 기관도 파는 종목은 없어요.</p>`}
     ${(f.buy || []).length ? `<h3 class="muted" style="margin:12px 0 4px">많이 산 종목 (외국인+기관)</h3><div class="chip-row">${line(f.buy, "up")}</div>` : ""}
     ${(f.sell || []).length ? `<h3 class="muted" style="margin:12px 0 4px">많이 판 종목</h3><div class="chip-row">${line(f.sell, "down")}</div>` : ""}
-    <p class="muted" style="margin:10px 0 0">금액은 순매수 주식 수 × 그날 종가로 어림한 값이에요. 큰손이 판다고 꼭 내리는 건 아니라서 매매 규칙은 안 바꿨어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">금액은 순매수 주식 수 × 그날 종가로 어림한 값이에요. 큰손이 판다고 꼭 내리는 건 아니라서 매매 규칙은 안 바꿨어요.</p></section>`;
 }
 
 function flowBars(x) {
@@ -2659,7 +2659,7 @@ function fillFlows(x) {
     ${m.hold == null ? "" : `<p class="sub" style="margin:10px 0 0">${term("외국인 보유율")} <b>${m.hold.toFixed(2)}%</b>${m.hold_chg == null ? "" : ` (20일 전보다 <b class="${sign(m.hold_chg)}">${m.hold_chg > 0 ? "+" : ""}${m.hold_chg.toFixed(2)}%p</b>)`}</p>`}
     <div class="legend" style="margin:10px 0 0"><span class="key"><i class="sw flow-frg"></i>외국인</span><span class="key"><i class="sw flow-inst"></i>기관</span></div>
     ${flowBars(x)}
-    <p class="muted" style="margin:8px 0 0">하루 ${term("순매수")} 주식 수 막대예요. 금액은 주식 수 × 그날 종가로 어림했어요. 네이버 증권 무료 자료예요.</p>`;
+    <p class="muted note" style="margin:8px 0 0">하루 ${term("순매수")} 주식 수 막대예요. 금액은 주식 수 × 그날 종가로 어림했어요. 네이버 증권 무료 자료예요.</p>`;
 }
 
 // 주가는 그대로인데 거래량만 크게 늘어난 종목 (quiet_volume.py). 예전 기록엔 없을 수 있어요.
@@ -2672,7 +2672,7 @@ function quietVolumeCard(d) {
   const more = q.total > (q.rows || []).length ? `<p class="muted" style="margin:6px 0 0">외 ${q.total - q.rows.length}개</p>` : "";
   return `<section class="card"><h2>주가 그대로·거래량 급증 <small>최근 ${q.days}거래일 · ${q.count}개 종목 중</small></h2>
     ${rows ? `<ul class="list">${rows}</ul>${more}` : `<p class="empty">오늘은 조건에 맞는 종목이 없어요.</p>`}
-    <p class="muted" style="margin:10px 0 0">주가는 ±${Math.round(q.max_move * 100)}% 안인데 거래량이 평소(${q.base}일 평균)의 ${q.min_ratio}배 이상인 종목이에요.
+    <p class="muted note" style="margin:10px 0 0">주가는 ±${Math.round(q.max_move * 100)}% 안인데 거래량이 평소(${q.base}일 평균)의 ${q.min_ratio}배 이상인 종목이에요.
       조용히 사 모으는 중인지 팔아 넘기는 중인지는 숫자만으론 몰라요. 참고용이고 매매 규칙은 안 바꿔요.</p></section>`;
 }
 
@@ -2683,7 +2683,7 @@ function widePicksCard(d) {
       <div class="meta">RSI2 ${p.rsi2} · 손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("");
   return `<section class="card"><h2>넓은 범위 후보 <small>참고 · 코스피 상위 200</small></h2>
     ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 넓은 범위에서도 조건에 맞는 종목이 없어요.</p>`}
-    <p class="muted" style="margin:10px 0 0">같은 조건을 2015년 이후 커진 회사까지 넓혀 봤어요. 검증 전이라 가상계좌엔 안 넣고 성과 화면 추천 성과로만 기록해요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">같은 조건을 2015년 이후 커진 회사까지 넓혀 봤어요. 검증 전이라 가상계좌엔 안 넣고 성과 화면 추천 성과로만 기록해요.</p></section>`;
 }
 
 // 내 판단 기록장 (텔레그램 '메모 삼성전자 산다')
@@ -2802,7 +2802,7 @@ function stockSectorCard(d) {
       <ul class="list">${links.map(([x, why]) => sectorLine(x, `${why}로 이어져요`)).join("")}</ul>` : ""}
     ${peers.length ? `<h3 class="muted" style="margin:12px 0 4px">같은 업종 대형주</h3>
       <ul class="list">${peers.map((x) => stockRow(x, d)).join("")}</ul>` : ""}
-    <p class="muted" style="margin:10px 0 0">업종을 누르면 홈 '업종별 호재·악재'에서 그 업종 뉴스와 종목을 자세히 봐요. 호재·악재는 뉴스 제목으로 짐작한 거예요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">업종을 누르면 홈 '업종별 호재·악재'에서 그 업종 뉴스와 종목을 자세히 봐요. 호재·악재는 뉴스 제목으로 짐작한 거예요.</p></section>`;
 }
 
 // 가격 알림: 텔레그램 봇이 15분마다 야후 5분봉을 보고, 정한 가격에 닿으면 텔레그램으로 알려 줘요.
@@ -2876,7 +2876,7 @@ function stockChartCard() {
     <p class="muted" id="stock-change" style="margin:8px 0 4px"></p>${candleLegend()}
     <div class="chart candle" id="stock-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
     <p class="muted" id="stock-all" style="margin:8px 0 0"></p>
-    <p class="muted" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 손가락을 따라와요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려서 같은 비율로 오르면 같은 높이예요.</p>${indHelp()}</section>`;
+    <p class="muted note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 손가락을 따라와요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려서 같은 비율로 오르면 같은 높이예요.</p>${indHelp()}</section>`;
 }
 
 // 차트 제목 옆: 자료가 시작하는 달. 보통 상장일이고, 야후 자료가 거기까지만 있는 오래된 종목
@@ -2993,7 +2993,7 @@ function fundHtml(f) {
   }
   return `<h2>재무제표 <small>${md(f.asof)} 받음</small></h2><div class="stats">${tiles}</div>
     <p class="sub" style="margin:12px 0 0">${gradeLine}</p>${eventsLine(f)}${targetBox(f, ent)}${body}
-    <p class="muted" style="margin:10px 0 0">야후 파이낸스 무료 자료라 늦거나 빠진 값이 있을 수 있어요. PER은 최근 4분기 순이익 기준이에요.</p>`;
+    <p class="muted note" style="margin:10px 0 0">야후 파이낸스 무료 자료라 늦거나 빠진 값이 있을 수 있어요. PER은 최근 4분기 순이익 기준이에요.</p>`;
 }
 
 // 다음 실적 발표일·배당 일정 한 줄 (야후 무료 자료, 매주 토요일 갱신)
@@ -3026,7 +3026,7 @@ function targetBox(f, ent) {
   return `<div class="tgt"><h3 class="muted" style="margin:14px 0 6px">애널리스트 ${term("목표주가")} <small>${t.n}명 평균</small></h3>
     <p class="sub" style="margin:0"><b>${price(market, t.mean)}</b>${up == null ? "" : ` · 지금보다 <b class="${sign(up)}">${pct(up)}</b>`}${t.rec ? ` · 의견 <b>${esc(t.rec)}</b>` : ""}</p>
     ${bar}<div class="legend" style="margin:4px 0 0"><span class="key"><i class="dot now"></i>지금 가격</span><span class="key"><i class="dot mean"></i>평균 목표가</span></div>
-    <p class="muted" style="margin:6px 0 0">증권사 목표가는 대체로 낙관적이고 늦게 바뀌어요. 참고만 하세요.</p></div>`;
+    <p class="muted note" style="margin:6px 0 0">증권사 목표가는 대체로 낙관적이고 늦게 바뀌어요. 참고만 하세요.</p></div>`;
 }
 
 // 매출과 영업이익(없으면 순이익) 막대. 적자는 0 아래로.
@@ -3447,6 +3447,31 @@ document.addEventListener("click", (e) => {
 }, true);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTerm(); });
 window.addEventListener("popstate", closeTerm);
+// ---------------------------------------------------------------- 작은 설명 글씨 접기
+// 설명·규칙 글씨(.note)와 도움말 목록(.help)은 처음엔 접어 두고 '자세히'를 누르면 펼쳐요.
+// 붙어 있는 것끼리는 한 번에 접고, 펼친 건 화면이 다시 그려져도 앱을 닫기 전까지 펼친 채로 둬요.
+const NOTE = ".note, ul.help";
+const FOLD_OPEN = new Set();
+function foldNotes(root) {
+  root.querySelectorAll(NOTE).forEach((el) => {
+    if (el.closest(".fold")) return;
+    const run = [el];
+    for (let n = el.nextElementSibling; n && n.matches(NOTE); n = n.nextElementSibling) run.push(n);
+    const key = el.textContent.trim().slice(0, 24);
+    const box = document.createElement("details");
+    box.className = "fold";
+    if (FOLD_OPEN.has(key)) box.open = true;
+    box.innerHTML = `<summary><span class="fold-more">자세히</span><span class="fold-less">접기</span></summary>`;
+    el.before(box);
+    box.append(...run);
+    box.addEventListener("toggle", () => { if (box.open) FOLD_OPEN.add(key); else FOLD_OPEN.delete(key); });
+  });
+}
+new MutationObserver((recs) => {
+  const hit = recs.some((r) => [...r.addedNodes].some((n) => n.nodeType === 1 && (n.matches(NOTE) || n.querySelector(NOTE))));
+  if (hit) foldNotes($("#app"));
+}).observe($("#app"), { childList: true, subtree: true });
+
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 render();  // 데이터가 오기 전에도 주소에 맞는 시장·화면 버튼을 표시해요
 load();

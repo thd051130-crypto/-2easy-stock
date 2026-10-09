@@ -582,3 +582,13 @@ details.gloss p { margin: 6px 0 2px; font-size: 14px; line-height: 1.55; color: 
 .step .name { font-weight: 600; }
 .step.on .name { color: var(--text-secondary); }
 .step .meta { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+
+/* 작은 설명 글씨 접기: 처음엔 '자세히 ▾'만 보이고 누르면 펼쳐져요 */
+details.fold { margin-top: 6px; }
+details.fold > summary { list-style: none; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 13px; color: var(--text-muted); -webkit-tap-highlight-color: transparent; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::after { content: "▾"; font-size: 12px; transition: transform .2s; }
+details.fold[open] > summary::after { transform: rotate(180deg); }
+details.fold .fold-less, details.fold[open] .fold-more { display: none; }
+details.fold[open] .fold-less { display: inline; }
+details.fold > summary + * { margin-top: 2px !important; }
