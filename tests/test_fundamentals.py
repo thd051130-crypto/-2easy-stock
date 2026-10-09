@@ -115,3 +115,18 @@ def test_update_merge_keeps_other_stocks(tmp_path, monkeypatch):
 @pytest.mark.parametrize("x, want", [("1.5", 1.5), (None, None), (float("nan"), None), ("abc", None), (float("inf"), None)])
 def test_num(x, want):
     assert fu.num(x) == want
+
+
+def test_summarize_adds_analyst_target_and_calendar():
+    info = dict(marketCap=1000.0, targetMeanPrice=478905.62, targetHighPrice=725000.0, targetLowPrice=290000.0,
+                numberOfAnalystOpinions=36, recommendationKey="strong_buy", recommendationMean=1.36111,
+                exDividendDate=1782691200, dividendRate=1496.0, lastDividendValue=374.0, earningsTimestamp=1793167200)
+    r = fu.summarize("kr", "005930", info, None, QUARTERLY, 500.0)
+    assert r["target"] == dict(mean=478905.62, high=725000.0, low=290000.0, n=36, rec="적극 매수", score=1.36)
+    assert r["events"] == dict(exdiv="2026-06-29", div_rate=1496.0, div_last=374.0, earn="2026-10-28")
+    # 배당 날짜는 야후가 그날 0시(UTC)로 줘요. 실적 발표는 뉴욕 시각 기준 날짜 (16:30 발표)
+    info = dict(marketCap=1.0, exDividendDate=1786320000, dividendDate=1786579200, earningsTimestamp=1793649600)
+    r = fu.summarize("us", "AAPL", info, None, None, None)
+    assert r["events"] == dict(exdiv="2026-08-10", paydiv="2026-08-13", earn="2026-11-02")
+    # 애널리스트가 없으면 목표주가 없음
+    assert fu.summarize("kr", "293490", dict(marketCap=1.0), None, None, None)["target"] is None

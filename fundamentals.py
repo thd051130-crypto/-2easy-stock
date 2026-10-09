@@ -102,6 +102,39 @@ def r2(x):
     return None if x is None else round(x, 2)
 
 
+REC = {"strong_buy": "적극 매수", "buy": "매수", "hold": "보유", "underperform": "비중 축소", "sell": "매도",
+       "strong_sell": "적극 매도", "none": None}
+# 실적 발표 시각 → 그 시장 날짜 (미장은 뉴욕 기준, 서머타임 한 시간 차이는 날짜에 거의 영향 없음).
+# 배당 날짜는 야후가 그날 0시(UTC)로 줘서 UTC 그대로 읽어요.
+TZ = {"kr": KST, "us": dt.timezone(dt.timedelta(hours=-5)), "utc": dt.timezone.utc}
+
+
+def day_of(market, ts):
+    """야후 유닉스 시각 → 'YYYY-MM-DD'. 없거나 이상하면 None."""
+    ts = num(ts)
+    if not ts or ts <= 0:
+        return None
+    return f"{dt.datetime.fromtimestamp(ts, TZ[market]).date():%Y-%m-%d}"
+
+
+def target(info):
+    """애널리스트 목표주가(야후 무료 컨센서스): 평균·최고·최저·참여 수·의견. 참여한 애널리스트가 없으면 None."""
+    n = num(info.get("numberOfAnalystOpinions"))
+    mean = num(info.get("targetMeanPrice"))
+    if not n or not mean:
+        return None
+    return dict(mean=r2(mean), high=r2(num(info.get("targetHighPrice"))), low=r2(num(info.get("targetLowPrice"))),
+                n=int(n), rec=REC.get(info.get("recommendationKey")), score=r2(num(info.get("recommendationMean"))))
+
+
+def events(market, info):
+    """배당·실적 일정: 배당락일, 배당 지급일, 1주당 연 배당금·최근 1회 배당금, 다음 실적 발표일."""
+    out = dict(exdiv=day_of("utc", info.get("exDividendDate")), paydiv=day_of("utc", info.get("dividendDate")),
+               div_rate=r2(num(info.get("dividendRate"))), div_last=r2(num(info.get("lastDividendValue"))),
+               earn=day_of(market, info.get("earningsTimestamp") or info.get("earningsTimestampStart")))
+    return {k: v for k, v in out.items() if v is not None}
+
+
 def summarize(market, code, info, annual, quarterly, equity, today=None):
     """화면에 보여 줄 숫자만 골라요. PER·PBR은 야후 값이 없거나 이상하면 재무제표로 계산해요."""
     cap = num(info.get("marketCap"))
@@ -125,7 +158,7 @@ def summarize(market, code, info, annual, quarterly, equity, today=None):
         pbr=r2(pbr), cap=cap, div=r2(num(info.get("dividendYield"))),  # 배당수익률은 % 단위 (yfinance 1.x)
         roe=r2(f["roe"]), debt=r2(f["debt"]), financial=f["financial"], sector=info.get("sector"),
         grade=dict(grade=g["grade"], score=g["score"], total=g["total"], checks=[[c, bool(ok)] for c, ok in g["checks"]]),
-        annual=annual, quarterly=quarterly)
+        annual=annual, quarterly=quarterly, target=target(info), events=events(market, info))
 
 
 def fetch(market, code):
