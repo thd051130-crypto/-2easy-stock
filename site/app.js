@@ -286,14 +286,14 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), calendarCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), savingsCard(),
     rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
-  stock: (d) => [stockHeadCard(d), stockSectorCard(d), stockChartCard(),
+  stock: (d) => [stockHeadCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
@@ -2144,6 +2144,30 @@ function toneBadge(s) {
   const cls = s.good > s.bad ? "good" : s.bad > s.good ? "bad" : "";
   return `<span class="badge ${cls}">${esc(s.label)}</span>`;
 }
+// 공시 (disclosures.py, 오픈DART). ⚠️ 주의(유상증자·전환사채 등), 🔍 지분 변동, 👍 좋은 편(자사주 매입·배당 등)
+const DIS_ICON = { warn: "⚠️", check: "🔍", good: "👍" };
+const DIS_LINK = (no) => `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${encodeURIComponent(no)}`;
+function disRow(x, withName) {
+  return `<li><div class="l"><div class="name">${DIS_ICON[x.tone] || "📄"} ${withName ? `${esc(x.name)} · ` : ""}<a href="${DIS_LINK(x.no)}" target="_blank" rel="noopener">${esc(x.title)}</a></div>
+    <div class="meta">${md(x.day)}${x.by && x.by !== x.name ? ` · ${esc(x.by)}` : ""}</div></div></li>`;
+}
+function discloseStockCard(d) {
+  if (market !== "kr" || !d.disclosures) return "";
+  const mine = d.disclosures.filter((x) => x.code === stockCode);
+  if (!mine.length) return "";
+  return `<section class="card"><h2>최근 공시 <small>30일 · 금감원 전자공시</small></h2><ul class="list">${mine.map((x) => disRow(x, false)).join("")}</ul>
+    <p class="muted" style="margin:8px 0 0">⚠️ 유상증자·전환사채·최대주주 변경 같은 공시는 주가가 내릴 때가 많아요. 제목을 누르면 원문이 열려요.</p></section>`;
+}
+function discloseHomeCard(d) {
+  if (market !== "kr" || !d.disclosures) return "";
+  const since = new Date(Date.parse(TODAY()) - 7 * 864e5).toISOString().slice(0, 10);
+  const mine = new Set([...WATCH.kr, ...(d.extras || []).map((e) => e.code), ...((d.account && d.account.positions) || []).map((p) => p.code)]);
+  const rows = d.disclosures.filter((x) => x.day >= since && (x.tone === "warn" || x.tone === "check" || mine.has(x.code)));
+  return `<section class="card"><h2>최근 공시 <small>7일 · 주의 공시와 내 종목</small></h2>
+    ${rows.length ? `<ul class="list">${rows.slice(0, 8).map((x) => disRow(x, true)).join("")}</ul>` : `<p class="empty">최근 7일 동안 주의할 공시가 없어요.</p>`}
+    <p class="muted" style="margin:8px 0 0">평일 한 시간마다 금감원 전자공시를 봐요. ⚠️ 공시는 텔레그램으로 바로 와요.</p></section>`;
+}
+
 // 다가오는 일정 (econ_calendar.py): 금리 결정·만기일·실적 시즌은 다 보여 주고, 종목 실적 발표·배당락은
 // 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만. 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;

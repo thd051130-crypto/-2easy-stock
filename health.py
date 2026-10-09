@@ -39,6 +39,7 @@ WORKFLOWS = {
     "fundamentals": ("재무·종목 목록", 1),
     "macro": ("경기 리포트", 5),
     "world": ("세계 지수·환율", 5),
+    "disclosures": ("공시 알림", None),
 }
 
 
