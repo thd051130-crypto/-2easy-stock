@@ -38,14 +38,15 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock", "search"];
+const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock", "search", "map"];
 let screen = "home";
-// 종목 화면(#kr/stock/005930)과 검색 화면(#kr/search)은 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
+// 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search"];
+const LAYERS = ["stock", "search", "map"];
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
+let mapStart = "";  // 주소로 바로 연 산업 지도의 고른 산업
 const fromHash = () => {
   const [m, s, code] = location.hash.slice(1).split("/");
   let c = null;
@@ -55,9 +56,14 @@ const fromHash = () => {
 {
   const h = fromHash();
   if (h.m === "kr" || h.m === "us") market = h.m;
-  if (SCREENS.includes(h.s) && (h.s !== "stock" || h.code)) { screen = h.s; stockCode = h.code; }
+  if (SCREENS.includes(h.s) && (h.s !== "stock" || h.code)) {
+    screen = h.s;
+    if (h.s === "map") mapStart = h.code || "";
+    else stockCode = h.code;
+  }
 }
-const hashFor = () => `#${market}${screen === "home" ? "" : `/${screen}`}${screen === "stock" ? `/${encodeURIComponent(stockCode)}` : ""}`;
+const hashFor = () => `#${market}${screen === "home" ? "" : `/${screen}`}${screen === "stock" ? `/${encodeURIComponent(stockCode)}`
+  : screen === "map" && mapFocus ? `/${encodeURIComponent(mapFocus)}` : ""}`;
 
 // 관심종목(★)은 이 폰 브라우저에 시장별로 저장해요. 저장소를 못 쓰면 앱을 닫을 때까지만 기억해요.
 const WATCH = {};
@@ -289,6 +295,7 @@ const VIEWS = {
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`],
   stock: (d) => [stockHeadCard(d), stockSectorCard(d), stockChartCard(), `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
+  map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
 };
 
 function render() {
@@ -346,6 +353,8 @@ function render() {
   if (screen === "watch") bindWatch(d);
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
+  if (screen === "map") bindMap();
+  if (screen !== "search") app.querySelectorAll("[data-map]").forEach((b) => b.addEventListener("click", () => openMap(b.dataset.map)));
   bindRows(app, d);
   if (screen === "chart") {
     app.querySelectorAll("[data-idx]").forEach((b) => b.addEventListener("click", () => {
@@ -828,7 +837,8 @@ function themeChips(title) {
   if (!THEMES) return "";
   return `<section class="card"><h2>${esc(title)} <small>누르면 관련 종목</small></h2>
     <div class="chips theme-chips" role="group" aria-label="테마 고르기">${THEMES.themes.map((t) =>
-      `<button type="button" data-theme-q="${esc(t.keys[0])} 관련 종목">${esc(t.name)}</button>`).join("")}</div></section>`;
+      `<button type="button" data-theme-q="${esc(t.keys[0])} 관련 종목">${esc(t.name)}</button>`).join("")}</div>
+    <button type="button" class="more" data-map="">산업 연관 지도로 보기<span aria-hidden="true">›</span></button></section>`;
 }
 
 const SYM_AT = { kr: null, us: null };  // 코드 → 목록 줄
@@ -865,6 +875,7 @@ function themeCard(t, only) {
   }).join("");
   return `<section class="card theme-card"><h2>${esc(t.name)} <small>테마 · 참고</small></h2>
     <p class="sub">${esc(t.why)}</p>${parts || `<p class="empty">이 시장엔 골라 둔 종목이 없어요.</p>`}
+    <button type="button" class="more" data-map="${esc(t.name)}">산업 지도에서 이어진 산업 보기<span aria-hidden="true">›</span></button>
     ${botNote()}
     <p class="muted" style="margin:10px 0 0">미리 골라 둔 대표 종목이에요 (큰 회사부터). 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
 }
@@ -904,6 +915,7 @@ function bindSearch() {
 }
 
 function bindResults(el) {
+  if (el.id === "search-results") el.querySelectorAll("[data-map]").forEach((b) => b.addEventListener("click", () => openMap(b.dataset.map)));
   el.querySelectorAll("[data-open]").forEach((row) => row.addEventListener("click", () => {
     const [m, code] = row.dataset.open.split("/");
     if (m !== market) { market = m; try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ } }
@@ -938,6 +950,335 @@ function bindResults(el) {
     try { localStorage.setItem("req", JSON.stringify(REQ)); } catch (e) { /* 이번만 기억 */ }
     setTimeout(() => { if (screen === "search") { const list = $("#search-results"); if (list) { list.innerHTML = searchResults(); bindResults(list); } } }, 300);
   }));
+}
+
+// ---------------------------------------------------------------- 산업 지도 (industry_map.py → industry.json)
+// 산업 36개를 점으로, 서로 이어진 산업을 선으로. 산업을 누르면 그 산업이 가운데로 오고 연결된 산업만 둘레에 모여요.
+let IMAP = null;  // { groups, kinds, nodes, links, flows?, corr?, hidden?, day? }
+let imapLoading = null;
+let mapFocus = mapStart;
+let mapColor = "group";
+try { mapColor = localStorage.getItem("map_color") === "flow" ? "flow" : "group"; } catch (e) { /* 기본값 */ }
+const MAP_W = 360, MAP_H = 470;
+const MAP_ANCHOR = { tech: [92, 80], energy: [270, 100], industry: [180, 238], consumer: [96, 380], finance: [272, 392] };
+const MAP_KIND = { s: "공급망", c: "같은 요인", n: "반대", h: "주가로 찾음" };
+function loadMap() {
+  if (!imapLoading) {
+    imapLoading = fetch("industry.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => {
+        if (!x || !Array.isArray(x.nodes)) { imapLoading = null; return; }
+        x.at = new Map(x.nodes.map((n, i) => [n.name, i]));
+        x.nodes.forEach((n) => { n.w = textW(n.short) + 26; n.fw = textW(n.short) * 1.18 + 30; });
+        mapLayout(x);
+        IMAP = x;
+      });
+  }
+  return imapLoading;
+}
+// 글자 폭 어림 (12px 글꼴): 한글 12px, 영문·숫자 7px, 기호 4px
+const textW = (s) => [...s].reduce((a, c) => a + (/[가-힣]/.test(c) ? 12 : /[A-Za-z0-9]/.test(c) ? 7.2 : 4), 0);
+
+// 전체 지도 자리: 묶음마다 중심으로 당기고, 이어진 산업끼리 당기고, 겹치면 밀어내요 (처음 한 번, 매번 같은 결과)
+function mapLayout(x) {
+  const N = x.nodes;
+  const groupIdx = {};
+  N.forEach((n) => {
+    const k = (groupIdx[n.group] = (groupIdx[n.group] || 0) + 1);
+    const total = N.filter((m) => m.group === n.group).length;
+    const a = (k / total) * Math.PI * 2;
+    const [ax, ay] = MAP_ANCHOR[n.group] || [MAP_W / 2, MAP_H / 2];
+    n.x = ax + Math.cos(a) * 46; n.y = ay + Math.sin(a) * 34;
+  });
+  const E = x.links.map((l) => [x.at.get(l.a), x.at.get(l.b)]).filter(([a, b]) => a != null && b != null);
+  const H = 26, GAP = 8, ROUNDS = 600;
+  for (let it = 0; it < ROUNDS; it++) {
+    const cool = 1 - it / ROUNDS;
+    if (it < ROUNDS - 120) {
+      for (const [a, b] of E) {
+        const p = N[a], q = N[b], dx = q.x - p.x, dy = q.y - p.y, dist = Math.hypot(dx, dy) || 1;
+        const f = ((dist - 100) / dist) * 0.01 * cool;
+        p.x += dx * f; p.y += dy * f; q.x -= dx * f; q.y -= dy * f;
+      }
+      N.forEach((n) => {
+        const [ax, ay] = MAP_ANCHOR[n.group] || [MAP_W / 2, MAP_H / 2];
+        n.x += (ax - n.x) * 0.03 * cool; n.y += (ay - n.y) * 0.03 * cool;
+      });
+    }
+    for (let sweep = it < ROUNDS - 120 ? 1 : 3; sweep > 0; sweep--) for (let i = 0; i < N.length; i++) {
+      for (let j = i + 1; j < N.length; j++) {
+        const p = N[i], q = N[j];
+        const ox = (p.w + q.w) / 2 + GAP - Math.abs(q.x - p.x), oy = H + GAP - Math.abs(q.y - p.y);
+        if (ox <= 0 || oy <= 0) continue;
+        if (ox < oy) { const s = (q.x >= p.x ? 1 : -1) * ox / 2; p.x -= s; q.x += s; }
+        else { const s = (q.y >= p.y ? 1 : -1) * oy / 2; p.y -= s; q.y += s; }
+      }
+    }
+    N.forEach((n) => {
+      n.x = Math.max(n.w / 2 + 2, Math.min(MAP_W - n.w / 2 - 2, n.x));
+      n.y = Math.max(H / 2 + 2, Math.min(MAP_H - H / 2 - 2, n.y));
+    });
+  }
+  N.forEach((n) => { n.ox = n.x; n.oy = n.y; });
+}
+
+// 고른 산업과 이어진 산업 [{ name, kind, why, role, corr }]: 사람이 이은 선 + 이 시장에서 주가로 찾은 연결
+function mapNeighbors(name) {
+  const out = [];
+  const corr = (IMAP.corr && IMAP.corr[market]) || {};
+  IMAP.links.forEach((l) => {
+    if (l.a !== name && l.b !== name) return;
+    const other = l.a === name ? l.b : l.a;
+    const role = l.kind !== "s" ? MAP_KIND[l.kind] : l.a === name ? "고객 산업" : "공급 산업";
+    out.push({ name: other, kind: l.kind, why: l.why, role, corr: corr[`${l.a}|${l.b}`] });
+  });
+  ((IMAP.hidden && IMAP.hidden[market]) || []).forEach(([a, b, v]) => {
+    if (a !== name && b !== name) return;
+    out.push({ name: a === name ? b : a, kind: "h", why: "최근 6개월 주가가 유난히 같이 움직였어요. 이유는 뉴스로 직접 확인해 보세요",
+      role: "주가로 찾음", corr: v });
+  });
+  const g = IMAP.groups.map((x) => x.id);
+  const ord = (n) => { const node = IMAP.nodes[IMAP.at.get(n.name)]; return g.indexOf(node.group) * 100 + IMAP.nodes.indexOf(node); };
+  return out.sort((a, b) => ord(a) - ord(b));
+}
+// 고른 산업은 가운데, 이어진 산업은 둘레(타원)에. 많으면 안쪽·바깥쪽 번갈아. 나머지는 제자리에서 흐리게.
+function mapTargets() {
+  const T = IMAP.nodes.map((n) => ({ x: n.ox, y: n.oy, on: !mapFocus, center: false }));
+  if (!mapFocus || !IMAP.at.has(mapFocus)) return T;
+  const cx = MAP_W / 2, cy = MAP_H / 2;
+  T[IMAP.at.get(mapFocus)] = { x: cx, y: cy, on: true, center: true };
+  const nb = mapNeighbors(mapFocus);
+  const many = nb.length > 8;
+  nb.forEach((x, i) => {
+    const a = -Math.PI / 2 + (i / nb.length) * Math.PI * 2;
+    const k = many && i % 2 ? 0.7 : 1;
+    const node = IMAP.nodes[IMAP.at.get(x.name)];
+    const rx = MAP_W / 2 - node.w / 2 - 4;
+    T[IMAP.at.get(x.name)] = { x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * (MAP_H / 2 - 36) * k, on: true, center: false };
+  });
+  return T;
+}
+
+function mapFlow(name, m = market) {
+  return IMAP && IMAP.flows && IMAP.flows[m] && IMAP.flows[m][name];
+}
+// 5일 흐름 색: 오르면 빨강, 내리면 파랑. ±1%·3%·6%에서 진해져요
+function heat(r5) {
+  if (r5 == null) return "";
+  const a = Math.abs(r5), lv = a >= 0.06 ? 3 : a >= 0.03 ? 2 : a >= 0.01 ? 1 : 0;
+  return lv ? ` heat ${r5 > 0 ? "up" : "down"} h${lv}` : " heat";
+}
+
+function mapSvg() {
+  const hidden = (IMAP.hidden && IMAP.hidden[market]) || [];
+  const edges = IMAP.links.map((l, i) => `<polyline class="edge k-${l.kind}" data-e="${i}" points=""/>`).join("")
+    + hidden.map((h, i) => `<polyline class="edge k-h" data-h="${i}" points=""/>`).join("");
+  const nodes = IMAP.nodes.map((n, i) => {
+    const f = mapFlow(n.name);
+    const cls = `node g-${n.group}${mapColor === "flow" ? heat(f && f.r5) : ""}`;
+    return `<g class="${cls}" data-n="${i}" role="button" tabindex="0" aria-label="${esc(n.name)}${f ? ` 5일 ${pct(f.r5)}` : ""}">
+      <rect class="hit" x="${-n.fw / 2 - 4}" y="-18" width="${n.fw + 8}" height="36"/>
+      <g class="pill"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
+      <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g>
+      <text class="flow ${sign(f && f.r5)}" y="27">${f ? pct(f.r5) : ""}</text></g>`;
+  }).join("");
+  return `<svg class="imap${mapFocus ? " focused" : ""}" viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="산업 연관 지도">
+    <defs><marker id="imap-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1 1 9 5 1 9z"/></marker></defs>
+    <g class="edges">${edges}</g><g class="nodes">${nodes}</g></svg>`;
+}
+
+// 점·선을 새 자리로 (0.45초). 동작 줄이기를 켰으면 바로.
+let mapAnim = 0;
+function placeMap(svg, animate) {
+  const T = mapTargets();
+  const N = IMAP.nodes;
+  const from = N.map((n) => ({ x: n.x, y: n.y }));
+  const hidden = (IMAP.hidden && IMAP.hidden[market]) || [];
+  const fi = mapFocus ? IMAP.at.get(mapFocus) : null;
+  N.forEach((n, i) => {
+    const g = svg.querySelector(`[data-n="${i}"]`);
+    g.classList.toggle("dim", !T[i].on);
+    g.classList.toggle("center", T[i].center);
+    g.classList.toggle("near", !!mapFocus && T[i].on && !T[i].center);
+  });
+  IMAP.links.forEach((l, i) => {
+    const e = svg.querySelector(`[data-e="${i}"]`);
+    const on = fi == null || l.a === mapFocus || l.b === mapFocus;
+    e.classList.toggle("off", !on);
+    e.classList.toggle("lit", fi != null && on);
+    if (fi != null && on && l.kind === "s") e.setAttribute("marker-mid", "url(#imap-arrow)"); else e.removeAttribute("marker-mid");
+  });
+  hidden.forEach(([a, b], i) => {
+    const e = svg.querySelector(`[data-h="${i}"]`);
+    const on = fi != null && (a === mapFocus || b === mapFocus);
+    e.classList.toggle("off", !on);
+    e.classList.toggle("lit", on);
+  });
+  const draw = (k) => {
+    N.forEach((n, i) => {
+      n.x = from[i].x + (T[i].x - from[i].x) * k;
+      n.y = from[i].y + (T[i].y - from[i].y) * k;
+      svg.querySelector(`[data-n="${i}"]`).setAttribute("transform", `translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`);
+    });
+    const line = (e, a, b) => {
+      const p = N[IMAP.at.get(a)], q = N[IMAP.at.get(b)];
+      if (!p || !q) return;
+      e.setAttribute("points", `${p.x.toFixed(1)},${p.y.toFixed(1)} ${((p.x + q.x) / 2).toFixed(1)},${((p.y + q.y) / 2).toFixed(1)} ${q.x.toFixed(1)},${q.y.toFixed(1)}`);
+    };
+    IMAP.links.forEach((l, i) => line(svg.querySelector(`[data-e="${i}"]`), l.a, l.b));
+    hidden.forEach(([a, b], i) => line(svg.querySelector(`[data-h="${i}"]`), a, b));
+  };
+  cancelAnimationFrame(mapAnim);
+  if (!animate || calm()) { draw(1); return; }
+  const t0 = performance.now(), dur = 450;
+  const step = (now) => {
+    const t = Math.min(1, (now - t0) / dur);
+    draw(1 - (1 - t) ** 3);
+    if (t < 1) mapAnim = requestAnimationFrame(step);
+  };
+  mapAnim = requestAnimationFrame(step);
+}
+
+function mapCard() {
+  const head = `<button type="button" class="back" data-back>‹ 뒤로</button><h2 class="stock-name">산업 연관 지도</h2>`;
+  if (!IMAP) {
+    return `<section class="card">${head}<p class="muted" id="map-wait">지도를 불러오는 중이에요…</p></section>`;
+  }
+  const legend = IMAP.groups.map((g) => `<span class="lg g-${g.id}"><i></i>${esc(g.name)}</span>`).join("");
+  const colors = [["group", "묶음 색"], ["flow", "5일 흐름 색"]].map(([k, label]) =>
+    `<button type="button" data-mapcolor="${k}" aria-pressed="${mapColor === k}">${label}</button>`).join("");
+  const has = !!(IMAP.flows && IMAP.flows[market]);
+  return `<section class="card map-card">${head}
+    <p class="sub" id="map-sub">${mapFocus ? `<b>${esc(mapFocus)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로 옮겨 가요.`
+      : "산업을 누르면 이어진 산업만 선으로 모아 보여 줘요."}</p>
+    <div class="map-tools"><div class="period" role="group" aria-label="점 색">${colors}</div>
+      <button type="button" class="map-all" data-mapall ${mapFocus ? "" : "hidden"}>‹ 전체 보기</button></div>
+    <div class="imap-wrap">${mapSvg()}</div>
+    <div class="map-legend">${mapColor === "flow" && has ? `<span class="lg"><i class="up"></i>5일 오름</span><span class="lg"><i class="down"></i>5일 내림</span><span class="muted">${MK_NAME[market]} 대표 종목 중간값</span>`
+      : legend}</div>
+    <div class="map-legend lines"><span><svg viewBox="0 0 28 8"><path class="k-s" d="M1 4h26"/></svg>공급망·수요</span>
+      <span><svg viewBox="0 0 28 8"><path class="k-c" d="M1 4h26"/></svg>같은 요인</span>
+      <span><svg viewBox="0 0 28 8"><path class="k-n" d="M1 4h26"/></svg>반대</span>
+      <span><svg viewBox="0 0 28 8"><path class="k-h" d="M1 4h26"/></svg>주가로 찾음</span></div>
+    ${mapColor === "flow" && !has ? `<p class="muted" style="margin:6px 0 0">${MK_NAME[market]} 흐름 자료가 아직 없어요. 다음 배포 때 생겨요.</p>` : ""}</section>`;
+}
+
+const together = (v) => (v == null ? "" : v >= 0.6 ? "주가 많이 같이 움직임" : v >= 0.3 ? "주가 조금 같이 움직임"
+  : v > -0.3 ? "주가는 따로 움직임" : "주가가 반대로 움직임");
+
+function mapStockRow(m, [code, ko, close, r5]) {
+  const mine = stocksOf(DATA.markets[m]).some((s) => s.code === code);
+  return `<li ${mine ? `data-open="${m}/${esc(code)}"` : `data-mapsearch="${esc(code)}"`}><div class="l"><div class="name">${esc(ko)}</div>
+    <div class="meta">${esc(code)}${mine ? " · 누르면 차트" : " · 누르면 검색"}</div></div>
+    <div class="r">${price(m, close)}<div class="meta ${sign(r5)}">5일 ${pct(r5)}</div></div></li>`;
+}
+
+function mapDetailCard() {
+  if (!IMAP) return "";
+  const day = IMAP.day && IMAP.day[market];
+  if (!mapFocus || !IMAP.at.has(mapFocus)) {
+    const fl = (IMAP.flows && IMAP.flows[market]) || {};
+    const ranked = Object.entries(fl).filter(([, f]) => f.r5 != null).sort((a, b) => b[1].r5 - a[1].r5);
+    const row = ([name, f]) => `<li data-mapgo="${esc(name)}"><div class="l"><div class="name">${esc(name)}</div>
+      <div class="meta">대표 ${f.n}종목 · 20일 ${pct(f.r20)}</div></div><div class="r ${sign(f.r5)}">${pct(f.r5)}</div></li>`;
+    const body = ranked.length >= 6 ? `<h3 class="muted" style="margin:4px 0">많이 오른 산업</h3><ul class="list">${ranked.slice(0, 3).map(row).join("")}</ul>
+      <h3 class="muted" style="margin:12px 0 4px">많이 내린 산업</h3><ul class="list">${ranked.slice(-3).reverse().map(row).join("")}</ul>`
+      : `<p class="empty">${MK_NAME[market]} 산업 흐름 자료가 아직 없어요. 다음 배포 때 생겨요.</p>`;
+    return `<section class="card"><h2>${MK_NAME[market]} 산업 흐름 <small>최근 5거래일${day ? ` · ${md(day)}` : ""}</small></h2>${body}
+      <p class="muted" style="margin:10px 0 0">산업마다 대표 종목 5개의 5일 등락률 중간값이에요. 누르면 지도에서 그 산업의 연결을 보여 줘요.
+      연결은 사람이 정리한 참고 자료라 매매 규칙은 안 바꿔요.</p></section>`;
+  }
+  const node = IMAP.nodes[IMAP.at.get(mapFocus)];
+  const group = IMAP.groups.find((g) => g.id === node.group);
+  const f = mapFlow(mapFocus);
+  const nb = mapNeighbors(mapFocus);
+  const lines = nb.map((x) => {
+    const xf = mapFlow(x.name);
+    const badge = `<span class="badge k-${x.kind}">${esc(x.role)}</span>`;
+    return `<li data-mapgo="${esc(x.name)}"><div class="l"><div class="name">${esc(x.name)}${badge}</div>
+      <div class="meta">${esc(x.why)}${x.corr == null ? "" : ` · ${together(x.corr)} (${x.corr.toFixed(2)})`}</div></div>
+      <div class="r ${sign(xf && xf.r5)}">${xf ? pct(xf.r5) : "-"}<div class="meta">5일</div></div></li>`;
+  }).join("");
+  const stocks = f ? f.stocks.map((s) => mapStockRow(market, s)).join("") : "";
+  return `<section class="card"><h2>${esc(mapFocus)} <small>${esc(group ? group.name : "")} · 참고</small></h2>
+    <p class="sub">${esc(node.why)}</p>
+    ${f ? `<p class="headline ${sign(f.r5)}" style="margin-top:10px">${pct(f.r5)} <small class="muted" style="font-size:13px;font-weight:400">${MK_NAME[market]} 5일 중간값 · 20일 ${pct(f.r20)}</small></p>` : ""}
+    <h3 class="muted" style="margin:12px 0 4px">이어진 산업 ${nb.length}개 <small>누르면 그 산업으로</small></h3>
+    <ul class="list">${lines}</ul>
+    ${stocks ? `<h3 class="muted" style="margin:12px 0 4px">${MK_NAME[market]} 대표 종목${day ? ` · ${md(day)} 종가` : ""}</h3><ul class="list">${stocks}</ul>`
+      : `<p class="muted" style="margin:10px 0 0">${MK_NAME[market]} 대표 종목 시세가 아직 없어요.</p>`}
+    <button type="button" class="more" data-mapq="${esc(node.q)}">${esc(mapFocus)} 관련 종목 전체 보기 (국장·미장)<span aria-hidden="true">›</span></button>
+    <p class="muted" style="margin:10px 0 0">주가 동행은 최근 120거래일 하루 등락률의 상관계수(1이면 똑같이, 0이면 따로)예요.
+      연결은 사람이 정리한 참고 자료라 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
+}
+
+function openMap(name) {
+  mapFocus = name || "";
+  go("map");
+}
+function setMapFocus(name) {
+  mapFocus = name;
+  history.replaceState(history.state, "", hashFor());
+  const svg = $(".imap");
+  if (!svg) { render(); return; }
+  svg.classList.toggle("focused", !!name);
+  placeMap(svg, true);
+  const sub = $("#map-sub");
+  if (sub) sub.innerHTML = name ? `<b>${esc(name)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로 옮겨 가요.`
+    : "산업을 누르면 이어진 산업만 선으로 모아 보여 줘요.";
+  const all = $("[data-mapall]");
+  if (all) all.hidden = !name;
+  const old = $("#map-detail");
+  if (old) { old.innerHTML = mapDetailCard(); bindMapDetail(old); }
+}
+function bindMapDetail(el) {
+  el.querySelectorAll("[data-mapgo]").forEach((b) => b.addEventListener("click", () => {
+    setMapFocus(b.dataset.mapgo);
+    const card = $(".map-card");
+    if (card) card.scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
+  }));
+  el.querySelectorAll("[data-mapq]").forEach((b) => b.addEventListener("click", () => {
+    searchQuery = `${b.dataset.mapq} 관련 종목`;
+    go("search");
+  }));
+  el.querySelectorAll("[data-mapsearch]").forEach((b) => b.addEventListener("click", () => {
+    searchQuery = b.dataset.mapsearch;
+    go("search");
+  }));
+  bindResults(el);
+}
+function bindMap() {
+  if (!IMAP) {
+    loadMap().then(() => {
+      if (screen !== "map") return;
+      if (IMAP) render();
+      else { const w = $("#map-wait"); if (w) w.textContent = "지도를 못 불러왔어요. 잠시 뒤 다시 열어 보세요."; }
+    });
+    return;
+  }
+  if (mapFocus && !IMAP.at.has(mapFocus)) mapFocus = "";
+  const svg = $(".imap");
+  placeMap(svg, false);
+  svg.querySelectorAll("[data-n]").forEach((g) => {
+    const pick = () => {
+      const name = IMAP.nodes[Number(g.dataset.n)].name;
+      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 '전체 보기'에서
+      setMapFocus(name === mapFocus ? "" : name);
+    };
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  const all = $("[data-mapall]");
+  if (all) all.addEventListener("click", () => setMapFocus(""));
+  document.querySelectorAll("[data-mapcolor]").forEach((b) => b.addEventListener("click", () => {
+    mapColor = b.dataset.mapcolor;
+    try { localStorage.setItem("map_color", mapColor); } catch (e) { /* 이번만 기억 */ }
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
+  const detail = $("#map-detail");
+  if (detail) bindMapDetail(detail);
 }
 
 // ---------------------------------------------------------------- 추천 종목 성과
@@ -1562,7 +1903,8 @@ function sectorsCard(d) {
       ${members ? `<h3 class="muted" style="margin:12px 0 4px">이 업종 대형주</h3><ul class="list">${members}</ul>` : ""}`;
   }
   return `<section class="card" id="sectors-card"><h2>업종별 호재·악재 <small>최근 5거래일 · 참고</small></h2>${chips}${body}
-    <p class="muted" style="margin:10px 0 0">호재·악재는 뉴스 제목 낱말로 짐작한 거예요. 고른 업종은 관심 화면 전체 종목에도 똑같이 걸려요.</p></section>`;
+    <p class="muted" style="margin:10px 0 0">호재·악재는 뉴스 제목 낱말로 짐작한 거예요. 고른 업종은 관심 화면 전체 종목에도 똑같이 걸려요.</p>
+    <button type="button" class="more" data-map="">산업 연관 지도 (어떤 산업끼리 이어져 있나)<span aria-hidden="true">›</span></button></section>`;
 }
 
 // 많이 오른·내린 종목과 추정 이유 (movers.py). 예전 기록엔 없을 수 있어요.
@@ -2309,6 +2651,7 @@ document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("clic
 window.addEventListener("popstate", () => {
   const h = fromHash();
   if (h.s === "stock" && h.code) stockCode = h.code;
+  if (h.s === "map") mapFocus = h.code || "";
   go(h.s, true);
 });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });

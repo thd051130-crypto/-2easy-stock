@@ -11,6 +11,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/world.json : 세계 지수·환율 (world.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
   - themes.py : 문장 검색용 테마 사전 → <out>/themes.json
+  - industry_map.py : 산업 지도 점·선 → <out>/industry.json (시세·주가 동행은 pages 워크플로가 이어서 채워요)
 
 사용법:
     python dashboard.py                 # site/ 를 _site/ 로 복사하고 _site/data.json 생성
@@ -26,6 +27,7 @@ import pathlib
 import shutil
 
 import commands
+import industry_map
 import readiness
 import strategy
 import themes
@@ -219,6 +221,8 @@ def main():
     # 문장 검색용 테마 사전 ('전력 관련 종목 찾아줘')
     (args.out / "themes.json").write_text(json.dumps(themes.build(args.paper / "symbols", args.paper / "sectors.json"),
                                                      ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    # 산업 지도 점·선 (시세 없이). pages 워크플로가 industry_map.py로 흐름·주가 동행을 채워 덮어써요
+    industry_map.write(args.out, industry_map.static_map())
     data = dict(build(args.paper), site_version=site_version(args.site))
     (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     for key, m in data["markets"].items():

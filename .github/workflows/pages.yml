@@ -11,7 +11,7 @@ on:
     types: [completed]
   push:
     branches: [main]
-    paths: ["site/**", "paper/**", "dashboard.py", "world.py", "themes.py", "stock_pages.py", "fundamentals.py", "watchlist.py", "strategy.py", "markets.py", ".github/workflows/pages.yml"]
+    paths: ["site/**", "paper/**", "dashboard.py", "world.py", "themes.py", "industry_map.py", "stock_pages.py", "fundamentals.py", "watchlist.py", "strategy.py", "markets.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -44,6 +44,10 @@ jobs:
       - run: python stock_pages.py --out _site
         continue-on-error: true
         timeout-minutes: 6
+      # 산업 지도: 산업 대표 종목 시세로 5일 흐름·주가 동행을 채워요. 못 받아도 점·선 지도는 떠요
+      - run: python industry_map.py --out _site
+        continue-on-error: true
+        timeout-minutes: 3
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
