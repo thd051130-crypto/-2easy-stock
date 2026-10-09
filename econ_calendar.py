@@ -48,23 +48,27 @@ def text_of(html):
 
 
 def parse_fomc(html):
-    """연준 일정표 → 금리 결정일(회의 마지막 날) 'YYYY-MM-DD' 목록. '*'는 경제전망 발표가 있는 회의."""
-    t = text_of(html)
-    out = []
-    heads = list(re.finditer(r"(\d{4}) FOMC Meetings", t))
-    for k, h in enumerate(heads):
-        year = int(h.group(1))
-        part = t[h.end(): heads[k + 1].start() if k + 1 < len(heads) else len(t)]
-        part = re.sub(r"\((?:Released|Held)[^)]*\)", " ", part)  # 의사록 공개일 같은 다른 날짜는 빼요
-        names = "|".join(MONTHS)
-        for m in re.finditer(rf"\b({names})(?:/({names}))?\s+(\d{{1,2}})(?:-(\d{{1,2}}))?(\*?)", part):
-            month = MONTHS[m.group(2) or m.group(1)]
-            day = int(m.group(4) or m.group(3))
-            try:
-                out.append(dict(date=f"{dt.date(year, month, day):%Y-%m-%d}", sep=bool(m.group(5))))
-            except ValueError:
-                continue
-    return sorted({x["date"]: x for x in out}.values(), key=lambda x: x["date"])
+    """연준 일정표 → 금리 결정일(회의 마지막 날) 'YYYY-MM-DD' 목록. '*'는 경제전망 발표가 있는 회의.
+    표의 달(fomc-meeting__month)과 날짜(fomc-meeting__date) 칸을 짝지어 읽고, 해는 바로 위 'YYYY FOMC Meetings' 제목으로 정해요.
+    서면 결의(notation vote)는 금리 결정이 아니라서 빼요."""
+    heads = [(m.start(), int(m.group(1))) for m in re.finditer(r"(\d{4}) FOMC Meetings", html)]
+    out = {}
+    pat = re.compile(r'fomc-meeting__month[^>]*>\s*(?:<strong>)?\s*([A-Za-z/]+)\s*(?:</strong>)?\s*</div>\s*'
+                     r'<div[^>]*fomc-meeting__date[^>]*>\s*([^<]+?)\s*</div>')
+    for m in pat.finditer(html):
+        year = next((y for pos, y in reversed(heads) if pos < m.start()), None)
+        months, days = m.group(1).split("/"), m.group(2)
+        if year is None or "notation" in days.lower() or months[-1] not in MONTHS:
+            continue
+        nums = re.findall(r"\d{1,2}", days)
+        if not nums:
+            continue
+        try:
+            d = dt.date(year, MONTHS[months[-1]], int(nums[-1]))
+        except ValueError:
+            continue
+        out[f"{d:%Y-%m-%d}"] = dict(date=f"{d:%Y-%m-%d}", sep="*" in days)
+    return sorted(out.values(), key=lambda x: x["date"])
 
 
 def parse_bok(html):

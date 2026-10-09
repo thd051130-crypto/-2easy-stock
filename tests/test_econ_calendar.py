@@ -3,11 +3,25 @@ import json
 
 import econ_calendar as ec
 
-FOMC = """<h4>2026 FOMC Meetings</h4> <div class="fomc-meeting__month"><strong>January</strong></div>
-<div class="fomc-meeting__date">27-28</div> Statement: PDF | HTML Minutes: PDF | HTML (Released February 18, 2026)
-<strong>March</strong> <div>17-18*</div> Projection Materials (Released April 08, 2026)
-<strong>October</strong> <div>27-28</div> <strong>December</strong> <div>8-9*</div>
-<h4>2027 FOMC Meetings</h4> <strong>January</strong> <div>26-27</div> <strong>April/May</strong> <div>30-1</div>"""
+FOMC = """<h4>2026 FOMC Meetings</h4>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>January</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">27-28</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>March</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">17-18*</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>August</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">22 (notation vote)</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>October</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">27-28</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>December</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">8-9*</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<h4>2027 FOMC Meetings</h4>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>January</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">26-27</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>April/May</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">30-1</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+<div class="row fomc-meeting" "><div class="fomc-meeting__month col-xs-5"><strong>October</strong></div>
+<div class="fomc-meeting__date col-xs-4 col-lg-1">26-27</div><div class="col-xs-12">Minutes (Released February 18, 2026)</div></div>
+"""
 
 BOK = """통화정책방향 결정회의 2026년 년도선택 2027년 2026년 2025년 이동 회의일자 결정문 1) 01월 15일(목) 첨부파일
 국문보도자료(2601).hwp 2026년도 제1차 금통위 의사록 02월 26일(목) 10월 22일(목) 11월 26일(목)"""
@@ -15,7 +29,7 @@ BOK = """통화정책방향 결정회의 2026년 년도선택 2027년 2026년 20
 
 def test_parse_fomc_uses_last_day_and_skips_release_dates():
     got = ec.parse_fomc(FOMC)
-    assert [x["date"] for x in got] == ["2026-01-28", "2026-03-18", "2026-10-28", "2026-12-09", "2027-01-27", "2027-05-01"]
+    assert [x["date"] for x in got] == ["2026-01-28", "2026-03-18", "2026-10-28", "2026-12-09", "2027-01-27", "2027-05-01", "2027-10-27"]
     assert [x["sep"] for x in got][:2] == [False, True]
 
 
