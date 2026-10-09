@@ -280,7 +280,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), allStocksCard(d)],
@@ -1428,6 +1428,20 @@ function moversCard(d) {
   return `<section class="card"><h2>왜 움직였나 <small>최근 5거래일 · ${mv.count}개 종목 중</small></h2>
     ${body || `<p class="empty">최근 5거래일 ±3% 넘게 움직인 종목이 없어요.</p>`}
     <p class="muted" style="margin:10px 0 0">이유는 시장·같이 움직인 종목·거래량·뉴스 제목으로 짐작한 거예요. 사기 전에 기사 원문을 확인하세요.</p></section>`;
+}
+
+// 주가는 그대로인데 거래량만 크게 늘어난 종목 (quiet_volume.py). 예전 기록엔 없을 수 있어요.
+function quietVolumeCard(d) {
+  const q = d.signal && d.signal.quiet_volume;
+  if (!q) return "";
+  const rows = (q.rows || []).map((r) => `<li data-stock="${esc(r.code)}"><div class="l"><div class="name">${esc(r.name)}</div>
+      <div class="meta">거래량 평소의 ${r.ratio.toFixed(1)}배 · 가장 많은 날 ${r.peak.toFixed(1)}배${r.r20 == null ? "" : ` · 20일 ${pct(r.r20)}`}</div></div>
+      <div class="r ${sign(r.r5)}">${pct(r.r5)}<div class="meta">5일 주가</div></div></li>`).join("");
+  const more = q.total > (q.rows || []).length ? `<p class="muted" style="margin:6px 0 0">외 ${q.total - q.rows.length}개</p>` : "";
+  return `<section class="card"><h2>주가 그대로·거래량 급증 <small>최근 ${q.days}거래일 · ${q.count}개 종목 중</small></h2>
+    ${rows ? `<ul class="list">${rows}</ul>${more}` : `<p class="empty">오늘은 조건에 맞는 종목이 없어요.</p>`}
+    <p class="muted" style="margin:10px 0 0">주가는 ±${Math.round(q.max_move * 100)}% 안인데 거래량이 평소(${q.base}일 평균)의 ${q.min_ratio}배 이상인 종목이에요.
+      조용히 사 모으는 중인지 팔아 넘기는 중인지는 숫자만으론 몰라요. 참고용이고 매매 규칙은 안 바꿔요.</p></section>`;
 }
 
 function widePicksCard(d) {
