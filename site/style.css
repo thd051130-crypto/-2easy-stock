@@ -466,3 +466,13 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .tgt-mark.now, .dot.now { background: var(--text-primary); }
 .tgt-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: 0; }
+
+/* 시장 히트맵 */
+.heat-group { margin-top: 8px; }
+.heat-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); font-weight: 600; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.heat-row { display: flex; flex-wrap: wrap; gap: 3px; }
+.heat-tile { flex-basis: 64px; min-height: 48px; border: 0; border-radius: 6px; padding: 5px 6px; font: inherit; text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: space-between; color: var(--text-primary); min-width: 0; }
+.heat-tile span { font-size: 12px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heat-tile b { font-size: 12px; font-variant-numeric: tabular-nums; }
+.heat-tile.strong { color: #fff; }

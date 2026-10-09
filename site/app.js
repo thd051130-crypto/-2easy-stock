@@ -286,7 +286,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
@@ -331,6 +331,13 @@ function render() {
   app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
     pickSector(b.dataset.sector);
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
+  app.querySelectorAll("[data-heat]").forEach((b) => b.addEventListener("click", () => {
+    heatP = b.dataset.heat;
+    try { localStorage.setItem("heat_p", heatP); } catch (e) { /* 이번만 기억 */ }
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -1942,6 +1949,50 @@ function toneBadge(s) {
   const cls = s.good > s.bad ? "good" : s.bad > s.good ? "bad" : "";
   return `<span class="badge ${cls}">${esc(s.label)}</span>`;
 }
+// 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)
+const HEAT_P = [["d1", "오늘", 1], ["r5", "5일", 5], ["r20", "20일", 20]];
+let heatP = "d1";
+try { heatP = localStorage.getItem("heat_p") || "d1"; } catch (e) { /* 처음 */ }
+function heatRet(s, k) {
+  if (k === "d1") return s.d1;
+  const n = (HEAT_P.find((x) => x[0] === k) || [])[2], sp = s.spark || [];
+  return sp.length > n ? sp[sp.length - 1] / sp[sp.length - 1 - n] - 1 : null;
+}
+function heatmapCard(d) {
+  const all = stocksOf(d).filter((s) => !s.extra && s.close != null);
+  if (all.length < 5) return "";
+  if (!HEAT_P.some((x) => x[0] === heatP)) heatP = "d1";
+  const funds = d.funds || {}, of = (d.signal && d.signal.sector_of) || {};
+  const groups = new Map();
+  all.forEach((s) => {
+    const g = of[s.code] || (s.code === "SPY" ? "ETF" : "기타");
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push({ s, cap: (funds[s.code] || {}).cap || 0, r: heatRet(s, heatP) });
+  });
+  const capOf = (rows) => rows.reduce((a, x) => a + x.cap, 0);
+  const sorted = [...groups.entries()].sort((a, b) => capOf(b[1]) - capOf(a[1]) || b[1].length - a[1].length);
+  const big = Math.max(...all.map((s) => (funds[s.code] || {}).cap || 0)) || 1;
+  const scale = heatP === "d1" ? 0.03 : heatP === "r5" ? 0.07 : 0.15;  // 이만큼 움직이면 가장 진한 색
+  const tile = ({ s, cap, r }) => {
+    const k = r == null ? 0 : Math.min(1, Math.abs(r) / scale), mix = Math.round(15 + k * 75);
+    const bg = r == null || Math.abs(r) < 0.0005 ? "var(--surface-0)" : `color-mix(in srgb, var(${r > 0 ? "--up" : "--down"}) ${mix}%, var(--surface-0))`;
+    const grow = cap ? Math.max(1, Math.sqrt(cap / big) * 6) : 1;
+    return `<button type="button" class="heat-tile${mix > 55 && r != null && Math.abs(r) >= 0.0005 ? " strong" : ""}" style="flex-grow:${grow.toFixed(2)};background:${bg}"
+      data-stock="${esc(s.code)}" aria-label="${esc(s.name)} ${r == null ? "자료 없음" : pct(r)}"><span>${esc(s.name)}</span><b>${r == null ? "-" : pct(r)}</b></button>`;
+  };
+  const rows = sorted.map(([g, list]) => {
+    list.sort((a, b) => b.cap - a.cap);
+    const avg = list.filter((x) => x.r != null);
+    const m = avg.length ? avg.reduce((a, x) => a + x.r, 0) / avg.length : null;
+    return `<div class="heat-group"><div class="heat-head"><span>${esc(g)}</span><b class="${sign(m)}">${m == null ? "" : pct(m)}</b></div>
+      <div class="heat-row">${list.map(tile).join("")}</div></div>`;
+  }).join("");
+  const chips = HEAT_P.map(([k, label]) => `<button type="button" data-heat="${k}" aria-pressed="${k === heatP}">${label}</button>`).join("");
+  return `<section class="card" id="heat-card"><h2>시장 히트맵 <small>${all.length}개 대형주 · ${md(all[0].day)}</small></h2>
+    <div class="period" role="group" aria-label="기간" style="margin:4px 0 10px">${chips}</div>${rows}
+    <p class="muted" style="margin:10px 0 0">칸이 클수록 시가총액이 크고, 진할수록 많이 움직였어요. 누르면 종목 화면이에요.</p></section>`;
+}
+
 function sectorsCard(d) {
   const secs = d.signal && d.signal.sectors;
   if (!secs || !secs.length) return "";
