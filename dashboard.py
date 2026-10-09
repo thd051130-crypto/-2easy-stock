@@ -33,6 +33,7 @@ import commands
 import flows
 import industry_map
 import readiness
+import review
 import strategy
 import themes
 import watchlist
@@ -80,8 +81,8 @@ def num(x):
         return None
 
 
-def account(folder, market):
-    """가상계좌 요약. 아직 첫 기록 전이면 None."""
+def account(folder, market, kind=None):
+    """가상계좌 요약. 아직 첫 기록 전이면 None. kind: 매매 복기용 규칙 이름 (kr|us|etf|rulebook, 기본 market)."""
     state = read_json(folder / "state.json")
     equity = [dict(date=r["date"], equity=num(r["equity"]), index=num(r["index"]), cash=num(r["cash"]))
               for r in read_rows(folder / "equity.csv")]
@@ -103,10 +104,13 @@ def account(folder, market):
                               buy_price=round(p["buy_price"], 2), price=round(price, 2),
                               value=round(p["qty"] * price, 2), ret=round(p["qty"] * price / p["cost"] - 1, 4)))
     trades = []
-    for t in read_rows(folder / "trades.csv"):
+    rows = read_rows(folder / "trades.csv")
+    notes = review.notes(rows, {r["date"]: r["index"] for r in equity if r["index"]}, kind or market)
+    for t, n in zip(rows, notes):
         trades.append(dict(code=t["code"], name=t["name"], buy_date=t["buy_date"], sell_date=t["sell_date"],
                            buy_price=num(t["buy_price"]), sell_price=num(t["sell_price"]), pnl=num(t["pnl"]),
-                           ret=num(t["ret"]), days=int(num(t["days"]) or 0), reason=t["reason"]))
+                           ret=num(t["ret"]), days=int(num(t["days"]) or 0), reason=t["reason"],
+                           buy_why=n["buy"], index_ret=n["index"], verdict=n["verdict"]))
     rets = [t["ret"] for t in trades if t["ret"] is not None]
     return dict(
         capital=capital, start=state["start"], last_day=last["date"], equity=last["equity"], cash=last["cash"],
@@ -192,7 +196,7 @@ def build(paper_dir):
         markets[key] = dict(name=m["name"], index_name=m["index_name"], currency=m["currency"],
                             capital=m["capital"], signal=read_json(folder / "signal.json"),
                             account=account(folder, key), rules=RULES[key],
-                            rulebook=dict(account=account(folder / "rulebook", key), rules=RULEBOOK_RULES),
+                            rulebook=dict(account=account(folder / "rulebook", key, "rulebook"), rules=RULEBOOK_RULES),
                             # 텔레그램으로 넣은 종목 (시세는 배포 때 stock_pages.py가 채워요), 기다리는 가격 알림
                             extras=watch[key], alerts=[a for a in alerts if a.get("market") == key],
                             funds=fund_table(folder / "fundamentals.json"))
@@ -200,7 +204,7 @@ def build(paper_dir):
     fl = read_json(paper_dir / "kr" / "flows.json")
     markets["kr"]["disclosures"] = (read_json(paper_dir / "kr" / "disclosures.json") or {}).get("items")
     markets["kr"]["flows"] = dict(day=fl.get("day"), warn=flows.warnings(fl), **flows.top_flows(fl)) if fl else None
-    etf_acct = account(paper_dir / "etf", "kr")
+    etf_acct = account(paper_dir / "etf", "kr", "etf")
     markets["kr"]["etf"] = dict(account=etf_acct, rules=ETF_RULES, readiness=readiness_of("etf", etf_acct, health))
     fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,

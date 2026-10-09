@@ -33,6 +33,7 @@ import pandas as pd
 import etf_backtest as etfb
 import kr_swing_backtest as kb
 import readiness
+import review
 import rulebook
 import strategy
 import tgchart
@@ -227,6 +228,9 @@ def weekly_summary(state, trades, equity, today, closes):
         week = trades[pd.to_datetime(trades["sell_date"]) >= monday]
         lines.append(f"끝난 거래 {len(r)}건 (이번 주 {len(week)}건), 승률 {(r > 0).mean():.0%}, "
                      f"평균 {r.mean():+.1%}, 실현손익 {money(market, trades['pnl'].sum(), True)}")
+        idx = {str(d): float(v) for d, v in zip(equity["date"], equity["index"])}
+        kind = "etf" if state.get("rule") == "etf" else "rulebook" if state.get("version") == 2 else market
+        lines += review.week_lines(review.notes(week.astype(str).to_dict("records"), idx, kind))
     else:
         lines.append("아직 끝난 거래가 없어요.")
 
