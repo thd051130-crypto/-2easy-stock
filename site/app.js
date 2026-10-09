@@ -323,7 +323,7 @@ const VIEWS = {
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
-  perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), savingsCard(),
+  perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), firstAccountCard(d), savingsCard(),
     rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
   stock: (d) => [stockHeadCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
@@ -349,7 +349,16 @@ function render() {
   app.innerHTML = VIEWS[screen](d).join("");
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
-  if (screen === "perf") { drawTrack(d); drawEquity(d); bindSavings(); }
+  if (screen === "perf") {
+    drawTrack(d); drawEquity(d); bindSavings();
+    app.querySelectorAll("[data-first]").forEach((b) => b.addEventListener("click", () => {
+      FIRST_DONE[b.dataset.first] = !FIRST_DONE[b.dataset.first];
+      try { localStorage.setItem("first_steps", JSON.stringify(FIRST_DONE)); } catch (e) { /* 이번만 */ }
+      const y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+    }));
+  }
   app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {
     e.preventDefault();
     const card = $("#stock-sector");
@@ -2090,6 +2099,35 @@ function bindSavings() {
   pick("data-sav-y", "years", Number);
   pick("data-sav-a", "acct", String);
   drawSavings();
+}
+
+// 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).
+const FIRST_STEPS = [
+  ["auto", "가상계좌 실전 전환 판정 통과", "위 '실전 전환 판정'이 전부 ✅가 되면 자동으로 체크돼요. 그전엔 진짜 돈을 넣지 않아요."],
+  ["cash", "비상금 따로 떼어 두기", "생활비 3~6개월치는 투자하지 않고 예금·파킹통장에. 급할 때 주식을 손해 보고 팔지 않게요."],
+  ["isa", "증권사 앱에서 중개형 ISA 계좌 만들기", "만 19세 이상이면 폰으로 비대면 개설돼요. '중개형'이어야 ETF를 직접 살 수 있어요. 수수료 이벤트를 비교해서 한 곳만."],
+  ["pension", "(선택) 연금저축 계좌", "노후용이라 55세 전에 빼면 세금을 돌려내야 해요. 세액공제는 소득이 생긴 뒤에 의미가 있어요."],
+  ["first", "첫 매수는 10만 원 이하, ETF 1~2주", "우리 ETF 규칙이 '보유' 신호일 때만 TIGER 미국S&P500을 사요. 현금 신호면 기다려요."],
+  ["log", "실제 체결가를 기록하기", "증권사 앱 체결 내역을 캡처해 두고, 같은 날 앱 'ETF(원화) 계좌'의 가격과 비교해요. 차이가 크면 규칙을 실전에 그대로 쓰기 어려워요."],
+  ["month", "한 달 뒤 점검하고 조금씩 늘리기", "실제 낙폭이 판정표 기준 안이고 규칙대로 사고팔았으면, 매달 같은 금액씩 늘려요 (아래 적립식 계산기 참고)."],
+  ["never", "안 하기로 약속하기", "레버리지·인버스, 신용·미수, 유료 리딩방, 한 종목 몰빵은 하지 않아요. 낙폭을 작게가 우리 원칙이에요."],
+];
+let FIRST_DONE = {};
+try { FIRST_DONE = JSON.parse(localStorage.getItem("first_steps") || "{}"); } catch (e) { /* 처음 */ }
+function firstAccountCard(d) {
+  if (market !== "kr" && market !== "us") return "";
+  const k = DATA.markets.kr, ready = !!((k.etf && k.etf.readiness && k.etf.readiness.ready) || (k.readiness && k.readiness.ready)
+    || (DATA.markets.us.readiness && DATA.markets.us.readiness.ready));
+  const done = (key) => (key === "auto" ? ready : !!FIRST_DONE[key]);
+  const n = FIRST_STEPS.filter(([key]) => done(key)).length;
+  const rows = FIRST_STEPS.map(([key, title, why], i) => `<li><button type="button" class="step${done(key) ? " on" : ""}" data-first="${key}"
+      aria-pressed="${done(key)}"${key === "auto" ? " disabled" : ""}><span class="box" aria-hidden="true">${done(key) ? "✓" : i + 1}</span>
+      <span class="l"><span class="name">${esc(title)}</span><span class="meta">${esc(why)}</span></span></button></li>`).join("");
+  return `<section class="card" id="first-card"><h2>실전 첫 계좌 체크리스트 <small>${n}/${FIRST_STEPS.length}</small></h2>
+    <div class="bar" aria-hidden="true"><i style="width:${Math.round((n / FIRST_STEPS.length) * 100)}%"></i></div>
+    <ul class="list steps">${rows}</ul>
+    <p class="muted" style="margin:10px 0 0">체크는 이 폰 브라우저에만 저장돼요. 계좌 개설 조건·세금 혜택은 바뀔 수 있어서 만들 때 증권사 안내를 꼭 확인하세요.
+      복무 중이면 장병내일준비적금 같은 정부 매칭 적금이 예금 중에선 가장 유리할 수 있어요.</p></section>`;
 }
 
 function readinessCard(d) {

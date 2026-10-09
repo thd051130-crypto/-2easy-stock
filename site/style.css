@@ -508,3 +508,17 @@ details.gloss { border-top: 1px solid var(--border); padding: 8px 0; }
 details.gloss summary { font-size: 15px; color: var(--text-primary); }
 details.gloss p { margin: 6px 0 2px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
 .term-all { border: 0; background: none; padding: 0; font: inherit; font-size: 14px; cursor: pointer; }
+
+/* 실전 첫 계좌 체크리스트 */
+.bar { height: 6px; border-radius: 999px; background: var(--surface-0); overflow: hidden; margin: 4px 0 6px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.list.steps li { padding: 0; }
+.step { display: flex; gap: 10px; align-items: flex-start; width: 100%; border: 0; background: none; font: inherit; text-align: left; color: inherit; padding: 10px 0; cursor: pointer; }
+.step:disabled { cursor: default; opacity: 1; }
+.step .box { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border); display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 1px; }
+.step.on .box { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step .l { display: grid; gap: 2px; min-width: 0; }
+.step .name { font-weight: 600; }
+.step.on .name { color: var(--text-secondary); }
+.step .meta { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
