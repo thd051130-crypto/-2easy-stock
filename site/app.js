@@ -644,7 +644,8 @@ function loadSymbols() {
   if (!symLoading) {
     symLoading = Promise.all(["kr", "us"].map((m) => fetch(`symbols/${m}.json`, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null)).catch(() => null)
-      .then((x) => { SYM[m] = x && Array.isArray(x.rows) ? x.rows.map((row) => ({ row, keys: nameKeys(row) })) : []; })))
+      .then((x) => { SYM[m] = x && Array.isArray(x.rows) ? x.rows.map((row) => ({ row, keys: nameKeys(row) })) : []; }))
+      .concat(loadThemes()))
       .then(() => { if (!SYM.kr.length && !SYM.us.length) symLoading = null; });  // 둘 다 못 받았으면 다음에 다시
   }
   return symLoading;
@@ -671,8 +672,8 @@ function searchCard() {
   return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
     <h2 class="stock-name">종목 검색</h2>
     <input id="search-input" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off"
-      spellcheck="false" placeholder="종목 이름이나 코드" aria-label="종목 검색" value="${esc(searchQuery)}">
-    <p class="muted" style="margin:8px 0 0">국장·미장에 상장된 종목을 다 찾아요. 대시보드에 없는 종목은 '추가'를 누르면 텔레그램 봇이 넣어 줘요.</p></section>`;
+      spellcheck="false" placeholder="종목 이름, 또는 '전력 관련주'" aria-label="종목 검색" value="${esc(searchQuery)}">
+    <p class="muted" style="margin:8px 0 0">국장·미장에 상장된 종목을 다 찾아요. '원전 관련주', '미국 AI 반도체'처럼 문장으로 치면 연관 종목을 모아 보여 줘요.</p></section>`;
 }
 
 // 대시보드에 있는 종목(시세 있음)과 다른 상장 종목으로 나눠서, 잘 맞는 순서(같으면 지금 시장, 시가총액 큰 순)로
@@ -708,27 +709,164 @@ function searchResults() {
   if (!q) {
     return `<section class="card"><ul class="help" style="margin:0">
       <li>이름 일부만 쳐도 돼요: '하이닉스', '삼성sdi', '코덱스 200', '슈드'</li>
+      <li>문장으로 쳐도 돼요: '전력 관련분야 종목 찾아줘', '미국 원전주', '화장품 대장주'</li>
       <li>대시보드에 있는 종목은 누르면 차트와 재무제표가 나와요.</li>
-      <li>없는 종목은 '추가'를 누르면 텔레그램이 열려요. 봇 화면에서 시작(START)을 누르면 보통 30분 안에 대시보드에 생기고 ★에 들어가요.</li></ul></section>`;
+      <li>없는 종목은 '추가'를 누르면 텔레그램이 열려요. 봇 화면에서 시작(START)을 누르면 보통 30분 안에 대시보드에 생기고 ★에 들어가요.</li></ul></section>
+      ${themeChips("테마로 찾기")}`;
   }
-  const { tracked, others } = findStocks(q);
-  if (!tracked.length && !others.length && !loading) {
-    return `<section class="card"><p class="empty">"${esc(q)}"에 맞는 종목이 없어요. 이름을 조금만 쳐 보거나 코드로 찾아보세요.</p></section>`;
+  const ask = parseAsk(q);
+  // 테마가 없으면 예전처럼 문장 전체로, 그래도 없으면 테마 낱말·군말을 뺀 나머지 말로 종목 이름을 찾아요
+  let found = ask.themes.length ? { tracked: [], others: [] } : findStocks(q);
+  if (!found.tracked.length && !found.others.length && ask.rest.length) found = findStocks(ask.rest.join(" "));
+  const whole = ask.themes.length ? findStocks(q) : null;
+  const nameFirst = whole && whole.tracked.concat(whole.others).some((x) => x.sc <= 1);
+  if (nameFirst) found = whole;  // '한국전력', '삼성전기'처럼 종목 이름 그대로면 종목이 먼저
+  const named = nameCards(found, loading);
+  const themed = ask.themes.slice(0, 3).map((t) => themeCard(t, ask.only));
+  if (!named.length && !themed.length) {
+    if (loading) return `<section class="card"><p class="muted">전체 종목 목록을 불러오는 중이에요…</p></section>`;
+    return `<section class="card"><p class="empty">"${esc(q)}"에 맞는 종목이나 테마가 없어요. 이름을 조금만 쳐 보거나 아래 테마를 눌러 보세요.</p></section>
+      ${themeChips("이런 테마를 찾을 수 있어요")}`;
   }
+  return (nameFirst ? named.concat(themed) : themed.concat(named)).join("");
+}
+
+function nameCards({ tracked, others }, loading) {
   const cards = [];
   if (tracked.length) {
     cards.push(`<section class="card"><h2>대시보드 종목 <small>누르면 차트·재무제표</small></h2>
       <ul class="list">${tracked.slice(0, 15).map(trackedRow).join("")}</ul></section>`);
   }
-  if (others.length || loading) {
-    const bot = DATA && DATA.bot;
+  if (others.length) {
     cards.push(`<section class="card"><h2>다른 상장 종목 <small>${others.length > 30 ? `${others.length}개 중 30개` : `${others.length}개`}</small></h2>
-      ${loading ? `<p class="muted">전체 종목 목록을 불러오는 중이에요…</p>` : ""}
-      ${others.length ? `<ul class="list">${others.slice(0, 30).map(otherRow).join("")}</ul>` : ""}
-      ${bot ? "" : `<p class="muted" style="margin:10px 0 0">텔레그램 봇이 아직 연결 전이라 '추가'를 못 눌러요. telegram-bot 워크플로가 한 번 돌면 켜져요.</p>`}
+      <ul class="list">${others.slice(0, 30).map(otherRow).join("")}</ul>${botNote()}
       ${others.length > 30 ? `<p class="muted" style="margin:10px 0 0">더 자세히 쳐 보세요.</p>` : ""}</section>`);
+  } else if (loading) {
+    cards.push(`<section class="card"><p class="muted">전체 종목 목록을 불러오는 중이에요…</p></section>`);
   }
-  return cards.join("");
+  return cards;
+}
+const botNote = () => (DATA && DATA.bot ? ""
+  : `<p class="muted" style="margin:10px 0 0">텔레그램 봇이 아직 연결 전이라 '추가'를 못 눌러요. telegram-bot 워크플로가 한 번 돌면 켜져요.</p>`);
+
+// ---------------------------------------------------------------- 문장 검색 ('전력 관련분야 종목 찾아줘')
+// themes.json (themes.py): 테마 낱말 → 미리 고른 국장·미장 대표 종목. 유료 AI 없이 문장에서 테마 낱말을 찾아요.
+let THEMES = null;  // { themes: [{ name, keys, why, sector, etf, kr: [[코드, 이름]], us, more_us }], filler: [...] }
+let themesLoading = null;
+function loadThemes() {
+  if (!themesLoading) {
+    themesLoading = fetch("themes.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => {
+        if (!x || !Array.isArray(x.themes)) { themesLoading = null; return; }
+        x.themes.forEach((t) => { t.nkeys = uniq(t.keys.map(norm)); try { t.re = t.etf ? new RegExp(t.etf, "i") : null; } catch (e) { t.re = null; } });
+        x.fill = uniq(x.filler.map(norm)).sort((a, b) => b.length - a.length);
+        THEMES = x;
+      });
+  }
+  return themesLoading;
+}
+const MK_ONLY = { kr: ["국장", "국내", "한국", "코스피", "코스닥", "국내주식"], us: ["미장", "미국", "해외", "나스닥", "미국주식", "해외주식"] };
+const PARTICLE = /(이랑|하고|에서|으로|은|는|이|가|을|를|의|에|와|과|랑)$/;
+
+// 문장 → { themes: 맞은 테마(문장 순서), rest: 테마 낱말·군말을 뺀 나머지 말, only: 'kr'|'us'|null }
+function parseAsk(q) {
+  const out = { themes: [], rest: [], only: null };
+  if (!THEMES) return out;
+  const mk = { kr: false, us: false };
+  const toks = [];
+  for (let w of String(q).toLowerCase().split(/\s+/).map(norm).filter(Boolean)) {
+    // '미국반도체', '국장 원전주': 시장 말은 앞에 붙어 있거나 따로 있을 때만 (한국전력의 '한국'은 이름이라 그대로)
+    for (const m of ["kr", "us"]) {
+      for (const k of MK_ONLY[m]) {
+        const bare = w.replace(PARTICLE, "");
+        if (w === k || bare === k) { mk[m] = true; w = ""; }
+        else if (m === "us" || k !== "한국") { if (w.startsWith(k) && w.length > k.length + 1) { mk[m] = true; w = w.slice(k.length); } }
+      }
+    }
+    // 군말 빼기: '전력관련분야' → '전력', '종목' → 없음
+    for (let again = true; again && w;) {
+      again = false;
+      for (const f of THEMES.fill) {
+        if (w === f) { w = ""; break; }
+        if (f.length >= 2 && w.endsWith(f) && w.length > f.length) { w = w.slice(0, -f.length); again = true; break; }
+      }
+    }
+    if (w) toks.push(w);
+  }
+  if (mk.kr !== mk.us) out.only = mk.kr ? "kr" : "us";
+  // 붙여 쓴 문장에서 긴 낱말부터: 'ai반도체'가 'ai'보다 먼저. 한 글자 낱말('금')은 따로 쓴 말일 때만
+  const s = toks.join("");
+  const starts = [];
+  toks.reduce((a, w) => { starts.push([a, a + w.length, w]); return a + w.length; }, 0);
+  const hits = [];
+  THEMES.themes.forEach((t) => t.nkeys.forEach((k) => {
+    for (let i = s.indexOf(k); i >= 0; i = s.indexOf(k, i + 1)) {
+      if (k.length === 1 && !starts.some(([a, b, w]) => a === i && (b === i + 1 || w.replace(PARTICLE, "") === k))) continue;
+      hits.push({ t, a: i, b: i + k.length });
+    }
+  }));
+  hits.sort((x, y) => (y.b - y.a) - (x.b - x.a) || x.a - y.a);
+  const used = new Array(s.length).fill(false);
+  const picked = [];
+  for (const h of hits) {
+    if (used.slice(h.a, h.b).some(Boolean)) continue;
+    for (let i = h.a; i < h.b; i++) used[i] = true;
+    picked.push(h);
+  }
+  picked.sort((x, y) => x.a - y.a).forEach((h) => { if (!out.themes.includes(h.t)) out.themes.push(h.t); });
+  // 남은 말: 테마 낱말이 안 덮은 글자들을 낱말별로
+  starts.forEach(([a, b]) => {
+    let w = "";
+    for (let i = a; i < b; i++) if (!used[i]) w += s[i];
+    if (w.length > 2) w = w.replace(/(이랑|하고|에서|으로|은|는|을|를|의)$/, "");  // '고양이'의 '이'는 그대로
+    if (w && !THEMES.fill.includes(w) && !/^[가-힣]$/.test(w)) out.rest.push(w);
+  });
+  return out;
+}
+
+function themeChips(title) {
+  if (!THEMES) return "";
+  return `<section class="card"><h2>${esc(title)} <small>누르면 관련 종목</small></h2>
+    <div class="chips theme-chips" role="group" aria-label="테마 고르기">${THEMES.themes.map((t) =>
+      `<button type="button" data-theme-q="${esc(t.keys[0])} 관련 종목">${esc(t.name)}</button>`).join("")}</div></section>`;
+}
+
+const SYM_AT = { kr: null, us: null };  // 코드 → 목록 줄
+function symRow(m, code) {
+  if (!SYM_AT[m] && SYM[m] && SYM[m].length) SYM_AT[m] = new Map(SYM[m].map((e) => [e.row[0], e.row]));
+  return SYM_AT[m] ? SYM_AT[m].get(code) : null;
+}
+// 테마 종목 한 줄: 대시보드에 있으면 시세·★, 없으면 '추가'
+function themeRow(m, code, ko, mine) {
+  const sym = symRow(m, code);
+  const row = sym ? [code, ko || sym[1], sym[2], sym[3], sym[4]] : [code, ko || code, m === "kr" ? "KS" : "", "s", ""];
+  const s = mine.get(code);
+  return s ? trackedRow({ m, s, row }) : otherRow({ m, row });
+}
+function themeCard(t, only) {
+  const mks = only ? [only] : market === "us" ? ["us", "kr"] : ["kr", "us"];
+  const parts = mks.map((m) => {
+    const d = DATA.markets[m];
+    const mine = new Map(stocksOf(d).map((x) => [x.code, x]));
+    const rows = t[m].map(([c, ko]) => themeRow(m, c, ko, mine));
+    const etfs = t.re ? (SYM[m] || []).filter((e) => e.row[3] === "e" && t.re.test(`${e.row[1]} ${e.row[4]}`)).slice(0, 5)
+      .map((e) => themeRow(m, e.row[0], "", mine)) : [];
+    const more = m === "us" ? (t.more_us || []).map((c) => themeRow(m, c, "", mine)) : [];
+    if (!rows.length && !etfs.length) return "";
+    const sec = t.sector && ((d.signal && d.signal.sectors) || []).find((x) => x.name === t.sector);
+    const secLine = sec ? `<li data-tsec="${m}/${esc(sec.name)}"><div class="l"><div class="name">${esc(sec.name)} 업종${toneBadge(sec)}</div>
+        <div class="meta">${MK_NAME[m]} 업종 흐름 · 누르면 업종 뉴스</div></div>
+        <div class="r ${sign(sec.r5)}">${pct(sec.r5)}<div class="meta">5일 중간값</div></div></li>` : "";
+    return `<h3 class="theme-mk">${MK_NAME[m]} <small>${rows.length}종목${etfs.length ? ` · ETF ${etfs.length}개` : ""}</small></h3>
+      ${secLine ? `<ul class="list">${secLine}</ul>` : ""}
+      ${rows.length ? `<ul class="list">${rows.join("")}</ul>` : `<p class="muted">${MK_NAME[m]}엔 골라 둔 종목이 없어요.</p>`}
+      ${etfs.length ? `<h3 class="muted" style="margin:12px 0 4px">관련 ETF</h3><ul class="list">${etfs.join("")}</ul>` : ""}
+      ${more.length ? `<details class="more-list"><summary>같은 업종 미장 종목 ${more.length}개 더</summary><ul class="list">${more.join("")}</ul></details>` : ""}`;
+  }).join("");
+  return `<section class="card theme-card"><h2>${esc(t.name)} <small>테마 · 참고</small></h2>
+    <p class="sub">${esc(t.why)}</p>${parts || `<p class="empty">이 시장엔 골라 둔 종목이 없어요.</p>`}
+    ${botNote()}
+    <p class="muted" style="margin:10px 0 0">미리 골라 둔 대표 종목이에요 (큰 회사부터). 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
 }
 
 function trackedRow(x) {
@@ -778,6 +916,22 @@ function bindResults(el) {
     const on = WATCH[m].includes(code);
     b.setAttribute("aria-pressed", String(on));
     b.textContent = on ? "★" : "☆";
+  }));
+  el.querySelectorAll("[data-theme-q]").forEach((b) => b.addEventListener("click", () => {
+    searchQuery = b.dataset.themeQ;
+    const input = $("#search-input");
+    if (input) input.value = searchQuery;
+    const list = $("#search-results");
+    if (list) { list.innerHTML = searchResults(); bindResults(list); }
+    window.scrollTo(0, 0);
+  }));
+  el.querySelectorAll("[data-tsec]").forEach((b) => b.addEventListener("click", () => {
+    const [m, name] = b.dataset.tsec.split("/");
+    if (m !== market) { market = m; try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ } }
+    SECTOR[m] = name;
+    try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
+    jumpSectors = true;
+    go("home");
   }));
   el.querySelectorAll("[data-req]").forEach((a) => a.addEventListener("click", () => {
     REQ[a.dataset.req] = Date.now();
