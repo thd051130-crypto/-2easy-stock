@@ -119,6 +119,39 @@ const trackSrc = {};  // 추천 성과에서 고른 출처 (시장별)
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// 용어 풀이: 어려운 말 옆 작은 ? 버튼을 누르면 아래에서 쉬운 설명이 올라와요. 검색 화면엔 용어 사전 전체.
+const TERMS = {
+  "PER": "주가 ÷ 1주당 순이익. 회사가 지금 버는 돈으로 주가만큼 벌려면 몇 년 걸리나예요. 낮을수록 싸다고 보지만, 업종마다 보통 수준이 달라요 (은행 5배, 반도체 15배, 성장주 30배+).",
+  "PBR": "주가 ÷ 1주당 순자산. 1배 미만이면 회사를 지금 다 팔아 나눠도 주가보다 많이 받는다는 뜻이라 싸다고 봐요. 다만 돈을 못 버는 회사도 PBR이 낮아요.",
+  "시가총액": "주가 × 주식 수 = 회사 전체 값. 클수록 큰 회사이고 보통 덜 출렁여요.",
+  "배당수익률": "1년 배당금 ÷ 주가. 3%면 100만 원어치 갖고 있을 때 1년에 약 3만 원(세전)을 받아요. 배당은 줄거나 끊길 수 있어요.",
+  "ROE": "순이익 ÷ 자기자본. 주주 돈 100원으로 1년에 몇 원을 버나예요. 10% 넘으면 잘 버는 편이에요.",
+  "부채비율": "부채 ÷ 자기자본. 100%면 빚이 자기 돈만큼이에요. 높을수록 금리가 오르거나 경기가 나쁠 때 위험해요. 은행·보험은 원래 높아서 따로 봐요.",
+  "최대 낙폭": "가장 높았던 때에서 가장 많이 떨어졌을 때까지의 비율(MDD). -30%면 1,000만 원이 잠깐 700만 원까지 줄었다는 뜻이에요. 우리 앱은 이걸 작게 하는 게 첫째 목표예요.",
+  "200일선": "최근 200거래일(약 10개월) 종가 평균. 주가가 이 위면 긴 흐름이 오르는 중, 아래면 내리는 중으로 봐요. 우리 규칙은 200일선 아래 종목은 안 사요.",
+  "RSI": "최근 14일 오른 힘과 내린 힘을 0~100으로. 70 위면 많이 올라 과열, 30 아래면 많이 빠진 상태예요. 30 아래라고 바로 오르는 건 아니에요.",
+  "52주 고점": "최근 1년 중 가장 높았던 종가. 고점 대비 -20%면 1년 중 꼭대기에서 20% 내려와 있다는 뜻이에요.",
+  "목표주가": "증권사 애널리스트들이 1년 안에 갈 거라고 본 값의 평균. 대체로 낙관적이고 주가를 늦게 따라 바뀌어서 참고만 해요.",
+  "순매수": "산 주식 수 - 판 주식 수. +면 그날 그쪽(외국인·기관)이 더 많이 샀고, -(순매도)면 더 많이 팔았어요.",
+  "외국인 보유율": "그 회사 주식 중 외국인이 가진 비율. 꾸준히 늘면 외국인이 사 모으는 중이에요.",
+  "배당락": "이날부터 사면 이번 배당을 못 받아요. 배당을 받으려면 배당락 전날까지 사 둬야 해요. 배당락 날엔 보통 배당금만큼 주가가 내려가요.",
+  "ISA": "개인종합자산관리계좌. 3년 넘게 유지하면 이익 200만 원(서민형 400만 원)까지 세금이 없고 넘는 부분도 9.9%만 내요. 한 해 2,000만 원까지 넣을 수 있어요.",
+  "ETF": "여러 종목을 한 바구니에 담아 주식처럼 사고파는 상품. TIGER 미국S&P500은 미국 큰 회사 500개를 한 번에 사는 것과 같아요.",
+  "FOMC": "미국 중앙은행(연준)의 금리 결정 회의. 1년에 8번. 금리를 올리면 보통 주가에 부담, 내리면 도움이 돼요. 한국시간 새벽에 발표돼요.",
+  "금통위": "한국은행 금융통화위원회. 한국 기준금리를 정해요. 1년에 8번, 보통 목요일 오전에 발표해요.",
+  "옵션 만기": "선물·옵션 계약이 끝나는 날(국장 매달 둘째 목요일, 미장 셋째 금요일). 큰손들이 계약을 정리하느라 장 막판에 주가가 출렁일 수 있어요.",
+  "실적 시즌": "회사들이 분기 실적을 몰아서 발표하는 때. 예상보다 나쁘면 하루에 -10%도 나와서 우리 국장 규칙은 이때 새로 안 사요.",
+  "유상증자": "회사가 새 주식을 찍어 돈을 받는 것. 주식 수가 늘어 내 몫이 줄어서(희석) 주가가 내릴 때가 많아요.",
+  "전환사채": "나중에 주식으로 바꿀 수 있는 회사 빚(CB). 주식으로 바뀌면 주식 수가 늘어 주가에 부담이 돼요.",
+  "자사주 매입": "회사가 자기 주식을 사는 것. 시장에 도는 주식이 줄어서 보통 주가에 좋은 소식이에요. 소각까지 하면 더 좋아요.",
+  "공시": "회사가 투자자에게 꼭 알려야 하는 일을 금감원 전자공시(DART)에 올린 글. 실적·증자·지분 변동 등이 있어요.",
+  "백테스트": "규칙을 과거 주가에 그대로 적용해 봤다면 어땠을지 계산한 것. 과거에 잘 됐다고 앞으로도 그렇다는 보장은 없어요.",
+  "가상계좌": "진짜 돈 없이 규칙대로 사고팔았다고 치고 기록하는 연습 계좌. 실제 체결 차이·수수료는 비슷하게 넣었어요.",
+  "복리": "번 돈을 다시 넣어 그 돈도 같이 불어나는 것. 기간이 길수록 차이가 커져요.",
+  "히트맵": "종목을 네모 칸으로 그린 지도. 칸이 크면 큰 회사, 빨강은 오름, 파랑은 내림, 진할수록 많이 움직였어요.",
+};
+const term = (t, label) => (TERMS[t] ? `${label ?? esc(t)}<button type="button" class="q" data-term="${esc(t)}" aria-label="${esc(t)} 뜻">?</button>` : (label ?? esc(t)));
+
 function money(m, x) {
   if (x == null) return "-";
   return m === "kr" ? `${Math.round(x).toLocaleString("ko-KR")}원`
@@ -296,7 +329,7 @@ const VIEWS = {
   stock: (d) => [stockHeadCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
-  search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`],
+  search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
 };
 
@@ -474,7 +507,7 @@ function homePerfCard(d) {
       <div class="stats">
         <div class="stat"><span>가상계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
         <div class="stat"><span>${esc(d.index_name)}</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
-        <div class="stat"><span>최대 낙폭</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
+        <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
       </div>
       ${rb ? `<p class="muted" style="margin:8px 0 0">내 규칙표 계좌 <b class="${sign(rb.gain)}">${pct(rb.gain)}</b></p>` : ""}
       ${pendingLines(a)}`
@@ -578,7 +611,8 @@ function screenerCard(d) {
   const noPrice = !all.some((s) => s.ma200 != null);
   return `<section class="card" id="screener"><h2>조건 검색 <small>${all.length}개 대형주 중</small></h2>
     <div class="chips">${chips}</div>${body}
-    <p class="muted" style="margin:10px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
+    <p class="muted" style="margin:10px 0 0">뜻이 궁금하면: ${["200일선", "52주 고점", "RSI", "PER", "PBR", "배당수익률", "ROE", "부채비율", "목표주가"].map((t) => term(t)).join(" · ")}</p>
+    <p class="muted" style="margin:6px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
 }
 
 // 배당 달력: 관심종목(없으면 배당 주는 대형주 전체)의 배당락일·지급일·1주당 배당금 (야후 무료 자료, 매주 갱신)
@@ -768,6 +802,13 @@ function searchCard() {
     <input id="search-input" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off"
       spellcheck="false" placeholder="종목 이름, 또는 '전력 관련주'" aria-label="종목 검색" value="${esc(searchQuery)}">
     <p class="muted" style="margin:8px 0 0">국장·미장에 상장된 종목을 다 찾아요. '원전 관련주', '미국 AI 반도체'처럼 문장으로 치면 연관 종목을 모아 보여 줘요.</p></section>`;
+}
+
+// 용어 사전 (검색 화면 맨 아래). 누르면 펼쳐져요
+function glossaryCard() {
+  const rows = Object.entries(TERMS).map(([t, txt]) => `<details class="gloss"><summary>${esc(t)}</summary><p>${esc(txt)}</p></details>`).join("");
+  return `<section class="card" id="glossary"><h2>용어 사전 <small>${Object.keys(TERMS).length}개</small></h2>${rows}
+    <p class="muted" style="margin:10px 0 0">앱 곳곳의 작은 ? 버튼을 눌러도 같은 설명이 나와요.</p></section>`;
 }
 
 // 대시보드에 있는 종목(시세 있음)과 다른 상장 종목으로 나눠서, 잘 맞는 순서(같으면 지금 시장, 시가총액 큰 순)로
@@ -1670,7 +1711,7 @@ function accountCard(d) {
     <div class="stats">
       <div class="stat"><span>가상계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
       <div class="stat"><span>${esc(d.index_name)}</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
-      <div class="stat"><span>최대 낙폭</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
+      <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
     </div>
     <div style="margin-top:14px"><div class="legend">
       <span class="key"><i class="sw" style="background:var(--series-1)"></i>가상계좌</span>
@@ -1932,7 +1973,7 @@ function rulebookAccountCard(d) {
     ? `<div class="stats">
         <div class="stat"><span>규칙표 계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
         <div class="stat"><span>알림 규칙 계좌</span><b class="${main ? sign(main.gain) : ""}">${main ? cnt(main.gain, "pct", pct(main.gain)) : "-"}</b></div>
-        <div class="stat"><span>최대 낙폭</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
+        <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
       </div>
       <p class="muted" style="margin:8px 0 0">${money(market, a.equity)} · 끝난 거래 ${a.trade_count}건${a.trade_count ? ` · 승률 ${Math.round(a.win_rate * 100)}%` : ""} · 보유 ${a.positions.length}종목</p>`
     : `<p class="empty">${NEXT_RUN[market]} 첫 자동 실행부터 기록해요.</p>`;
@@ -1993,14 +2034,14 @@ function savingsCard() {
   const inp = (k, label, unit, attrs) => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-sav="${k}" type="text" inputmode="decimal" value="${SAV[k]}" ${attrs || ""}><span>${unit}</span></span></label>`;
   const yrs = [1, 3, 5, 10, 20].map((y) => `<button type="button" data-sav-y="${y}" aria-pressed="${SAV.years === y}">${y}년</button>`).join("");
   const accts = [["isa", "ISA"], ["normal", "일반 계좌"]].map(([k, l]) => `<button type="button" data-sav-a="${k}" aria-pressed="${SAV.acct === k}">${l}</button>`).join("");
-  return `<section class="card" id="sav-card"><h2>적립식 복리 계산기 <small>매달 넣으면 얼마가 될까</small></h2>
+  return `<section class="card" id="sav-card"><h2>적립식 ${term("복리")} 계산기 <small>매달 넣으면 얼마가 될까</small></h2>
     <div class="sav-grid">${inp("monthly", "매달", "만 원")}${inp("start", "처음에", "만 원")}</div>
     <div class="period" role="group" aria-label="기간" style="margin:10px 0 0">${yrs}</div>
     <div class="period" role="group" aria-label="계좌" style="margin:8px 0 0">${accts}</div>
     <div id="sav-out">${savOut()}</div>
     <details style="margin-top:10px"><summary>내 가정 바꾸기</summary>
       <div class="sav-grid" style="margin-top:8px">${inp("rate", "연 수익률", "%")}${inp("mdd", "최대 낙폭", "%")}</div></details>
-    <p class="muted" style="margin:10px 0 0">ISA(일반형)는 3년 이상 유지하면 이익 200만 원까지 세금이 없고, 넘는 부분은 9.9%예요. 한 해 2,000만 원까지 넣을 수 있어요.
+    <p class="muted" style="margin:10px 0 0">${term("ISA")}(일반형)는 3년 이상 유지하면 이익 200만 원까지 세금이 없고, 넘는 부분은 9.9%예요. 한 해 2,000만 원까지 넣을 수 있어요.
       일반 계좌는 예금 이자·ETF 차익에 15.4%. 금융소득이 한 해 2,000만 원을 넘을 때 붙는 종합과세는 빼고 계산했어요.
       수익률은 과거 백테스트라 앞으로도 그렇다는 보장이 없어요. 매달 같은 비율로 오른다고 단순하게 셌어요.</p></section>`;
 }
@@ -2072,7 +2113,7 @@ function etfAccountCard(d) {
       <div class="stats">
         <div class="stat"><span>ETF 계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
         <div class="stat"><span>코스피</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
-        <div class="stat"><span>최대 낙폭</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
+        <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
       </div>
       <p class="muted" style="margin:8px 0 0">${a.positions.length ? a.positions.map((p) => `${esc(p.name)} ${shares(p.qty)} ${pct(p.ret)}`).join(" · ") : "보유 없음 (현금)"}</p>
       ${pendingLines(a)}`
@@ -2156,7 +2197,7 @@ function discloseStockCard(d) {
   const mine = d.disclosures.filter((x) => x.code === stockCode);
   if (!mine.length) return "";
   return `<section class="card"><h2>최근 공시 <small>30일 · 금감원 전자공시</small></h2><ul class="list">${mine.map((x) => disRow(x, false)).join("")}</ul>
-    <p class="muted" style="margin:8px 0 0">⚠️ 유상증자·전환사채·최대주주 변경 같은 공시는 주가가 내릴 때가 많아요. 제목을 누르면 원문이 열려요.</p></section>`;
+    <p class="muted" style="margin:8px 0 0">⚠️ ${term("유상증자")}·${term("전환사채")}·최대주주 변경 같은 공시는 주가가 내릴 때가 많아요. 👍 ${term("자사주 매입")}·배당은 좋은 소식일 때가 많아요. 제목을 누르면 원문이 열려요.</p></section>`;
 }
 function discloseHomeCard(d) {
   if (market !== "kr" || !d.disclosures) return "";
@@ -2187,7 +2228,8 @@ function calendarCard(d) {
     const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
-    return `${head}<li${tap}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
+    const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
+    return `${head}<li${tap}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
   const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
@@ -2235,7 +2277,7 @@ function heatmapCard(d) {
       <div class="heat-row">${list.map(tile).join("")}</div></div>`;
   }).join("");
   const chips = HEAT_P.map(([k, label]) => `<button type="button" data-heat="${k}" aria-pressed="${k === heatP}">${label}</button>`).join("");
-  return `<section class="card" id="heat-card"><h2>시장 히트맵 <small>${all.length}개 대형주 · ${md(all[0].day)}</small></h2>
+  return `<section class="card" id="heat-card"><h2>시장 ${term("히트맵")} <small>${all.length}개 대형주 · ${md(all[0].day)}</small></h2>
     <div class="period" role="group" aria-label="기간" style="margin:4px 0 10px">${chips}</div>${rows}
     <p class="muted" style="margin:10px 0 0">칸이 클수록 시가총액이 크고, 진할수록 많이 움직였어요. 누르면 종목 화면이에요.</p></section>`;
 }
@@ -2344,10 +2386,10 @@ function fillFlows(x) {
     <div class="stats" style="grid-template-columns:repeat(2,1fr)">${tile("외국인 5일", m.frg5_won, m.frg5, m.frg_streak)}${tile("기관 5일", m.inst5_won, m.inst5, m.inst_streak)}
       <div class="stat"><span>외국인 20일</span><b class="${sign(m.frg20_won)}">${won(m.frg20_won)}</b></div>
       <div class="stat"><span>기관 20일</span><b class="${sign(m.inst20_won)}">${won(m.inst20_won)}</b></div></div>
-    ${m.hold == null ? "" : `<p class="sub" style="margin:10px 0 0">외국인 보유율 <b>${m.hold.toFixed(2)}%</b>${m.hold_chg == null ? "" : ` (20일 전보다 <b class="${sign(m.hold_chg)}">${m.hold_chg > 0 ? "+" : ""}${m.hold_chg.toFixed(2)}%p</b>)`}</p>`}
+    ${m.hold == null ? "" : `<p class="sub" style="margin:10px 0 0">${term("외국인 보유율")} <b>${m.hold.toFixed(2)}%</b>${m.hold_chg == null ? "" : ` (20일 전보다 <b class="${sign(m.hold_chg)}">${m.hold_chg > 0 ? "+" : ""}${m.hold_chg.toFixed(2)}%p</b>)`}</p>`}
     <div class="legend" style="margin:10px 0 0"><span class="key"><i class="sw flow-frg"></i>외국인</span><span class="key"><i class="sw flow-inst"></i>기관</span></div>
     ${flowBars(x)}
-    <p class="muted" style="margin:8px 0 0">하루 순매수 주식 수 막대예요. 금액은 주식 수 × 그날 종가로 어림했어요. 네이버 증권 무료 자료예요.</p>`;
+    <p class="muted" style="margin:8px 0 0">하루 ${term("순매수")} 주식 수 막대예요. 금액은 주식 수 × 그날 종가로 어림했어요. 네이버 증권 무료 자료예요.</p>`;
 }
 
 // 주가는 그대로인데 거래량만 크게 늘어난 종목 (quiet_volume.py). 예전 기록엔 없을 수 있어요.
@@ -2652,7 +2694,7 @@ function fundHtml(f) {
     return `<h2>재무제표</h2><p class="empty">${etf ? "ETF라 매출·영업이익 같은 재무제표가 없어요." : "재무 자료가 아직 없어요. 매주 토요일에 받아요."}</p>`;
   }
   const usd = market === "us";
-  const tile = (label, value, note) => `<div class="stat"><span>${label}</span><b>${value}</b>${note ? `<small>${note}</small>` : ""}</div>`;
+  const tile = (label, value, note) => `<div class="stat"><span>${term(label.replace(/\(.*\)$/, ""), esc(label))}</span><b>${value}</b>${note ? `<small>${note}</small>` : ""}</div>`;
   const tiles = [
     tile("PER", f.loss ? "적자" : f.per != null ? `${f.per.toFixed(1)}배` : "-", "주가 ÷ 이익"),
     tile("PBR", f.pbr != null ? `${f.pbr.toFixed(2)}배` : "-", "주가 ÷ 순자산"),
@@ -2692,7 +2734,7 @@ function eventsLine(f) {
   const e = f.events || {};
   const parts = [];
   if (e.earn) parts.push(`실적 발표 <b>${ymd(e.earn)}</b> (${dday(e.earn)})`);
-  if (e.exdiv) parts.push(`배당락 ${ymd(e.exdiv)}${e.exdiv >= TODAY() ? ` (${dday(e.exdiv)})` : ""}`);
+  if (e.exdiv) parts.push(`${term("배당락")} ${ymd(e.exdiv)}${e.exdiv >= TODAY() ? ` (${dday(e.exdiv)})` : ""}`);
   if (e.div_rate) parts.push(`1주당 연 배당 ${market === "kr" ? `${num(e.div_rate)}원` : `$${e.div_rate.toFixed(2)}`}`);
   return parts.length ? `<p class="sub" style="margin:8px 0 0">📅 ${parts.join(" · ")}</p>` : "";
 }
@@ -2711,7 +2753,7 @@ function targetBox(f, ent) {
       <span class="tgt-range" style="left:${at(t.low)};right:${(100 - parseFloat(at(t.high))).toFixed(1)}%"></span>
       <span class="tgt-mark mean" style="left:${at(t.mean)}"></span>${now ? `<span class="tgt-mark now" style="left:${at(now)}"></span>` : ""}</div>
     <div class="tgt-ends"><span>최저 ${px(market, t.low)}</span><span>최고 ${px(market, t.high)}</span></div>` : "";
-  return `<div class="tgt"><h3 class="muted" style="margin:14px 0 6px">애널리스트 목표주가 <small>${t.n}명 평균</small></h3>
+  return `<div class="tgt"><h3 class="muted" style="margin:14px 0 6px">애널리스트 ${term("목표주가")} <small>${t.n}명 평균</small></h3>
     <p class="sub" style="margin:0"><b>${price(market, t.mean)}</b>${up == null ? "" : ` · 지금보다 <b class="${sign(up)}">${pct(up)}</b>`}${t.rec ? ` · 의견 <b>${esc(t.rec)}</b>` : ""}</p>
     ${bar}<div class="legend" style="margin:4px 0 0"><span class="key"><i class="dot now"></i>지금 가격</span><span class="key"><i class="dot mean"></i>평균 목표가</span></div>
     <p class="muted" style="margin:6px 0 0">증권사 목표가는 대체로 낙관적이고 늦게 바뀌어요. 참고만 하세요.</p></div>`;
@@ -3113,6 +3155,28 @@ window.addEventListener("popstate", () => {
   go(h.s, true);
 });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+// ? 버튼: 줄 전체를 누른 것(종목 화면 열기)으로 번지지 않게 먼저 잡아서 설명 창을 띄워요
+function closeTerm() { const x = $(".term-sheet"); if (x) x.remove(); }
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-term]");
+  if (!b) { if (!e.target.closest || !e.target.closest(".term-sheet")) closeTerm(); return; }
+  e.preventDefault();
+  e.stopPropagation();
+  closeTerm();
+  const t = b.dataset.term;
+  const box = document.createElement("div");
+  box.className = "term-sheet";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-label", `${t} 뜻`);
+  box.innerHTML = `<div class="term-head"><b>${esc(t)}</b><button type="button" class="term-x" aria-label="닫기">×</button></div><p>${esc(TERMS[t] || "")}</p>
+    <button type="button" class="linkish term-all">용어 사전 전체 보기</button>`;
+  document.body.appendChild(box);
+  $(".term-x", box).addEventListener("click", closeTerm);
+  $(".term-all", box).addEventListener("click", () => { closeTerm(); go("search"); requestAnimationFrame(() => { const g = $("#glossary"); if (g) g.scrollIntoView(); }); });
+  $(".term-x", box).focus();
+}, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTerm(); });
+window.addEventListener("popstate", closeTerm);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 render();  // 데이터가 오기 전에도 주소에 맞는 시장·화면 버튼을 표시해요
 load();
