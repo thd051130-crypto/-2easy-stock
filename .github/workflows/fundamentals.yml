@@ -20,7 +20,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 75
     env:
       PYTHONUNBUFFERED: "1"
     steps:
@@ -34,6 +34,8 @@ jobs:
       - run: python symbols.py
         continue-on-error: true  # 종목 목록을 못 받아도 재무는 저장해요 (지난번 목록을 그대로 써요)
       - run: python sectors.py  # 새로 들어온 종목의 업종 (업종별 호재·악재, 앱 업종 버튼)
+        continue-on-error: true
+      - run: python returns.py  # 적립식 계산기용 종목별 10년 수익률·배당률·최대 낙폭 (전 종목 월봉, 20분쯤)
         continue-on-error: true
       - name: commit
         run: |

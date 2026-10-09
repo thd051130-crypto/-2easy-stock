@@ -489,11 +489,27 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .sav-in input { min-width: 0; width: 100%; }
 .sav-grid3 { grid-template-columns: 1fr 1fr 1fr; }
 .sav-h { font-size: 14px; margin: 14px 0 0; display: flex; align-items: baseline; gap: 6px; }
-.sav-groups { display: grid; gap: 8px; margin-top: 6px; }
-.sav-group { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: start; }
-.sav-group > span { font-size: 12px; color: var(--text-muted); padding-top: 9px; }
-.sav-group .chips { margin-top: 0; }
 .sav-mine { margin-top: 10px; }
+.sav-picked { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.sav-pick { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 4px 4px 10px; border-radius: 999px;
+  border: 1.5px solid var(--c); background: var(--surface-0); font-size: 13px; font-weight: 600; min-height: 34px; }
+.sav-pick > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sav-pick small { color: var(--text-muted); font-weight: 400; }
+.sav-pick .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.sav-pick button { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.sav-pick.empty { border: 1.5px dashed var(--border); background: transparent; color: var(--text-muted); font-weight: 400; padding-right: 10px; }
+.sav-res { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.sav-res li + li { border-top: 1px solid var(--border); }
+.sav-res button { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sav-res button[aria-pressed="true"] { background: var(--accent-bg); }
+.sav-res .l { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.sav-res b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sav-res small { font-size: 12px; color: var(--text-muted); }
+.sav-res .add { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-bg); color: var(--accent-fg); font-weight: 700; }
+.sav-quick { margin-top: 10px; }
+.sav-quick > span { font-size: 12px; }
+.sav-quick .chips { margin-top: 4px; }
+.sav-quick .chips button { font-size: 12px; min-height: 30px; padding: 4px 10px; }
 .sav-togs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .sav-tog { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; min-width: 0; }
 .sav-tog input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -507,7 +523,7 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .sav-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
 .sav-hero > div { background: var(--surface-0); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .sav-hero small { display: block; font-size: 12px; color: var(--text-muted); }
-.sav-hero b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.sav-hero b { display: block; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-top: 2px; }
 .sav-chart { margin-top: 12px; }
 #sav-card .period button { white-space: nowrap; padding-left: 4px; padding-right: 4px; }
 .sav-chart .sav-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
@@ -530,7 +546,7 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .sav-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--surface-0); margin: 8px 0 6px; }
 .sav-bar i { display: block; height: 100%; transition: width .4s ease; }
 @media (prefers-reduced-motion: reduce) { .sav-chart .sav-line, .sav-chart .sav-area { animation: none; } .sav-bar i, .sav-tog .sw-t, .sav-tog .sw-t::after { transition: none; } }
-@media (max-width: 380px) { .sav-togs { grid-template-columns: 1fr; } .sav-group { grid-template-columns: 1fr; gap: 4px; } .sav-group > span { padding-top: 0; } }
+@media (max-width: 380px) { .sav-togs { grid-template-columns: 1fr; } }
 
 /* 다가오는 일정 */
 .list.cal li.cal-day { border-top: 0; padding: 12px 0 2px; font-size: 13px; color: var(--text-secondary); }
