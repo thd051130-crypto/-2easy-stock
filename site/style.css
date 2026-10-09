@@ -487,6 +487,66 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .sav-in { display: grid; gap: 4px; font-size: 12px; color: var(--text-muted); min-width: 0; }
 .sav-in .alert-input { min-width: 0; }
 .sav-in input { min-width: 0; width: 100%; }
+.sav-grid3 { grid-template-columns: 1fr 1fr 1fr; }
+.sav-h { font-size: 14px; margin: 14px 0 0; display: flex; align-items: baseline; gap: 6px; }
+.sav-mine { margin-top: 10px; }
+.sav-picked { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.sav-pick { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 4px 4px 10px; border-radius: 999px;
+  border: 1.5px solid var(--c); background: var(--surface-0); font-size: 13px; font-weight: 600; min-height: 34px; }
+.sav-pick > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sav-pick small { color: var(--text-muted); font-weight: 400; }
+.sav-pick .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.sav-pick button { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.sav-clear { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; text-decoration: underline; padding: 4px 6px; min-height: 34px; cursor: pointer; }
+.sav-res { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.sav-res li + li { border-top: 1px solid var(--border); }
+.sav-res button { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sav-res button[aria-pressed="true"] { background: var(--accent-bg); }
+.sav-res .l { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.sav-res b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sav-res small { font-size: 12px; color: var(--text-muted); }
+.sav-res .add { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-bg); color: var(--accent-fg); font-weight: 700; }
+.sav-quick { margin-top: 10px; }
+.sav-quick > span { font-size: 12px; }
+.sav-quick .chips { margin-top: 4px; }
+.sav-quick .chips button { font-size: 12px; min-height: 30px; padding: 4px 10px; }
+.sav-togs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.sav-tog { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; min-width: 0; }
+.sav-tog input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sav-tog .sw-t { flex: none; width: 36px; height: 22px; border-radius: 999px; background: var(--grid); position: relative; transition: background .2s; }
+.sav-tog .sw-t::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.sav-tog input:checked + .sw-t { background: var(--accent); }
+.sav-tog input:checked + .sw-t::after { transform: translateX(14px); }
+.sav-tog input:focus-visible + .sw-t { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sav-tog b { display: block; font-size: 13px; }
+.sav-tog small { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+.sav-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.sav-hero > div { background: var(--surface-0); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.sav-hero small { display: block; font-size: 12px; color: var(--text-muted); }
+.sav-hero b { display: block; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.sav-chart { margin-top: 12px; }
+#sav-card .period button { white-space: nowrap; padding-left: 4px; padding-right: 4px; }
+.sav-chart .sav-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.sav-chart .sav-paid { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.sav-chart .sav-base { stroke: var(--border); stroke-width: 1; }
+.sav-chart text.sav-pill { fill: #fff; font-weight: 700; font-size: 11px; }
+.sav-chart .sav-line, .sav-chart .sav-area { animation: sav-in .6s ease-out both; }
+@keyframes sav-in { from { opacity: 0; } to { opacity: 1; } }
+.sav-legend { margin: 8px 0 0; }
+.sav-legend .sw { width: 10px; height: 10px; border-radius: 3px; }
+.sw.b-paid, .sav-bar .b-paid { background: var(--text-muted); opacity: .45; }
+.sw.b-gain, .sav-bar .b-gain { background: var(--c, var(--series-1)); }
+.sw.b-div, .sav-bar .b-div { background: var(--c, var(--series-1)); opacity: .55; }
+.sw.b-loss, .sav-bar .b-loss { background: repeating-linear-gradient(135deg, var(--down) 0 3px, transparent 3px 6px); }
+.sav-legend .sw.b-gain, .sav-legend .sw.b-div { background-color: var(--text-secondary); }
+.sav-list .sav-row { display: block; }
+.sav-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.sav-top .r { text-align: right; }
+.sav-top .r b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.sav-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--surface-0); margin: 8px 0 6px; }
+.sav-bar i { display: block; height: 100%; transition: width .4s ease; }
+@media (prefers-reduced-motion: reduce) { .sav-chart .sav-line, .sav-chart .sav-area { animation: none; } .sav-bar i, .sav-tog .sw-t, .sav-tog .sw-t::after { transition: none; } }
+@media (max-width: 380px) { .sav-togs { grid-template-columns: 1fr; } }
 
 /* 다가오는 일정 */
 .list.cal li.cal-day { border-top: 0; padding: 12px 0 2px; font-size: 13px; color: var(--text-secondary); }
