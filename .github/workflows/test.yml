@@ -16,7 +16,5 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pip install pytest matplotlib koreanize-matplotlib
       - run: python -m pytest -v
-      - run: python flows.py --code 005930 && python flows.py --out /tmp/flows.json && python -c "import json,flows;d=json.load(open('/tmp/flows.json'));print(d['day'],len(d['stocks']));print(flows.warnings(d)[:3]);print(flows.top_flows(d))"
-        continue-on-error: true
-      - run: python econ_calendar.py --save /tmp/cal.json --dry-run && python -c "import json;d=json.load(open('/tmp/cal.json'));print(d['fomc']);print(d['bok'])"
+      - run: python -c "import requests,re;t=requests.get('https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm',headers={'User-Agent':'Mozilla/5.0'},timeout=20).text;i=t.find('2027 FOMC Meetings');print(t[i:i+6000]);j=t.find('2025 FOMC Meetings');k=t.find('August',j);print('=====AUG2025');print(t[k-1500:k+800])"
         continue-on-error: true
