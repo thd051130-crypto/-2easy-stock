@@ -4,16 +4,20 @@
   "fractional": true,
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
-  "cash": 7470,
-  "equity": 7470,
-  "last_day": "2026-10-08",
-  "positions": [],
-  "pending_buys": [
+  "cash": 3735.0,
+  "equity": 7470.00622262355,
+  "last_day": "2026-10-09",
+  "positions": [
     {
       "code": "SPY",
       "name": "SPY",
-      "signal_date": "2026-10-08"
+      "qty": 4.79726445597356,
+      "buy_date": "2026-10-09",
+      "buy_price": 776.239990234375,
+      "cost": 3735.0,
+      "last_price": 778.57
     }
   ],
+  "pending_buys": [],
   "pending_sells": []
 }

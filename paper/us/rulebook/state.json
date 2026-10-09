@@ -2,42 +2,115 @@
   "version": 2,
   "market": "us",
   "capital": 7470,
-  "cash": 7470,
-  "equity": 7470,
+  "cash": 5229.000000000001,
+  "equity": 7499.2075957299485,
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
-  "last_day": "2026-10-08",
-  "positions": [],
-  "orders": [
+  "last_day": "2026-10-09",
+  "positions": [
     {
-      "side": "buy",
       "code": "MDT",
       "name": "메드트로닉",
-      "kind": "new"
+      "qty": 5.049829726775859,
+      "cost": 448.2,
+      "buy_price": 88.48999786376953,
+      "raw": 446.85942173479566,
+      "slot": 1494.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-09",
+      "last_buy": 88.48999786376953,
+      "last_price": 88.4800033569336
     },
+    {
+      "code": "DIS",
+      "name": "디즈니",
+      "qty": 4.167687153957162,
+      "cost": 448.2,
+      "buy_price": 107.22000122070312,
+      "raw": 446.8594217347956,
+      "slot": 1494.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-09",
+      "last_buy": 107.22000122070312,
+      "last_price": 108.0500030517578
+    },
+    {
+      "code": "LLY",
+      "name": "일라이릴리",
+      "qty": 0.3873742146373728,
+      "cost": 448.2,
+      "buy_price": 1153.56005859375,
+      "raw": 446.85942173479566,
+      "slot": 1494.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-09",
+      "last_buy": 1153.56005859375,
+      "last_price": 1179.27001953125
+    },
+    {
+      "code": "PFE",
+      "name": "화이자",
+      "qty": 16.18469438089251,
+      "cost": 448.2,
+      "buy_price": 27.61000061035156,
+      "raw": 446.8594217347956,
+      "slot": 1494.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-09",
+      "last_buy": 27.61000061035156,
+      "last_price": 28.280000686645508
+    },
+    {
+      "code": "MA",
+      "name": "마스터카드",
+      "qty": 0.7783515931379532,
+      "cost": 448.2,
+      "buy_price": 574.1099853515625,
+      "raw": 446.85942173479566,
+      "slot": 1494.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-09",
+      "last_buy": 574.1099853515625,
+      "last_price": 589.1400146484375
+    }
+  ],
+  "orders": [
     {
       "side": "buy",
       "code": "DIS",
       "name": "디즈니",
-      "kind": "new"
+      "kind": "add"
     },
     {
-      "side": "buy",
+      "side": "sell",
       "code": "LLY",
-      "name": "일라이릴리",
-      "kind": "new"
+      "frac": 0.6,
+      "reason": "익절 +2%",
+      "tp": 2
     },
     {
-      "side": "buy",
+      "side": "sell",
       "code": "PFE",
-      "name": "화이자",
-      "kind": "new"
+      "frac": 0.6,
+      "reason": "익절 +2%",
+      "tp": 2
     },
     {
-      "side": "buy",
+      "side": "sell",
       "code": "MA",
-      "name": "마스터카드",
-      "kind": "new"
+      "frac": 0.6,
+      "reason": "익절 +2%",
+      "tp": 2
     }
   ],
   "halt_next": false,
@@ -53,25 +126,22 @@
   },
   "pending_buys": [
     {
-      "code": "MDT",
-      "name": "메드트로닉"
-    },
-    {
       "code": "DIS",
       "name": "디즈니"
-    },
+    }
+  ],
+  "pending_sells": [
     {
       "code": "LLY",
-      "name": "일라이릴리"
+      "reason": "익절 +2%"
     },
     {
       "code": "PFE",
-      "name": "화이자"
+      "reason": "익절 +2%"
     },
     {
       "code": "MA",
-      "name": "마스터카드"
+      "reason": "익절 +2%"
     }
-  ],
-  "pending_sells": []
+  ]
 }
