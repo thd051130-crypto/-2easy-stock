@@ -325,11 +325,12 @@ const VIEWS = {
   home: (d) => [homeSignalCard(d), worldCard(), macroCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
-  watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), allStocksCard(d)],
-  perf: (d) => [trackCard(d), accountCard(d), positionsCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), firstAccountCard(d), savingsCard(),
+  watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
+  perf: (d) => [trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
+    firstAccountCard(d), savingsCard(),
     rulebookAccountCard(d), memoCard(), healthCard()],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
-  stock: (d) => [stockHeadCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
+  stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
@@ -353,7 +354,8 @@ function render() {
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") {
-    drawTrack(d); drawEquity(d); bindSavings();
+    drawTrack(d); drawEquity(d); bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
+    if (!RET[market]) loadReturns().then(() => { if (screen === "perf") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
     app.querySelectorAll("[data-first]").forEach((b) => b.addEventListener("click", () => {
       FIRST_DONE[b.dataset.first] = !FIRST_DONE[b.dataset.first];
       try { localStorage.setItem("first_steps", JSON.stringify(FIRST_DONE)); } catch (e) { /* 이번만 */ }
@@ -410,7 +412,10 @@ function render() {
     const card = $("#sectors-card");
     if (card) requestAnimationFrame(() => { card.scrollIntoView(); window.scrollBy(0, -70); });
   }
-  if (screen === "watch") bindWatch(d);
+  if (screen === "watch") {
+    bindWatch(d); bindIncome(d);
+    if (!RET[market]) loadReturns().then(() => { if (screen === "watch") { const c = $("#income-card"); if (c) { c.outerHTML = incomeCard(d); bindIncome(d); } } });
+  }
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
   if (screen === "map") bindMap();
@@ -531,7 +536,7 @@ function homePerfCard(d) {
   const line = h ? `<div class="track-line"><span>추천 종목 ${h.days}거래일 뒤 평균 <small>${esc(s.label)} · ${h.n}개</small></span>
       <b class="${sign(h.avg)}">${cnt(h.avg, "pct", pct(h.avg))}</b><span class="muted">${esc(d.index_name)} ${pct(h.index)} · 오른 종목 ${Math.round(h.win * 100)}%</span></div>` : "";
   return `<section class="card"><h2>성과 <small>${a ? `${md(a.last_day)} 종가` : `${money(market, d.capital)}${market === "kr" ? "으로" : "로"} 시작`}</small></h2>
-    ${acc}${line}${totalLine()}${healthLine()}${more("perf", "성과 자세히 보기")}</section>`;
+    ${acc}${line}${totalLine()}${goalLine()}${healthLine()}${more("perf", "성과 자세히 보기")}</section>`;
 }
 
 // ---------------------------------------------------------------- 관심종목
@@ -1758,11 +1763,15 @@ function tradesCard(d) {
   const summary = a.trade_count
     ? `<p class="muted" style="margin:0 0 8px">끝난 거래 ${a.trade_count}건 · 승률 ${Math.round(a.win_rate * 100)}% · 실현손익 <span class="${sign(a.realized)}">${a.realized > 0 ? "+" : ""}${money(market, a.realized)}</span></p>`
     : "";
-  const items = a.trades.map((t) => `<li><div class="l"><div class="name">${esc(t.name)}</div>
-      <div class="meta">${md(t.buy_date)} → ${md(t.sell_date)} · ${t.days}일 · ${esc(t.reason)}</div></div>
+  // 매매 복기: 산 이유 → 판 이유 → 같은 기간 지수와 비교한 한 줄 평가 (review.py)
+  const items = a.trades.map((t) => `<li class="review"><div class="l"><div class="name">${esc(t.name)}</div>
+      <div class="meta">${md(t.buy_date)} → ${md(t.sell_date)} · ${t.days}일${t.index_ret != null ? ` · 같은 기간 ${esc(d.index_name)} ${pct(t.index_ret)}` : ""}</div>
+      ${t.buy_why ? `<div class="why"><span>산 이유</span>${esc(t.buy_why)}</div>` : ""}
+      <div class="why"><span>판 이유</span>${esc(t.reason)}</div>
+      ${t.verdict ? `<div class="why verdict"><span>평가</span>${esc(t.verdict)}</div>` : ""}</div>
       <div class="r"><div class="${sign(t.ret)}">${pct(t.ret)}</div><div class="meta">${t.pnl > 0 ? "+" : ""}${money(market, t.pnl)}</div></div></li>`).join("");
-  return `<section class="card"><h2>최근 거래 <small>최근 ${a.trades.length}건</small></h2>${summary}
-    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">아직 끝난 거래가 없어요.</p>`}</section>`;
+  return `<section class="card"><h2>매매 복기 <small>최근 ${a.trades.length}건</small></h2>${summary}
+    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">아직 끝난 거래가 없어요. 첫 거래가 끝나면 산 이유·판 이유·지수와 비교한 평가가 여기 쌓여요.</p>`}</section>`;
 }
 
 // 세계 지수·환율(world.json)에 있는 지수들. 매매 기준 지수가 맨 앞이에요.
@@ -2042,7 +2051,11 @@ let retLoading = null;
 function loadReturns() {
   if (!retLoading) {
     retLoading = Promise.all(["kr", "us"].map((m) => fetch(`symbols/${m}_returns.json`, { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null)).catch(() => null).then((x) => { RET[m] = (x && x.s) || {}; })));
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null).then((x) => {
+        RET[m] = (x && x.s) || {};
+        RET_IDX[m] = (x && x.idx) || null;  // 폭락 대비 점검: 지수의 하락장 낙폭
+        if (x && x.crises) CRISES = x.crises;
+      })));
   }
   return retLoading;
 }
@@ -2911,6 +2924,7 @@ function bindStock() {
   const fill = (x) => {
     if (screen !== "stock" || `${market}/${stockCode}` !== key) return;  // 받는 사이 다른 화면으로 갔으면 안 그려요
     drawStock(x, false);
+    fillCheck();
   };
   if (STOCK_READY.has(key)) fill(STOCK_READY.get(key));
   else stockData(market, stockCode).then(fill);
@@ -3476,6 +3490,456 @@ new MutationObserver((recs) => {
   const hit = recs.some((r) => [...r.addedNodes].some((n) => n.nodeType === 1 && (n.matches(NOTE) || n.querySelector(NOTE))));
   if (hit) foldNotes($("#app"));
 }).observe($("#app"), { childList: true, subtree: true });
+
+// ---------------------------------------------------------------- 폭락 대비 점검
+// 2008 금융위기·2020 코로나·2022 금리 인상 때 각 종목이 실제로 얼마나 빠졌는지(returns.py가 매주 월봉으로 계산)를
+// 지금 가상계좌 보유 비중이나 관심종목(똑같이 나눠 샀다고 치고)에 그대로 대입해요. 그때 상장 전이면 지수 값으로 대신해요.
+const RET_IDX = { kr: null, us: null };  // 지수 하락장 [[낙폭 %, 회복 개월] | null] × 3
+let CRISES = ["2008 금융위기", "2020 코로나", "2022 금리 인상"];
+const RULE_MDD = { kr: "국장 알림 규칙 -3.2%", us: "미장 알림 규칙 -9.5%", etf: "ETF 계좌 규칙 -8.4%" };
+let stressOf = "acct";
+function crisisOf(m, code) {
+  const r = RET[m] && RET[m][code];
+  return (r && r[5]) || null;
+}
+// 종목들 [{code, name, w(비중 0~1)}] → 하락장마다 {dd, rec, worst, proxies}
+function stressRun(m, items, cash) {
+  const idx = RET_IDX[m] || [];
+  return CRISES.map((name, k) => {
+    let dd = 0, rec = 0, slow = false, worst = null;
+    const proxies = [];
+    items.forEach((it) => {
+      const own = crisisOf(m, it.code);
+      let c = own && own[k];
+      if (!c) { c = idx[k]; if (c) proxies.push(it.name); }
+      if (!c) return;
+      dd += it.w * c[0];
+      if (c[1] == null) slow = true; else rec = Math.max(rec, c[1]);
+      if (!worst || c[0] < worst.dd) worst = { name: it.name, dd: c[0] };
+    });
+    return { name, dd: dd * (1 - cash), rec, slow, worst, proxies, index: idx[k] };
+  });
+}
+function stressTargets(d) {
+  const out = [];
+  if (d.account) out.push(["acct", "가상계좌"]);
+  if (d.etf && d.etf.account) out.push(["etf", "ETF 계좌"]);
+  out.push(["watch", "관심종목"]);
+  return out;
+}
+function stressCard(d) {
+  const targets = stressTargets(d);
+  if (!targets.some((t) => t[0] === stressOf)) stressOf = targets[0][0];
+  if (!RET[market]) {
+    return `<section class="card" id="stress-card"><h2>폭락 대비 점검</h2><p class="muted">과거 하락장 자료를 불러오는 중이에요…</p></section>`;
+  }
+  const chips = targets.map(([k, l]) => `<button type="button" data-stress="${k}" aria-pressed="${stressOf === k}">${l}</button>`).join("");
+  let items = [], cash = 0, base = 0, what = "", empty = "";
+  if (stressOf === "watch") {
+    const list = stocksOf(d).filter((s) => WATCH[market].includes(s.code));
+    items = list.map((s) => ({ code: s.code, name: s.name, w: 1 / list.length }));
+    base = market === "kr" ? 1e7 : 7470;
+    what = `관심종목 ${list.length}개에 ${money(market, base)}을 똑같이 나눠 넣었다면`;
+    if (!list.length) empty = "관심 화면에서 ☆를 눌러 종목을 넣으면 계산해요.";
+  } else {
+    const a = stressOf === "etf" ? d.etf.account : d.account;
+    base = a.equity;
+    const value = a.positions.reduce((s, p) => s + p.value, 0);
+    items = a.positions.map((p) => ({ code: p.code, name: p.name, w: value ? p.value / value : 0 }));
+    cash = a.equity ? 1 - value / a.equity : 1;
+    what = `지금 ${stressOf === "etf" ? "ETF 계좌" : "가상계좌"} (주식 ${Math.round((1 - cash) * 100)}%, 현금 ${Math.round(cash * 100)}%)`;
+    if (!items.length) empty = "지금은 전부 현금이라 폭락이 와도 계좌는 그대로예요. 규칙은 지수가 꺾이면 현금으로 쉬어요.";
+  }
+  const res = stressRun(market, items, cash);
+  const worstDd = Math.min(...res.map((r) => r.dd), 0);
+  const rows = res.map((r) => {
+    const w = Math.min(100, Math.abs(r.dd));
+    const iw = r.index ? Math.min(100, Math.abs(r.index[0])) : 0;
+    const loss = base * r.dd / 100;
+    return `<li class="stress-row"><div class="stress-top"><b>${esc(r.name)}</b>
+        <span class="${sign(r.dd)}">${items.length ? `${Math.round(r.dd)}%` : "0%"}${items.length ? ` <small class="muted">(${money(market, Math.round(loss))})</small>` : ""}</span></div>
+      <div class="stress-bar" role="img" aria-label="${esc(r.name)} 낙폭 ${Math.round(r.dd)}%, ${esc(d.index_name)} ${r.index ? r.index[0] : "-"}%">
+        <i class="me" style="width:${w}%"></i>${r.index ? `<i class="idx" style="left:${iw}%" title="${esc(d.index_name)}"></i>` : ""}</div>
+      <div class="meta">${items.length ? `${r.slow ? "아직 회복 못 한 종목 있음" : r.rec ? `가장 늦은 종목 회복 ${r.rec}개월` : "바로 회복"}${r.worst ? ` · 가장 많이 빠진 ${esc(r.worst.name)} ${r.worst.dd}%` : ""} · ` : ""}${esc(d.index_name)} ${r.index ? `${r.index[0]}% (회복 ${r.index[1] == null ? "아직" : `${r.index[1]}개월`})` : "자료 없음"}</div></li>`;
+  }).join("");
+  const proxies = [...new Set(res.flatMap((r) => r.proxies))];
+  const verdict = !items.length ? "" : worstDd > -15 ? `<p class="good-line">✅ 가장 나빴던 때도 ${Math.round(worstDd)}%예요. 버틸 만한 수준이에요.</p>`
+    : worstDd > -30 ? `<p class="caution">⚠️ 가장 나빴던 때 ${Math.round(worstDd)}%까지 빠져요. 현금 비중을 늘리거나 종목을 나누는 걸 생각해 보세요.</p>`
+      : `<p class="caution">🚨 가장 나빴던 때 ${Math.round(worstDd)}%예요. 낙폭 최소화 원칙보다 훨씬 커요.</p>`;
+  return `<section class="card" id="stress-card"><h2>폭락 대비 점검 <small>그때 같은 폭락이 오면</small></h2>
+    <div class="period" role="group" aria-label="점검할 대상">${chips}</div>
+    <p class="muted" style="margin:10px 0 6px">${what}</p>
+    ${empty ? `<p class="empty">${empty}</p>` : ""}
+    <ul class="list stress-list">${rows}</ul>
+    <div class="legend" style="margin:8px 0 0"><span class="key"><i class="sw" style="background:var(--down)"></i>${items.length ? "내 계산" : ""}</span><span class="key"><i class="sw idx-key"></i>${esc(d.index_name)}</span></div>
+    ${verdict}
+    ${proxies.length ? `<p class="muted" style="margin:8px 0 0">그때 상장 전이라 ${esc(d.index_name)} 값으로 대신 계산: ${proxies.slice(0, 6).map(esc).join(", ")}${proxies.length > 6 ? ` 외 ${proxies.length - 6}개` : ""}</p>` : ""}
+    <p class="muted note" style="margin:10px 0 0">낙폭은 하락장 직전 월말 고점에서 월중 최저가까지예요. 회복은 다시 그 고점 종가를 넘기까지 걸린 달이에요(배당 빼고 주가만).
+      현금은 0%로 쳐요. 알림 규칙은 지수가 200일선 아래로 내려가면 현금으로 쉬어서 실제로는 덜 빠져요(백테스트 2011~ 최대 낙폭: ${RULE_MDD[stressOf === "etf" ? "etf" : market]}).
+      과거 폭락이 그대로 반복된다는 뜻은 아니에요.</p></section>`;
+}
+function bindStress(d) {
+  const card = $("#stress-card");
+  if (!card) return;
+  card.querySelectorAll("[data-stress]").forEach((b) => b.addEventListener("click", () => {
+    stressOf = b.dataset.stress;
+    try { localStorage.setItem("stress_of", stressOf); } catch (e) { /* 이번만 */ }
+    card.outerHTML = stressCard(d);
+    bindStress(d);
+  }));
+}
+
+// ---------------------------------------------------------------- 사기 전 체크리스트
+// 종목 화면 맨 위 신호등. 이미 있는 숫자(지수 추세, 종목 일봉, 재무 등급, 실적 일정)를 한눈에 모아요. 참고용이에요.
+const VOL_MAX = { kr: 0.45, us: 0.45 };
+const SEASONS = [[1, 20, 2, 15], [4, 20, 5, 15], [7, 20, 8, 14], [10, 20, 11, 14]];  // strategy.EARNINGS_SEASONS
+function inSeason(day) {
+  const m = +day.slice(5, 7), dd = +day.slice(8, 10);
+  return SEASONS.some(([m1, d1, m2, d2]) => (m === m1 && dd >= d1) || (m === m2 && dd <= d2));
+}
+function checks(d, x) {
+  const sig = d.signal || {};
+  const out = [];
+  const add = (label, state, why) => out.push({ label, state, why });
+  if (sig.index && sig.ma50 && sig.ma200) {
+    const up = sig.index > sig.ma200 && sig.index > sig.ma50;
+    add("시장 추세", up ? "ok" : sig.index > sig.ma200 ? "warn" : "bad",
+      `${esc(d.index_name)}가 50일선 ${sig.index > sig.ma50 ? "위" : "아래"}, 200일선 ${sig.index > sig.ma200 ? "위" : "아래"}`);
+  } else add("시장 추세", "na", "지수 자료 없음");
+  const c = x && x.candles;
+  const cl = c && c.c && c.c.length > 30 ? c.c : null;
+  if (cl && cl.length >= 200) {
+    const ma = cl.slice(-200).reduce((a, b) => a + b, 0) / 200, last = cl[cl.length - 1];
+    add("종목 200일선", last > ma ? "ok" : "bad", `종가가 200일선보다 ${pct(last / ma - 1)}`);
+  } else add("종목 200일선", "na", cl ? "상장 200일이 안 됐어요" : "일봉 자료 없음");
+  if (cl) {
+    const r = rsiOf(cl, 14).filter((v) => v != null);
+    const v = r[r.length - 1];
+    if (v != null) add("과열 아님", v >= 70 ? "bad" : v >= 60 ? "warn" : "ok", `${term("RSI", "RSI14")} ${Math.round(v)} (70 넘으면 과열)`);
+    const hi = Math.max(...cl.slice(-250)), last = cl[cl.length - 1], off = last / hi - 1;
+    add("고점 대비", off >= -0.15 ? "ok" : off >= -0.3 ? "warn" : "bad", `52주 고점보다 ${pct(off)}${off < -0.3 ? " (떨어지는 칼날 조심)" : ""}`);
+    const rets = cl.slice(-21).map((v2, i, a) => (i ? Math.log(v2 / a[i - 1]) : null)).filter((v2) => v2 != null);
+    const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+    const vol = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, rets.length - 1)) * Math.sqrt(252);
+    add("변동성", vol <= VOL_MAX[market] * 0.7 ? "ok" : vol <= VOL_MAX[market] ? "warn" : "bad", `최근 20일 연 ${Math.round(vol * 100)}% 출렁임 (규칙 한도 ${Math.round(VOL_MAX[market] * 100)}%)`);
+  }
+  const f = (x && x.fund) || (d.funds || {})[stockCode] || {};
+  const earn = f.events && f.events.earn;
+  const today = TODAY();
+  const nEarn = earn ? Math.round((Date.parse(earn) - Date.parse(today)) / 864e5) : null;
+  if (nEarn != null && nEarn >= 0 && nEarn <= 7) add("실적 발표", "bad", `실적 발표 ${ymd(earn)} (${dday(earn)}). 발표 직후 크게 움직일 수 있어요`);
+  else if (market === "kr" && inSeason(today)) add("실적 발표", "warn", "국장 실적 시즌이라 규칙상 새로 사지 않는 때예요");
+  else add("실적 발표", "ok", earn && nEarn > 0 ? `다음 발표 ${ymd(earn)} (${dday(earn)})` : "가까운 발표 없음");
+  const g = f.grade;
+  if (g && g[2]) {
+    const r = g[1] / g[2];
+    add("재무 등급", f.loss ? "bad" : r >= 0.8 ? "ok" : r >= 0.6 ? "warn" : "bad", `${esc(g[0] || "")} ${g[1]}/${g[2]}${f.loss ? " · 적자" : ""}`);
+  } else if (f.grade && f.grade.total) {
+    const r = f.grade.score / f.grade.total;
+    add("재무 등급", f.loss ? "bad" : r >= 0.8 ? "ok" : r >= 0.6 ? "warn" : "bad", `${esc(f.grade.grade || "")} ${f.grade.score}/${f.grade.total}${f.loss ? " · 적자" : ""}`);
+  } else add("재무 등급", "na", "재무 자료 없음 (ETF거나 아직 못 받음)");
+  return out;
+}
+const LIGHT = { ok: ["🟢", "통과"], warn: ["🟡", "주의"], bad: ["🔴", "걸림"], na: ["⚪", "모름"] };
+function checkCard(d) {
+  const x = STOCK_READY.get(`${market}/${stockCode}`);
+  if (!x && STOCK_DATA.has(`${market}/${stockCode}`)) {
+    return `<section class="card" id="check-card"><h2>사기 전 체크리스트</h2><p class="muted">종목 자료를 불러오는 중이에요…</p></section>`;
+  }
+  const list = checks(d, x);
+  const known = list.filter((c) => c.state !== "na");
+  const okN = known.filter((c) => c.state === "ok").length, badN = known.filter((c) => c.state === "bad").length;
+  const head = !known.length ? "판단할 자료가 없어요" : badN ? `${known.length}개 중 ${okN}개 통과, ${badN}개 걸림`
+    : okN === known.length ? `${known.length}개 모두 통과` : `${known.length}개 중 ${okN}개 통과, 나머지 주의`;
+  return `<section class="card" id="check-card"><h2>사기 전 체크리스트 <small>${head}</small></h2>
+    <ul class="checks">${list.map((c) => `<li class="ck-${c.state}"><span class="ck-dot" aria-hidden="true">${LIGHT[c.state][0]}</span>
+      <span class="ck-l"><b>${c.label}</b> <span class="sr">${LIGHT[c.state][1]}</span><small>${c.why}</small></span></li>`).join("")}</ul>
+    <p class="muted note" style="margin:10px 0 0">빨간 불이 하나라도 있으면 기다리는 게 보수적인 선택이에요. 모두 초록이어도 매수 추천은 아니에요. 지수 추세는 오늘 신호, 나머지는 일봉·재무(매주 갱신) 기준이에요.</p></section>`;
+}
+function fillCheck() {
+  const el = $("#check-card");
+  if (el && DATA) el.outerHTML = checkCard(DATA.markets[market]);
+}
+
+// ---------------------------------------------------------------- 전역일 목표 트래커
+// 전역일·지금 모은 돈·매달 저축·목표를 넣으면 남은 날, 진척도, 그 속도로 전역 때 얼마인지 세 가지로 보여줘요 (이 폰에만 저장).
+const GOAL = { end: "", now: 0, monthly: 50, target: 0 };
+try { Object.assign(GOAL, JSON.parse(localStorage.getItem("goal") || "{}")); } catch (e) { /* 처음 */ }
+const GOAL_PLANS = [
+  ["예금", 0.03 * (1 - 0.154), "연 3% 예금 (이자세 15.4% 뗀 뒤)"],
+  ["ETF 규칙", 0.071, "ETF 계좌 규칙 백테스트 연 +7.1% (2011~, 최대 낙폭 -8.4%)"],
+  ["S&P500 그냥 적립", null, "TIGER 미국S&P500 최근 10년 실제 상승률·분배율 (낙폭 -30% 안팎을 견뎌야 해요)"],
+];
+function goalRate(p) {
+  if (p[1] != null) return p[1];
+  const r = RET.kr && RET.kr["360750"];
+  return r ? (r[1] + r[2]) / 100 : 0.12;
+}
+function monthsLeft() {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(GOAL.end)) return null;
+  const days = Math.round((Date.parse(GOAL.end) - Date.parse(TODAY())) / 864e5);
+  return { days, months: Math.max(0, days / 30.44) };
+}
+function futureValue(now, monthly, rate, months) {
+  const r = Math.pow(1 + rate, 1 / 12) - 1;
+  const n = Math.floor(months);
+  let v = now;
+  for (let i = 0; i < n; i++) v = v * (1 + r) + monthly;
+  return v * (1 + r * (months - n));
+}
+const man = (v) => (Math.abs(v) >= 1e4 ? `${(v / 1e4).toFixed(Math.abs(v) >= 1e5 ? 0 : 1).replace(/\.0$/, "")}억` : `${Math.round(v).toLocaleString("ko-KR")}만`);
+function goalOut() {
+  const left = monthsLeft();
+  if (!left) return `<p class="muted" style="margin:10px 0 0">전역일을 넣으면 계산해요.</p>`;
+  if (left.days < 0) return `<p class="good-line">🎉 전역일이 지났어요. 새 목표 날짜를 넣어 보세요.</p>`;
+  const prog = GOAL.target > 0 ? Math.min(1, GOAL.now / GOAL.target) : null;
+  const plans = GOAL_PLANS.map((p) => ({ name: p[0], note: p[2], v: futureValue(GOAL.now, GOAL.monthly, goalRate(p), left.months) }));
+  const max = Math.max(GOAL.target || 0, ...plans.map((p) => p.v), 1);
+  const need = GOAL.target > 0 ? (() => {
+    const r = Math.pow(1 + GOAL_PLANS[0][1], 1 / 12) - 1, n = left.months;
+    const gap = GOAL.target - GOAL.now * Math.pow(1 + r, n);
+    const k = r ? (Math.pow(1 + r, n) - 1) / r : n;
+    return n >= 1 ? Math.max(0, gap / k) : null;
+  })() : null;
+  return `<div class="goal-top"><div><small>전역까지</small><b>D-${left.days}</b><small>${Math.floor(left.months)}개월</small></div>
+      <div><small>지금</small><b>${man(GOAL.now)}원</b>${prog != null ? `<small>목표의 ${Math.round(prog * 100)}%</small>` : ""}</div>
+      <div><small>매달</small><b>${man(GOAL.monthly)}원</b><small>${GOAL.target ? `목표 ${man(GOAL.target)}원` : "목표 없음"}</small></div></div>
+    ${prog != null ? `<div class="goal-prog" role="img" aria-label="목표의 ${Math.round(prog * 100)}%"><i style="width:${prog * 100}%"></i></div>` : ""}
+    <h3 class="sav-h">이 속도로 모으면 전역 때</h3>
+    <ul class="list goal-list">${plans.map((p) => `<li><div class="l"><div class="name">${p.name}</div><div class="meta">${p.note}</div>
+        <div class="goal-bar"><i style="width:${(p.v / max) * 100}%"></i>${GOAL.target ? `<em style="left:${(GOAL.target / max) * 100}%" title="목표"></em>` : ""}</div></div>
+      <div class="r"><b>${man(p.v)}원</b>${GOAL.target ? `<div class="meta ${p.v >= GOAL.target ? "up" : ""}">${p.v >= GOAL.target ? "목표 달성" : `${man(GOAL.target - p.v)} 모자람`}</div>` : ""}</div></li>`).join("")}</ul>
+    ${need != null && need > GOAL.monthly ? `<p class="caution">예금만으로 목표에 닿으려면 매달 ${man(need)}원(지금보다 ${man(need - GOAL.monthly)}원 더)이 필요해요.</p>`
+      : need != null ? `<p class="good-line">✅ 예금만으로도 목표에 닿는 속도예요. 굳이 위험을 늘릴 필요가 없어요.</p>` : ""}`;
+}
+function goalCard() {
+  const inp = (k, label, unit, type = "text") => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-goal="${k}" type="${type}" ${type === "text" ? `inputmode="decimal"` : ""} value="${esc(GOAL[k] || (type === "date" ? "" : 0))}">${unit ? `<span>${unit}</span>` : ""}</span></label>`;
+  return `<section class="card" id="goal-card"><h2>전역일 목표 <small>이 폰에만 저장</small></h2>
+    <div class="sav-grid">${inp("end", "전역일", "", "date")}${inp("target", "목표 금액", "만 원")}${inp("now", "지금 모은 돈", "만 원")}${inp("monthly", "매달 저축", "만 원")}</div>
+    <div id="goal-out">${goalOut()}</div>
+    <p class="muted note" style="margin:10px 0 0">세 가지 모두 과거 수익률을 그대로 가정한 계산이라 보장이 아니에요. 주식 쪽은 중간에 낙폭이 와도 팔지 않고 버틴다는 가정이에요.
+      전역이 가까우면(1~2년) 쓸 돈은 예금에 두는 게 보수적이에요.</p></section>`;
+}
+function bindGoal() {
+  const card = $("#goal-card");
+  if (!card) return;
+  card.querySelectorAll("[data-goal]").forEach((i) => i.addEventListener(i.type === "date" ? "change" : "input", () => {
+    const k = i.dataset.goal;
+    if (k === "end") GOAL.end = i.value;
+    else { const v = parseFloat(i.value.replace(/[,\s]/g, "")); GOAL[k] = Number.isFinite(v) && v >= 0 ? Math.min(v, 1e6) : 0; }
+    try { localStorage.setItem("goal", JSON.stringify(GOAL)); } catch (e) { /* 이번만 */ }
+    const out = $("#goal-out"); if (out) out.innerHTML = goalOut();
+  }));
+}
+// 홈 성과 카드에 한 줄 (전역일을 넣었을 때만)
+function goalLine() {
+  const left = monthsLeft();
+  if (!left || left.days < 0) return "";
+  const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, GOAL.now / GOAL.target) * 100)}%` : "";
+  return `<p class="muted" style="margin:10px 0 0">🎖️ 전역까지 <b>D-${left.days}</b>${prog}</p>`;
+}
+
+// ---------------------------------------------------------------- 예상 배당금
+// 관심종목(또는 가상계좌 보유 종목)을 가졌다면 1년에 배당을 얼마 받는지, 달마다 언제 들어오는지.
+// 1주당 배당은 최근 12개월 실제 배당(returns.py, 야후 월봉)으로, 없으면 재무 화면의 연 배당금으로 계산해요.
+const DIVQ = { mode: "amount", amount: 1000, qty: { kr: {}, us: {} }, src: "watch" };
+try { Object.assign(DIVQ, JSON.parse(localStorage.getItem("div_plan") || "{}")); } catch (e) { /* 처음 */ }
+DIVQ.qty = { kr: {}, us: {}, ...(DIVQ.qty || {}) };
+const DIV_TAX = { kr: 0.154, us: 0.15 };
+function divPerShare(m, code, d) {
+  const r = RET[m] && RET[m][code];
+  const months = (r && r[6]) || [];
+  if (months.length) return { total: months.reduce((a, x) => a + x[1], 0), months };
+  const e = ((d.funds || {})[code] || {}).events || {};
+  if (e.div_rate) {
+    const mo = e.exdiv ? +e.exdiv.slice(5, 7) : 12;
+    return { total: e.div_rate, months: [[mo, e.div_rate]], guess: true };
+  }
+  return null;
+}
+function divHoldings(d) {
+  const all = stocksOf(d);
+  if (DIVQ.src === "acct") {
+    return ((d.account && d.account.positions) || []).map((p) => ({ code: p.code, name: p.name, price: p.price, qty: p.qty, fixed: true }));
+  }
+  const list = all.filter((s) => WATCH[market].includes(s.code));
+  const fx = market === "us" ? (DATA.total && DATA.total.fx) || (d.signal && d.signal.usdkrw) || 1350 : 1;
+  const each = list.length ? (DIVQ.amount * 1e4) / fx / list.length : 0;
+  return list.map((s) => ({ code: s.code, name: s.name, price: s.close,
+    qty: DIVQ.mode === "amount" ? (s.close ? each / s.close : 0) : +(DIVQ.qty[market][s.code] || 0) }));
+}
+function incomeCard(d) {
+  if (!RET[market]) return `<section class="card" id="income-card"><h2>예상 배당금</h2><p class="muted">배당 자료를 불러오는 중이에요…</p></section>`;
+  const hold = divHoldings(d);
+  const fx = market === "us" ? (DATA.total && DATA.total.fx) || (d.signal && d.signal.usdkrw) || 1350 : 1;
+  const tax = DIV_TAX[market];
+  const byMonth = Array(12).fill(0);
+  let total = 0, invest = 0;
+  const rows = hold.map((h) => {
+    const dv = divPerShare(market, h.code, d);
+    const year = dv ? dv.total * h.qty : 0;
+    if (dv) dv.months.forEach(([mo, amt]) => { byMonth[mo - 1] += amt * h.qty; });
+    total += year;
+    invest += (h.price || 0) * h.qty;
+    const yld = dv && h.price ? dv.total / h.price : null;
+    const qtyBox = DIVQ.mode === "qty" && !h.fixed
+      ? `<span class="alert-input div-qty"><input data-divq="${esc(h.code)}" type="text" inputmode="decimal" value="${h.qty || ""}" placeholder="0" aria-label="${esc(h.name)} 주식 수"><span>주</span></span>` : "";
+    return `<li><div class="l"><div class="name">${esc(h.name)}</div>
+        <div class="meta">${h.qty ? `${shares(Math.round(h.qty * 1000) / 1000)} · ` : ""}${dv ? `1주 연 ${money(market, Math.round(dv.total * 100) / 100)}${yld != null ? ` (${(yld * 100).toFixed(1)}%)` : ""} · ${dv.months.length}번${dv.guess ? " (추정)" : ""}` : "배당 없음"}</div>${qtyBox}</div>
+      <div class="r">${year ? `<b>${money(market, Math.round(year * (1 - tax) * 100) / 100)}</b><div class="meta">세후 / 1년</div>` : `<span class="muted">-</span>`}</div></li>`;
+  }).join("");
+  const after = total * (1 - tax);
+  const won = (v) => `${num(v * fx)}원`;
+  const top = Math.max(...byMonth, 1e-9);
+  const bars = byMonth.map((v, i) => `<div class="mbar"><i style="height:${(v / top) * 100}%" class="${v ? "" : "zero"}"></i><span>${i + 1}</span></div>`).join("");
+  const srcChips = [["watch", "관심종목"], ["acct", "가상계좌 보유"]].map(([k, l]) => `<button type="button" data-divsrc="${k}" aria-pressed="${DIVQ.src === k}">${l}</button>`).join("");
+  const modeChips = [["amount", "금액 나눠 넣기"], ["qty", "주식 수 직접"]].map(([k, l]) => `<button type="button" data-divmode="${k}" aria-pressed="${DIVQ.mode === k}">${l}</button>`).join("");
+  const empty = !hold.length ? (DIVQ.src === "acct" ? "가상계좌가 지금 보유한 종목이 없어요." : "관심 화면에서 ☆를 눌러 종목을 넣으면 계산해요.") : "";
+  return `<section class="card" id="income-card"><h2>예상 배당금 <small>${DIVQ.src === "acct" ? "가상계좌 보유" : "관심종목"} 기준</small></h2>
+    <div class="period" role="group" aria-label="어떤 종목">${srcChips}</div>
+    ${DIVQ.src === "watch" ? `<div class="period" role="group" aria-label="넣는 방법" style="margin:8px 0 0">${modeChips}</div>
+      ${DIVQ.mode === "amount" ? `<div class="sav-grid" style="margin-top:8px"><label class="sav-in"><span>똑같이 나눠 넣을 돈</span><span class="alert-input"><input data-divamt type="text" inputmode="decimal" value="${DIVQ.amount}"><span>만 원</span></span></label></div>` : ""}` : ""}
+    ${empty ? `<p class="empty" style="margin-top:10px">${empty}</p>` : `
+    <div class="sav-hero" style="margin-top:12px"><div><small>1년 세후</small><b>${market === "us" ? won(after) : `${num(after)}원`}</b></div>
+      <div><small>한 달 평균</small><b>${market === "us" ? won(after / 12) : `${num(after / 12)}원`}</b></div></div>
+    <p class="muted" style="margin:6px 0 0">세전 ${money(market, Math.round(total * 100) / 100)} · 넣은 돈 ${money(market, Math.round(invest))} 대비 ${invest ? ((total / invest) * 100).toFixed(1) : "0"}%${market === "us" ? ` · 환율 ${num(fx)}원` : ""}</p>
+    <h3 class="sav-h">달마다 (배당락 달 기준, 세전)</h3>
+    <div class="mbars" role="img" aria-label="달마다 예상 배당">${bars}</div>
+    <ul class="list" style="margin-top:10px">${rows}</ul>`}
+    <p class="muted note" style="margin:10px 0 0">최근 12개월 실제 배당이 앞으로도 같다고 친 계산이에요. 실제 입금은 배당락 뒤 1~2달(국장 연말 배당은 다음 해 4월쯤)이에요.
+      세금은 국장 15.4%, 미장 15%(미국에서 떼요)로 뺐어요. 1년 배당·이자가 2,000만 원을 넘으면 금융소득종합과세가 붙어요. 배당은 회사가 줄이거나 끊을 수 있어요.</p></section>`;
+}
+function bindIncome(d) {
+  const card = $("#income-card");
+  if (!card) return;
+  const save = () => { try { localStorage.setItem("div_plan", JSON.stringify(DIVQ)); } catch (e) { /* 이번만 */ } };
+  const redraw = () => { save(); const c = $("#income-card"); if (c) { c.outerHTML = incomeCard(d); bindIncome(d); } };
+  card.querySelectorAll("[data-divsrc]").forEach((b) => b.addEventListener("click", () => { DIVQ.src = b.dataset.divsrc; redraw(); }));
+  card.querySelectorAll("[data-divmode]").forEach((b) => b.addEventListener("click", () => { DIVQ.mode = b.dataset.divmode; redraw(); }));
+  // 숫자 입력은 칸을 다시 그리지 않고(키보드가 닫히지 않게) 입력이 끝나면(change) 다시 계산해요
+  const amt = $("[data-divamt]", card);
+  if (amt) amt.addEventListener("change", () => { const v = parseFloat(amt.value.replace(/[,\s]/g, "")); DIVQ.amount = Number.isFinite(v) && v >= 0 ? Math.min(v, 1e6) : 0; redraw(); });
+  card.querySelectorAll("[data-divq]").forEach((i) => i.addEventListener("change", () => {
+    const v = parseFloat(i.value.replace(/[,\s]/g, ""));
+    if (Number.isFinite(v) && v > 0) DIVQ.qty[market][i.dataset.divq] = Math.min(v, 1e7); else delete DIVQ.qty[market][i.dataset.divq];
+    redraw();
+  }));
+}
+
+// ---------------------------------------------------------------- 수익률 달력
+// 날마다 몇 % 올랐는지 달력 칸에 색으로 (오르면 빨강, 내리면 파랑). 가상계좌는 기록 시작일부터, 지수는 최근 5년쯤.
+// 관심종목 배당락일(💰)도 같이 찍어요.
+let calSrc = "acct";
+let calMonth = null;  // "YYYY-MM"
+let calPick = null;   // 눌러 본 날
+function calSources(d) {
+  const out = [];
+  if (d.account) out.push(["acct", "가상계좌"]);
+  if (d.rulebook && d.rulebook.account) out.push(["rule", "규칙표"]);
+  if (d.etf && d.etf.account) out.push(["etf", "ETF 계좌"]);
+  if (d.signal && d.signal.candles) out.push(["idx", d.index_name]);
+  return out;
+}
+// 고른 것 → {날짜: 그날 수익률}
+function dailyReturns(d, src) {
+  const out = {};
+  if (src === "idx") {
+    const c = d.signal.candles;
+    for (let i = 1; i < c.dates.length; i++) out[c.dates[i]] = c.c[i] / c.c[i - 1] - 1;
+    return out;
+  }
+  const a = src === "etf" ? d.etf.account : src === "rule" ? d.rulebook.account : d.account;
+  if (!a) return out;
+  let prev = 0;
+  a.curve.forEach((p) => { out[p.date] = (1 + p.account) / (1 + prev) - 1; prev = p.account; });
+  return out;
+}
+function exdivDays(d) {
+  const out = {};
+  const funds = d.funds || {};
+  const codes = new Set([...WATCH[market], ...((d.account && d.account.positions) || []).map((p) => p.code)]);
+  const names = Object.fromEntries(stocksOf(d).map((s) => [s.code, s.name]));
+  codes.forEach((c) => { const e = (funds[c] || {}).events; if (e && e.exdiv) (out[e.exdiv] = out[e.exdiv] || []).push(names[c] || c); });
+  return out;
+}
+const calColor = (r) => {
+  if (r == null) return "";
+  const a = Math.min(1, Math.abs(r) / 0.02) * 0.85 + 0.12;
+  return `background:color-mix(in srgb, var(${r >= 0 ? "--up" : "--down"}) ${Math.round(a * 100)}%, transparent)`;
+};
+function compound(list) { return list.reduce((a, r) => a * (1 + r), 1) - 1; }
+function retCalendarCard(d) {
+  const srcs = calSources(d);
+  if (!srcs.length) return "";
+  if (!srcs.some((s) => s[0] === calSrc)) calSrc = srcs[0][0];
+  const daily = dailyReturns(d, calSrc);
+  const days = Object.keys(daily).sort();
+  const last = days[days.length - 1] || TODAY();
+  if (!calMonth || (days.length && (calMonth < days[0].slice(0, 7) || calMonth > last.slice(0, 7)))) calMonth = last.slice(0, 7);
+  const [y, m] = calMonth.split("-").map(Number);
+  const exd = exdivDays(d);
+  const inMonth = days.filter((x) => x.startsWith(calMonth));
+  const mret = inMonth.length ? compound(inMonth.map((x) => daily[x])) : null;
+  const upN = inMonth.filter((x) => daily[x] > 0).length, downN = inMonth.filter((x) => daily[x] < 0).length;
+  // 월~금 다섯 칸 (주말은 장이 없어서 빼요)
+  const first = new Date(Date.UTC(y, m - 1, 1)), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let cells = "";
+  const lead = (first.getUTCDay() + 6) % 7;
+  if (lead < 5) cells += `<span class="cal-cell blank"></span>`.repeat(lead);
+  for (let dd = 1; dd <= dim; dd++) {
+    const wd = new Date(Date.UTC(y, m - 1, dd)).getUTCDay();
+    if (wd === 0 || wd === 6) continue;
+    const key = `${calMonth}-${String(dd).padStart(2, "0")}`;
+    const r = daily[key];
+    const ex = exd[key];
+    cells += `<button type="button" class="cal-cell${r == null ? " off" : ""}${calPick === key ? " picked" : ""}" data-calday="${key}" style="${calColor(r)}"
+      aria-label="${m}월 ${dd}일 ${r == null ? "기록 없음" : pct(r, 2)}${ex ? `, 배당락 ${ex.join(", ")}` : ""}">
+      <span class="cd">${dd}${ex ? "<i>💰</i>" : ""}</span><span class="cr">${r == null ? "" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1)}`}</span></button>`;
+  }
+  const months = [];
+  for (let k = 1; k <= 12; k++) {
+    const key = `${y}-${String(k).padStart(2, "0")}`;
+    const list = days.filter((x) => x.startsWith(key));
+    const r = list.length ? compound(list.map((x) => daily[x])) : null;
+    months.push(`<button type="button" class="cal-m${key === calMonth ? " on" : ""}" data-calm="${key}" ${list.length ? "" : "disabled"} style="${r == null ? "" : calColor(r / 3)}">
+      <span>${k}월</span><b>${r == null ? "-" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1)}%`}</b></button>`);
+  }
+  const yearDays = days.filter((x) => x.startsWith(`${y}-`));
+  const yret = yearDays.length ? compound(yearDays.map((x) => daily[x])) : null;
+  const pick = calPick && calPick.startsWith(calMonth) ? calPick : null;
+  const pickLine = pick ? `<p class="cal-pick">${pick.slice(5, 7)}.${pick.slice(8)} ${daily[pick] == null ? "장이 없었거나 기록 전이에요" : `<b class="${sign(daily[pick])}">${pct(daily[pick], 2)}</b>`}${exd[pick] ? ` · 💰 배당락: ${exd[pick].map(esc).join(", ")}` : ""}</p>` : "";
+  const firstM = days.length ? days[0].slice(0, 7) : calMonth;
+  return `<section class="card" id="retcal-card"><h2>수익률 달력 <small>날마다 몇 %</small></h2>
+    <div class="chips" role="group" aria-label="무엇의 수익률" style="margin-top:0">${srcs.map(([k, l]) => `<button type="button" data-calsrc="${k}" aria-pressed="${calSrc === k}">${esc(l)}</button>`).join("")}</div>
+    <div class="cal-head"><button type="button" class="cal-nav" data-calstep="-1" aria-label="이전 달" ${calMonth <= firstM ? "disabled" : ""}>‹</button>
+      <div><b>${y}년 ${m}월</b><small>${mret == null ? "기록 없음" : `<span class="${sign(mret)}">${pct(mret)}</span> · 오른 날 ${upN} · 내린 날 ${downN}`}</small></div>
+      <button type="button" class="cal-nav" data-calstep="1" aria-label="다음 달" ${calMonth >= last.slice(0, 7) ? "disabled" : ""}>›</button></div>
+    <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
+    ${pickLine}
+    <h3 class="sav-h">${y}년 달별 <small class="muted">${yret == null ? "" : `한 해 ${pct(yret)}`}</small></h3>
+    <div class="cal-months">${months.join("")}</div>
+    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 많이 움직인 날이에요(±2%면 가장 진해요). 가상계좌는 그날 평가금액이 전날보다 몇 % 바뀌었는지, 지수는 종가 기준이에요.
+      💰는 관심종목·보유 종목의 다음 배당락일이에요(야후 무료 자료라 바뀔 수 있어요).</p></section>`;
+}
+function bindRetCal(d) {
+  const card = $("#retcal-card");
+  if (!card) return;
+  const redraw = () => { const c = $("#retcal-card"); if (c) { c.outerHTML = retCalendarCard(d); bindRetCal(d); } };
+  card.querySelectorAll("[data-calsrc]").forEach((b) => b.addEventListener("click", () => {
+    calSrc = b.dataset.calsrc; calMonth = null; calPick = null;
+    try { localStorage.setItem("cal_src", calSrc); } catch (e) { /* 이번만 */ }
+    redraw();
+  }));
+  card.querySelectorAll("[data-calstep]").forEach((b) => b.addEventListener("click", () => {
+    const [y, m] = calMonth.split("-").map(Number);
+    const t = new Date(Date.UTC(y, m - 1 + Number(b.dataset.calstep), 1));
+    calMonth = `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}`;
+    redraw();
+  }));
+  card.querySelectorAll("[data-calm]").forEach((b) => b.addEventListener("click", () => { calMonth = b.dataset.calm; redraw(); }));
+  card.querySelectorAll("[data-calday]").forEach((b) => b.addEventListener("click", () => { calPick = calPick === b.dataset.calday ? null : b.dataset.calday; redraw(); }));
+}
+try { stressOf = localStorage.getItem("stress_of") || stressOf; calSrc = localStorage.getItem("cal_src") || calSrc; } catch (e) { /* 처음 */ }
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 render();  // 데이터가 오기 전에도 주소에 맞는 시장·화면 버튼을 표시해요

@@ -50,3 +50,21 @@ def test_build_keeps_old_value_when_fetch_fails():
     out = rt.build("kr", rows, old={"999999": ["2010-01", 1.0, 0.0, -10, 10.0], "123456": ["x"]}, fetch=fake, pause=0)
     assert set(out) == {"005930", "999999"}  # 새 종목은 1년이 안 돼서 빠지고, 못 받은 종목은 지난번 값
     assert rt.ticker("us", ["BRK.B", "", "", "s", ""]) == "BRK-B"
+
+
+def test_crisis_drawdown_and_recovery():
+    rows = [(f"{2007 + i // 12}-{i % 12 + 1:02d}", 100.0, 100.0, 0.0, 100.0) for i in range(48)]
+    # 2008-10에 월중 최저 50, 종가 60 → 2010-01에 종가 100 회복
+    rows = [(ym, 60.0 if "2008-10" <= ym < "2010-01" else c, a, v, 50.0 if ym == "2008-10" else (60.0 if "2008-10" <= ym < "2010-01" else lo))
+            for ym, c, a, v, lo in rows]
+    c = rt.crisis(rows, "2007-06", "2009-12")
+    assert c == [-50, 15]
+    assert rt.crisis(rows, "2006-01", "2007-12") is None  # 자료 시작 전
+    never = [r if r[0] < "2008-10" else (r[0], 60.0, 60.0, 0.0, 50.0) for r in rows]
+    assert rt.crisis(never, "2007-06", "2009-12")[1] is None  # 아직 회복 못 함
+
+
+def test_stats_adds_crises_and_dividend_months():
+    s = rt.stats(months(30, div=0.01))
+    assert len(s) == 7 and s[5] == [None, None, None]  # 2000년 시작이라 하락장 기간 자료 없음
+    assert len(s[6]) == 12 and s[6][0][0] == int(months(30)[-12][0][5:7])

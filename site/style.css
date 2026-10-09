@@ -593,3 +593,72 @@ details.fold[open] > summary::after { transform: rotate(180deg); }
 details.fold .fold-less, details.fold[open] .fold-more { display: none; }
 details.fold[open] .fold-less { display: inline; }
 details.fold > summary + * { margin-top: 2px !important; }
+
+/* 폭락 대비 점검 */
+.stress-list li { display: block; }
+.stress-top { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.stress-bar { position: relative; height: 10px; background: var(--surface-0); border-radius: 999px; margin: 6px 0 4px; }
+.stress-bar .me { position: absolute; left: 0; top: 0; bottom: 0; background: var(--down); border-radius: 999px; }
+.stress-bar .idx { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; background: var(--text-primary); border-radius: 2px; }
+.sw.idx-key { background: var(--text-primary); width: 3px; }
+.good-line { font-size: 13px; color: var(--good-fg); background: var(--good-bg); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
+
+/* 사기 전 체크리스트 */
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.checks li { display: flex; gap: 10px; align-items: flex-start; background: var(--surface-0); border-radius: 10px; padding: 8px 10px; }
+.ck-dot { font-size: 16px; line-height: 1.3; }
+.ck-l { min-width: 0; }
+.ck-l b { font-size: 14px; }
+.ck-l small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 매매 복기 */
+.list li.review .why { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45; }
+.list li.review .why span { display: inline-block; min-width: 42px; color: var(--text-muted); margin-right: 4px; }
+.list li.review .why.verdict { color: var(--text-primary); }
+
+/* 전역일 목표 */
+.goal-top { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.goal-top > div { background: var(--surface-0); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.goal-top small { display: block; font-size: 11px; color: var(--text-muted); }
+.goal-top b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+.goal-prog { height: 10px; background: var(--surface-0); border-radius: 999px; margin-top: 10px; overflow: hidden; }
+.goal-prog i { display: block; height: 100%; background: var(--series-3); border-radius: 999px; }
+.goal-bar { position: relative; height: 8px; background: var(--surface-0); border-radius: 999px; margin-top: 6px; }
+.goal-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--series-1); border-radius: 999px; }
+.goal-bar em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--wait-fg); }
+.goal-list .l { flex: 1; }
+
+/* 예상 배당금 */
+.mbars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; height: 90px; align-items: end; }
+.mbar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.mbar i { display: block; width: 100%; background: var(--series-3); border-radius: 4px 4px 0 0; min-height: 2px; }
+.mbar i.zero { background: var(--grid); }
+.mbar span { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+.div-qty { margin-top: 6px; max-width: 150px; }
+.div-qty input { width: 100%; min-width: 0; }
+
+/* 수익률 달력 */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 8px; text-align: center; }
+.cal-head b { display: block; font-size: 16px; }
+.cal-head small { font-size: 12px; color: var(--text-muted); }
+.cal-nav { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); font-size: 20px; cursor: pointer; }
+.cal-nav:disabled { opacity: .35; cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.cal-w { font-size: 11px; color: var(--text-muted); text-align: center; }
+.cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 48px; padding: 4px 2px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface-1); color: var(--text-primary); font: inherit; cursor: pointer; min-width: 0; }
+.cal-cell.blank { border: 0; background: transparent; cursor: default; }
+.cal-cell.off { color: var(--text-muted); }
+.cal-cell.picked { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cal-cell .cd { font-size: 11px; line-height: 1; }
+.cal-cell .cd i { font-style: normal; font-size: 9px; margin-left: 1px; }
+.cal-cell .cr { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.cal-pick { font-size: 13px; margin: 8px 0 0; color: var(--text-secondary); }
+.cal-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cal-m { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-1);
+  color: var(--text-primary); font: inherit; cursor: pointer; min-width: 0; }
+.cal-m span { font-size: 11px; color: var(--text-secondary); }
+.cal-m b { font-size: 12px; font-variant-numeric: tabular-nums; }
+.cal-m.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cal-m:disabled { opacity: .4; cursor: default; }

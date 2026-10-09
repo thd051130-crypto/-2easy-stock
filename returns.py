@@ -6,11 +6,16 @@
   - 배당·분배율: 같은 기간 받은 배당 ÷ 그때 주가, 1년 평균
   - 최대 낙폭: 상장 뒤 전체, 배당 다시 넣은 값(수정 종가) 월말 기준
   - 상장(자료 시작) 연월
+  - 큰 하락장 세 번(2008 금융위기, 2020 코로나, 2022 금리 인상)에 얼마나 빠졌고 몇 달 만에 회복했는지 (폭락 대비 점검)
+  - 최근 12개월 배당락 달과 1주당 배당금 (예상 배당금)
 ETF 가격에는 총보수가 이미 빠져 있어서 계산기는 보수를 따로 빼지 않아요.
 1년이 안 된 종목은 숫자를 안 만들어요(계산기가 '자료 부족'으로 보여요).
 fundamentals 워크플로(매주 토요일)에서 symbols.py 다음에 돌려요. 못 받은 종목은 지난번 값을 둬요.
 
-한 줄: 코드 → [시작 "YYYY-MM", 주가 상승 %/년, 배당 %/년, 최대 낙폭 %, 계산에 쓴 햇수]
+한 줄: 코드 → [시작 "YYYY-MM", 주가 상승 %/년, 배당 %/년, 최대 낙폭 %, 계산에 쓴 햇수,
+              [하락장별 [낙폭 %, 회복 개월(아직이면 null)] 또는 그때 상장 전이면 null] × 3,
+              [[배당락 달(1~12), 1주당 배당금], ...] 최근 12개월]
+지수(코스피·S&P500)의 하락장 숫자는 "idx"에 따로 둬요 (상장 전 종목은 앱이 지수로 대신 계산해요).
 
 사용법:
     python returns.py                    # 국장·미장 둘 다
@@ -30,6 +35,10 @@ FOLDER = pathlib.Path("paper/symbols")
 WINDOW = 120   # 최근 10년(월) 수익률
 MIN_MONTHS = 12
 BATCH = 150
+# 하락장: (이름, 고점을 찾기 시작하는 달, 바닥을 찾는 마지막 달). 고점은 월말 종가, 바닥은 월중 최저가로 봐요
+CRISES = [("2008 금융위기", "2007-06", "2009-12"), ("2020 코로나", "2019-12", "2020-12"),
+          ("2022 금리 인상", "2021-10", "2022-12")]
+INDEXES = {"kr": "^KS11", "us": "^GSPC"}
 
 
 def ticker(market, row):
@@ -37,8 +46,43 @@ def ticker(market, row):
     return f"{row[0]}.{row[2] or 'KS'}" if market == "kr" else row[0].replace(".", "-")
 
 
+def ok(x):
+    return x is not None and x > 0 and not math.isnan(x)
+
+
+def crisis(rows, start, end):
+    """하락장 하나: [낙폭 %, 바닥에서 고점 종가를 다시 넘기까지 개월(아직이면 None)]. 그때 상장 전이면 None.
+    rows: [(연월, 종가, 수정 종가, 배당[, 최저가])] 오래된 순."""
+    if not rows or rows[0][0] > start:
+        return None
+    win = [i for i, m in enumerate(rows) if start <= m[0] <= end]
+    if len(win) < 3:
+        return None
+    peak, dd, at, top = rows[win[0]][1], 0.0, None, None
+    for i in win[1:]:
+        m = rows[i]
+        low = m[4] if len(m) > 4 and ok(m[4]) and m[4] <= m[1] else m[1]
+        if low / peak - 1 < dd:
+            dd, at, top = low / peak - 1, i, peak
+        peak = max(peak, m[1])
+    if at is None:
+        return [0, 0]
+    rec = next((j - at for j in range(at, len(rows)) if rows[j][1] >= top), None)
+    return [round(dd * 100), rec]
+
+
+def crises(rows):
+    return [crisis(rows, a, b) for _, a, b in CRISES]
+
+
+def div_months(rows):
+    """최근 12개월 배당: [[배당락 달, 1주당 배당금]] (배당 없으면 [])."""
+    return [[int(m[0][5:7]), round(m[3], 2)] for m in rows[-12:] if len(m) > 3 and ok(m[3])]
+
+
 def stats(months):
-    """[(연월, 종가, 수정 종가, 배당)] 오래된 순 → [시작, 주가 %, 배당 %, 낙폭 %, 햇수]. 짧거나 이상하면 None."""
+    """[(연월, 종가, 수정 종가, 배당[, 최저가])] 오래된 순 → [시작, 주가 %, 배당 %, 낙폭 %, 햇수, 하락장 3개, 최근 배당].
+    짧거나 이상하면 None."""
     rows = [m for m in months if m[1] and m[1] > 0 and not math.isnan(m[1])]
     if len(rows) < MIN_MONTHS + 1:
         return None
@@ -54,11 +98,12 @@ def stats(months):
         mdd = min(mdd, v / peak - 1)
     if not (-0.99 < price < 3 and 0 <= div < 1):  # 액면분할 누락 같은 이상한 값
         return None
-    return [rows[0][0], round(price * 100, 1), round(div * 100, 2), round(mdd * 100), round(years, 1)]
+    return [rows[0][0], round(price * 100, 1), round(div * 100, 2), round(mdd * 100), round(years, 1),
+            crises(rows), div_months(rows)]
 
 
 def fetch(tickers, retries=2):
-    """야후 월봉 한 묶음 → {야후 코드: [(연월, 종가, 수정 종가, 배당)]}."""
+    """야후 월봉 한 묶음 → {야후 코드: [(연월, 종가, 수정 종가, 배당, 최저가)]}."""
     import yfinance as yf
 
     for attempt in range(retries + 1):
@@ -81,7 +126,9 @@ def fetch(tickers, retries=2):
         if d.empty:
             continue
         divs = d["Dividends"] if "Dividends" in d else [0] * len(d)
-        out[t] = [(f"{ix:%Y-%m}", float(c), float(a), float(v)) for ix, c, a, v in zip(d.index, d["Close"], d["Adj Close"], divs)]
+        lows = d["Low"] if "Low" in d else d["Close"]
+        out[t] = [(f"{ix:%Y-%m}", float(c), float(a), float(v), float(lo))
+                  for ix, c, a, v, lo in zip(d.index, d["Close"], d["Adj Close"], divs, lows)]
     return out
 
 
@@ -119,12 +166,16 @@ def main():
             continue
         rows = json.loads(src.read_text())["rows"]
         path = FOLDER / f"{m}_returns.json"
-        old = json.loads(path.read_text()).get("s", {}) if path.exists() else {}
+        prev = json.loads(path.read_text()) if path.exists() else {}
+        old = prev.get("s", {})
         s = build(m, rows, old)
         print(f"{m} 수익률 {len(s)}/{len(rows)}종목")
         if len(s) < len(rows) * 0.5 and len(old) > len(s):
             raise SystemExit("절반도 못 받아서 지난번 파일을 그대로 둬요")
-        path.write_text(json.dumps(dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), s=s),
+        idx = fetch([INDEXES[m]]).get(INDEXES[m])
+        idx = crises(idx) if idx else prev.get("idx")
+        path.write_text(json.dumps(dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), s=s, idx=idx,
+                                        crises=[c[0] for c in CRISES]),
                                    ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
