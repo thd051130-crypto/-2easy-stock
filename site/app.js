@@ -2074,6 +2074,15 @@ function savSim(p, { monthly, years, start, acct, taxOn, reinvest }) {
   const isa = acct === "isa" && !us, payTax = taxOn && !isa;  // 일반 계좌만 배당 받을 때 바로 떼요 (미국 상장은 ISA로 못 사서 일반 계좌로)
   const divRate = us ? 0.15 : TAX;  // 미국 배당은 미국에서 15% 떼고 끝
   let val = start, cash = 0, paid = start, basis = start, divs = 0, divTax = 0;
+  // 지금 다 판다면 낼 세금 (배당 세금은 받을 때 이미 뗐어요)
+  const sellTax = () => {
+    if (!taxOn) return 0;
+    if (isa) return Math.max(0, val + cash - paid - 2e6) * 0.099;  // ISA 일반형: 이익(배당 포함) 200만 원까지 비과세, 넘는 부분 9.9%
+    if (us) return Math.max(0, val - basis - 2.5e6) * 0.22;         // 해외 주식 양도세: 한 해 250만 원 넘는 차익에 22% (한 번에 판다고 쳐요)
+    if (p.tax === "other") return Math.max(0, val - basis) * TAX;    // 팔 때 차익에 15.4% (국내 주식·주식형 ETF는 비과세)
+    return 0;
+  };
+  // 그래프 선은 세금을 켜면 '그때 다 팔고 세금 낸 뒤' 금액이에요
   const series = [val], paidSeries = [paid];
   for (let i = 1; i <= m; i++) {
     val += monthly; paid += monthly; basis += monthly;
@@ -2081,15 +2090,10 @@ function savSim(p, { monthly, years, start, acct, taxOn, reinvest }) {
     const d = val * dy, dt = payTax ? d * divRate : 0;
     divs += d; divTax += dt;
     if (reinvest) { val += d - dt; basis += d - dt; } else cash += d - dt;
-    series.push(val + cash); paidSeries.push(paid);
+    series.push(val + cash - sellTax()); paidSeries.push(paid);
   }
-  let saleTax = 0;
-  if (taxOn) {
-    if (isa) saleTax = Math.max(0, val + cash - paid - 2e6) * 0.099;  // ISA 일반형: 이익(배당 포함) 200만 원까지 비과세, 넘는 부분 9.9%
-    else if (us) saleTax = Math.max(0, val - basis - 2.5e6) * 0.22;   // 해외 주식 양도세: 한 해 250만 원 넘는 차익에 22% (마지막에 한 번에 판다고 쳐요)
-    else if (p.tax === "other") saleTax = Math.max(0, val - basis) * TAX;  // 팔 때 차익에 15.4% (국내 주식·주식형 ETF는 비과세)
-  }
-  const bal = val + cash;  // 배당 세금은 받을 때 이미 뗐어요
+  const saleTax = sellTax();
+  const bal = val + cash;
   return { paid, bal, divs, divTax, cash, tax: divTax + saleTax, after: bal - saleTax, series, paidSeries };
 }
 function savRun() {
@@ -2186,6 +2190,7 @@ function savOut() {
   return `<div class="sav-hero"><div><small>넣은 돈 (${SAV.years}년)</small><b>${savWon(paid)}</b></div>
       <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 최고</small><b class="${sign(Math.max(...list.map((x) => x.r.after)) - paid)}">${savWon(Math.max(...list.map((x) => x.r.after)))}</b></div></div>
     ${warn.map((w) => `<p class="caution" style="margin:8px 0 0">⚠️ ${w}</p>`).join("")}${missing}
+    <p class="muted sav-cap">${SAV.taxOn ? "그래프는 그때 다 팔고 세금을 낸 뒤 손에 쥐는 금액이에요" : "그래프는 세금을 떼기 전 금액이에요"}</p>
     <div class="chart sav-chart" id="sav-chart"></div>
     <div class="legend sav-legend"><span class="key"><i class="sw b-paid"></i>넣은 돈</span><span class="key"><i class="sw b-gain"></i>주가 상승</span><span class="key"><i class="sw b-div"></i>배당·이자</span><span class="key"><i class="sw b-loss"></i>주가 하락</span></div>
     <ul class="list sav-list">${rows}</ul>`;
@@ -2263,7 +2268,7 @@ function drawSavings() {
       $("line", g).setAttribute("x1", cx); $("line", g).setAttribute("x2", cx);
       g.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", cx); c.setAttribute("cy", y(list[k].r.series[i])); });
       const when = i === 0 ? "지금" : `${Math.floor(i / 12) ? `${Math.floor(i / 12)}년` : ""}${i % 12 ? ` ${i % 12}개월` : ""} 뒤`.trim();
-      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(list[0].r.paidSeries[i]))}</div>` + [...list].sort((a, b) => b.r.series[i] - a.r.series[i]).map((s) =>
+      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(list[0].r.paidSeries[i]))}${SAV.taxOn ? " · 세금 뗀 뒤" : ""}</div>` + [...list].sort((a, b) => b.r.series[i] - a.r.series[i]).map((s) =>
         `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.p.name)} <b>${esc(savWon(s.r.series[i]))}</b></div>`).join("");
       tip.style.display = "";
       const tw = tip.offsetWidth, left = (cx / W) * r.width;
