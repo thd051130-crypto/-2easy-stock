@@ -1853,18 +1853,17 @@ function idxChips(d) {
 }
 
 // 비교 차트 (TradingView·토스처럼): 지수·종목을 최대 8개까지 같은 출발점(0%)에서 겹쳐 그려요.
-// 지수 차트처럼 일봉·주봉·월봉·년봉, 옆으로 밀기·확대·축소, 길게 눌러 세부정보. 화면에 보이는 첫날이 늘 0%예요.
+// 지수 차트처럼 일봉·주봉·월봉·년봉, 옆으로 밀기·확대·축소, 길게 눌러 세부정보 (보조지표는 없어요). 화면에 보이는 첫날이 늘 0%예요.
 // 항목 키: "i:^KS11"(지수) / "s:kr:005930"·"s:us:AAPL"(국장·미장 아무 종목). 옛 "s:005930"은 지금 시장 종목이에요. 시장마다 따로 기억해요.
 const cmpColor = (i) => savColor(i);
 const CMP_MAX = 8;
 const COMPARE = { kr: null, us: null };
 let cmpF = "d";        // 일봉·주봉·월봉·년봉
-let cmpMa = false;     // 이동평균선 (50일선·200일선)
 let cmpQuery = "";
 let cmpDrawn = null;   // 마지막으로 그린 항목·기간 (바뀌면 보던 구간을 처음으로)
 try {
   Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}"));
-  cmpF = localStorage.getItem("cmp_f") || "d"; cmpMa = localStorage.getItem("cmp_ma") === "1";
+  cmpF = localStorage.getItem("cmp_f") || "d";
 } catch (e) { /* 처음 */ }
 function cmpItems(d) {
   if (!COMPARE[market]) {
@@ -1933,9 +1932,7 @@ function compareCard(d) {
       placeholder="지수·종목 검색 (예: 나스닥, 엔비디아)" aria-label="비교 차트에 넣을 지수·종목 검색" value="${esc(cmpQuery)}">
     <div id="cmp-res">${cmpResults(d)}</div>
     <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 0">${frames}</div>
-    <div class="chips" role="group" aria-label="보조지표"><button type="button" data-cmp-ma aria-pressed="${cmpMa}">이동평균선</button></div>
     <p class="muted" id="cmp-range" style="margin:8px 0 4px"></p>
-    ${cmpMa ? `<div class="legend"><span class="key"><i class="sw sw-dash"></i>50일선 (점선)</span><span class="key"><i class="sw sw-dot"></i>200일선 (점점)</span></div>` : ""}
     <div class="chart candle" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
     <p class="muted note" id="cmp-note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 누르면 그날 각자 몇 % 올랐는지 보이고, 길게 누른 채 움직이면 세부정보가 손가락을 따라와요.
       화면에 보이는 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. 8배 넘게 차이 나면 '로그 눈금'으로 그려요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
@@ -1952,15 +1949,13 @@ function cmpRows(got) {
   }));
   const keys = [...info.keys()].sort();
   const series = fs.map((f) => {
-    const out = { c: [], ma50: [], ma200: [] };
+    const out = { c: [] };
     const at = f ? new Map(f.keys.map((k, i) => [k, i])) : new Map();
     let prev = null;
     keys.forEach((k) => {
       const i = at.get(k);
       if (i != null) prev = i;
       out.c.push(prev == null ? null : f.c[prev]);
-      out.ma50.push(i == null ? null : f.ma50[i]);
-      out.ma200.push(i == null ? null : f.ma200[i]);
     });
     return out;
   });
@@ -2016,7 +2011,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     list.forEach((s, j) => {
       if (base[j] == null) return;
       for (let i = start; i <= endI; i++) {
-        for (const val of cmpMa ? [s.c[i], s.ma50[i], s.ma200[i]] : [s.c[i]]) if (val != null) { const r = val / base[j]; if (r < lo) lo = r; if (r > hi) hi = r; }
+        const val = s.c[i]; if (val != null) { const r = val / base[j]; if (r < lo) lo = r; if (r > hi) hi = r; }
       }
     });
     if (!Number.isFinite(lo)) { lo = 0.9; hi = 1.1; }
@@ -2040,8 +2035,6 @@ function compareChart(el, f, list, show, reset, onRange) {
       }
       return dstr ? `<path d="${dstr}" fill="none" stroke="${list[j].color}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>` : "";
     };
-    const mas = cmpMa ? list.map((s, j) => path(s.ma200, j, 'stroke-width="1.3" stroke-dasharray="1.5 3" opacity=".85"')
-      + path(s.ma50, j, 'stroke-width="1.3" stroke-dasharray="5 3" opacity=".85"')).join("") : "";
     const lines = list.map((s, j) => path(s.c, j, 'stroke-width="2"')).join("");
     // 오른쪽 끝: 각자 지금 몇 % (선 색 딱지, 겹치면 위아래로 벌려요)
     const ends = list.map((s, j) => {
@@ -2059,7 +2052,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     const clip = `cc-${key}`;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.name).join(", "))} 비교 차트">
       <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath></defs>
-      ${grid}${zero}<g clip-path="url(#${clip})">${mas}${lines}</g>
+      ${grid}${zero}<g clip-path="url(#${clip})">${lines}</g>
       <line class="cross" x1="${picked ? X(v.pick) : 0}" x2="${picked ? X(v.pick) : 0}" y1="${pad.t}" y2="${pad.t + ih}"${picked ? "" : ' style="display:none"'}/>
       ${tags}${xl}${logY ? `<text class="pane-label" x="${pad.l + iw + 6}" y="${pad.t - 8}">로그 눈금</text>` : ""}</svg>
       <div class="tip" style="display:none"></div>`;
@@ -2073,9 +2066,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     const rows = list.map((s, j) => {
       if (base[j] == null || s.c[i] == null) return "";
       const r = s.c[i] / base[j] - 1;
-      const ma = cmpMa ? [s.ma50[i] ? `50일선 ${s.fmt(s.ma50[i])}` : "", s.ma200[i] ? `200일선 ${s.fmt(s.ma200[i])}` : ""].filter(Boolean).join(" · ") : "";
-      return `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.name)} <b class="${sign(r)}">${pct(r)}</b> <span class="muted">${esc(s.fmt(s.c[i]))}</span></div>`
-        + (ma ? `<div class="row muted" style="padding-left:20px;font-size:11px">${esc(ma)}</div>` : "");
+      return `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.name)} <b class="${sign(r)}">${pct(r)}</b> <span class="muted">${esc(s.fmt(s.c[i]))}</span></div>`;
     }).join("");
     tip.innerHTML = `<div class="muted">${esc(frameLabel(f, i, "full"))}</div>${rows}`;
     tip.style.display = "";
@@ -2097,7 +2088,7 @@ function compareChart(el, f, list, show, reset, onRange) {
 }
 function bindCompare(d) {
   const save = () => {
-    try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_f", cmpF); localStorage.setItem("cmp_ma", cmpMa ? "1" : "0"); } catch (e) { /* 이번만 */ }
+    try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_f", cmpF); } catch (e) { /* 이번만 */ }
   };
   const redraw = () => { save(); const y = window.scrollY; render(); window.scrollTo(0, y); };
   document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
@@ -2114,8 +2105,6 @@ function bindCompare(d) {
   const q = $("#cmp-q");
   if (q) q.addEventListener("input", () => { cmpQuery = q.value; const r = $("#cmp-res"); if (r) r.innerHTML = cmpResults(d); });
   document.querySelectorAll("[data-cmp-f]").forEach((b) => b.addEventListener("click", () => { cmpF = b.dataset.cmpF; redraw(); }));
-  const ma = $("[data-cmp-ma]");
-  if (ma) ma.addEventListener("click", () => { cmpMa = !cmpMa; redraw(); });  // 보던 구간·확대는 그대로
   drawCompare(d);
   // 전 종목 목록은 처음 열 때 받아요. 다른 시장 종목은 받은 뒤 이름을 채워요.
   if (!SYM.kr || !SYM.us) loadSymbols().then(() => {
