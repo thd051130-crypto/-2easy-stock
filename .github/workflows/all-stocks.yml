@@ -1,5 +1,5 @@
 # 전 종목(국장 약 4천·미장 약 5천) 종목 화면 파일: 검색에서 아무 종목이나 눌러 차트를 보고 ☆로 관심종목에 넣을 수 있게 해요.
-#   야후 무료 시세를 묶음으로 받아(all_stocks.py, 시장마다 15분쯤) 아티팩트 stocks-<시장>으로 올리면, 끝날 때 pages가 받아서 앱에 넣어요.
+#   야후 무료 시세를 묶음으로 받아(all_stocks.py, 국장 15분·미장 30분쯤) 아티팩트 stocks-<시장>으로 올리면, 끝날 때 pages가 받아서 앱에 넣어요.
 #   국장: 평일 한국시간 16:20쯤 / 미장: 화~토 한국시간 06:20쯤. 저장소에는 커밋하지 않아요 (파일이 커서).
 #   보기 전용이고 매매 규칙·가상계좌 신호는 안 바꿔요. 폰에서 바로 돌려 보기: Actions → all-stocks → Run workflow
 name: all-stocks
@@ -27,7 +27,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
