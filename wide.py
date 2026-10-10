@@ -3,7 +3,7 @@
 알림 규칙의 종목 48개는 2015년 말 기준으로 고정해 뒀어요 (지금 잘나가는 종목만 골라 백테스트가 좋아 보이는 걸 막으려고).
 그래서 그 뒤 커진 회사(예: 한화에어로스페이스, HD현대일렉트릭)는 후보에 안 나와요. 여기서는 그 회사들까지 같은 조건으로 봐요.
   - 시장 조건(코스피 50·200일선, 시장 폭)은 알림 규칙 48개로 계산한 것을 그대로 써요
-  - 종목 조건: 200일선 위, 최근 10일 안에 20일 신고가 → RSI2 < 10 눌림, 20일 변동성 연 45% 이하
+  - 종목 조건: 200일선 위, 최근 10일 안에 20일 신고가 → RSI2 < 5 눌림, 20일 변동성 연 35% 이하 (strategy.py와 같은 값)
   - 지금 목록으로 과거를 백테스트하면 생존편향이 생겨서 검증할 수 없어요. 그래서 가상계좌에는 넣지 않고
     추천 종목 성과(track.py, src=wide)로만 실제 결과를 쌓아 봐요
 종목 목록은 paper/symbols/kr.json(시가총액 순, 매주 fundamentals 워크플로가 갱신)에서 읽어요.
@@ -54,7 +54,8 @@ def compute(wide_closes, closes, index_close, names):
     if wide_closes.empty:
         return []
     ok = strategy.kr_frames(closes, index_close)["ok"].reindex(wide_closes.index).fillna(False)
-    entry, _, rank, _ = kb.dip_after_breakout(wide_closes, strategy.broadcast(ok, wide_closes))
+    entry, _, rank, _ = kb.dip_after_breakout(wide_closes, strategy.broadcast(ok, wide_closes),
+                                            th=strategy.KR_RSI_TH)
     entry &= strategy.volatility(wide_closes) <= strategy.KR_STOCK_VOL_MAX
     last = entry.iloc[-1].fillna(False)
     rsi2 = kb.rsi(wide_closes).iloc[-1]

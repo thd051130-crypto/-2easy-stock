@@ -76,7 +76,7 @@ def test_kr_summary_and_extras():
     picks = [dict(name="삼성<전자>", close=262000.0)]
     market["kospi_ok"] = True
     head = "\n".join(ks.kr_summary(market, picks, 10_000_000))
-    assert "매수 후보 1개" in head and "삼성&lt;전자&gt;" in head and "손절 243,660원" in head
+    assert "매수 후보 1개" in head and "삼성&lt;전자&gt;" in head and "손절 248,900원" in head
     payload = dict(rulebook=[dict(name=f"종목{i}") for i in range(6)],
                    movers=dict(up=[dict(name="케이씨텍", r5=0.411)], down=[]),
                    sectors=[dict(name="2차전지", r5=0.082), dict(name="조선", r5=-0.061)])

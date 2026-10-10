@@ -27,8 +27,8 @@ import kr_swing_backtest as kb
 import strategy
 from markets import MARKETS
 
-# 2026-10-04 비교 당시 값 그대로 (지금 규칙은 학습팀 제안으로 시장 폭 40%, 손절 -7%로 바뀌었어요)
-BREADTH_MIN, INDEX_VOL_MAX, STOCK_VOL_MAX, OLD_STOP = 0.50, strategy.US_VOL_MAX, strategy.KR_STOCK_VOL_MAX, 0.05
+# 2026-10-04 비교 당시 값 그대로 (지금 규칙은 학습팀 제안으로 바뀌었어요: strategy.py)
+BREADTH_MIN, INDEX_VOL_MAX, STOCK_VOL_MAX, OLD_STOP = 0.50, strategy.US_VOL_MAX, 0.45, 0.05
 
 
 def kr_variants(closes, index_close):

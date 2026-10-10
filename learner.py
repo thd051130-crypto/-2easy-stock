@@ -47,7 +47,7 @@ GRIDS = {
 }
 CURRENT = {
     "kr": dict(breadth_min=strategy.KR_BREADTH_MIN, stock_vol_max=strategy.KR_STOCK_VOL_MAX, stop=strategy.KR_STOP,
-               rsi_th=10),
+               rsi_th=strategy.KR_RSI_TH),
     "us": dict(vol_max=strategy.US_VOL_MAX, weight=strategy.US_WEIGHT, ma_long=200),
 }
 LABELS = {
