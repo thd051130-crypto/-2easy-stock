@@ -809,7 +809,7 @@
 "Security & Protection Services"
 ]
 },
-"updated": "2026-10-08T14:30+09:00",
+"updated": "2026-10-10T09:09+09:00",
 "us": {
 "AAPL": [
 "IT·전자",
@@ -1063,6 +1063,10 @@
 "전력·유틸리티",
 "Utilities - Regulated Electric"
 ],
+"ELV": [
+"바이오·헬스",
+"Healthcare Plans"
+],
 "EMR": [
 "조선·방산·기계",
 "Specialty Industrial Machinery"
@@ -1278,6 +1282,10 @@
 "MRK": [
 "바이오·헬스",
 "Drug Manufacturers - General"
+],
+"MRNA": [
+"바이오·헬스",
+"Biotechnology"
 ],
 "MRVL": [
 "반도체",
