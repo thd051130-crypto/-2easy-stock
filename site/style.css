@@ -478,6 +478,8 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 /* 비교 차트 */
 .cmp-chip { display: inline-flex; align-items: center; gap: 6px; }
 .cmp-chip span { color: var(--text-muted); }
+.sw.sw-dash { height: 0; border-top: 2px dashed var(--text-secondary); background: none; }
+.sw.sw-dot { height: 0; border-top: 2px dotted var(--text-secondary); background: none; }
 .cmp-add { font: inherit; font-size: 13px; border: 1px dashed var(--border); background: var(--surface-1); color: var(--accent); border-radius: 999px; padding: 6px 10px; min-height: 32px; max-width: 100%; }
 
 /* 적립식 복리 계산기 */

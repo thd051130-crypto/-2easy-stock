@@ -1853,14 +1853,19 @@ function idxChips(d) {
 }
 
 // 비교 차트 (TradingView·토스처럼): 지수·종목을 최대 8개까지 같은 출발점(0%)에서 겹쳐 그려요.
+// 지수 차트처럼 일봉·주봉·월봉·년봉, 옆으로 밀기·확대·축소, 길게 눌러 세부정보. 화면에 보이는 첫날이 늘 0%예요.
 // 항목 키: "i:^KS11"(지수) / "s:kr:005930"·"s:us:AAPL"(국장·미장 아무 종목). 옛 "s:005930"은 지금 시장 종목이에요. 시장마다 따로 기억해요.
-const CMP_P = [["m1", "1개월", 21], ["m3", "3개월", 63], ["y1", "1년", 252], ["y3", "3년", 756], ["y10", "10년", 2520]];
 const cmpColor = (i) => savColor(i);
 const CMP_MAX = 8;
 const COMPARE = { kr: null, us: null };
-let cmpP = "y1";
+let cmpF = "d";        // 일봉·주봉·월봉·년봉
+let cmpMa = false;     // 이동평균선 (50일선·200일선)
 let cmpQuery = "";
-try { Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}")); cmpP = localStorage.getItem("cmp_p") || "y1"; } catch (e) { /* 처음 */ }
+let cmpDrawn = null;   // 마지막으로 그린 항목·기간 (바뀌면 보던 구간을 처음으로)
+try {
+  Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}"));
+  cmpF = localStorage.getItem("cmp_f") || "d"; cmpMa = localStorage.getItem("cmp_ma") === "1";
+} catch (e) { /* 처음 */ }
 function cmpItems(d) {
   if (!COMPARE[market]) {
     const first = WATCH[market][0] || (stocksOf(d)[0] || {}).code;
@@ -1893,8 +1898,9 @@ function cmpResults(d) {
   if (!q) {
     const watch = WATCH[market].filter((c) => !cmpHas(items, market, c)).map((c) => btn(`s:${market}:${c}`, cmpName(d, `s:${market}:${c}`))).join("");
     const idx = chartIndexes(d).filter((r) => !items.includes(`i:${r.sym}`)).map((r) => btn(`i:${r.sym}`, r.name)).join("");
+    // 지수 버튼은 많아서 접어 둬요 (차트가 아래로 밀리지 않게)
     return (watch ? `<div class="sav-quick"><span class="muted">내 관심종목</span><div class="chips">${watch}</div></div>` : "")
-      + `<div class="sav-quick"><span class="muted">지수</span><div class="chips">${idx}</div></div>`;
+      + `<details class="fold" style="margin-top:6px"><summary class="muted">지수 바로 넣기</summary><div class="chips">${idx}</div></details>`;
   }
   const qs = queryKeys(q), hits = [];
   chartIndexes(d).forEach((r, i) => {
@@ -1920,58 +1926,179 @@ function compareCard(d) {
   const items = cmpItems(d);
   const chips = items.map((k, i) => `<button type="button" class="cmp-chip" data-cmp-del="${esc(k)}" aria-label="${esc(cmpName(d, k))} 빼기">
     <i class="sw" style="background:${cmpColor(i)}"></i>${esc(cmpName(d, k))} <span aria-hidden="true">×</span></button>`).join("");
-  const periods = CMP_P.map(([k, label]) => `<button type="button" data-cmp-p="${k}" aria-pressed="${k === cmpP}">${label}</button>`).join("");
-  return `<section class="card" id="cmp-card"><h2>비교 차트 <small>같은 날 0%에서 출발</small></h2>
+  const frames = FRAMES.map(([k, label]) => `<button type="button" data-cmp-f="${k}" aria-pressed="${k === cmpF}">${label}</button>`).join("");
+  return `<section class="card" id="cmp-card"><h2>비교 차트 <small>보이는 첫날 0%에서 출발</small></h2>
     <div class="chips" id="cmp-chips">${chips}</div>
     <input id="cmp-q" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:10px"
       placeholder="지수·종목 검색 (예: 나스닥, 엔비디아)" aria-label="비교 차트에 넣을 지수·종목 검색" value="${esc(cmpQuery)}">
     <div id="cmp-res">${cmpResults(d)}</div>
-    <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 4px">${periods}</div>
-    <div class="chart" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
-    <p class="muted note" id="cmp-note" style="margin:8px 0 0">고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
+    <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 0">${frames}</div>
+    <div class="chips" role="group" aria-label="보조지표"><button type="button" data-cmp-ma aria-pressed="${cmpMa}">이동평균선</button></div>
+    <p class="muted" id="cmp-range" style="margin:8px 0 4px"></p>
+    ${cmpMa ? `<div class="legend"><span class="key"><i class="sw sw-dash"></i>50일선 (점선)</span><span class="key"><i class="sw sw-dot"></i>200일선 (점점)</span></div>` : ""}
+    <div class="chart candle" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
+    <p class="muted note" id="cmp-note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 누르면 그날 각자 몇 % 올랐는지 보이고, 길게 누른 채 움직이면 세부정보가 손가락을 따라와요.
+      화면에 보이는 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. 8배 넘게 차이 나면 '로그 눈금'으로 그려요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
+}
+// 항목마다 고른 기간 캔들(지수 차트와 같은 frameCandles)을 만들고, 모든 항목의 날짜를 합쳐 한 줄로 세워요.
+// 쉬는 날(국장·미장 휴일이 달라요)은 직전 값으로 이어요.
+function cmpRows(got) {
+  const fs = got.map((x) => (x ? frameCandles(x, cmpF) : null));
+  const info = new Map();
+  fs.forEach((f) => f && f.keys.forEach((k, i) => {
+    const r = info.get(k);
+    if (!r) info.set(k, { first: f.first[i], last: f.last[i] });
+    else { if (f.first[i] < r.first) r.first = f.first[i]; if (f.last[i] > r.last) r.last = f.last[i]; }
+  }));
+  const keys = [...info.keys()].sort();
+  const series = fs.map((f) => {
+    const out = { c: [], ma50: [], ma200: [] };
+    const at = f ? new Map(f.keys.map((k, i) => [k, i])) : new Map();
+    let prev = null;
+    keys.forEach((k) => {
+      const i = at.get(k);
+      if (i != null) prev = i;
+      out.c.push(prev == null ? null : f.c[prev]);
+      out.ma50.push(i == null ? null : f.ma50[i]);
+      out.ma200.push(i == null ? null : f.ma200[i]);
+    });
+    return out;
+  });
+  return { f: { keys, first: keys.map((k) => info.get(k).first), last: keys.map((k) => info.get(k).last), frame: cmpF }, series };
 }
 function drawCompare(d) {
   const el = $("#cmp-chart");
   if (!el) return;
   const items = cmpItems(d);
-  if (!items.length) { el.innerHTML = `<p class="empty">위 '+ 더하기'에서 지수나 종목을 골라 주세요.</p>`; return; }
-  const want = items.join(",") + cmpP + market;
+  if (!items.length) { el.innerHTML = `<p class="empty">위 검색창에서 지수나 종목을 찾아 넣어 주세요.</p>`; return; }
+  const want = items.join(",") + cmpF + market;
   Promise.all(items.map(cmpLoad)).then(() => {
-    if (screen !== "chart" || cmpItems(d).join(",") + cmpP + market !== want) return;  // 받는 사이 바뀌었으면 안 그려요
-    const got = items.map((k) => { const x = cmpReady(k); return x && x.candles && x.candles.dates && x.candles.dates.length ? x.candles : null; });
-    const base = got.find(Boolean);
-    if (!base) { el.innerHTML = `<p class="empty">자료를 못 받았어요. 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`; return; }
-    // 모든 날짜를 합쳐서 기간 길이만큼 자르고, 쉬는 날은 직전 값으로 이어요 (국장·미장 휴일이 달라서)
-    const n = (CMP_P.find((x) => x[0] === cmpP) || CMP_P[2])[2];
-    const allDates = [...new Set(got.filter(Boolean).flatMap((c) => c.dates))].sort();
-    const last = allDates[allDates.length - 1];
-    const dates = allDates.filter((x) => x >= base.dates[Math.max(0, base.dates.length - 1 - n)] && x <= last);
-    const step = Math.max(1, Math.ceil(dates.length / 400));  // 점이 너무 많으면 폰이 버벅여서 솎아요
-    const shown = dates.filter((_, i) => i % step === 0 || i === dates.length - 1);
-    const series = items.map((k, j) => {
-      const c = got[j];
-      if (!c) return { name: cmpName(d, k), color: cmpColor(j), values: shown.map(() => null) };
-      const at = new Map(c.dates.map((x, i) => [x, c.c[i]]));
-      let prev = null, start = null;
-      const values = shown.map((x) => {
-        if (at.has(x)) prev = at.get(x);
-        if (prev == null) return null;
-        if (start == null) start = prev;
-        return prev / start - 1;
-      });
-      return { name: cmpName(d, k), color: cmpColor(j), values };
+    if (screen !== "chart" || !$("#cmp-chart") || cmpItems(d).join(",") + cmpF + market !== want) return;  // 받는 사이 바뀌었으면 안 그려요
+    const el2 = $("#cmp-chart");
+    const got = items.map((k) => { const x = cmpReady(k); return x && x.candles && x.candles.dates && x.candles.dates.length > 1 ? x.candles : null; });
+    if (!got.some(Boolean)) { el2.innerHTML = `<p class="empty">자료를 못 받았어요. 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`; return; }
+    const { f, series } = cmpRows(got);
+    const list = items.map((k, j) => {
+      const m = k[0] === "i" ? null : cmpStock(k)[0];
+      return { name: cmpName(d, k), color: cmpColor(j), ok: Boolean(got[j]), ...series[j],
+        fmt: m ? (v) => px(m, v) : (v) => (Math.abs(v) >= 1000 ? num(v) : px("us", v)) };
     });
-    lineChart(el, { dates: shown, series, fmt: (v) => pct(v), zero: true });
-    const missing = items.filter((_, j) => !got[j]).map((k) => cmpName(d, k));
-    const late = series.filter((s) => s.values[0] == null && s.values.some((v) => v != null)).map((s) => s.name);
+    const show = (FRAMES.find((x) => x[0] === cmpF) || FRAMES[0])[2];
+    compareChart(el2, f, list, show, cmpDrawn !== want, (txt) => { const t = $("#cmp-range"); if (t) t.innerHTML = txt; });
+    cmpDrawn = want;
+    const missing = list.filter((s) => !s.ok).map((s) => s.name);
     const note = $("#cmp-note");
-    if (note) note.textContent = (missing.length ? `${missing.join(", ")} 자료를 못 받았어요. ` : "")
-      + (late.length ? `${late.join(", ")}은(는) 이 기간 중간에 상장해서 상장일부터 0%예요. ` : "")
-      + "고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요.";
+    if (note && missing.length && !note.dataset.miss) { note.dataset.miss = "1"; note.insertAdjacentText("afterbegin", `${missing.join(", ")} 자료를 못 받았어요. `); }
   });
 }
+// 비교 선 차트: 화면에 보이는 첫 칸을 0%로 (밀거나 확대하면 다시 맞춰요). 조작은 캔들 차트와 같아요.
+function compareChart(el, f, list, show, reset, onRange) {
+  const n = f.keys.length, key = el.id;
+  if (reset || !VIEW[key] || VIEW[key].n !== n || VIEW[key].frame !== f.frame) {
+    VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: f.frame, pick: null };
+  }
+  const v = VIEW[key];
+  let W = 0, pad, iw, ih, cw, start, base = [];
+  const draw = () => {
+    W = Math.max(el.clientWidth, 260);
+    pad = { l: 6, r: 62, t: 22, b: 22 };
+    iw = W - pad.l - pad.r;
+    ih = Math.round(Math.max(300, window.innerHeight * 0.55)) - pad.t - pad.b;
+    const H = pad.t + ih + pad.b;
+    v.count = Math.max(Math.min(5, n), Math.min(n, MAX_SHOW, v.count));
+    v.end = Math.max(v.count - 1, Math.min(n - 1, v.end));
+    const endI = Math.round(v.end);
+    start = endI - Math.round(v.count) + 1;
+    cw = iw / Math.round(v.count);
+    // 항목마다 보이는 구간의 첫 값 = 0% (구간 중간에 상장했으면 상장일부터)
+    base = list.map((s) => { for (let i = start; i <= endI; i++) if (s.c[i] != null) return s.c[i]; return null; });
+    let lo = Infinity, hi = -Infinity;
+    list.forEach((s, j) => {
+      if (base[j] == null) return;
+      for (let i = start; i <= endI; i++) {
+        for (const val of cmpMa ? [s.c[i], s.ma50[i], s.ma200[i]] : [s.c[i]]) if (val != null) { const r = val / base[j]; if (r < lo) lo = r; if (r > hi) hi = r; }
+      }
+    });
+    if (!Number.isFinite(lo)) { lo = 0.9; hi = 1.1; }
+    lo = Math.min(lo, 1); hi = Math.max(hi, 1);
+    const logY = lo > 0 && hi / lo >= 8;
+    if (logY) { const r = Math.log(hi / lo) * 0.08; hi *= Math.exp(r); lo /= Math.exp(r); } else {
+      const span = hi - lo || 0.02; hi += span * 0.08; lo -= span * 0.08;
+    }
+    const sc = logY ? (p) => Math.log(Math.max(p, lo / 10)) : (p) => p, sLo = sc(lo), sHi = sc(hi);
+    const X = (i) => pad.l + (i - start + 0.5) * cw;
+    const Y = (p) => pad.t + (1 - (sc(p) - sLo) / (sHi - sLo)) * ih;
+    const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => sLo + (sHi - sLo) * (0.06 + 0.88 * t)).map((t) => (logY ? Math.exp(t) : t));
+    const grid = ticks.map((t) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>
+      <text x="${pad.l + 2}" y="${Y(t) - 4}">${esc(pct(t - 1))}</text>`).join("");
+    const path = (vals, j, extra) => {
+      if (base[j] == null) return "";
+      let dstr = "", pen = false;
+      for (let i = start; i <= endI; i++) {
+        const val = vals[i]; if (val == null) { pen = false; continue; }
+        dstr += `${pen ? "L" : "M"}${X(i).toFixed(1)},${Y(val / base[j]).toFixed(1)}`; pen = true;
+      }
+      return dstr ? `<path d="${dstr}" fill="none" stroke="${list[j].color}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>` : "";
+    };
+    const mas = cmpMa ? list.map((s, j) => path(s.ma200, j, 'stroke-width="1.3" stroke-dasharray="1.5 3" opacity=".85"')
+      + path(s.ma50, j, 'stroke-width="1.3" stroke-dasharray="5 3" opacity=".85"')).join("") : "";
+    const lines = list.map((s, j) => path(s.c, j, 'stroke-width="2"')).join("");
+    // 오른쪽 끝: 각자 지금 몇 % (선 색 딱지, 겹치면 위아래로 벌려요)
+    const ends = list.map((s, j) => {
+      let i = endI; while (i >= start && s.c[i] == null) i--;
+      if (i < start || base[j] == null) return null;
+      return { j, r: s.c[i] / base[j] - 1, y: Math.min(pad.t + ih - 9, Math.max(pad.t + 9, Y(s.c[i] / base[j]))) };
+    }).filter(Boolean).sort((a, b) => a.y - b.y);
+    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 18) ends[k].y = ends[k - 1].y + 18;
+    const tags = ends.map((e) => `<rect x="${pad.l + iw + 1}" y="${e.y - 9}" width="${pad.r - 2}" height="18" rx="3" fill="${list[e.j].color}"/>
+      <text class="tag-text" x="${pad.l + iw + 6}" y="${e.y + 4}">${esc(pct(e.r))}</text>`).join("");
+    const zero = `<line class="zero" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(1)}" y2="${Y(1)}"/>`;
+    const xs = [start, Math.round((start + endI) / 2), endI];
+    const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(frameLabel(f, i, "axis"))}</text>`).join("");
+    const picked = v.pick != null && v.pick >= start && v.pick <= endI;
+    const clip = `cc-${key}`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.name).join(", "))} 비교 차트">
+      <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath></defs>
+      ${grid}${zero}<g clip-path="url(#${clip})">${mas}${lines}</g>
+      <line class="cross" x1="${picked ? X(v.pick) : 0}" x2="${picked ? X(v.pick) : 0}" y1="${pad.t}" y2="${pad.t + ih}"${picked ? "" : ' style="display:none"'}/>
+      ${tags}${xl}${logY ? `<text class="pane-label" x="${pad.l + iw + 6}" y="${pad.t - 8}">로그 눈금</text>` : ""}</svg>
+      <div class="tip" style="display:none"></div>`;
+    const best = ends.slice().sort((a, b) => b.r - a.r)[0];
+    onRange(`${esc(frameLabel(f, start, "axis"))} ~ ${esc(frameLabel(f, endI, "axis"))} (${Math.round(v.count)}${UNIT[f.frame]})`
+      + (best && ends.length > 1 ? ` · 가장 많이 오른 건 <b>${esc(list[best.j].name)}</b> <b class="${sign(best.r)}">${pct(best.r)}</b>` : ""));
+    if (picked) showTip(v.pick, X(v.pick));
+  };
+  const showTip = (i, x) => {
+    const tip = $(".tip", el);
+    const rows = list.map((s, j) => {
+      if (base[j] == null || s.c[i] == null) return "";
+      const r = s.c[i] / base[j] - 1;
+      const ma = cmpMa ? [s.ma50[i] ? `50일선 ${s.fmt(s.ma50[i])}` : "", s.ma200[i] ? `200일선 ${s.fmt(s.ma200[i])}` : ""].filter(Boolean).join(" · ") : "";
+      return `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.name)} <b class="${sign(r)}">${pct(r)}</b> <span class="muted">${esc(s.fmt(s.c[i]))}</span></div>`
+        + (ma ? `<div class="row muted" style="padding-left:20px;font-size:11px">${esc(ma)}</div>` : "");
+    }).join("");
+    tip.innerHTML = `<div class="muted">${esc(frameLabel(f, i, "full"))}</div>${rows}`;
+    tip.style.display = "";
+    const r = el.getBoundingClientRect(), left = (x / W) * r.width, tw = tip.offsetWidth;
+    tip.style.left = `${Math.max(0, Math.min(r.width - tw, left > r.width / 2 ? left - tw - 12 : left + 12))}px`;
+    tip.style.top = `${pad.t}px`;
+  };
+  chartGestures(el, v, () => ({ start, cw, pad, W }), draw, showTip);
+  draw();
+  el._draw = draw;
+  if (!el._ro) {
+    let w = el.clientWidth;
+    el._ro = new ResizeObserver(() => {
+      if (!el.isConnected) { el._ro.disconnect(); return; }
+      if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; el._draw(); }
+    });
+    el._ro.observe(el);
+  }
+}
 function bindCompare(d) {
-  const save = () => { try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_p", cmpP); } catch (e) { /* 이번만 */ } };
+  const save = () => {
+    try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_f", cmpF); localStorage.setItem("cmp_ma", cmpMa ? "1" : "0"); } catch (e) { /* 이번만 */ }
+  };
   const redraw = () => { save(); const y = window.scrollY; render(); window.scrollTo(0, y); };
   document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
     COMPARE[market] = cmpItems(d).filter((k) => k !== b.dataset.cmpDel); redraw();
@@ -1986,7 +2113,9 @@ function bindCompare(d) {
   // 글자를 칠 때는 결과 칸만 다시 그려요 (검색창은 그대로 둬서 키보드가 안 닫혀요)
   const q = $("#cmp-q");
   if (q) q.addEventListener("input", () => { cmpQuery = q.value; const r = $("#cmp-res"); if (r) r.innerHTML = cmpResults(d); });
-  document.querySelectorAll("[data-cmp-p]").forEach((b) => b.addEventListener("click", () => { cmpP = b.dataset.cmpP; redraw(); }));
+  document.querySelectorAll("[data-cmp-f]").forEach((b) => b.addEventListener("click", () => { cmpF = b.dataset.cmpF; redraw(); }));
+  const ma = $("[data-cmp-ma]");
+  if (ma) ma.addEventListener("click", () => { cmpMa = !cmpMa; redraw(); });  // 보던 구간·확대는 그대로
   drawCompare(d);
   // 전 종목 목록은 처음 열 때 받아요. 다른 시장 종목은 받은 뒤 이름을 채워요.
   if (!SYM.kr || !SYM.us) loadSymbols().then(() => {
@@ -3385,21 +3514,39 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     tip.style.top = `${pad.t}px`;
   };
 
-  // 손가락·마우스 조작
+  chartGestures(el, v, () => ({ start, cw, pad, W }), draw, showTip);
+  draw();
+  // 화면 폭이 바뀌면(폰 돌리기) 지금 고른 기간으로 다시 그려요. 탭을 바꿔 사라진 예전 차트는 다시 그리지 않아요
+  // (안 그러면 예전 차트가 위의 기간·최고·최저 문구를 덮어써요).
+  el._draw = draw;
+  if (!el._ro) {
+    let w = el.clientWidth;
+    el._ro = new ResizeObserver(() => {
+      if (!el.isConnected) { el._ro.disconnect(); return; }
+      if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; el._draw(); }
+    });
+    el._ro.observe(el);
+  }
+}
+
+// 차트 손가락·마우스 조작 (캔들 차트·비교 차트 같이): 옆으로 밀기, 두 손가락 확대·축소, 누르면 세부정보,
+// 길게 누른 채 움직이면 세부정보가 손가락을 따라가요. geo()는 지금 그린 차트의 첫 칸·칸 폭·여백·폭이에요.
+function chartGestures(el, v, geo, draw, showTip) {
   const pts = new Map();
   let gesture = null, raf = 0, hold = 0;
   const HOLD_MS = 280;  // 이만큼 가만히 누르고 있으면 세부정보가 손가락을 따라가요
   const redraw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
-  const scale = () => el.getBoundingClientRect().width / W;
+  const scale = () => el.getBoundingClientRect().width / geo().W;
   const svgX = (clientX) => (clientX - el.getBoundingClientRect().left) / scale();
-  const candleAt = (clientX) => Math.round(start + (svgX(clientX) - pad.l) / cw - 0.5);
+  const xOf = (i) => { const { start, cw, pad } = geo(); return pad.l + (i - start + 0.5) * cw; };
+  const candleAt = (clientX) => { const { start, cw, pad } = geo(); return Math.round(start + (svgX(clientX) - pad.l) / cw - 0.5); };
   const stopHold = () => { clearTimeout(hold); hold = 0; };
   // 고른 캔들만 바꿔요 (차트 전체를 다시 그리지 않고 선과 세부정보만 옮겨서 손가락을 바로 따라가요)
   const movePick = (clientX) => {
-    const i = Math.max(start, Math.min(Math.round(v.end), candleAt(clientX)));
+    const i = Math.max(geo().start, Math.min(Math.round(v.end), candleAt(clientX)));
     if (i === v.pick && $(".tip", el).style.display !== "none") return;
     v.pick = i;
-    const x = pad.l + (i - start + 0.5) * cw, cross = $("line.cross", el);
+    const x = xOf(i), cross = $("line.cross", el);
     if (cross) { cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.style.display = ""; }
     showTip(i, x);
   };
@@ -3418,8 +3565,9 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     if (pts.size === 1) {
       gesture = { type: "tap", x0: e.clientX, y0: e.clientY, end0: v.end };
       // 세부정보가 떠 있으면 그 선 근처를 잡고 밀어서 바로 옮길 수 있어요
+      const { start, cw } = geo();
       const onLine = v.pick != null && v.pick >= start && v.pick <= Math.round(v.end)
-        && Math.abs(svgX(e.clientX) - (pad.l + (v.pick - start + 0.5) * cw)) <= Math.max(cw, 28 / scale());
+        && Math.abs(svgX(e.clientX) - xOf(v.pick)) <= Math.max(cw, 28 / scale());
       if (onLine) gesture.grab = true;
       else hold = setTimeout(() => { if (gesture && gesture.type === "tap" && pts.size === 1) scrub(pts.values().next().value.x); }, HOLD_MS);
     }
@@ -3443,7 +3591,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
       if (gesture.type === "tap" && gesture.grab && Math.hypot(dx, dy) > 4) { scrub(e.clientX); return; }
       if (gesture.type === "tap" && Math.hypot(dx, dy) > 6) stopHold();
       if (gesture.type === "tap" && Math.abs(dx) > 6) gesture.type = "pan";
-      if (gesture.type === "pan") { v.end = gesture.end0 - dx / (cw * scale()); redraw(); }
+      if (gesture.type === "pan") { v.end = gesture.end0 - dx / (geo().cw * scale()); redraw(); }
     }
   };
   // 세부정보가 손가락을 따라가는 동안(또는 선을 잡은 동안)은 화면이 위아래로 움직이지 않게 해요
@@ -3456,7 +3604,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     stopHold();
     if (gesture && gesture.type === "tap" && pts.size === 1) {
       const i = candleAt(e.clientX);
-      v.pick = i >= start && i <= Math.round(v.end) && v.pick !== i ? i : null;
+      v.pick = i >= geo().start && i <= Math.round(v.end) && v.pick !== i ? i : null;
       if (v.pick == null) $(".tip", el).style.display = "none";
       draw();
     }
@@ -3469,18 +3617,6 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
   el.onpointerup = up;
   el.onpointercancel = (e) => { stopHold(); endScrub(); pts.delete(e.pointerId); if (!pts.size) gesture = null; };
   el.onwheel = (e) => { e.preventDefault(); v.count *= e.deltaY > 0 ? 1.15 : 1 / 1.15; redraw(); };
-  draw();
-  // 화면 폭이 바뀌면(폰 돌리기) 지금 고른 기간으로 다시 그려요. 탭을 바꿔 사라진 예전 차트는 다시 그리지 않아요
-  // (안 그러면 예전 차트가 위의 기간·최고·최저 문구를 덮어써요).
-  el._draw = draw;
-  if (!el._ro) {
-    let w = el.clientWidth;
-    el._ro = new ResizeObserver(() => {
-      if (!el.isConnected) { el._ro.disconnect(); return; }
-      if (Math.abs(el.clientWidth - w) > 4) { w = el.clientWidth; el._draw(); }
-    });
-    el._ro.observe(el);
-  }
 }
 
 // 선 차트 (SVG). 같은 단위 시리즈만 한 축에 그려요. 손가락으로 좌우로 밀면 그날 값이 보여요.
