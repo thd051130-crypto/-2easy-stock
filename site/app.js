@@ -1852,45 +1852,80 @@ function idxChips(d) {
     `<button type="button" data-idx="${esc(r.sym)}" aria-pressed="${r.sym === cur}">${esc(r.name)}</button>`).join("")}</div>`;
 }
 
-// 비교 차트 (TradingView·토스처럼): 지수·종목을 최대 4개까지 같은 출발점(0%)에서 겹쳐 그려요.
-// 항목 키: "i:^KS11"(지수) / "s:005930"(지금 시장 종목). 시장마다 따로 기억해요.
+// 비교 차트 (TradingView·토스처럼): 지수·종목을 최대 8개까지 같은 출발점(0%)에서 겹쳐 그려요.
+// 항목 키: "i:^KS11"(지수) / "s:kr:005930"·"s:us:AAPL"(국장·미장 아무 종목). 옛 "s:005930"은 지금 시장 종목이에요. 시장마다 따로 기억해요.
 const CMP_P = [["m1", "1개월", 21], ["m3", "3개월", 63], ["y1", "1년", 252], ["y3", "3년", 756], ["y10", "10년", 2520]];
-const CMP_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--bb)"];
-const CMP_MAX = 4;
+const cmpColor = (i) => savColor(i);
+const CMP_MAX = 8;
 const COMPARE = { kr: null, us: null };
 let cmpP = "y1";
+let cmpQuery = "";
 try { Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}")); cmpP = localStorage.getItem("cmp_p") || "y1"; } catch (e) { /* 처음 */ }
 function cmpItems(d) {
   if (!COMPARE[market]) {
     const first = WATCH[market][0] || (stocksOf(d)[0] || {}).code;
-    COMPARE[market] = [`i:${OWN_IDX[market]}`].concat(first ? [`s:${first}`] : []);
+    COMPARE[market] = [`i:${OWN_IDX[market]}`].concat(first ? [`s:${market}:${first}`] : []);
   }
   return COMPARE[market];
 }
-function cmpName(d, key) {
-  const id = key.slice(2);
-  if (key[0] === "i") return (chartIndexes(d).find((r) => r.sym === id) || { name: id }).name;
-  return (stocksOf(d).find((x) => x.code === id) || { name: id }).name;
+// 종목 키 → [시장, 코드]
+function cmpStock(key) {
+  const id = key.slice(2), m = /^(kr|us):(.+)$/.exec(id);
+  return m ? [m[1], m[2]] : [market, id];
 }
+function cmpName(d, key) {
+  if (key[0] === "i") { const id = key.slice(2); return (chartIndexes(d).find((r) => r.sym === id) || { name: id }).name; }
+  const [m, code] = cmpStock(key);
+  const s = m === market && stocksOf(d).find((x) => x.code === code);
+  if (s) return s.name;
+  const e = (SYM[m] || []).find((x) => x.row[0] === code), x = STOCK_READY.get(`${m}/${code}`);
+  return (e && e.row[1]) || (x && x.name) || code;
+}
+const cmpHas = (items, m, code) => items.some((k) => k[0] === "s" && cmpStock(k).join(":") === `${m}:${code}`);
 // 지수·종목 일봉 (종목 화면·지수 버튼과 같은 파일)
-const cmpLoad = (key) => (key[0] === "i" ? idxData(key.slice(2)) : stockData(market, key.slice(2)));
-const cmpReady = (key) => (key[0] === "i" ? IDX_READY.get(key.slice(2)) : STOCK_READY.get(`${market}/${key.slice(2)}`));
+const cmpLoad = (key) => (key[0] === "i" ? idxData(key.slice(2)) : stockData(...cmpStock(key)));
+const cmpReady = (key) => (key[0] === "i" ? IDX_READY.get(key.slice(2)) : STOCK_READY.get(cmpStock(key).join("/")));
+// 검색 결과: 지수 이름 + 국장·미장 전 종목 (계산기·검색 화면과 같은 방식). 비어 있으면 관심종목·지수 바로 넣기 버튼.
+function cmpResults(d) {
+  const items = cmpItems(d), q = cmpQuery.trim();
+  if (items.length >= CMP_MAX) return `<p class="muted" style="margin:8px 0 0">${CMP_MAX}개가 다 찼어요. 위에서 ×로 하나 빼면 더 넣을 수 있어요.</p>`;
+  const btn = (k, label) => `<button type="button" data-cmp-add="${esc(k)}">+ ${esc(label)}</button>`;
+  if (!q) {
+    const watch = WATCH[market].filter((c) => !cmpHas(items, market, c)).map((c) => btn(`s:${market}:${c}`, cmpName(d, `s:${market}:${c}`))).join("");
+    const idx = chartIndexes(d).filter((r) => !items.includes(`i:${r.sym}`)).map((r) => btn(`i:${r.sym}`, r.name)).join("");
+    return (watch ? `<div class="sav-quick"><span class="muted">내 관심종목</span><div class="chips">${watch}</div></div>` : "")
+      + `<div class="sav-quick"><span class="muted">지수</span><div class="chips">${idx}</div></div>`;
+  }
+  const qs = queryKeys(q), hits = [];
+  chartIndexes(d).forEach((r, i) => {
+    const sc = scoreOf([r.sym.replace(/^\^/, ""), r.name], [norm(r.name)], qs);
+    if (sc != null && !items.includes(`i:${r.sym}`)) hits.push({ sc: sc - 0.5, i, key: `i:${r.sym}`, name: r.name, meta: "지수" });
+  });
+  if (!SYM.kr || !SYM.us) {
+    if (!hits.length) return `<p class="muted" style="margin:8px 0 0">종목 목록 불러오는 중…</p>`;
+  } else {
+    for (const m of ["kr", "us"]) (SYM[m] || []).forEach((e, i) => {
+      const sc = scoreOf(e.row, e.keys, qs);
+      if (sc != null && !cmpHas(items, m, e.row[0])) hits.push({ sc, i, m, key: `s:${m}:${e.row[0]}`, name: e.row[1],
+        meta: [e.row[0], kindName(m, e.row), m === market ? "" : MK_NAME[m]].filter(Boolean).join(" · ") });
+    });
+  }
+  hits.sort((a, b) => a.sc - b.sc || (a.m && a.m !== market ? 1 : 0) - (b.m && b.m !== market ? 1 : 0) || a.i - b.i);
+  if (!hits.length) return `<p class="muted" style="margin:8px 0 0">'${esc(q)}'에 맞는 지수·종목이 없어요.</p>`;
+  return `<ul class="sav-res">${hits.slice(0, 8).map((h) => `<li><button type="button" data-cmp-add="${esc(h.key)}"><span class="l"><b>${esc(h.name)}</b>
+    <small>${esc(h.meta)}</small></span><span class="add">+</span></button></li>`).join("")}</ul>`;
+}
 function compareCard(d) {
   if (!d.signal) return "";
   const items = cmpItems(d);
   const chips = items.map((k, i) => `<button type="button" class="cmp-chip" data-cmp-del="${esc(k)}" aria-label="${esc(cmpName(d, k))} 빼기">
-    <i class="sw" style="background:${CMP_COLORS[i]}"></i>${esc(cmpName(d, k))} <span aria-hidden="true">×</span></button>`).join("");
-  const opt = (k, label) => (items.includes(k) ? "" : `<option value="${esc(k)}">${esc(label)}</option>`);
-  const watch = WATCH[market].map((c) => opt(`s:${c}`, cmpName(d, `s:${c}`))).join("");
-  const others = stocksOf(d).filter((x) => !WATCH[market].includes(x.code)).sort((a, b) => a.name.localeCompare(b.name, "ko"))
-    .map((x) => opt(`s:${x.code}`, x.name)).join("");
-  const idx = chartIndexes(d).map((r) => opt(`i:${r.sym}`, r.name)).join("");
-  const add = items.length < CMP_MAX ? `<select class="cmp-add" aria-label="비교할 지수·종목 더하기"><option value="">+ 더하기</option>
-      ${watch ? `<optgroup label="내 관심종목">${watch}</optgroup>` : ""}<optgroup label="지수">${idx}</optgroup>
-      <optgroup label="전체 종목">${others}</optgroup></select>` : "";
+    <i class="sw" style="background:${cmpColor(i)}"></i>${esc(cmpName(d, k))} <span aria-hidden="true">×</span></button>`).join("");
   const periods = CMP_P.map(([k, label]) => `<button type="button" data-cmp-p="${k}" aria-pressed="${k === cmpP}">${label}</button>`).join("");
   return `<section class="card" id="cmp-card"><h2>비교 차트 <small>같은 날 0%에서 출발</small></h2>
-    <div class="chips">${chips}${add}</div>
+    <div class="chips" id="cmp-chips">${chips}</div>
+    <input id="cmp-q" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:10px"
+      placeholder="지수·종목 검색 (예: 나스닥, 엔비디아)" aria-label="비교 차트에 넣을 지수·종목 검색" value="${esc(cmpQuery)}">
+    <div id="cmp-res">${cmpResults(d)}</div>
     <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 4px">${periods}</div>
     <div class="chart" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
     <p class="muted note" id="cmp-note" style="margin:8px 0 0">고른 기간 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
@@ -1915,7 +1950,7 @@ function drawCompare(d) {
     const shown = dates.filter((_, i) => i % step === 0 || i === dates.length - 1);
     const series = items.map((k, j) => {
       const c = got[j];
-      if (!c) return { name: cmpName(d, k), color: CMP_COLORS[j], values: shown.map(() => null) };
+      if (!c) return { name: cmpName(d, k), color: cmpColor(j), values: shown.map(() => null) };
       const at = new Map(c.dates.map((x, i) => [x, c.c[i]]));
       let prev = null, start = null;
       const values = shown.map((x) => {
@@ -1924,7 +1959,7 @@ function drawCompare(d) {
         if (start == null) start = prev;
         return prev / start - 1;
       });
-      return { name: cmpName(d, k), color: CMP_COLORS[j], values };
+      return { name: cmpName(d, k), color: cmpColor(j), values };
     });
     lineChart(el, { dates: shown, series, fmt: (v) => pct(v), zero: true });
     const missing = items.filter((_, j) => !got[j]).map((k) => cmpName(d, k));
@@ -1941,10 +1976,26 @@ function bindCompare(d) {
   document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
     COMPARE[market] = cmpItems(d).filter((k) => k !== b.dataset.cmpDel); redraw();
   }));
-  const sel = $(".cmp-add");
-  if (sel) sel.addEventListener("change", () => { if (sel.value) { COMPARE[market] = cmpItems(d).concat(sel.value).slice(0, CMP_MAX); redraw(); } });
+  const res = $("#cmp-res");
+  if (res) res.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cmp-add]");
+    if (!b) return;
+    COMPARE[market] = cmpItems(d).concat(b.dataset.cmpAdd).slice(0, CMP_MAX);
+    cmpQuery = ""; redraw();
+  });
+  // 글자를 칠 때는 결과 칸만 다시 그려요 (검색창은 그대로 둬서 키보드가 안 닫혀요)
+  const q = $("#cmp-q");
+  if (q) q.addEventListener("input", () => { cmpQuery = q.value; const r = $("#cmp-res"); if (r) r.innerHTML = cmpResults(d); });
   document.querySelectorAll("[data-cmp-p]").forEach((b) => b.addEventListener("click", () => { cmpP = b.dataset.cmpP; redraw(); }));
   drawCompare(d);
+  // 전 종목 목록은 처음 열 때 받아요. 다른 시장 종목은 받은 뒤 이름을 채워요.
+  if (!SYM.kr || !SYM.us) loadSymbols().then(() => {
+    if (!$("#cmp-card")) return;
+    const r = $("#cmp-res"); if (r) r.innerHTML = cmpResults(d);
+    const c = $("#cmp-chips"); if (c && cmpItems(d).some((k) => k[0] === "s")) c.querySelectorAll("[data-cmp-del]").forEach((b, i) => {
+      const k = b.dataset.cmpDel; b.childNodes[2].textContent = `${cmpName(d, k)} `; b.setAttribute("aria-label", `${cmpName(d, k)} 빼기`);
+    });
+  });
 }
 
 // 다른 지수 자료: indexes/<기호>.json (배포 때 stock_pages.py가 야후에서 처음부터 받은 일봉). 앱을 닫을 때까지 기억해요.
