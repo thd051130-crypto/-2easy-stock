@@ -809,7 +809,7 @@
 "Security & Protection Services"
 ]
 },
-"updated": "2026-10-10T09:09+09:00",
+"updated": "2026-10-10T15:19+09:00",
 "us": {
 "AAPL": [
 "IT·전자",
@@ -1402,6 +1402,10 @@
 "QCOM": [
 "반도체",
 "Semiconductors"
+],
+"QH": [
+"인터넷·게임·SW",
+"Software - Application"
 ],
 "RIO": [
 "화학·소재",
