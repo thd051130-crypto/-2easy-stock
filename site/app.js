@@ -1859,11 +1859,12 @@ const cmpColor = (i) => savColor(i);
 const CMP_MAX = 8;
 const COMPARE = { kr: null, us: null };
 let cmpF = "d";        // 일봉·주봉·월봉·년봉
+let cmpLine = false;   // false면 캔들, true면 선
 let cmpQuery = "";
 let cmpDrawn = null;   // 마지막으로 그린 항목·기간 (바뀌면 보던 구간을 처음으로)
 try {
   Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}"));
-  cmpF = localStorage.getItem("cmp_f") || "d";
+  cmpF = localStorage.getItem("cmp_f") || "d"; cmpLine = localStorage.getItem("cmp_line") === "1";
 } catch (e) { /* 처음 */ }
 function cmpItems(d) {
   if (!COMPARE[market]) {
@@ -1932,9 +1933,10 @@ function compareCard(d) {
       placeholder="지수·종목 검색 (예: 나스닥, 엔비디아)" aria-label="비교 차트에 넣을 지수·종목 검색" value="${esc(cmpQuery)}">
     <div id="cmp-res">${cmpResults(d)}</div>
     <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 0">${frames}</div>
+    <div class="chips" role="group" aria-label="모양"><button type="button" data-cmp-line="0" aria-pressed="${!cmpLine}">캔들</button><button type="button" data-cmp-line="1" aria-pressed="${cmpLine}">선</button></div>
     <p class="muted" id="cmp-range" style="margin:8px 0 4px"></p>
     <div class="chart candle" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
-    <p class="muted note" id="cmp-note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 누르면 그날 각자 몇 % 올랐는지 보이고, 길게 누른 채 움직이면 세부정보가 손가락을 따라와요.
+    <p class="muted note" id="cmp-note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들은 항목마다 자기 색이고, 오른 캔들은 꽉 차고 내린 캔들은 속이 비어요. 누르면 그날 각자 몇 % 올랐는지 보이고, 길게 누른 채 움직이면 세부정보가 손가락을 따라와요.
       화면에 보이는 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. 8배 넘게 차이 나면 '로그 눈금'으로 그려요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
 }
 // 항목마다 고른 기간 캔들(지수 차트와 같은 frameCandles)을 만들고, 모든 항목의 날짜를 합쳐 한 줄로 세워요.
@@ -1949,13 +1951,14 @@ function cmpRows(got) {
   }));
   const keys = [...info.keys()].sort();
   const series = fs.map((f) => {
-    const out = { c: [] };
+    const out = { c: [], o: [], h: [], l: [] };
     const at = f ? new Map(f.keys.map((k, i) => [k, i])) : new Map();
     let prev = null;
     keys.forEach((k) => {
       const i = at.get(k);
       if (i != null) prev = i;
       out.c.push(prev == null ? null : f.c[prev]);
+      out.o.push(i == null ? null : f.o[i]); out.h.push(i == null ? null : f.h[i]); out.l.push(i == null ? null : f.l[i]);  // 쉬는 날은 캔들 없이
     });
     return out;
   });
@@ -1998,7 +2001,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     W = Math.max(el.clientWidth, 260);
     pad = { l: 6, r: 62, t: 22, b: 22 };
     iw = W - pad.l - pad.r;
-    ih = Math.round(Math.max(300, window.innerHeight * 0.55)) - pad.t - pad.b;
+    ih = Math.round(Math.max(170, Math.min(260, W * 0.62))) - pad.t - pad.b;  // 가로로 넓적하게 (지수 차트보다 낮게)
     const H = pad.t + ih + pad.b;
     v.count = Math.max(Math.min(5, n), Math.min(n, MAX_SHOW, v.count));
     v.end = Math.max(v.count - 1, Math.min(n - 1, v.end));
@@ -2011,7 +2014,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     list.forEach((s, j) => {
       if (base[j] == null) return;
       for (let i = start; i <= endI; i++) {
-        const val = s.c[i]; if (val != null) { const r = val / base[j]; if (r < lo) lo = r; if (r > hi) hi = r; }
+        for (const val of cmpLine ? [s.c[i]] : [s.c[i], s.h[i], s.l[i]]) if (val != null) { const r = val / base[j]; if (r < lo) lo = r; if (r > hi) hi = r; }
       }
     });
     if (!Number.isFinite(lo)) { lo = 0.9; hi = 1.1; }
@@ -2035,7 +2038,21 @@ function compareChart(el, f, list, show, reset, onRange) {
       }
       return dstr ? `<path d="${dstr}" fill="none" stroke="${list[j].color}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>` : "";
     };
-    const lines = list.map((s, j) => path(s.c, j, 'stroke-width="2"')).join("");
+    // 캔들: 항목마다 자기 색. 오른 캔들은 꽉 채우고 내린 캔들은 속이 빈 테두리 (색이 겹쳐도 오르내림이 보여요)
+    const bw = Math.max(1, cw * 0.6);
+    const candles = (s, j) => {
+      if (base[j] == null) return "";
+      let out = "";
+      for (let i = start; i <= endI; i++) {
+        if (s.o[i] == null || s.c[i] == null) continue;
+        const b = base[j], x = X(i), up = s.c[i] >= s.o[i];
+        const top = Y(Math.max(s.o[i], s.c[i]) / b), bh = Math.max(1, Math.abs(Y(s.o[i] / b) - Y(s.c[i] / b)));
+        out += `<line x1="${x}" x2="${x}" y1="${Y(s.h[i] / b)}" y2="${Y(s.l[i] / b)}" stroke="${s.color}" stroke-width="1"/>`
+          + (cw >= 3 ? `<rect x="${x - bw / 2}" y="${top}" width="${bw}" height="${bh}" stroke="${s.color}" stroke-width="1" fill="${up ? s.color : "var(--surface-1)"}"/>` : "");
+      }
+      return out;
+    };
+    const lines = list.map((s, j) => (cmpLine ? path(s.c, j, 'stroke-width="2"') : candles(s, j))).join("");
     // 오른쪽 끝: 각자 지금 몇 % (선 색 딱지, 겹치면 위아래로 벌려요)
     const ends = list.map((s, j) => {
       let i = endI; while (i >= start && s.c[i] == null) i--;
@@ -2088,7 +2105,7 @@ function compareChart(el, f, list, show, reset, onRange) {
 }
 function bindCompare(d) {
   const save = () => {
-    try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_f", cmpF); } catch (e) { /* 이번만 */ }
+    try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_f", cmpF); localStorage.setItem("cmp_line", cmpLine ? "1" : "0"); } catch (e) { /* 이번만 */ }
   };
   const redraw = () => { save(); const y = window.scrollY; render(); window.scrollTo(0, y); };
   document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
@@ -2105,6 +2122,7 @@ function bindCompare(d) {
   const q = $("#cmp-q");
   if (q) q.addEventListener("input", () => { cmpQuery = q.value; const r = $("#cmp-res"); if (r) r.innerHTML = cmpResults(d); });
   document.querySelectorAll("[data-cmp-f]").forEach((b) => b.addEventListener("click", () => { cmpF = b.dataset.cmpF; redraw(); }));
+  document.querySelectorAll("[data-cmp-line]").forEach((b) => b.addEventListener("click", () => { cmpLine = b.dataset.cmpLine === "1"; redraw(); }));  // 보던 구간은 그대로
   drawCompare(d);
   // 전 종목 목록은 처음 열 때 받아요. 다른 시장 종목은 받은 뒤 이름을 채워요.
   if (!SYM.kr || !SYM.us) loadSymbols().then(() => {
