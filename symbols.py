@@ -3,6 +3,8 @@
 
 야후 파이낸스 스크리너(무료)에서 받아요.
   - 국장: 코스피·코스닥 전 종목과 ETF·ETN. 이름은 야후 한국어 이름(법인 이름)에서 (주)·주식회사를 떼고 써요.
+    ETF는 네이버 ETF 목록의 정식 한글 이름('KODEX 200타겟위클리커버드콜', '…(H)')을 먼저 써요. 야후는 300개 넘게
+    영문 이름이 잘려 있어서('KODEX 200 Target Weekly Covered') 한글로 못 찾아요. 네이버에만 있는 새 ETF도 넣어요.
   - 미장: 시가총액 2억 달러 넘는 주식과 상장된 ETF 전부. 많이 찾는 종목은 한국어 이름(테슬라, 슈드…)도 붙여요.
 웹앱 검색 화면과 텔레그램 봇(이름으로 종목 찾기)이 같이 써요. 상장 종목은 자주 안 바뀌어서 매주 한 번 새로 받아요.
 
@@ -221,6 +223,41 @@ US_KO = {
     "BOTZ": "로봇·AI ETF", "NVDL": "엔비디아 2배 ETF", "TSLL": "테슬라 2배 ETF",
 }
 
+# ---------------------------------------------------------------- 네이버 ETF 정식 이름
+
+NAVER_ETF = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=0&targetColumn=market_sum&sortOrder=desc"
+NAVER_HEADERS = {"User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36",
+                 "Referer": "https://finance.naver.com/sise/etf.naver"}
+
+
+def parse_naver_etf(raw):
+    """네이버 ETF 목록 응답(EUC-KR일 때가 있어요) → {코드: 이름}."""
+    for enc in ("utf-8", "cp949"):
+        try:
+            data = json.loads(raw.decode(enc))
+            break
+        except (UnicodeDecodeError, ValueError):
+            continue
+    else:
+        return {}
+    items = ((data or {}).get("result") or {}).get("etfItemList") or []
+    return {str(x["itemcode"]).upper(): re.sub(r"\s+", " ", x["itemname"]).strip()
+            for x in items if x.get("itemcode") and x.get("itemname")}
+
+
+def naver_etf_names():
+    """국내 ETF 정식 한글 이름. 못 받으면(클라우드처럼 막힌 곳) 빈 dict → 야후 이름 그대로."""
+    import requests
+
+    try:
+        r = requests.get(NAVER_ETF, headers=NAVER_HEADERS, timeout=20)
+        r.raise_for_status()
+        return parse_naver_etf(r.content)
+    except Exception as e:  # 네트워크
+        print(f"네이버 ETF 이름을 못 받았어요: {e!r}")
+        return {}
+
+
 # ---------------------------------------------------------------- 야후에서 받기
 
 
@@ -266,17 +303,23 @@ def aliases(*names, skip=()):
     return "|".join(out)
 
 
-def rows_kr(stocks, etfs, universe=None):
+def rows_kr(stocks, etfs, universe=None, etf_names=None):
     universe = MARKETS["kr"]["universe"] if universe is None else universe
+    etf_names = etf_names or {}
     rows, seen = [], set()
     for q, kind in [(x, "s") for x in stocks] + [(x, "e") for x in etfs]:
         code, _, sfx = (q.get("symbol") or "").partition(".")
         long_name, short_name = q.get("longName"), q.get("shortName")
-        if len(code) != 6 or sfx not in ("KS", "KQ") or code in seen or not (long_name or short_name):
+        ko = etf_names.get(code) if kind == "e" else None
+        if len(code) != 6 or sfx not in ("KS", "KQ") or code in seen or not (long_name or short_name or ko):
             continue  # 신주인수권 같은 8자리 코드, 이름 없는 종목은 빼요
         seen.add(code)
         if universe.get(code):
             name = universe[code]
+        elif ko:  # 네이버 정식 이름. 야후 이름(잘린 영문 등)은 다른 이름으로 남겨서 영어로도 찾아요
+            yahoo_name = kr_etf_name(long_name, short_name) if (long_name or short_name) else None
+            rows.append([code, ko, sfx, kind, aliases(yahoo_name, short_name, skip=(ko,))])
+            continue
         elif kind == "s":
             name = kr_stock_name(long_name, short_name)
             if preferred(short_name):  # 우선주 정식 이름은 보통주와 같아서('삼성전자') 넣으면 보통주를 찾을 때 헷갈려요
@@ -286,6 +329,11 @@ def rows_kr(stocks, etfs, universe=None):
             if korean_etf_name(long_name, short_name):  # 한국어 원래 이름에서 만든 이름이면 그 긴 이름은 또 넣을 필요가 없어요
                 long_name = None
         rows.append([code, name, sfx, kind, aliases(short_name, clean(long_name), skip=(name,))])
+    # 야후에 아직 없는 새 ETF (네이버에만 있는 것). 국내 ETF는 다 코스피 상장이에요.
+    for code, ko in etf_names.items():
+        if code not in seen and re.fullmatch(r"[0-9A-Z]{6}", code):
+            seen.add(code)
+            rows.append([code, ko, "KS", "e", ""])
     return rows
 
 
@@ -306,9 +354,11 @@ def rows_us(stocks, etfs, universe=None):
     return rows
 
 
-def build(market, fetch=fetch):
+def build(market, fetch=fetch, etf_names=None):
     stocks, etfs = fetch(market)
-    rows = rows_kr(stocks, etfs) if market == "kr" else rows_us(stocks, etfs)
+    if market == "kr" and etf_names is None:
+        etf_names = naver_etf_names()
+    rows = rows_kr(stocks, etfs, etf_names=etf_names) if market == "kr" else rows_us(stocks, etfs)
     return dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), rows=rows)
 
 

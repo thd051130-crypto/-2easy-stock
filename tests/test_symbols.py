@@ -93,6 +93,31 @@ def test_rows_kr_filters_and_names():
     assert [r[0] for r in sy.search(rows, "삼성전자")] == ["005930", "005935"]
 
 
+def test_rows_kr_naver_etf_names():
+    etfs = [yahoo("069500.KS", "삼성KODEX200상장지수투자신탁[주식]", "KODEX 200"),
+            yahoo("498400.KS", None, "KODEX 200 Target Weekly Covered"), yahoo("52M149.KS", None, None),
+            yahoo("0046A0.KS", None, None)]
+    names = {"498400": "KODEX 200타겟위클리커버드콜", "0046A0": "TIGER 미국초단기국채", "0089B0": "PLUS 나스닥100미국채혼합50"}
+    rows = sy.rows_kr([], etfs, universe={}, etf_names=names)
+    assert rows == [
+        ["069500", "KODEX 200", "KS", "e", ""],
+        ["498400", "KODEX 200타겟위클리커버드콜", "KS", "e", "KODEX 200 Target Weekly Covered"],
+        ["0046A0", "TIGER 미국초단기국채", "KS", "e", ""],  # 야후엔 이름이 없어도 네이버 이름으로
+        ["0089B0", "PLUS 나스닥100미국채혼합50", "KS", "e", ""],  # 네이버에만 있는 새 ETF
+    ]
+    assert [r[0] for r in sy.search(rows, "커버드콜")] == ["498400"]
+    assert [r[0] for r in sy.search(rows, "target weekly")] == ["498400"]
+
+
+def test_parse_naver_etf():
+    body = {"resultCode": "success", "result": {"etfItemList": [
+        {"itemcode": "069500", "itemname": "KODEX 200"}, {"itemcode": "0046a0", "itemname": "TIGER  미국S&P500(H)"}]}}
+    want = {"069500": "KODEX 200", "0046A0": "TIGER 미국S&P500(H)"}
+    assert sy.parse_naver_etf(json.dumps(body, ensure_ascii=False).encode("cp949")) == want
+    assert sy.parse_naver_etf(json.dumps(body, ensure_ascii=False).encode("utf-8")) == want
+    assert sy.parse_naver_etf(b"<html>") == {}
+
+
 def test_rows_us_korean_names_and_aliases():
     stocks = [yahoo("TSLA", "Tesla, Inc.", "Tesla, Inc."), yahoo("JPM-PC", "JPMorgan Pfd", "JPM Pfd"),
               yahoo("BRK-B", "Berkshire Hathaway Inc. New", "Berkshire Hathaway Inc. New"),
@@ -121,5 +146,5 @@ def test_save_keeps_old_file_when_too_few(tmp_path):
 
 def test_build_with_fake_fetch():
     fake = lambda market: ([yahoo("005930.KS", "삼성전자(주)", "SamsungElec")], [])  # noqa: E731
-    data = sy.build("kr", fetch=fake)
+    data = sy.build("kr", fetch=fake, etf_names={})
     assert data["rows"] == [["005930", "삼성전자", "KS", "s", "SamsungElec"]] and data["updated"]
