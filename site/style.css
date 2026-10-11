@@ -660,3 +660,30 @@ details.fold > summary + * { margin-top: 2px !important; }
 .cal-m b { font-size: 12px; font-variant-numeric: tabular-nums; }
 .cal-m.on { outline: 2px solid var(--accent); outline-offset: 1px; }
 .cal-m:disabled { opacity: .4; cursor: default; }
+
+/* 정부 정책 칸: 접힌 줄은 제목·일정·영향 업종 알약만, 누르면 자세히 */
+.pol-list { display: grid; gap: 8px; }
+details.pol { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-0); }
+details.pol > summary { list-style: none; padding: 10px 34px 10px 12px; position: relative; color: var(--text-primary); font-weight: 400; font-size: 14px; }
+details.pol > summary::-webkit-details-marker { display: none; }
+details.pol > summary::after { content: "›"; position: absolute; right: 12px; top: 10px; font-size: 20px; line-height: 1; color: var(--text-muted); transition: transform .15s; }
+details.pol[open] > summary::after { transform: rotate(90deg); }
+details.pol[open] { background: var(--surface-1); }
+.pol-title { font-weight: 700; font-size: 15px; line-height: 1.35; }
+.pol-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+.pol-sub .badge { margin-left: 0; }
+.pol-fx { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.pol-pill { font: inherit; font-size: 12px; line-height: 1.4; padding: 2px 8px; border-radius: 999px; border: 0; background: var(--surface-1); color: var(--text-secondary); white-space: nowrap; }
+details.pol[open] .pol-pill { background: var(--surface-0); }
+.pol-pill.good { background: var(--good-bg); color: var(--good-fg); }
+.pol-pill.bad { background: var(--wait-bg); color: var(--wait-fg); }
+button.pol-pill { cursor: pointer; min-height: 28px; font-weight: 600; }
+.pol-body { padding: 0 12px 12px; }
+.pol-sum { margin: 0; font-size: 14px; line-height: 1.55; }
+.pol-src { margin: 12px 0 0; font-size: 12px; color: var(--text-muted); }
+.pol-src a { color: var(--accent); }
+.pol-glance { display: grid; gap: 8px; margin: 4px 0 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-0); }
+.pol-glance .muted { font-size: 12px; }
+.pol-glance .pol-fx { margin-top: 4px; }
+.pol-stale { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--wait-bg); color: var(--wait-fg); font-size: 13px; }
+details.pol-sec { margin-top: 6px; }

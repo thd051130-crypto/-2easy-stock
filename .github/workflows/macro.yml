@@ -49,12 +49,17 @@ jobs:
       - name: economic calendar
         continue-on-error: true
         run: python econ_calendar.py --save paper/calendar.json $([ "$(TZ=Asia/Seoul date +%u)" = "1" ] || [ "$REPORT" = "true" ] && echo --report)
+      # 정부 정책별 최근 뉴스 제목 (구글 뉴스 RSS, 무료). 정책 목록 자체는 paper/policies.json을 손으로 고쳐요
+      - name: policy news
+        continue-on-error: true
+        run: python policies.py --news
       - name: commit macro log
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add paper/macro.json
           [ -f paper/calendar.json ] && git add paper/calendar.json
+          [ -f paper/policy_news.json ] && git add paper/policy_news.json
           if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
           git commit -m "경기 판정 기록 $(TZ=Asia/Seoul date +%F)"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done

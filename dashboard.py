@@ -8,6 +8,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/etf/ : 국내 상장 ETF 원화 가상계좌 (paper_trade.py --rule etf)
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
+  - paper/policies.json, policy_news.json : 정부 정책과 최근 뉴스 (policies.py)
   - paper/world.json : 세계 지수·환율 (world.py)
   - paper/calendar.json : 경제 일정 (econ_calendar.py)
   - paper/kr/disclosures.json : 국장 종목 공시 (disclosures.py, 오픈DART 키가 있을 때만)
@@ -32,6 +33,7 @@ import shutil
 import commands
 import flows
 import industry_map
+import policies
 import readiness
 import review
 import strategy
@@ -209,7 +211,7 @@ def build(paper_dir):
     fx = ((markets["us"]["signal"] or {}).get("usdkrw") or (markets["kr"]["signal"] or {}).get("usdkrw"))
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
                 bot=watchlist.bot_username(paper_dir), health=health,
-                macro=read_json(paper_dir / "macro.json"),
+                macro=read_json(paper_dir / "macro.json"), policies=policies.payload(paper_dir),
                 calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
                 total=total_assets(markets, etf_acct, fx))
 

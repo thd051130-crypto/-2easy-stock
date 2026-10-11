@@ -1,0 +1,550 @@
+{
+  "reviewed": "2026-10-11",
+  "note": "손으로 정리하는 정부 정책 목록이에요. 정책 내용은 바뀔 때 고쳐 주세요 (policies.py 맨 위 설명 참고). 뉴스 제목은 매일 자동으로 붙어요. 순서대로 보여 줘요 (위 5개가 처음 보이는 중요한 정책).",
+  "items": [
+    {
+      "id": "us-fed",
+      "region": "us",
+      "title": "미국 연준 금리 인상 (3.75~4.00%)",
+      "status": "시행 중",
+      "date": "2026-09-16",
+      "next": "2026-10-28",
+      "next_note": "다음 FOMC (연말까지 한 번 더 올릴 전망)",
+      "summary": "2023년 이후 처음으로 0.25%p 올렸어요. 물가가 목표보다 높고 중동 긴장도 이유였어요. 위원들은 연말까지 한 번 더 올릴 것으로 봐요. 미국 금리가 오르면 달러가 강해지고 원/달러 환율이 오르기 쉬워요.",
+      "effects": [
+        {
+          "sector": "금융",
+          "tone": 1,
+          "why": "이자 수익 증가"
+        },
+        {
+          "sector": "인터넷·게임·SW",
+          "tone": -1,
+          "why": "기술 성장주에 부담"
+        },
+        {
+          "sector": "건설·부동산",
+          "tone": -1,
+          "why": "주택 대출 금리 상승"
+        },
+        {
+          "sector": "바이오·헬스",
+          "tone": -1,
+          "why": "자금 조달이 어려워져요"
+        }
+      ],
+      "query": {
+        "ko": "미국 연준 금리",
+        "en": "Federal Reserve rate hike"
+      },
+      "sources": [
+        {
+          "name": "CNBC",
+          "url": "https://www.cnbc.com/2026/09/16/fed-rate-decision-september-2026.html"
+        },
+        {
+          "name": "연준 회의록",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomcminutes20260916.htm"
+        }
+      ]
+    },
+    {
+      "id": "kr-rate",
+      "region": "kr",
+      "title": "한국은행 기준금리 연속 인상 (연 3.00%)",
+      "status": "시행 중",
+      "date": "2026-08-27",
+      "next": "2026-10-22",
+      "next_note": "다음 금통위",
+      "summary": "7월에 3년 6개월 만에 올린 데 이어 8월에 한 번 더 올려 연 3.00%예요. 금리가 오르면 대출 이자가 비싸져 빚이 많은 업종과 미래 이익을 보고 사는 성장주가 불리해요.",
+      "effects": [
+        {
+          "sector": "금융",
+          "tone": 1,
+          "why": "예금·대출 이자 차이(예대마진)가 커져요"
+        },
+        {
+          "sector": "건설·부동산",
+          "tone": -1,
+          "why": "주택담보대출 이자 부담이 커져요"
+        },
+        {
+          "sector": "인터넷·게임·SW",
+          "tone": -1,
+          "why": "성장주는 금리가 오르면 몸값이 깎이기 쉬워요"
+        },
+        {
+          "sector": "바이오·헬스",
+          "tone": -1,
+          "why": "돈을 빌려 연구하는 회사가 많아요"
+        }
+      ],
+      "query": {
+        "ko": "한국은행 기준금리",
+        "en": "Bank of Korea rate"
+      },
+      "sources": [
+        {
+          "name": "한국은행",
+          "url": "https://www.bok.or.kr/portal/main/main.do"
+        },
+        {
+          "name": "MBC 뉴스",
+          "url": "https://imnews.imbc.com/news/2026/econo/article/6847676_36932.html"
+        }
+      ]
+    },
+    {
+      "id": "kr-us-deal",
+      "region": "kr",
+      "title": "한미 관세 합의·대미투자 3,500억 달러 (마스가)",
+      "status": "이행 중",
+      "date": "2026-10-07",
+      "next": null,
+      "next_note": "후속 사업(원전 8기·알래스카 LNG) 발표",
+      "summary": "미국이 한국 상품·자동차 관세를 15%로 낮추는 대신, 한국이 조선협력 1,500억 달러와 투자펀드 2,000억 달러를 내요. 1호 사업은 텍사스 가스발전소예요. 트럼프 대통령이 10월에 투자 속도를 다시 재촉했어요.",
+      "effects": [
+        {
+          "sector": "조선·방산·기계",
+          "tone": 1,
+          "why": "미국 조선소 투자·함정 수리 (마스가)"
+        },
+        {
+          "sector": "전력·유틸리티",
+          "tone": 1,
+          "why": "미국 발전소·원전 사업 참여"
+        },
+        {
+          "sector": "자동차",
+          "tone": 1,
+          "why": "자동차 관세 25% → 15%"
+        },
+        {
+          "sector": "에너지·정유",
+          "tone": 0,
+          "why": "알래스카 LNG는 아직 검토 단계"
+        }
+      ],
+      "query": {
+        "ko": "대미투자 마스가 관세",
+        "en": "Korea US investment shipbuilding MASGA"
+      },
+      "sources": [
+        {
+          "name": "데일리안 (일지)",
+          "url": "https://www.dailian.co.kr/news/view/1694105/%EB%8C%80%EB%AF%B8%ED%88%AC%EC%9E%90-%EA%B4%80%EC%84%B8%ED%98%91%EC%83%81%EC%84%9C-%ED%85%8D%EC%82%AC%EC%8A%A4-%EC%B2%AB-%EC%82%AC%EC%97%85%EA%B9%8C-2026"
+        },
+        {
+          "name": "서울신문 (10/7)",
+          "url": "https://www.seoul.co.kr/news/international/2026/10/07/20261007500011"
+        }
+      ]
+    },
+    {
+      "id": "world-oil",
+      "region": "world",
+      "title": "중동 전쟁·OPEC+ 증산 멈춤 (브렌트 100달러대)",
+      "status": "진행 중",
+      "date": "2026-10-04",
+      "next": "2026-11-01",
+      "next_note": "다음 OPEC+ 회의",
+      "summary": "미국·이란 전쟁으로 호르무즈 해협 수출이 막혀 유가가 높아요 (10월 9일 브렌트 약 104달러). OPEC+는 11월 생산 목표를 그대로 두기로 했어요. 기름값이 오르면 정유는 유리하고, 기름을 많이 쓰는 업종은 불리해요.",
+      "effects": [
+        {
+          "sector": "에너지·정유",
+          "tone": 1,
+          "why": "기름값·정제 마진 상승"
+        },
+        {
+          "sector": "조선·방산·기계",
+          "tone": 1,
+          "why": "방산 수요·유조선 발주"
+        },
+        {
+          "sector": "운송",
+          "tone": -1,
+          "why": "항공·해운 연료비 상승"
+        },
+        {
+          "sector": "화학·소재",
+          "tone": -1,
+          "why": "원료(나프타) 값 상승"
+        }
+      ],
+      "query": {
+        "ko": "OPEC 유가 호르무즈",
+        "en": "OPEC oil price Hormuz"
+      },
+      "sources": [
+        {
+          "name": "CNBC (OPEC+)",
+          "url": "https://www.cnbc.com/2026/09/06/opec-oil-output-october.html"
+        },
+        {
+          "name": "Moscow Times (10/4)",
+          "url": "https://www.themoscowtimes.com/2026/10/04/opec-agrees-to-keep-november-oil-output-targets-steady-a93865"
+        }
+      ]
+    },
+    {
+      "id": "world-us-china",
+      "region": "world",
+      "title": "미·중 무역 휴전 연장 (2027년 1월 10일까지)",
+      "status": "연장됨",
+      "date": "2026-09-23",
+      "next": "2027-01-10",
+      "next_note": "휴전 끝나는 날",
+      "summary": "미·중이 관세 휴전을 두 달만 늘렸어요. 그동안 중국의 희토류 수출 통제 강화도 미뤄져요. 다만 희토류 문제는 풀리지 않았고, 휴전이 짧아 1월에 다시 불안해질 수 있어요.",
+      "effects": [
+        {
+          "sector": "반도체",
+          "tone": 0,
+          "why": "당장은 안정, 1월 끝나면 다시 위험"
+        },
+        {
+          "sector": "2차전지",
+          "tone": 0,
+          "why": "희토류·흑연 공급 걱정은 남아 있어요"
+        },
+        {
+          "sector": "자동차",
+          "tone": 0,
+          "why": "모터용 희토류 자석은 대부분 중국산"
+        },
+        {
+          "sector": "화학·소재",
+          "tone": 1,
+          "why": "중국 밖 희토류·소재 회사는 수요가 늘어요"
+        }
+      ],
+      "query": {
+        "ko": "미중 무역 휴전 희토류",
+        "en": "US China trade truce rare earth"
+      },
+      "sources": [
+        {
+          "name": "Rinnovabili",
+          "url": "https://www.rinnovabili.net/policy-and-affairs/environmental-policies/chinese-rare-earth-exports-trump-xi-truce/"
+        },
+        {
+          "name": "CSIS",
+          "url": "https://www.csis.org/analysis/rare-earth-export-restrictions-one-year-later"
+        }
+      ]
+    },
+    {
+      "id": "kr-budget-ai",
+      "region": "kr",
+      "title": "2027년 예산안: AI·반도체에 21.3조 원",
+      "status": "국회 심사 중",
+      "date": "2026-09-01",
+      "next": "2026-12-02",
+      "next_note": "국회 예산 처리 법정 기한",
+      "summary": "반도체·피지컬 AI·AI 데이터센터 3대 사업과 AI 예산을 올해보다 97% 늘렸어요. 반도체 지원은 1.3조 → 3.4조 원, 서남권 반도체 클러스터에 1.5조 원이 새로 들어가요.",
+      "effects": [
+        {
+          "sector": "반도체",
+          "tone": 1,
+          "why": "반도체 특별회계 2.6조 원 신설"
+        },
+        {
+          "sector": "인터넷·게임·SW",
+          "tone": 1,
+          "why": "AI 모델·데이터센터 예산 확대"
+        },
+        {
+          "sector": "전력·유틸리티",
+          "tone": 1,
+          "why": "데이터센터는 전기를 많이 써요"
+        },
+        {
+          "sector": "IT·전자",
+          "tone": 1,
+          "why": "제조 AI·로봇 실증 사업"
+        }
+      ],
+      "query": {
+        "ko": "2027 예산안 AI 반도체",
+        "en": "Korea 2027 budget AI semiconductor"
+      },
+      "sources": [
+        {
+          "name": "헤럴드경제",
+          "url": "https://biz.heraldcorp.com/article/10858698"
+        },
+        {
+          "name": "파이낸셜뉴스",
+          "url": "https://www.fnnews.com/news/202609011809102581"
+        }
+      ]
+    },
+    {
+      "id": "kr-buyback",
+      "region": "kr",
+      "title": "자사주 소각 의무화 (3차 상법 개정)",
+      "status": "시행 중",
+      "date": "2026-03-06",
+      "next": "2027-09-06",
+      "next_note": "이미 가진 자사주 소각 기한 (시행 후 1년 6개월)",
+      "summary": "회사가 사들인 자기 주식은 원칙적으로 없애야(소각) 해요. 새로 산 자사주는 1년 안, 원래 갖고 있던 자사주는 1년 6개월 안이에요. 주식 수가 줄어 한 주의 가치가 올라가는 효과가 있어요.",
+      "effects": [
+        {
+          "sector": "지주·기타",
+          "tone": 1,
+          "why": "자사주를 많이 쌓아 둔 지주사가 소각 대상이 많아요"
+        },
+        {
+          "sector": "금융",
+          "tone": 1,
+          "why": "은행·증권·보험은 자사주 매입·소각을 많이 해요"
+        },
+        {
+          "sector": "자동차",
+          "tone": 1,
+          "why": "현대차·기아처럼 자사주가 많은 대형주"
+        }
+      ],
+      "query": {
+        "ko": "자사주 소각 의무화",
+        "en": "Korea treasury share cancellation"
+      },
+      "sources": [
+        {
+          "name": "대한민국 정책브리핑",
+          "url": "https://www.korea.kr/briefing/pressReleaseView.do?newsId=156746015"
+        },
+        {
+          "name": "법률신문",
+          "url": "https://www.lawtimes.co.kr/news/articleView.html?idxno=217411"
+        }
+      ]
+    },
+    {
+      "id": "us-chip-tariff",
+      "region": "us",
+      "title": "미국 반도체 관세 25% (232조, 1단계)",
+      "status": "시행 중",
+      "date": "2026-01-15",
+      "next": null,
+      "next_note": "2단계(범위 확대) 여부",
+      "summary": "첨단 AI 칩 일부에 25% 관세를 매겨요. 미국 데이터센터용·연구용 등은 빠져요. 협상 결과에 따라 반도체 장비·더 많은 칩으로 넓힐 수 있다고 했고, 미국에 공장을 짓는 회사는 깎아 준다고 했어요.",
+      "effects": [
+        {
+          "sector": "반도체",
+          "tone": -1,
+          "why": "범위가 넓어지면 수출 부담 (미국 공장 투자 회사는 덜해요)"
+        },
+        {
+          "sector": "IT·전자",
+          "tone": -1,
+          "why": "칩이 들어간 제품 값이 오를 수 있어요"
+        }
+      ],
+      "query": {
+        "ko": "반도체 관세 232조",
+        "en": "semiconductor tariff Section 232"
+      },
+      "sources": [
+        {
+          "name": "White & Case",
+          "url": "https://www.whitecase.com/insight-alert/president-trump-orders-narrowly-targeted-25-section-232-tariff-certain-advanced"
+        },
+        {
+          "name": "PwC",
+          "url": "https://www.pwc.com/us/en/services/tax/library/pwc-trump-imposes-sec-232-tariffs-on-semiconductors.html"
+        }
+      ]
+    },
+    {
+      "id": "us-301",
+      "region": "us",
+      "title": "미국 '강제노동' 관세 (301조, 한국 12.5%)",
+      "status": "시행 중",
+      "date": "2026-07-24",
+      "next": null,
+      "next_note": "한국은 '과잉생산' 관세와 합쳐 15% 상한 요구 중",
+      "summary": "2월 대법원이 상호관세(IEEPA)를 위법이라고 판결한 뒤, 임시 10% 관세를 거쳐 60개국에 10~12.5% 관세를 새로 매겼어요. 한국·일본은 기존 관세 포함 12.5%예요. 반도체·자동차·철강은 이미 따로 관세가 있어 빠졌어요.",
+      "effects": [
+        {
+          "sector": "소비재·유통",
+          "tone": -1,
+          "why": "화장품·식품 등 미국 수출 상품에 관세"
+        },
+        {
+          "sector": "화학·소재",
+          "tone": -1,
+          "why": "화학 제품 수출 부담"
+        },
+        {
+          "sector": "IT·전자",
+          "tone": -1,
+          "why": "가전·부품 수출 부담"
+        }
+      ],
+      "query": {
+        "ko": "301조 강제노동 관세 한국",
+        "en": "Section 301 forced labor tariff"
+      },
+      "sources": [
+        {
+          "name": "Greenberg Traurig",
+          "url": "https://www.gtlaw.com/en/insights/2026/7/ustr-imposes-new-section-301-forced-labor-tariffs-on-imports-from-60-economies"
+        },
+        {
+          "name": "아시아경제 (영문)",
+          "url": "https://www.asiae.co.kr/en/article/2026072410094950571"
+        }
+      ]
+    },
+    {
+      "id": "us-pharma",
+      "region": "us",
+      "title": "미국 의약품 관세 100% (한국은 15% 상한)",
+      "status": "시행 중",
+      "date": "2026-09-29",
+      "next": null,
+      "next_note": "회사별 약값 합의·미국 공장 계획 승인",
+      "summary": "특허 신약과 원료에 기본 100% 관세예요. 복제약(제네릭)은 빠지고, 한국·EU·일본산은 15%로 묶였어요. 미국 정부와 약값 인하(최혜국 약가) 합의 + 미국 공장 계획이 있으면 0%예요.",
+      "effects": [
+        {
+          "sector": "바이오·헬스",
+          "tone": -1,
+          "why": "신약 수출은 15% 관세 (바이오시밀러·위탁생산은 영향이 작을 수 있어요)"
+        }
+      ],
+      "query": {
+        "ko": "의약품 관세 100%",
+        "en": "pharmaceutical tariff Section 232"
+      },
+      "sources": [
+        {
+          "name": "Arnall Golden Gregory",
+          "url": "https://www.agg.com/news-insights/publications/section-232-tariffs-on-pharmaceuticals-100-duties-on-patented-drugs-and-apis-starting-july-31-2026/"
+        },
+        {
+          "name": "PharmExec",
+          "url": "https://www.pharmexec.com/view/new-us-guidance-lays-out-exemptions-100-tariffs-report"
+        }
+      ]
+    },
+    {
+      "id": "kr-dividend-tax",
+      "region": "kr",
+      "title": "고배당 기업 배당소득 분리과세 (14~30%)",
+      "status": "시행 중",
+      "date": "2026-01-01",
+      "next": "2028-12-31",
+      "next_note": "적용 끝 (2028년 사업연도까지)",
+      "summary": "배당을 많이 주는 회사(배당성향 40% 이상, 또는 25% 이상이면서 배당을 10% 넘게 늘린 회사)의 배당금은 다른 소득과 합치지 않고 14~30%로 따로 세금을 매길 수 있어요. 배당을 늘리는 회사가 많아질 수 있어요.",
+      "effects": [
+        {
+          "sector": "금융",
+          "tone": 1,
+          "why": "은행·보험은 배당성향이 높아 조건을 맞추기 쉬워요"
+        },
+        {
+          "sector": "통신·미디어",
+          "tone": 1,
+          "why": "통신사는 대표적인 고배당 업종이에요"
+        },
+        {
+          "sector": "지주·기타",
+          "tone": 1,
+          "why": "지주사 배당 확대 기대"
+        }
+      ],
+      "query": {
+        "ko": "배당소득 분리과세 고배당",
+        "en": "Korea dividend tax separate taxation"
+      },
+      "sources": [
+        {
+          "name": "PwC 세금 요약",
+          "url": "https://taxsummaries.pwc.com/republic-of-korea/corporate/tax-credits-and-incentives"
+        },
+        {
+          "name": "택스넷",
+          "url": "https://www.taxnet.co.kr/contents/taxnetpost/post-detail?id=2703&gubunCode=TP0030"
+        }
+      ]
+    },
+    {
+      "id": "kr-budget-future",
+      "region": "kr",
+      "title": "2027년 예산안: SMR·우주·바이오에 41.4조 원",
+      "status": "국회 심사 중",
+      "date": "2026-09-01",
+      "next": "2026-12-02",
+      "next_note": "국회 예산 처리 법정 기한",
+      "summary": "'포스트 반도체'로 소형원전(SMR)·핵융합·양자·우주항공·첨단바이오에 41.4조 원을 넣어요. 2035년 첫 상용 SMR이 목표예요. 재생에너지 2.8조 원, 전기차 보조금 3조 원도 들어 있어요.",
+      "effects": [
+        {
+          "sector": "전력·유틸리티",
+          "tone": 1,
+          "why": "SMR·재생에너지 투자"
+        },
+        {
+          "sector": "조선·방산·기계",
+          "tone": 1,
+          "why": "우주항공·원전 기자재"
+        },
+        {
+          "sector": "바이오·헬스",
+          "tone": 1,
+          "why": "첨단바이오 연구 예산"
+        },
+        {
+          "sector": "2차전지",
+          "tone": 1,
+          "why": "전기차 보조금 3조 원"
+        }
+      ],
+      "query": {
+        "ko": "2027 예산안 SMR 우주 바이오",
+        "en": "Korea budget SMR nuclear"
+      },
+      "sources": [
+        {
+          "name": "한국세정신문",
+          "url": "https://www.taxtimes.co.kr/news/article.html?no=276629"
+        },
+        {
+          "name": "뉴스핌",
+          "url": "https://www.newspim.com/news/view/20260901000527"
+        }
+      ]
+    },
+    {
+      "id": "world-boj",
+      "region": "world",
+      "title": "일본은행 10월 금리 인상 가능성",
+      "status": "예정",
+      "date": "2026-09-28",
+      "next": "2026-10-30",
+      "next_note": "일본은행 금리 결정",
+      "summary": "일본은행이 10월 말에 금리를 올릴 수 있다는 말이 나와요 (시장은 동결 가능성을 더 높게 봐요). 일본 금리가 오르면 엔화가 강해지고, 싼 엔화로 빌려 투자하던 돈이 빠지면서 세계 증시가 출렁일 수 있어요.",
+      "effects": [
+        {
+          "sector": "금융",
+          "tone": 0,
+          "why": "세계 금리 상승, 시장 변동성"
+        },
+        {
+          "sector": "자동차",
+          "tone": 1,
+          "why": "엔화가 강해지면 일본차와 경쟁하는 한국차가 유리해요"
+        }
+      ],
+      "query": {
+        "ko": "일본은행 금리 인상",
+        "en": "Bank of Japan rate hike"
+      },
+      "sources": [
+        {
+          "name": "Japan Times",
+          "url": "https://www.japantimes.co.jp/business/2026/09/28/economy/boj-hike-october-possibility/"
+        }
+      ]
+    }
+  ]
+}

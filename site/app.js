@@ -322,7 +322,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
@@ -373,7 +373,7 @@ function render() {
     SECTOR[market] = b.dataset.sectorGo;
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
     jumpSectors = true;  // 홈이 다시 그려지면 업종 칸으로 내려가요 (뒤로 가기로 돌아가는 경우가 있어서 render에서)
-    go("home");
+    if (screen === "home") render(); else go("home");  // 홈 정부 정책 칸에서 누르면 바로 다시 그려요
   }));
   app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -382,6 +382,29 @@ function render() {
     render();
     window.scrollTo(0, y);
   }));
+  app.querySelectorAll("[data-pol-r]").forEach((b) => b.addEventListener("click", () => {
+    polR = b.dataset.polR;
+    try { localStorage.setItem("pol_r", polR); } catch (e) { /* 이번만 기억 */ }
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }));
+  const pm = $("#pol-more");
+  if (pm) pm.addEventListener("toggle", () => { polMore = pm.open; });
+  app.querySelectorAll("details[data-pol]").forEach((x) => x.addEventListener("toggle", () => {
+    if (x.open) POL_OPEN.add(x.dataset.pol); else POL_OPEN.delete(x.dataset.pol);
+  }));
+  app.querySelectorAll("[data-pol-go]").forEach((b) => b.addEventListener("click", () => {
+    polJump = b.dataset.polGo;  // 홈이 다시 그려지면 그 정책을 펼쳐서 보여 줘요
+    POL_OPEN.add(polJump);
+    polR = "";
+    if (screen === "home") render(); else go("home");
+  }));
+  if (screen === "home" && polJump) {
+    const x = app.querySelector(`details[data-pol="${CSS.escape(polJump)}"]`);
+    polJump = null;
+    if (x) requestAnimationFrame(() => { x.scrollIntoView(); window.scrollBy(0, -70); });
+  }
   app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
     calAll = !calAll;
     const y = window.scrollY;
@@ -2710,6 +2733,87 @@ function macroCard() {
     <p class="muted note" style="margin:10px 0 0">경고 0~1개 확장, 2~3개 둔화, 4개↑ 위축 경고. 백테스트에서 이걸로 매수를 줄여도 낙폭이 안 줄어서 규칙은 안 바꿔요.</p></section>`;
 }
 
+// 정부 정책 (policies.py, paper/policies.json을 손으로 정리 + 매일 뉴스 제목). 접힌 줄엔 제목과 영향 업종만,
+// 누르면 쉬운 설명·업종별 이유·다음 일정·최근 뉴스·출처가 펼쳐져요. 참고용이고 매매 규칙엔 안 써요.
+const POL_REGION = { kr: ["🇰🇷", "국내"], us: ["🇺🇸", "미국"], world: ["🌍", "세계"] };
+const POL_TONE = { 1: ["good", "▲", "호재"], "-1": ["bad", "▼", "악재"], 0: ["", "◆", "엇갈림"] };
+let polR = "";
+try { polR = localStorage.getItem("pol_r") || ""; } catch (e) { /* 처음 */ }
+const POL_OPEN = new Set();
+let polJump = null;
+let polMore = false;
+const POL_FIRST = 5;  // 처음엔 정책 5개만, 나머지는 '더 보기'
+function polPill(e) {
+  const [cls, mark, word] = POL_TONE[e.tone] || POL_TONE[0];
+  return `<span class="pol-pill ${cls}" title="${esc(word)}">${mark} ${esc(e.sector)}</span>`;
+}
+function policyRow(p) {
+  const [flag, region] = POL_REGION[p.region] || ["", ""];
+  const next = p.next ? ` · ${esc(p.next_note || "다음 일정")} ${md(p.next)} <b>${dday(p.next)}</b>` : p.next_note ? ` · 지켜볼 것: ${esc(p.next_note)}` : "";
+  const fx = (p.effects || []).map((e) => {
+    const [cls, mark, word] = POL_TONE[e.tone] || POL_TONE[0];
+    return `<li data-sector-go="${esc(e.sector)}"><div class="l"><div class="name"><span class="badge ${cls}">${mark} ${word}</span> ${esc(e.sector)}</div>
+      <div class="meta">${esc(e.why)}</div></div><div class="r meta">업종 ›</div></li>`;
+  }).join("");
+  const link = (u, t) => /^https:\/\//.test(u || "") ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>` : esc(t);
+  const news = (p.news || []).map((n) => `<li><div class="l"><div class="meta">📰 ${link(n.link, n.title)}${n.source ? ` · ${esc(n.source)}` : ""}${n.date ? ` · ${md(n.date)}` : ""}</div></div></li>`).join("");
+  const src = (p.sources || []).map((x) => link(x.url, x.name)).join(" · ");
+  return `<details class="pol" data-pol="${esc(p.id)}"${POL_OPEN.has(p.id) ? " open" : ""}><summary>
+      <div class="pol-title">${flag} ${esc(p.title)}</div>
+      <div class="pol-sub"><span class="badge">${esc(p.status || region)}</span> ${md(p.date)}${p.next ? ` · 다음 ${md(p.next)} ${dday(p.next)}` : ""}</div>
+      <div class="pol-fx">${(p.effects || []).map((e) => polPill(e)).join("")}</div></summary>
+    <div class="pol-body">
+      <p class="pol-sum">${esc(p.summary)}</p>
+      <p class="meta" style="margin:6px 0 0">📅 ${region} · ${esc(p.status || "")} ${p.date}${next}</p>
+      ${fx ? `<h3 class="muted" style="margin:12px 0 4px">영향 받는 업종 <small>누르면 업종 칸으로</small></h3><ul class="list">${fx}</ul>` : ""}
+      ${news ? `<h3 class="muted" style="margin:12px 0 4px">최근 7일 뉴스</h3><ul class="list">${news}</ul>` : ""}
+      ${src ? `<p class="meta pol-src">출처: ${src}</p>` : ""}
+    </div></details>`;
+}
+function policyCard() {
+  const P = DATA && DATA.policies;
+  if (!P || !P.items || !P.items.length) return "";
+  if (polR && !P.items.some((p) => p.region === polR)) polR = "";
+  const shown = P.items.filter((p) => !polR || p.region === polR);
+  const count = (r) => P.items.filter((p) => p.region === r).length;
+  const chips = `<div class="chips" role="group" aria-label="지역 고르기" style="margin-bottom:8px">
+    <button type="button" data-pol-r="" aria-pressed="${!polR}">전체</button>
+    ${Object.entries(POL_REGION).filter(([r]) => count(r)).map(([r, [f, n]]) => `<button type="button" data-pol-r="${r}" aria-pressed="${polR === r}">${f} ${n}</button>`).join("")}</div>`;
+  // 한눈에: 지금 고른 정책들로 업종마다 호재·악재 개수를 세서 많은 순으로
+  const tally = {};
+  shown.forEach((p) => (p.effects || []).forEach((e) => {
+    const t = tally[e.sector] || (tally[e.sector] = [0, 0]);
+    if (e.tone > 0) t[0] += 1; else if (e.tone < 0) t[1] += 1;
+  }));
+  const rows = Object.entries(tally);
+  const top = (k) => rows.filter(([, t]) => t[k] > t[1 - k]).sort((a, b) => b[1][k] - a[1][k] || a[1][1 - k] - b[1][1 - k]).slice(0, 4)
+    .map(([n, t]) => `<button type="button" class="pol-pill ${k ? "bad" : "good"}" data-sector-go="${esc(n)}">${k ? "▼" : "▲"} ${esc(n)} ${t[k]}</button>`).join("");
+  const good = top(0), bad = top(1);
+  const glance = good || bad ? `<div class="pol-glance">
+      ${good ? `<div><span class="muted">호재 많은 업종</span><div class="pol-fx">${good}</div></div>` : ""}
+      ${bad ? `<div><span class="muted">악재 많은 업종</span><div class="pol-fx">${bad}</div></div>` : ""}</div>` : "";
+  const stale = P.stale ? `<p class="pol-stale">⚠️ 정책 목록을 ${md(P.reviewed)} 뒤로 다시 정리하지 않았어요. 바뀐 정책이 있을 수 있어요.</p>` : "";
+  return `<section class="card" id="policy-card"><h2>정부 정책 <small>${md(P.reviewed)} 정리 · 참고</small></h2>${chips}${stale}${glance}
+    <div class="pol-list">${shown.slice(0, POL_FIRST).map(policyRow).join("")}</div>
+    ${shown.length > POL_FIRST ? `<details id="pol-more" class="more-list"${polMore || shown.slice(POL_FIRST).some((p) => POL_OPEN.has(p.id)) ? " open" : ""}><summary class="muted">정책 ${shown.length - POL_FIRST}개 더 보기</summary>
+      <div class="pol-list">${shown.slice(POL_FIRST).map(policyRow).join("")}</div></details>` : ""}
+    <p class="muted note" style="margin:10px 0 0">정책을 누르면 쉬운 설명·업종별 이유·다음 일정·출처가 펼쳐져요. ▲ 호재 ▼ 악재 ◆ 엇갈림은 정책 내용으로 짐작한 거예요. 정책 목록은 손으로 정리하고, 뉴스 제목은 매일 아침 자동으로 붙어요${P.news_day ? ` (${md(P.news_day)})` : ""}. 매매 규칙은 안 바꿔요.</p></section>`;
+}
+// 업종 칸·종목 화면에 붙는 '관련 정부 정책' (접어서)
+function sectorPolicies(name, open) {
+  const P = DATA && DATA.policies;
+  if (!P || !name) return "";
+  const mine = (P.items || []).map((p) => [p, (p.effects || []).find((e) => e.sector === name)]).filter(([, e]) => e);
+  if (!mine.length) return "";
+  const rows = mine.map(([p, e]) => {
+    const [cls, mark, word] = POL_TONE[e.tone] || POL_TONE[0];
+    return `<li data-pol-go="${esc(p.id)}"><div class="l"><div class="name">${(POL_REGION[p.region] || [""])[0]} ${esc(p.title)}</div>
+      <div class="meta"><span class="badge ${cls}">${mark} ${word}</span> ${esc(e.why)}</div></div></li>`;
+  }).join("");
+  const g = mine.filter(([, e]) => e.tone > 0).length, b = mine.filter(([, e]) => e.tone < 0).length;
+  return `<details class="more-list pol-sec"${open ? " open" : ""}><summary>🏛️ 관련 정부 정책 ${mine.length}개 · ▲${g} ▼${b}</summary><ul class="list">${rows}</ul></details>`;
+}
+
 // 업종별 호재·악재 (sectors.py). 버튼으로 업종을 고르면 그 업종만 자세히, 관심 화면 전체 종목도 그 업종만 보여 줘요.
 function sectorChips(list, current) {
   const btn = (name, label) => `<button type="button" data-sector="${esc(name)}" aria-pressed="${current === name}">${esc(label)}</button>`;
@@ -2844,6 +2948,7 @@ function sectorsCard(d) {
     body = `<p class="headline">${esc(s.name)} ${pct(s.r5)}${toneBadge(s)}</p>
       <p class="sub">5거래일 중간값${s.vs_index == null ? "" : `, 지수보다 ${pct(s.vs_index)}p`}${s.r20 == null ? "" : ` · 20일 ${pct(s.r20)}`}${s.above200 == null ? "" : ` · 200일선 위 ${Math.round(s.above200 * 100)}%`}</p>
       <p class="muted" style="margin:6px 0 0">가장 강한 종목 ${esc(s.best.name)} ${pct(s.best.r5)} · 가장 약한 종목 ${esc(s.worst.name)} ${pct(s.worst.r5)} (${s.count}종목 중)</p>
+      ${sectorPolicies(s.name, true)}
       ${news ? `<h3 class="muted" style="margin:12px 0 4px">최근 7일 뉴스 제목 · 호재 ${s.good} · 악재 ${s.bad}</h3><ul class="list">${news}</ul>`
         : `<p class="empty">최근 7일 뉴스 제목을 못 받았어요.</p>`}
       ${members ? `<h3 class="muted" style="margin:12px 0 4px">이 업종 대형주</h3><ul class="list">${members}</ul>` : ""}`;
@@ -3066,6 +3171,7 @@ function stockSectorCard(d) {
     .map((c) => stocksOf(d).find((x) => x.code === c)).filter(Boolean).slice(0, 5);
   return `<section class="card" id="stock-sector"><h2>업종과 연관 업종 <small>최근 5거래일 · 참고</small></h2>
     <ul class="list">${sectorLine(mine, `이 종목 업종 · ${mine.count}종목 중간값${mine.vs_index == null ? "" : `, 지수보다 ${pct(mine.vs_index)}p`}`)}</ul>
+    ${sectorPolicies(name, false)}
     ${links.length ? `<h3 class="muted" style="margin:12px 0 4px">같이 보면 좋은 연관 업종</h3>
       <ul class="list">${links.map(([x, why]) => sectorLine(x, `${why}로 이어져요`)).join("")}</ul>` : ""}
     ${peers.length ? `<h3 class="muted" style="margin:12px 0 4px">같은 업종 대형주</h3>
