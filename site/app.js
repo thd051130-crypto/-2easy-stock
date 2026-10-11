@@ -361,6 +361,7 @@ function render() {
   const app = $("#app");
   app.classList.remove(...FX);
   app.innerHTML = VIEWS[screen](d).join("");
+  foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") {
