@@ -176,6 +176,13 @@ const px = (m, x) => (x == null ? "-" : m === "kr" ? num(x)
   : x.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
 const shares = (q) => (Number.isInteger(q) ? `${q}주` : `${q.toFixed(3)}주`);
+// 가상매매 금액 옆에 작게: 그 돈이면 몇 주인지. 가상계좌는 소수점 주식으로 사서 소수 첫째 자리까지 보여 줘요.
+const wonShort = (x) => (x >= 1e4 ? `${Math.round(x / 1e4).toLocaleString("ko-KR")}만 원` : `${Math.round(x).toLocaleString("ko-KR")}원`);
+function canBuy(m, amount, unit) {
+  if (!amount || !unit) return "";
+  const q = amount / unit;
+  return `${m === "kr" ? wonShort(amount) : money(m, amount)} ≈ ${q < 0.1 ? "0.1주 미만" : `${q.toFixed(1)}주`}`;
+}
 
 let siteVersion = null;  // 이 화면을 연 뒤 처음 받은 data.json의 화면 버전
 
@@ -1763,19 +1770,20 @@ function signalCard(d) {
   let body;
   if (market === "us") {
     const [title, desc] = US_ACTION[s.action] || ["-", ""];
-    const etf = s.etf_close ? `<p class="muted">${esc(s.etf)} 종가 ${price("us", s.etf_close)} · ${money("us", d.capital)} 계좌면 ${money("us", d.capital / 2)} ≈ ${(d.capital / 2 / s.etf_close).toFixed(3)}주</p>` : "";
+    const etf = s.etf_close ? `<p class="muted">${esc(s.etf)} 종가 ${price("us", s.etf_close)} · ${money("us", d.capital)} 계좌면 ${canBuy("us", d.capital / 2, s.etf_close)}</p>` : "";
     body = `<p class="headline">${title}</p><p class="sub">${desc}</p>${idx}${etf}${opinion(s.opinion)}`;
   } else if (!s.ok) {
     body = `<p class="headline">신규 매수 쉬는 날</p><p class="sub">${esc(s.pause || "코스피가 50일선이나 200일선 아래라 새로 사지 않아요.")}</p>${idx}`;
   } else if (!s.picks.length) {
     body = `<p class="headline">오늘은 매수 신호 없음</p><p class="sub">조건에 맞게 눌린 종목이 없어요. 기다리는 것도 규칙이에요.</p>${idx}`;
   } else {
+    const slot = ((d.account && d.account.equity) || d.capital) * 0.1;  // 종목당 계좌의 10%
     const items = s.picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
         <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
         <div class="meta">RSI2 ${p.rsi2.toFixed(1)} · 5일선 ${num(p.ma5)}원 위로 마감하면 매도 · 손절 참고 ${num(p.stop)}원</div>
         ${opinion(p.opinion)}
         ${i >= s.max_positions ? `<div class="meta">${s.max_positions}종목이 차면 건너뛰어요</div>` : ""}
-      </div><div class="r">${num(p.close)}원</div></li>`).join("");
+      </div><div class="r">${num(p.close)}원<div class="meta">${canBuy("kr", slot, p.close)}</div></div></li>`).join("");
     body = `<p class="headline">매수 후보 ${s.picks.length}개</p>
       <p class="sub note">다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.</p>${idx}
       <ul class="list" style="margin-top:12px">${items}</ul>`;
@@ -1848,7 +1856,7 @@ function tradesCard(d) {
     : "";
   // 매매 복기: 산 이유 → 판 이유 → 같은 기간 지수와 비교한 한 줄 평가 (review.py)
   const items = a.trades.map((t) => `<li class="review"><div class="l"><div class="name">${esc(t.name)}</div>
-      <div class="meta">${md(t.buy_date)} → ${md(t.sell_date)} · ${t.days}일${t.index_ret != null ? ` · 같은 기간 ${esc(d.index_name)} ${pct(t.index_ret)}` : ""}</div>
+      <div class="meta">${t.qty ? `${shares(t.qty)} · ` : ""}${md(t.buy_date)} → ${md(t.sell_date)} · ${t.days}일${t.index_ret != null ? ` · 같은 기간 ${esc(d.index_name)} ${pct(t.index_ret)}` : ""}</div>
       ${t.buy_why ? `<div class="why"><span>산 이유</span>${esc(t.buy_why)}</div>` : ""}
       <div class="why"><span>판 이유</span>${esc(t.reason)}</div>
       ${t.verdict ? `<div class="why verdict"><span>평가</span>${esc(t.verdict)}</div>` : ""}</div>
@@ -2246,9 +2254,10 @@ function rulebookPicksCard(d) {
   if (!rb) return "";
   const picks = (d.signal && d.signal.rulebook) || [];
   const unit = market === "kr" ? "원" : "달러";
+  const first = ((rb.account && rb.account.equity) || d.capital) / 5 * 0.3;  // 종목당 계좌의 1/5, 첫 매수는 그중 30%
   const items = picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
       <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${opinion(p.opinion)}</div>
-      <div class="r">${num(p.close)}${unit}</div></li>`).join("");
+      <div class="r">${num(p.close)}${unit}<div class="meta">1차 ${canBuy(market, first, p.close)}</div></div></li>`).join("");
   return `<section class="card"><h2>내 규칙표 후보 <small>${picks.length}개 · 검증용 가상계좌에 기록</small></h2>
     ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
     <details style="margin-top:12px"><summary>규칙표 보기</summary><ol>${rb.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details>
