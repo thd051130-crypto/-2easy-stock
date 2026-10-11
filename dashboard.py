@@ -109,7 +109,7 @@ def account(folder, market, kind=None):
     rows = read_rows(folder / "trades.csv")
     notes = review.notes(rows, {r["date"]: r["index"] for r in equity if r["index"]}, kind or market)
     for t, n in zip(rows, notes):
-        trades.append(dict(code=t["code"], name=t["name"], buy_date=t["buy_date"], sell_date=t["sell_date"],
+        trades.append(dict(code=t["code"], name=t["name"], qty=num(t["qty"]), buy_date=t["buy_date"], sell_date=t["sell_date"],
                            buy_price=num(t["buy_price"]), sell_price=num(t["sell_price"]), pnl=num(t["pnl"]),
                            ret=num(t["ret"]), days=int(num(t["days"]) or 0), reason=t["reason"],
                            buy_why=n["buy"], index_ret=n["index"], verdict=n["verdict"]))
