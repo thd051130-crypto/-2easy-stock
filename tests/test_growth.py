@@ -56,6 +56,20 @@ def test_failure_message_and_weekly_summary():
     assert "확인 필요" in health.weekly_message(r)
 
 
+def test_weekly_summary_new_workflow_and_github_side():
+    now = dt.datetime(2026, 10, 11, 10, tzinfo=health.KST)
+    runs = {"all-stocks": [dict(conclusion="success")] * 3,  # 생긴 지 2일: 예정 10회 → 2회
+            "learner": [dict(conclusion="success")] * 6
+            + [dict(conclusion="failure", github_side=True, created_at="2026-10-05T20:03:00Z")],
+            "macro": [dict(conclusion="success")] * 2}  # 생긴 지 3일: 예정 5회 → 2회
+    r = health.summarize(runs, now, {"all-stocks": 2.0, "learner": 30, "macro": 3.0})
+    rows = {w["workflow"]: w for w in r["workflows"]}
+    assert rows["all-stocks"]["expected"] == 2 and rows["all-stocks"]["ok"]
+    assert rows["learner"]["failure"] == 0 and rows["learner"]["github_skipped"] == 1 and rows["learner"]["ok"]
+    assert rows["macro"]["ok"] and r["ok"] is True
+    assert "GitHub 서버 사정으로 못 돈 것 1회" in health.weekly_message(r)
+
+
 def test_record_error_appends(tmp_path):
     path = tmp_path / "e.txt"
     health.record_error("하나", path)

@@ -3119,7 +3119,7 @@ function healthCard() {
   const h = DATA.health;
   if (!h) return "";
   const rows = h.workflows.map((w) => `<li><div class="l"><div class="name">${w.ok ? "✅" : "⚠️"} ${esc(w.label)}</div>
-      <div class="meta">성공 ${w.success}회${w.expected ? `/${w.expected}회 예정` : ""}${w.failure ? ` · 실패 ${w.failure}회` : ""}</div></div></li>`).join("");
+      <div class="meta">성공 ${w.success}회${w.expected ? `/${w.expected}회 예정` : ""}${w.failure ? ` · 실패 ${w.failure}회` : ""}${w.github_skipped ? ` · GitHub 사정으로 못 돈 것 ${w.github_skipped}회` : ""}</div></div></li>`).join("");
   return `<section class="card"><h2>자동 실행 점검 <small>${md(h.checked.slice(0, 10))} 기준 지난 7일</small></h2><ul class="list">${rows}</ul></section>`;
 }
 

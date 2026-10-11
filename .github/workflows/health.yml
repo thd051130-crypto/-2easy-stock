@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   weekly:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 10
     env:
       GITHUB_TOKEN: ${{ github.token }}
@@ -45,3 +45,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --ref main
+      - name: 고장 알림
+        if: failure()
+        run: python health.py fail --workflow health

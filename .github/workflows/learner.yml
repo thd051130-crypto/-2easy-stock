@@ -1,5 +1,5 @@
 # 학습팀: 매일 새벽 최신 시세로 규칙 값을 다시 맞춰 보고, 지금 규칙보다 확실히 나을 때만 바꾸자고 제안해요.
-#   매일 한국시간 05:00쯤 조용히 계산·기록 (새 제안이 나오면 그때만 텔레그램)
+#   매일 한국시간 06:40쯤 조용히 계산·기록 (새 제안이 나오면 그때만 텔레그램)
 #   토요일 한국시간 10:00쯤 주간 보고를 텔레그램으로
 # 규칙(strategy.py)은 자동으로 바꾸지 않아요. 결과는 learning/ 와 docs/learning-latest.md에 커밋해요.
 # 폰에서 바로 돌려 보기: Actions → learner → Run workflow
@@ -8,7 +8,7 @@ name: learner
 
 on:
   schedule:
-    - cron: "0 20 * * *"  # UTC 20:00 = 한국 05:00, 매일
+    - cron: "40 21 * * *"  # UTC 21:40 = 한국 06:40, 매일 (뉴욕 장이 확실히 끝난 뒤. 11월 서머타임이 끝나면 05:00엔 아직 장중이에요)
     - cron: "0 1 * * 6"   # UTC 01:00 토 = 한국 10:00 토, 주간 보고
   workflow_dispatch:
     inputs:
@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   learn:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 40
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
