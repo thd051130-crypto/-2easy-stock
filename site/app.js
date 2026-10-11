@@ -1278,14 +1278,15 @@ function bindResults(el) {
 }
 
 // ---------------------------------------------------------------- 산업 지도 (industry_map.py → industry.json)
-// 산업 36개를 점으로, 서로 이어진 산업을 선으로. 산업을 누르면 그 산업이 가운데로 오고 연결된 산업만 둘레에 모여요.
+// 산업 44개를 점으로, 서로 이어진 산업을 선으로. 산업을 누르면 그 산업이 가운데로 오고 연결된 산업만 둘레에 모여요.
 let IMAP = null;  // { groups, kinds, nodes, links, flows?, corr?, hidden?, day? }
 let imapLoading = null;
 let mapFocus = mapStart;
 let mapColor = "group";
 try { mapColor = localStorage.getItem("map_color") === "flow" ? "flow" : "group"; } catch (e) { /* 기본값 */ }
-const MAP_W = 360, MAP_H = 470;
-const MAP_ANCHOR = { tech: [92, 80], energy: [270, 100], industry: [180, 238], consumer: [96, 380], finance: [272, 392] };
+const MAP_W = 360, MAP_H = 560;  // 산업 44개라 세로를 늘렸어요 (36개 땐 470)
+const MAP_ANCHOR = { tech: [92, 92], energy: [270, 112], industry: [180, 282], consumer: [96, 452], finance: [272, 466] };
+const MAP_MINOR = 0.8;
 const MAP_KIND = { s: "공급망", c: "같은 요인", n: "반대", h: "주가로 찾음" };
 function loadMap() {
   if (!imapLoading) {
@@ -1293,7 +1294,8 @@ function loadMap() {
       .then((x) => {
         if (!x || !Array.isArray(x.nodes)) { imapLoading = null; return; }
         x.at = new Map(x.nodes.map((n, i) => [n.name, i]));
-        x.nodes.forEach((n) => { n.w = textW(n.short) + 26; n.fw = textW(n.short) * 1.18 + 30; });
+        // 세부 테마(minor)는 0.8배로 작게 그려서 자리도 0.8배만 차지해요
+        x.nodes.forEach((n) => { n.w = textW(n.short) + 26; n.fw = textW(n.short) * 1.18 + 30; n.s = n.minor ? MAP_MINOR : 1; });
         mapLayout(x);
         IMAP = x;
       });
@@ -1332,15 +1334,15 @@ function mapLayout(x) {
     for (let sweep = it < ROUNDS - 120 ? 1 : 3; sweep > 0; sweep--) for (let i = 0; i < N.length; i++) {
       for (let j = i + 1; j < N.length; j++) {
         const p = N[i], q = N[j];
-        const ox = (p.w + q.w) / 2 + GAP - Math.abs(q.x - p.x), oy = H + GAP - Math.abs(q.y - p.y);
+        const ox = (p.w * p.s + q.w * q.s) / 2 + GAP - Math.abs(q.x - p.x), oy = H * (p.s + q.s) / 2 + GAP - Math.abs(q.y - p.y);
         if (ox <= 0 || oy <= 0) continue;
         if (ox < oy) { const s = (q.x >= p.x ? 1 : -1) * ox / 2; p.x -= s; q.x += s; }
         else { const s = (q.y >= p.y ? 1 : -1) * oy / 2; p.y -= s; q.y += s; }
       }
     }
     N.forEach((n) => {
-      n.x = Math.max(n.w / 2 + 2, Math.min(MAP_W - n.w / 2 - 2, n.x));
-      n.y = Math.max(H / 2 + 2, Math.min(MAP_H - H / 2 - 2, n.y));
+      n.x = Math.max(n.w * n.s / 2 + 2, Math.min(MAP_W - n.w * n.s / 2 - 2, n.x));
+      n.y = Math.max(H * n.s / 2 + 2, Math.min(MAP_H - H * n.s / 2 - 2, n.y));
     });
   }
   N.forEach((n) => { n.ox = n.x; n.oy = n.y; });
@@ -1399,7 +1401,7 @@ function mapSvg() {
     + hidden.map((h, i) => `<polyline class="edge k-h" data-h="${i}" points=""/>`).join("");
   const nodes = IMAP.nodes.map((n, i) => {
     const f = mapFlow(n.name);
-    const cls = `node g-${n.group}${mapColor === "flow" ? heat(f && f.r5) : ""}`;
+    const cls = `node g-${n.group}${n.minor ? " minor" : ""}${mapColor === "flow" ? heat(f && f.r5) : ""}`;
     return `<g class="${cls}" data-n="${i}" role="button" tabindex="0" aria-label="${esc(n.name)}${f ? ` 5일 ${pct(f.r5)}` : ""}">
       <rect class="hit" x="${-n.fw / 2 - 4}" y="-18" width="${n.fw + 8}" height="36"/>
       <g class="pill"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
@@ -1470,6 +1472,7 @@ function mapCard() {
     return `<section class="card">${head}<p class="muted" id="map-wait">지도를 불러오는 중이에요…</p></section>`;
   }
   const legend = IMAP.groups.map((g) => `<span class="lg g-${g.id}"><i></i>${esc(g.name)}</span>`).join("");
+  const minorNote = IMAP.nodes.some((n) => n.minor) ? `<span class="muted">작고 흐린 점: 큰 틀 밖 세부 테마</span>` : "";
   const colors = [["group", "묶음 색"], ["flow", "5일 흐름 색"]].map(([k, label]) =>
     `<button type="button" data-mapcolor="${k}" aria-pressed="${mapColor === k}">${label}</button>`).join("");
   const has = !!(IMAP.flows && IMAP.flows[market]);
@@ -1480,7 +1483,7 @@ function mapCard() {
       <button type="button" class="map-all" data-mapall ${mapFocus ? "" : "hidden"}>‹ 전체 보기</button></div>
     <div class="imap-wrap">${mapSvg()}</div>
     <div class="map-legend">${mapColor === "flow" && has ? `<span class="lg"><i class="up"></i>5일 오름</span><span class="lg"><i class="down"></i>5일 내림</span><span class="muted">${MK_NAME[market]} 대표 종목 중간값</span>`
-      : legend}</div>
+      : legend + minorNote}</div>
     <div class="map-legend lines"><span><svg viewBox="0 0 28 8"><path class="k-s" d="M1 4h26"/></svg>공급망·수요</span>
       <span><svg viewBox="0 0 28 8"><path class="k-c" d="M1 4h26"/></svg>같은 요인</span>
       <span><svg viewBox="0 0 28 8"><path class="k-n" d="M1 4h26"/></svg>반대</span>

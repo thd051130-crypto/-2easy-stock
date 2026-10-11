@@ -424,6 +424,11 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .imap .node .pill { transition: transform .3s; }
 .imap .node.center .pill { transform: scale(1.18); }
 .imap .node.center .pill rect { stroke-width: 2.2; }
+.imap .node.minor:not(.center) .pill { transform: scale(.8); }
+.imap .node.minor:not(.center) .pill text { fill-opacity: .5; }
+.imap .node.minor:not(.center) .pill rect { stroke-opacity: .5; }
+.imap .node.minor:not(.center) .pill circle { opacity: .5; }
+.imap .node.minor:not(.center) .flow { transform: translateY(-3px); }
 .imap .node.dim { opacity: .07; cursor: default; }
 .imap .node:focus-visible .pill rect { stroke: var(--accent); stroke-width: 2.4; }
 .imap .node.heat .pill rect { stroke: var(--border); }
