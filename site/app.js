@@ -1477,7 +1477,7 @@ function mapCard() {
     `<button type="button" data-mapcolor="${k}" aria-pressed="${mapColor === k}">${label}</button>`).join("");
   const has = !!(IMAP.flows && IMAP.flows[market]);
   return `<section class="card map-card">${head}
-    <p class="sub" id="map-sub">${mapFocus ? `<b>${esc(mapFocus)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로 옮겨 가요.`
+    <p class="sub" id="map-sub">${mapFocus ? `<b>${esc(mapFocus)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로, 빈 곳을 누르면 이전으로 가요.`
       : "산업을 누르면 이어진 산업만 선으로 모아 보여 줘요."}</p>
     <div class="map-tools"><div class="period" role="group" aria-label="점 색">${colors}</div>
       <button type="button" class="map-all" data-mapall ${mapFocus ? "" : "hidden"}>‹ 전체 보기</button></div>
@@ -1540,11 +1540,18 @@ function mapDetailCard() {
       연결은 사람이 정리한 참고 자료라 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
 }
 
+// 지도에서 거쳐 온 산업들. 빈 곳을 누르면 하나씩 되돌아가고, 다 되돌아가면 전체 보기예요
+let mapTrail = [];
 function openMap(name) {
   mapFocus = name || "";
+  mapTrail = [];
   go("map");
 }
-function setMapFocus(name) {
+function setMapFocus(name, back = false) {
+  if (!back) {
+    if (!name) mapTrail = [];
+    else if (mapFocus && name !== mapFocus) mapTrail.push(mapFocus);
+  }
   mapFocus = name;
   history.replaceState(history.state, "", hashFor());
   const svg = $(".imap");
@@ -1552,7 +1559,7 @@ function setMapFocus(name) {
   svg.classList.toggle("focused", !!name);
   placeMap(svg, true);
   const sub = $("#map-sub");
-  if (sub) sub.innerHTML = name ? `<b>${esc(name)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로 옮겨 가요.`
+  if (sub) sub.innerHTML = name ? `<b>${esc(name)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로, 빈 곳을 누르면 이전으로 가요.`
     : "산업을 누르면 이어진 산업만 선으로 모아 보여 줘요.";
   const all = $("[data-mapall]");
   if (all) all.hidden = !name;
@@ -1590,11 +1597,16 @@ function bindMap() {
   svg.querySelectorAll("[data-n]").forEach((g) => {
     const pick = () => {
       const name = IMAP.nodes[Number(g.dataset.n)].name;
-      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 '전체 보기'에서
+      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (아래 svg에서 이전으로)
       setMapFocus(name === mapFocus ? "" : name);
     };
     g.addEventListener("click", pick);
     g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  // 빈 곳(또는 흐린 산업)을 누르면 이전 산업으로, 처음 고른 산업이었으면 전체 보기로
+  svg.addEventListener("click", (e) => {
+    if (!mapFocus || e.target.closest("[data-n]:not(.dim)")) return;
+    setMapFocus(mapTrail.pop() || "", true);
   });
   const all = $("[data-mapall]");
   if (all) all.addEventListener("click", () => setMapFocus(""));
