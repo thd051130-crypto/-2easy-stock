@@ -38,6 +38,7 @@ def test_build_adds_flows_and_correlations_without_network():
     assert set(kr) == {"전력·전력기기", "데이터센터", "조선"}
     assert kr["전력·전력기기"]["stocks"][0][:2] == ["267260", "HD현대일렉트릭"]
     assert kr["전력·전력기기"]["r5"] > 0
+    assert len(kr["전력·전력기기"]["stocks"][0]) == 6  # [코드, 이름, 종가, 5일, 1일, 20일]
     assert "전력·전력기기|데이터센터" in out["corr"]["kr"]
     assert out["day"]["kr"] == "2026-07-01"
 

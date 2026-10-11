@@ -7,7 +7,7 @@
   - 주가 동행: 산업마다 대표 종목(국장·미장 각각 앞 5개)의 하루 등락률 평균으로 산업 주가를 만들고,
     최근 120거래일 동안 두 산업이 같이 움직인 정도(상관계수, -1~1)를 선마다 붙여요.
     사람이 안 이은 산업 중에 유난히 같이 움직인 쌍(0.6 이상이면서 그 시장 상위 5%)은 '주가로 찾은 연결'로 따로 보여 줘요.
-  - 흐름: 산업 대표 종목의 5·20거래일 등락률 중간값과 종목별 5일 등락률.
+  - 흐름: 산업 대표 종목의 5·20거래일 등락률 중간값과 종목별 5·20일 등락률.
 연결은 참고용이에요. 매매 규칙·신호·가상계좌는 안 바꿔요.
 
 dashboard.py가 배포 때 주가 없이 <out>/industry.json(점·선)을 쓰고, pages 워크플로가 이어서
@@ -223,7 +223,7 @@ def flows(close, mem, sym_of):
             r5s.append(r5)
             r20s.append(r20)
             cols.append(s)
-            stocks.append([code, ko, r(c.iloc[-1]), r(r5), r(c.iloc[-1] / c.iloc[-2] - 1)])
+            stocks.append([code, ko, r(c.iloc[-1]), r(r5), r(c.iloc[-1] / c.iloc[-2] - 1), r(r20)])  # 끝: 20일 (앱 20일 보기)
         if not stocks:
             continue
         out[name] = dict(r5=r(pd.Series(r5s).median()), r20=r(pd.Series(r20s).median()), n=len(stocks), stocks=stocks)
