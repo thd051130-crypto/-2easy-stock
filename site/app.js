@@ -2886,6 +2886,36 @@ function heatRet(s, k) {
   const n = (HEAT_P.find((x) => x[0] === k) || [])[2], sp = s.spark || [];
   return sp.length > n ? sp[sp.length - 1] / sp[sp.length - 1 - n] - 1 : null;
 }
+// 네모 안을 넓이(무게)대로 나눠요 (squarified treemap). 결과는 0~100 비율
+function squarify(items, x, y, w, h) {
+  const out = [], total = items.reduce((a, it) => a + it.wt, 0);
+  if (!total || w <= 0 || h <= 0) return out;
+  const scale = (w * h) / total;
+  let rest = items.map((it) => ({ it, a: it.wt * scale }));
+  const worst = (row, side) => {
+    const sum = row.reduce((a, r) => a + r.a, 0), mx = Math.max(...row.map((r) => r.a)), mn = Math.min(...row.map((r) => r.a));
+    return Math.max((side * side * mx) / (sum * sum), (sum * sum) / (side * side * mn));
+  };
+  while (rest.length) {
+    const side = Math.min(w, h);
+    let row = [rest[0]], i = 1;
+    while (i < rest.length && worst([...row, rest[i]], side) <= worst(row, side)) row.push(rest[i++]);
+    rest = rest.slice(i);
+    const sum = row.reduce((a, r) => a + r.a, 0);
+    if (w >= h) {  // 왼쪽에 세로 줄
+      const cw = rest.length ? sum / h : w;
+      let cy = y;
+      row.forEach((r, j) => { const ch = j === row.length - 1 ? y + h - cy : r.a / cw; out.push({ it: r.it, x, y: cy, w: cw, h: ch }); cy += ch; });
+      x += cw; w -= cw;
+    } else {       // 위에 가로 줄
+      const ch = rest.length ? sum / w : h;
+      let cx = x;
+      row.forEach((r, j) => { const cw = j === row.length - 1 ? x + w - cx : r.a / ch; out.push({ it: r.it, x: cx, y, w: cw, h: ch }); cx += cw; });
+      y += ch; h -= ch;
+    }
+  }
+  return out;
+}
 function heatmapCard(d) {
   const all = stocksOf(d).filter((s) => !s.extra && s.close != null);
   if (all.length < 5) return "";
@@ -2897,28 +2927,39 @@ function heatmapCard(d) {
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g).push({ s, cap: (funds[s.code] || {}).cap || 0, r: heatRet(s, heatP) });
   });
-  const capOf = (rows) => rows.reduce((a, x) => a + x.cap, 0);
-  const sorted = [...groups.entries()].sort((a, b) => capOf(b[1]) - capOf(a[1]) || b[1].length - a[1].length);
-  const big = Math.max(...all.map((s) => (funds[s.code] || {}).cap || 0)) || 1;
-  const scale = heatP === "d1" ? 0.03 : heatP === "r5" ? 0.07 : 0.15;  // 이만큼 움직이면 가장 진한 색
-  const tile = ({ s, cap, r }) => {
-    const k = r == null ? 0 : Math.min(1, Math.abs(r) / scale), mix = Math.round(15 + k * 75);
-    const bg = r == null || Math.abs(r) < 0.0005 ? "var(--surface-0)" : `color-mix(in srgb, var(${r > 0 ? "--up" : "--down"}) ${mix}%, var(--surface-0))`;
-    const grow = cap ? Math.max(1, Math.sqrt(cap / big) * 6) : 1;
-    return `<button type="button" class="heat-tile${mix > 55 && r != null && Math.abs(r) >= 0.0005 ? " strong" : ""}" style="flex-grow:${grow.toFixed(2)};background:${bg}"
-      data-stock="${esc(s.code)}" aria-label="${esc(s.name)} ${r == null ? "자료 없음" : pct(r)}"><span>${esc(s.name)}</span><b>${r == null ? "-" : pct(r)}</b></button>`;
-  };
-  const rows = sorted.map(([g, list]) => {
-    list.sort((a, b) => b.cap - a.cap);
+  // 크기: 시가총액을 조금 눌러서(0.6제곱) 작은 회사도 칸이 보이게
+  const caps = all.map((s) => (funds[s.code] || {}).cap || 0).filter((c) => c > 0);
+  const small = caps.length ? Math.min(...caps) : 1;
+  groups.forEach((list) => list.forEach((x) => { x.wt = Math.pow((x.cap || small) / small, 0.6); }));
+  const glist = [...groups.entries()].map(([g, list]) => {
+    list.sort((a, b) => b.wt - a.wt);
     const avg = list.filter((x) => x.r != null);
-    const m = avg.length ? avg.reduce((a, x) => a + x.r, 0) / avg.length : null;
-    return `<div class="heat-group"><div class="heat-head"><span>${esc(g)}</span><b class="${sign(m)}">${m == null ? "" : pct(m)}</b></div>
-      <div class="heat-row">${list.map(tile).join("")}</div></div>`;
+    return { g, list, wt: list.reduce((a, x) => a + x.wt, 0), m: avg.length ? avg.reduce((a, x) => a + x.r, 0) / avg.length : null };
+  }).sort((a, b) => b.wt - a.wt);
+  const scale = heatP === "d1" ? 0.03 : heatP === "r5" ? 0.07 : 0.15;  // 이만큼 움직이면 가장 진한 색
+  const P = (v) => `${+v.toFixed(3)}%`;
+  const tile = ({ it: { s, r }, x, y, w, h }, gw, gh) => {
+    const k = r == null ? 0 : Math.min(1, Math.abs(r) / scale), mix = Math.round(15 + k * 75);
+    const flat = r == null || Math.abs(r) < 0.0005;
+    const bg = flat ? "var(--surface-0)" : `color-mix(in srgb, var(${r > 0 ? "--up" : "--down"}) ${mix}%, var(--surface-0))`;
+    const aw = (w * gw) / 100, ah = (h * gh) / 100;  // 전체 네모 기준 크기(%)
+    const fs = Math.max(2.1, Math.min(3.6, Math.sqrt(aw * ah) / 4.6, aw / 3.6));  // 좁은 칸은 글자도 작게
+    const fit = aw >= 7 && ah >= 4.5, two = fit && ah >= fs * 2.6;
+    return `<button type="button" class="heat-tile${!flat && mix > 55 ? " strong" : ""}" style="left:${P(x)};top:${P(y)};width:${P(w)};height:${P(h)};background:${bg};font-size:${fs.toFixed(2)}cqw"
+      data-stock="${esc(s.code)}" aria-label="${esc(s.name)} ${r == null ? "자료 없음" : pct(r)}">${fit ? `<span>${esc(s.name)}</span>` : ""}${two ? `<b>${r == null ? "-" : pct(r)}</b>` : ""}</button>`;
+  };
+  const HEAD = 4.4;  // 업종 이름 줄 높이(전체 네모 기준 %)
+  const boxes = squarify(glist, 0, 0, 100, 100).map(({ it: G, x, y, w, h }) => {
+    const head = w >= 16 && h >= 14;
+    const hd = head ? (HEAD / h) * 100 : 0;
+    const tiles = squarify(G.list, 0, hd, 100, 100 - hd).map((t) => tile(t, w, h)).join("");
+    return `<div class="heat-grp" style="left:${P(x)};top:${P(y)};width:${P(w)};height:${P(h)}" title="${esc(G.g)}">
+      ${head ? `<div class="heat-head" style="height:${P(hd)}"><span>${esc(G.g)}</span><b class="${sign(G.m)}">${G.m == null ? "" : pct(G.m)}</b></div>` : ""}${tiles}</div>`;
   }).join("");
   const chips = HEAT_P.map(([k, label]) => `<button type="button" data-heat="${k}" aria-pressed="${k === heatP}">${label}</button>`).join("");
   return `<section class="card" id="heat-card"><h2>시장 ${term("히트맵")} <small>${all.length}개 대형주 · ${md(all[0].day)}</small></h2>
-    <div class="period" role="group" aria-label="기간" style="margin:4px 0 10px">${chips}</div>${rows}
-    <p class="muted note" style="margin:10px 0 0">칸이 클수록 시가총액이 크고, 진할수록 많이 움직였어요. 누르면 종목 화면이에요.</p></section>`;
+    <div class="period" role="group" aria-label="기간" style="margin:4px 0 10px">${chips}</div><div class="heat-box">${boxes}</div>
+    <p class="muted note" style="margin:10px 0 0">칸이 클수록 시가총액이 크고, 진할수록 많이 움직였어요. 굵은 선은 업종 경계예요. 작은 칸도 누르면 종목 화면이에요.</p></section>`;
 }
 
 function sectorsCard(d) {
