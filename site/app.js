@@ -2212,8 +2212,8 @@ function trendCard(d) {
 
 function candleLegend() {
   return `<div class="legend">
-      <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
-      <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
+      <span class="key"><i class="sw" style="background:var(--c-up)"></i>상승</span>
+      <span class="key"><i class="sw" style="background:var(--c-down)"></i>하락</span>
       ${IND.ma ? `<span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
       <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span>` : ""}
       ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>`;
@@ -3551,17 +3551,19 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
       }
     }
     const mas = ind.ma ? line(ma200, "ma ma200") + line(ma50, "ma ma50") : "";
-    // 최고·최저 표시 (캔들 옆에 가격). 글자 길이를 어림해서 오른쪽 가격 축을 덮지 않는 쪽에 써요.
+    // 지금 값 (가장 최근 캔들 종가). 과거로 밀어 봐도 보이는 구간의 최고·최저를 지금 값과 비교해요.
+    const last = c.c[n - 1], lastCls = last >= c.o[n - 1] ? "up" : "down";
+    const vsNow = (price) => last / price - 1;  // 최고 대비는 0 또는 마이너스, 최저 대비는 0 또는 플러스
+    // 최고·최저 표시 (캔들 옆에 가격 + 지금 값이 얼마나 떨어져 있는지). 글자 길이를 어림해서 오른쪽 가격 축을 덮지 않는 쪽에 써요.
     const mark = (i, price, label, above) => {
-      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`;
-      const w = [...text].reduce((sum, ch) => sum + (/[가-힣]/.test(ch) ? 11 : 6.5), 0);
+      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`, diff = pct(vsNow(price)), tail = `지금 ${diff}`;
+      const w = [...`${text} ${tail}`].reduce((sum, ch) => sum + (/[가-힣]/.test(ch) ? 11 : 6.5), 0);
       const x = X(i), y = Y(price), right = x + 6 + w <= pad.l + iw || x - 6 - w < pad.l;
       const tx = right ? x + 6 : x - 6, ty = above ? y - 6 : y + 14;
       return `<line class="mark" x1="${x}" x2="${right ? x + 4 : x - 4}" y1="${y}" y2="${y}"/>
-        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${esc(text)}</text>`;
+        <text class="mark-text" x="${tx}" y="${ty}" text-anchor="${right ? "start" : "end"}">${esc(text)} <tspan class="mark-diff ${sign(vsNow(price))}">${esc(tail)}</tspan></text>`;
     };
     // 지금 값 표시 (오른쪽 축, 마지막 캔들 색)
-    const last = c.c[n - 1], lastCls = last >= c.o[n - 1] ? "up" : "down";
     const ly = Math.min(pad.t + ih, Math.max(pad.t, Y(last)));
     const nowTag = `<line class="now ${lastCls}" x1="${pad.l}" x2="${pad.l + iw}" y1="${ly}" y2="${ly}"/>
       <rect class="tag ${lastCls}" x="${pad.l + iw + 1}" y="${ly - 9}" width="${pad.r - 2}" height="18" rx="3"/>
@@ -3605,7 +3607,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     const first = start > 0 ? c.c[start - 1] : c.o[start];
     const ch = c.c[endI] / first - 1;
     onRange(`${esc(frameLabel(c, start, "axis"))} ~ ${esc(frameLabel(c, endI, "axis"))} (${Math.round(v.count)}${UNIT[c.frame]}) `
-      + `<b class="${sign(ch)}">${pct(ch)}</b> · 최고 ${fmt(c.h[hiI])} · 최저 ${fmt(c.l[loI])}`);
+      + `<b class="${sign(ch)}">${pct(ch)}</b><br>${hiLoLine(c.h[hiI], c.l[loI], c.c[n - 1], fmt)}`);
     if (picked) showTip(v.pick, X(v.pick));
   };
 
@@ -3640,6 +3642,16 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     });
     el._ro.observe(el);
   }
+}
+
+// 보이는 구간 최고·최저와 지금 값 차이 (차트 위 한 줄): 최고 대비 얼마 내려와 있고, 최저 대비 얼마 올라와 있는지.
+// 차이 금액은 가격과 같은 모양(fmt)으로, 앞에 +/-를 붙여요.
+function hiLoLine(hi, lo, now, fmt) {
+  const gap = (p) => {
+    const d = now - p, r = now / p - 1;
+    return `<span class="${sign(r)}">${d > 0 ? "+" : d < 0 ? "-" : ""}${esc(fmt(Math.abs(d)))} (${pct(r)})</span>`;
+  };
+  return `<span class="nowrap">최고 ${esc(fmt(hi))} 대비 지금 ${gap(hi)}</span> · <span class="nowrap">최저 ${esc(fmt(lo))} 대비 지금 ${gap(lo)}</span>`;
 }
 
 // 차트 손가락·마우스 조작 (캔들 차트·비교 차트 같이): 옆으로 밀기, 두 손가락 확대·축소, 누르면 세부정보,
