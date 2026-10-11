@@ -1599,7 +1599,7 @@ function bindMap() {
   svg.querySelectorAll("[data-n]").forEach((g) => {
     const pick = () => {
       const name = IMAP.nodes[Number(g.dataset.n)].name;
-      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (아래 svg에서 이전으로)
+      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (CSS로 터치를 안 받아요)
       setMapFocus(name === mapFocus ? "" : name);
     };
     g.addEventListener("click", pick);
