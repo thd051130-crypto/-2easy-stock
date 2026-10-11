@@ -1375,12 +1375,14 @@ function mapTargets() {
   T[IMAP.at.get(mapFocus)] = { x: cx, y: cy, on: true, center: true };
   const nb = mapNeighbors(mapFocus);
   const many = nb.length > 8;
+  // 둘레 거리: 이어진 산업이 적으면 가깝게, 많을수록 조금씩 넓게 (지도 끝까지 퍼지면 선이 너무 길어요)
+  const ry = Math.min(MAP_H / 2 - 36, (many ? 150 : 110) + nb.length * 9);
   nb.forEach((x, i) => {
     const a = -Math.PI / 2 + (i / nb.length) * Math.PI * 2;
-    const k = many && i % 2 ? 0.7 : 1;
+    const k = many && i % 2 ? 0.66 : 1;
     const node = IMAP.nodes[IMAP.at.get(x.name)];
-    const rx = MAP_W / 2 - node.w / 2 - 4;
-    T[IMAP.at.get(x.name)] = { x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * (MAP_H / 2 - 36) * k, on: true, center: false };
+    const rx = (MAP_W / 2 - node.w / 2 - 4) * (many ? 1 : 0.9);
+    T[IMAP.at.get(x.name)] = { x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k, on: true, center: false };
   });
   return T;
 }
@@ -1597,7 +1599,7 @@ function bindMap() {
   svg.querySelectorAll("[data-n]").forEach((g) => {
     const pick = () => {
       const name = IMAP.nodes[Number(g.dataset.n)].name;
-      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (아래 svg에서 이전으로)
+      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (CSS로 터치를 안 받아요)
       setMapFocus(name === mapFocus ? "" : name);
     };
     g.addEventListener("click", pick);

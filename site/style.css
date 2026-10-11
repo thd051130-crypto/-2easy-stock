@@ -429,7 +429,7 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .imap .node.minor:not(.center) .pill rect { stroke-opacity: .5; }
 .imap .node.minor:not(.center) .pill circle { opacity: .5; }
 .imap .node.minor:not(.center) .flow { transform: translateY(-3px); }
-.imap .node.dim { opacity: .07; cursor: default; }
+.imap .node.dim { opacity: .07; cursor: default; pointer-events: none; }  /* 흐린 산업은 터치를 안 받아요: 겹친 진한 산업이 눌리고, 빈 곳 누르기(이전으로)로 처리 */
 .imap .node:focus-visible .pill rect { stroke: var(--accent); stroke-width: 2.4; }
 .imap .node.heat .pill rect { stroke: var(--border); }
 .imap .node.heat.up.h1 .pill rect { fill: color-mix(in srgb, var(--up) 14%, var(--surface-1)); }
