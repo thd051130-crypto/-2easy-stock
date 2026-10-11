@@ -4193,6 +4193,7 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 $(".search-btn").addEventListener("click", () => go("search"));
+$(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
   if (screen === "map") { mapTrail = []; setMapFocus(""); window.scrollTo(0, 0); } else openMap("");
