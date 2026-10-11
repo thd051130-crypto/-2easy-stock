@@ -1376,12 +1376,12 @@ function mapNeighbors(name) {
   return out.sort((a, b) => ord(a) - ord(b));
 }
 // 고른 산업은 가운데, 이어진 산업은 둘레(타원)에. 많으면 안쪽·바깥쪽 번갈아. 나머지는 제자리에서 흐리게.
-function mapTargets() {
-  const T = IMAP.nodes.map((n) => ({ x: n.ox, y: n.oy, on: !mapFocus, center: false }));
-  if (!mapFocus || !IMAP.at.has(mapFocus)) return T;
+function mapTargets(focus = mapFocus) {
+  const T = IMAP.nodes.map((n) => ({ x: n.ox, y: n.oy, on: !focus, center: false }));
+  if (!focus || !IMAP.at.has(focus)) return T;
   const cx = MAP_W / 2, cy = MAP_H / 2;
-  T[IMAP.at.get(mapFocus)] = { x: cx, y: cy, on: true, center: true };
-  const nb = mapNeighbors(mapFocus);
+  T[IMAP.at.get(focus)] = { x: cx, y: cy, on: true, center: true };
+  const nb = mapNeighbors(focus);
   const many = nb.length > 8;
   // 둘레 거리: 이어진 산업이 적으면 가깝게, 많을수록 조금씩 넓게 (지도 끝까지 퍼지면 선이 너무 길어요)
   const ry = Math.min(MAP_H / 2 - 36, (many ? 150 : 110) + nb.length * 9);
@@ -1599,55 +1599,103 @@ function bindMapDetail(el) {
 }
 // 두 손가락 확대·축소: 벌리면 손가락 사이에 가장 가까운 산업으로 들어가 연관 산업만 모이고 나머지는 흐려져요.
 // 이미 들어가 있으면 둘레 산업 중 가까운 것으로 한 단계 더. 오므리면 이전으로 (빈 곳 누르기와 같아요).
-// 벌리는 동안 지도가 손가락을 따라 커지고, 손을 떼면 정해요. 노트북 터치패드(ctrl+휠)도 같아요.
-const PINCH_IN = 1.18, PINCH_OUT = 0.85;
-function mapPinchDone(svg, ratio, cx, cy) {
-  if (ratio >= PINCH_IN) {
-    // 화면 좌표 → 지도 좌표, 진한 산업 중 가장 가까운 것 (가운데 산업은 빼요: 그 산업 둘레로 더 들어가요)
-    const m = svg.getScreenCTM();
-    const pt = m ? new DOMPoint(cx, cy).matrixTransform(m.inverse()) : { x: MAP_W / 2, y: MAP_H / 2 };
-    let best = null, bd = Infinity;
-    IMAP.nodes.forEach((n, i) => {
-      const g = svg.querySelector(`[data-n="${i}"]`);
-      if (!g || g.classList.contains("dim") || n.name === mapFocus) return;
-      const d = Math.hypot(n.x - pt.x, n.y - pt.y);
-      if (d < bd) { bd = d; best = n.name; }
-    });
-    if (best) setMapFocus(best);
-  } else if (ratio <= PINCH_OUT && mapFocus) {
-    setMapFocus(mapTrail.pop() || "", true);
-  }
+// 손가락을 벌리는 만큼 산업들이 새 자리로 조금씩 옮겨 가고(흐려질 산업은 서서히 흐려지고), 손을 떼면
+// 그 자리에서 이어서 끝까지 가요. 덜 벌렸으면 원래 자리로 부드럽게 돌아와요. 노트북 터치패드(ctrl+휠)도 같아요.
+const PINCH_FULL_IN = 2, PINCH_FULL_OUT = 0.5;   // 이만큼 벌리거나 오므리면 미리보기가 끝까지 가요
+const PINCH_COMMIT = 0.3;                          // 미리보기가 30% 넘게 갔으면(1.3배·0.85배) 손 뗄 때 그쪽으로
+function mapPinchPick(svg, cx, cy) {
+  // 화면 좌표 → 지도 좌표, 진한 산업 중 가장 가까운 것 (가운데 산업은 빼요: 그 산업 둘레로 더 들어가요)
+  const m = svg.getScreenCTM();
+  const pt = m ? new DOMPoint(cx, cy).matrixTransform(m.inverse()) : { x: MAP_W / 2, y: MAP_H / 2 };
+  let best = null, bd = Infinity;
+  IMAP.nodes.forEach((n, i) => {
+    const g = svg.querySelector(`[data-n="${i}"]`);
+    if (!g || g.classList.contains("dim") || n.name === mapFocus) return;
+    const d = Math.hypot(n.x - pt.x, n.y - pt.y);
+    if (d < bd) { bd = d; best = n.name; }
+  });
+  return best;
+}
+// 미리보기: from(손가락 대기 전 자리) → focus로 갔을 때 자리 사이 k(0~1)만큼. 선도 같이 따라가요
+function mapPreview(svg, from, focus, k) {
+  const T = mapTargets(focus);
+  const N = IMAP.nodes;
+  N.forEach((n, i) => {
+    n.x = from[i].x + (T[i].x - from[i].x) * k;
+    n.y = from[i].y + (T[i].y - from[i].y) * k;
+    const g = svg.querySelector(`[data-n="${i}"]`);
+    g.setAttribute("transform", `translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`);
+    const a = from[i].dim ? 0.07 : 1, b = T[i].on ? 1 : 0.07;
+    g.style.transition = "none";
+    g.style.opacity = (a + (b - a) * k).toFixed(3);
+  });
+  const line = (e, a, b) => {
+    const p = N[IMAP.at.get(a)], q = N[IMAP.at.get(b)];
+    if (!e || !p || !q) return;
+    e.setAttribute("points", `${p.x.toFixed(1)},${p.y.toFixed(1)} ${((p.x + q.x) / 2).toFixed(1)},${((p.y + q.y) / 2).toFixed(1)} ${q.x.toFixed(1)},${q.y.toFixed(1)}`);
+  };
+  // 선: 갈 곳과 상관없는 선은 서서히 사라지고, 이어질 선은 서서히 나타나요
+  const fade = (e, on) => {
+    if (!e) return;
+    const a = e.classList.contains("off") ? 0 : 1, b = on ? 1 : 0;
+    e.style.transition = "none";
+    e.style.opacity = (a + (b - a) * k).toFixed(3);
+  };
+  IMAP.links.forEach((l, i) => {
+    const e = svg.querySelector(`[data-e="${i}"]`);
+    line(e, l.a, l.b);
+    fade(e, !focus || l.a === focus || l.b === focus);
+  });
+  ((IMAP.hidden && IMAP.hidden[market]) || []).forEach(([a, b], i) => {
+    const e = svg.querySelector(`[data-h="${i}"]`);
+    line(e, a, b);
+    fade(e, !!focus && (a === focus || b === focus));
+  });
+}
+function mapPreviewClear(svg) {
+  svg.querySelectorAll("[data-n], .edge").forEach((g) => { g.style.transition = ""; g.style.opacity = ""; });
 }
 function bindMapPinch(svg) {
-  let start = null;  // { d, cx, cy }
+  let start = null;  // { d, cx, cy, from, inTo, outTo, ratio }
   const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  const zoom = (k, cx, cy) => {
-    if (k == null) { svg.style.transform = ""; svg.style.transformOrigin = ""; return; }
-    const r = svg.getBoundingClientRect();
-    svg.style.transformOrigin = `${cx - r.left}px ${cy - r.top}px`;
-    svg.style.transform = `scale(${Math.max(0.8, Math.min(1.4, k)).toFixed(3)})`;
+  // 벌림(ratio>1)·오므림(ratio<1)마다 갈 곳과 진행 정도(0~1)
+  const goal = (s) => {
+    if (s.ratio > 1) {
+      if (s.inTo === undefined) s.inTo = mapPinchPick(svg, s.cx, s.cy);
+      return s.inTo ? { to: s.inTo, back: false, k: Math.min(1, (s.ratio - 1) / (PINCH_FULL_IN - 1)) } : null;
+    }
+    if (!mapFocus) return null;
+    return { to: mapTrail.length ? mapTrail[mapTrail.length - 1] : "", back: true, k: Math.min(1, (1 - s.ratio) / (1 - PINCH_FULL_OUT)) };
   };
-  let ratio = 1;
   svg.addEventListener("touchstart", (e) => {
     if (e.touches.length !== 2) return;
     const t = e.touches;
-    start = { d: dist(t) || 1, cx: (t[0].clientX + t[1].clientX) / 2, cy: (t[0].clientY + t[1].clientY) / 2 };
-    ratio = 1;
+    cancelAnimationFrame(mapAnim);
+    start = { d: dist(t) || 1, cx: (t[0].clientX + t[1].clientX) / 2, cy: (t[0].clientY + t[1].clientY) / 2, ratio: 1,
+      from: IMAP.nodes.map((n, i) => ({ x: n.x, y: n.y, dim: svg.querySelector(`[data-n="${i}"]`).classList.contains("dim") })) };
   }, { passive: true });
   svg.addEventListener("touchmove", (e) => {
     if (!start || e.touches.length !== 2) return;
     e.preventDefault();  // 화면 전체 확대 대신 지도 확대
-    ratio = dist(e.touches) / start.d;
-    zoom(ratio, start.cx, start.cy);
+    start.ratio = dist(e.touches) / start.d;
+    const g = goal(start);
+    // 갈 곳이 없으면(전체 보기에서 오므리기 등) 제자리
+    mapPreview(svg, start.from, g ? g.to : mapFocus, g ? g.k : 0);
   }, { passive: false });
   const end = (e) => {
     if (!start || e.touches.length) return;
     const s0 = start;
     start = null;
-    zoom(null);
     svg.dataset.pinched = "1";  // 손 뗄 때 생기는 클릭은 무시
     setTimeout(() => { delete svg.dataset.pinched; }, 350);
-    mapPinchDone(svg, ratio, s0.cx, s0.cy);
+    const g = goal(s0);
+    mapPreviewClear(svg);
+    if (g && g.k >= PINCH_COMMIT) {
+      if (g.back) mapTrail.pop();
+      setMapFocus(g.to, g.back);  // 지금 자리(미리보기 중간)에서 이어서 움직여요
+    } else {
+      placeMap(svg, true);  // 덜 벌렸으면 원래 자리로
+    }
   };
   svg.addEventListener("touchend", end);
   svg.addEventListener("touchcancel", end);
@@ -1659,7 +1707,8 @@ function bindMapPinch(svg) {
     const now = Date.now();
     if (now - wheelAt < 500) return;
     wheelAt = now;
-    mapPinchDone(svg, e.deltaY < 0 ? PINCH_IN : PINCH_OUT, e.clientX, e.clientY);
+    if (e.deltaY < 0) { const to = mapPinchPick(svg, e.clientX, e.clientY); if (to) setMapFocus(to); }
+    else if (mapFocus) setMapFocus(mapTrail.pop() || "", true);
   }, { passive: false });
 }
 
