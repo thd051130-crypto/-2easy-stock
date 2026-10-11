@@ -122,7 +122,7 @@ def test_kr_payload_carries_rule_opinion():
     pick = dict(code="005930", name="삼성전자", close=60000.0, rsi2=5.0, ma5=61000.0, ma200=55000.0, high20=63000.0,
                 days_since_high=3, vol20=0.3)
     row = ks.kr_payload(market, [pick], index_close)["picks"][0]
-    assert row["stop"] == 55800.0  # 손절 -7%
+    assert row["stop"] == 57000.0  # 손절 -5%
     assert row["opinion"][0].startswith("이유:") and row["opinion"][1].startswith("위험:")
 
 
