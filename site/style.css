@@ -245,6 +245,7 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart .ma200 { stroke: var(--ma200); }
 .chart .mark { stroke: var(--text-secondary); stroke-width: 1; }
 .chart text.mark-text { fill: var(--text-primary); font-weight: 600; }
+.chart text.mark-text tspan.mark-diff.up { fill: var(--up); } .chart text.mark-text tspan.mark-diff.down { fill: var(--down); }
 .chart .now { stroke-width: 1; stroke-dasharray: 2 3; }
 .chart .now.up { stroke: var(--up); } .chart .now.down { stroke: var(--down); }
 .chart .tag.up { fill: var(--up); } .chart .tag.down { fill: var(--down); }
