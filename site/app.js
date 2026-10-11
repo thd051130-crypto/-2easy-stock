@@ -2136,7 +2136,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: f.frame, pick: null };
   }
   const v = VIEW[key];
-  let W = 0, pad, iw, ih, cw, start, base = [];
+  let W = 0, pad, iw, ih, cw, start, base = [], Yp;
   const draw = () => {
     W = Math.max(el.clientWidth, 260);
     pad = { l: 6, r: 62, t: 22, b: 22 };
@@ -2166,6 +2166,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     const sc = logY ? (p) => Math.log(Math.max(p, lo / 10)) : (p) => p, sLo = sc(lo), sHi = sc(hi);
     const X = (i) => pad.l + (i - start + 0.5) * cw;
     const Y = (p) => pad.t + (1 - (sc(p) - sLo) / (sHi - sLo)) * ih;
+    Yp = Y;
     const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => sLo + (sHi - sLo) * (0.06 + 0.88 * t)).map((t) => (logY ? Math.exp(t) : t));
     const grid = ticks.map((t) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>
       <text x="${pad.l + 2}" y="${Y(t) - 4}">${esc(pct(t - 1))}</text>`).join("");
@@ -2231,7 +2232,13 @@ function compareChart(el, f, list, show, reset, onRange) {
     tip.style.left = `${Math.max(0, Math.min(r.width - tw, left > r.width / 2 ? left - tw - 12 : left + 12))}px`;
     tip.style.top = `${pad.t}px`;
   };
-  chartGestures(el, v, () => ({ start, cw, pad, W }), draw, showTip);
+  // 누른 곳 근처에 어느 항목이든 캔들(선이면 그 점)이 있는지: 없으면 빈 곳이라 세부정보를 닫아요
+  const hit = (i, y) => Yp && list.some((s, j) => {
+    if (base[j] == null || s.c[i] == null) return false;
+    const top = Yp((cmpLine ? s.c[i] : s.h[i]) / base[j]), bot = Yp((cmpLine ? s.c[i] : s.l[i]) / base[j]);
+    return y >= top - HIT_PX && y <= bot + HIT_PX;
+  });
+  chartGestures(el, v, () => ({ start, cw, pad, W, hit }), draw, showTip);
   draw();
   el._draw = draw;
   if (!el._ro) {
@@ -3648,6 +3655,7 @@ function growthLine(s) {
 // 한 손가락으로 옆으로 밀면 과거로, 두 손가락 벌리기·오므리기(또는 마우스 휠)로 확대·축소, 짧게 누르면 그 캔들 값.
 // 길게 누른 채 움직이거나, 이미 뜬 세부정보 선을 잡고 밀면 세부정보가 손가락을 따라와요.
 const VIEW = {};  // 차트별 보기 상태 (보이는 캔들 수, 마지막 캔들 위치)
+const HIT_PX = 14;  // 캔들 위아래로 이만큼(화면 점)까지 누르면 그 캔들을 누른 걸로 쳐요
 const MAX_SHOW = 1300;  // 한 화면 최대 캔들 수 (상장일부터 일봉은 1만 개가 넘어서, 다 그리면 폰이 버벅여요. 더 길게는 주봉·월봉으로)
 // c = frameCandles()가 만든 캔들 (일봉·주봉·월봉·년봉), show = 처음 보이는 캔들 수
 // opts: fmt = 가격 표시, name = 차트 이름, ind = 켜 둔 보조지표 (이동평균선·볼린저밴드는 캔들 위에,
@@ -3661,7 +3669,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: c.frame, pick: null };
   }
   const v = VIEW[key];
-  let W = 0, H = 0, pad, iw, ih, cw, start, lo, hi, bottom;
+  let W = 0, H = 0, pad, iw, ih, cw, start, lo, hi, bottom, Yp;
   let volOn = false;
 
   const draw = () => {
@@ -3697,6 +3705,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     const sc = logY ? (p) => Math.log(Math.max(p, lo / 10)) : (p) => p, sLo = sc(lo), sHi = sc(hi);
     const X = (i) => pad.l + (i - start + 0.5) * cw;
     const Y = (p) => pad.t + (1 - (sc(p) - sLo) / (sHi - sLo)) * ih;
+    Yp = Y;
     const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => sLo + (sHi - sLo) * (0.06 + 0.88 * f)).map((t) => (logY ? Math.exp(t) : t));
     const lastY = Y(c.c[n - 1]);
     const grid = ticks.map((t) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>
@@ -3736,7 +3745,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     const vsNow = (price) => last / price - 1;  // 최고 대비는 0 또는 마이너스, 최저 대비는 0 또는 플러스
     // 최고·최저 표시 (캔들 옆에 가격 + 지금 값이 얼마나 떨어져 있는지). 글자 길이를 어림해서 오른쪽 가격 축을 덮지 않는 쪽에 써요.
     const mark = (i, price, label, above) => {
-      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`, diff = pct(vsNow(price)), tail = `지금 ${diff}`;
+      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`, diff = pct(vsNow(price)), tail = diff;
       const w = [...`${text} ${tail}`].reduce((sum, ch) => sum + (/[가-힣]/.test(ch) ? 11 : 6.5), 0);
       const x = X(i), y = Y(price), right = x + 6 + w <= pad.l + iw || x - 6 - w < pad.l;
       const tx = right ? x + 6 : x - 6, ty = above ? y - 6 : y + 14;
@@ -3809,7 +3818,9 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     tip.style.top = `${pad.t}px`;
   };
 
-  chartGestures(el, v, () => ({ start, cw, pad, W }), draw, showTip);
+  // 누른 곳이 캔들(고가~저가 근처)인지: 캔들 위아래 빈 곳을 누르면 세부정보를 닫아요. 아래 칸(거래량·RSI)은 캔들로 쳐요.
+  const hit = (i, y) => y > pad.t + ih || (Yp && y >= Yp(c.h[i]) - HIT_PX && y <= Yp(c.l[i]) + HIT_PX);
+  chartGestures(el, v, () => ({ start, cw, pad, W, hit }), draw, showTip);
   draw();
   // 화면 폭이 바뀌면(폰 돌리기) 지금 고른 기간으로 다시 그려요. 탭을 바꿔 사라진 예전 차트는 다시 그리지 않아요
   // (안 그러면 예전 차트가 위의 기간·최고·최저 문구를 덮어써요).
@@ -3831,7 +3842,7 @@ function hiLoLine(hi, lo, now, fmt) {
     const d = now - p, r = now / p - 1;
     return `<span class="${sign(r)}">${d > 0 ? "+" : d < 0 ? "-" : ""}${esc(fmt(Math.abs(d)))} (${pct(r)})</span>`;
   };
-  return `<span class="nowrap">최고 ${esc(fmt(hi))} 대비 지금 ${gap(hi)}</span> · <span class="nowrap">최저 ${esc(fmt(lo))} 대비 지금 ${gap(lo)}</span>`;
+  return `<span class="nowrap">최고 ${esc(fmt(hi))} 대비 ${gap(hi)}</span> · <span class="nowrap">최저 ${esc(fmt(lo))} 대비 ${gap(lo)}</span>`;
 }
 
 // 차트 손가락·마우스 조작 (캔들 차트·비교 차트 같이): 옆으로 밀기, 두 손가락 확대·축소, 누르면 세부정보,
@@ -3844,7 +3855,25 @@ function chartGestures(el, v, geo, draw, showTip) {
   const scale = () => el.getBoundingClientRect().width / geo().W;
   const svgX = (clientX) => (clientX - el.getBoundingClientRect().left) / scale();
   const xOf = (i) => { const { start, cw, pad } = geo(); return pad.l + (i - start + 0.5) * cw; };
+  const svgY = (clientY) => (clientY - el.getBoundingClientRect().top) / scale();
   const candleAt = (clientX) => { const { start, cw, pad } = geo(); return Math.round(start + (svgX(clientX) - pad.l) / cw - 0.5); };
+  // 세부정보 닫기 (선과 상자만 숨겨요)
+  const closeTip = () => {
+    if (v.pick == null) return;
+    v.pick = null;
+    const tip = $(".tip", el), cross = $("line.cross", el);
+    if (tip) tip.style.display = "none";
+    if (cross) cross.style.display = "none";
+  };
+  el._closeTip = closeTip;
+  // 차트 밖 아무 데나 눌러도 닫혀요 (화면에 차트가 없어지면 그만 들어요)
+  if (!el._outside) {
+    el._outside = (e) => {
+      if (!el.isConnected) { document.removeEventListener("pointerdown", el._outside, true); return; }
+      if (!el.contains(e.target)) el._closeTip();
+    };
+    document.addEventListener("pointerdown", el._outside, true);
+  }
   const stopHold = () => { clearTimeout(hold); hold = 0; };
   // 고른 캔들만 바꿔요 (차트 전체를 다시 그리지 않고 선과 세부정보만 옮겨서 손가락을 바로 따라가요)
   const movePick = (clientX) => {
@@ -3868,7 +3897,7 @@ function chartGestures(el, v, geo, draw, showTip) {
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     stopHold();
     if (pts.size === 1) {
-      gesture = { type: "tap", x0: e.clientX, y0: e.clientY, end0: v.end };
+      gesture = { type: "tap", x0: e.clientX, y0: e.clientY, end0: v.end, onTip: Boolean(e.target.closest && e.target.closest(".tip")) };
       // 세부정보가 떠 있으면 그 선 근처를 잡고 밀어서 바로 옮길 수 있어요
       const { start, cw } = geo();
       const onLine = v.pick != null && v.pick >= start && v.pick <= Math.round(v.end)
@@ -3908,8 +3937,10 @@ function chartGestures(el, v, geo, draw, showTip) {
   const up = (e) => {
     stopHold();
     if (gesture && gesture.type === "tap" && pts.size === 1) {
-      const i = candleAt(e.clientX);
-      v.pick = i >= geo().start && i <= Math.round(v.end) && v.pick !== i ? i : null;
+      // 캔들을 누르면 세부정보, 같은 캔들을 다시 누르거나 빈 곳·세부정보 상자를 누르면 닫혀요
+      const i = candleAt(e.clientX), { hit } = geo();
+      const onCandle = !gesture.onTip && i >= geo().start && i <= Math.round(v.end) && (!hit || hit(i, svgY(e.clientY)));
+      v.pick = onCandle && v.pick !== i ? i : null;
       if (v.pick == null) $(".tip", el).style.display = "none";
       draw();
     }
