@@ -2494,18 +2494,24 @@ const savWon = (x) => {
   return `${s}${Math.round(a / 1e4).toLocaleString("ko-KR")}만원`;
 };
 // 지금 가격이면 매달 넣는 돈(처음 넣는 돈)으로 몇 주 사는지. 미장은 환율로 원화를 달러로 바꿔요.
-function savShares(p, o) {
+function savShares(p, o, r) {
   if (!p.m || !p.code) return "";
   const q = QUOTES[p.m] && QUOTES[p.m].q[p.code];
-  const dash = DATA.markets[p.m] && stocksOf(DATA.markets[p.m]).find((x) => x.code === p.code);
+  const dash = !q && DATA.markets[p.m] && stocksOf(DATA.markets[p.m]).find((x) => x.code === p.code);
   const px = (q && q[0]) || (dash && dash.close);
   if (!px) return "";
+  const day = q ? QUOTES[p.m].day : DATA.markets[p.m].signal && DATA.markets[p.m].signal.day;
   const fx = p.m === "us" ? (DATA.total && DATA.total.fx) || (DATA.markets.us.signal && DATA.markets.us.signal.usdkrw) || 1350 : 1;
-  const n = (won) => { const v = won / fx / px; return v < 0.1 ? "0.1주 미만" : `${v.toFixed(1)}주`; };
-  const parts = [`지금 ${price(p.m, px)}`];
+  const cnt = (v) => (v < 0.1 ? "0.1주 미만" : v >= 100 ? `${Math.round(v).toLocaleString("ko-KR")}주` : `${v.toFixed(1)}주`);
+  const n = (won) => cnt(won / fx / px);
+  const parts = [`${day ? `${md(day)} 종가` : "지금"} ${price(p.m, px)}`];
   if (o.monthly) parts.push(`매달 ${savWon(o.monthly)} ≈ ${n(o.monthly)}`);
   if (o.start) parts.push(`처음 ${savWon(o.start)} ≈ ${n(o.start)}`);
-  return `<div class="meta">${parts.join(" · ")}${p.m === "us" ? ` (환율 ${num(fx)}원)` : ""}</div>`;
+  // 끝에 모인 주식 수: 주가가 위 가정(연 p.price%)대로 오른다고 치고, 그때 주식 평가액(배당 현금 빼고)을 그때 1주 가격으로 나눠요.
+  const pxEnd = px * Math.pow(1 + p.price / 100, o.years);
+  const held = (r.bal - r.cash) / fx / pxEnd;
+  const total = `<div class="meta"><b>${o.years}년 뒤 모인 주식 약 ${cnt(held)}</b> · 그때 1주 ${price(p.m, pxEnd)} 가정</div>`;
+  return `<div class="meta">${parts.join(" · ")}${p.m === "us" ? ` (환율 ${num(fx)}원)` : ""}</div>${total}`;
 }
 let savQuery = "";
 // 고른 종목 (× 로 빼요)
@@ -2586,7 +2592,7 @@ function savOut() {
       ${bar}
       <div class="meta">${[r.divs > 0 ? `배당·이자 ${savWon(r.divs)}` : "배당 없음", cash.slice(3), r.tax > 0 ? `세금 ${savWon(r.tax)}` : "",
         p.fee ? `${term("총보수")} 연 ${p.fee}%` : ""].filter(Boolean).join(" · ")}</div>
-      ${savShares(p, o)}<div class="meta">${esc(p.note)}</div>${worst}</li>`;
+      ${savShares(p, o, r)}<div class="meta">${esc(p.note)}</div>${worst}</li>`;
   }).join("");
   return `<div class="sav-hero"><div><small>넣은 돈 (${SAV.years}년)</small><b>${savWon(paid)}</b></div>
       <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 최고</small><b class="${sign(Math.max(...list.map((x) => x.r.after)) - paid)}">${savWon(Math.max(...list.map((x) => x.r.after)))}</b></div></div>
