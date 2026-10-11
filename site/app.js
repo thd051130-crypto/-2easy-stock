@@ -2953,7 +2953,10 @@ function bindSavings() {
       const k = p.dataset.savP, at = SAV.picks.indexOf(k);
       if (at >= 0) SAV.picks.splice(at, 1); else SAV.picks.push(k);
     } else return;
+    // 위에 고른 종목 줄이 늘거나 줄어도 누른 버튼(검색창 아래)이 제자리에 있게 화면을 맞춰요
+    const q = $("#sav-q"), top = q && q.getBoundingClientRect().top;
     redrawPicks(); refresh();
+    if (q) window.scrollBy(0, q.getBoundingClientRect().top - top);
   });
   const q = $("#sav-q");
   if (q) q.addEventListener("input", () => { savQuery = q.value; const b = $("#sav-res"); if (b) b.innerHTML = savResults(); });
