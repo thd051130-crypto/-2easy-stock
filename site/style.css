@@ -697,3 +697,8 @@ button.pol-pill { cursor: pointer; min-height: 28px; font-weight: 600; }
 .pol-glance .pol-fx { margin-top: 4px; }
 .pol-stale { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--wait-bg); color: var(--wait-fg); font-size: 13px; }
 details.pol-sec { margin-top: 6px; }
+/* 배당 달력: 받는 달 제목, "언제까지 사야" 줄은 작게 */
+.div-mh { font-size: 15px; margin: 12px 0 4px; }
+.div-mh small { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+details > summary.div-mh { cursor: pointer; }
+.div-buy { font-size: 11px; opacity: .8; }
