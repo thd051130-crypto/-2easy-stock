@@ -404,7 +404,7 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --g-consumer: #eda100; --g-finance: #e87ba4; } }
 :root[data-theme="dark"] { --g-consumer: #eda100; --g-finance: #e87ba4; }
 .imap-wrap { margin: 10px -8px 0; }
-.imap { display: block; width: 100%; height: auto; max-height: 72vh; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.imap { display: block; width: 100%; height: auto; max-height: 72vh; touch-action: pan-y;  /* 두 손가락 확대는 지도가 받아요 */ user-select: none; -webkit-user-select: none; }
 .imap .edge { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-opacity: .28; transition: stroke-opacity .3s, stroke-width .3s; }
 .imap .edge.k-c { stroke-dasharray: 4 3; }
 .imap .edge.k-n { stroke-dasharray: 4 3; }
