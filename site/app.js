@@ -1292,8 +1292,8 @@ try { mapColor = localStorage.getItem("map_color") === "flow" ? "flow" : "group"
 let mapDays = 5;
 try { mapDays = localStorage.getItem("map_days") === "20" ? 20 : 5; } catch (e) { /* 기본값 */ }
 const fv = (f) => (f ? (mapDays === 20 ? f.r20 : f.r5) : null);
-const MAP_W = 360, MAP_H = 560;  // 산업 44개라 세로를 늘렸어요 (36개 땐 470)
-const MAP_ANCHOR = { tech: [92, 92], energy: [270, 112], industry: [180, 282], consumer: [96, 452], finance: [272, 466] };
+const MAP_W = 360, MAP_H = 660;  // 산업 44개 + 점 사이 빈 공간 넉넉히 (36개 땐 470)
+const MAP_ANCHOR = { tech: [92, 104], energy: [270, 128], industry: [180, 332], consumer: [96, 534], finance: [272, 552] };
 const MAP_MINOR = 0.8;
 const MAP_KIND = { s: "공급망", c: "같은 요인", n: "반대", h: "주가로 찾음" };
 function loadMap() {
@@ -1325,7 +1325,7 @@ function mapLayout(x) {
     n.x = ax + Math.cos(a) * 46; n.y = ay + Math.sin(a) * 34;
   });
   const E = x.links.map((l) => [x.at.get(l.a), x.at.get(l.b)]).filter(([a, b]) => a != null && b != null);
-  const H = 26, GAP = 8, ROUNDS = 600;
+  const H = 26, GAP = 14, ROUNDS = 600;  // GAP: 점 사이 최소 빈 공간 (빈 곳 누르기·두 손가락 벌리기 자리)
   for (let it = 0; it < ROUNDS; it++) {
     const cool = 1 - it / ROUNDS;
     if (it < ROUNDS - 120) {
@@ -1489,8 +1489,8 @@ function mapCard() {
   const days = [5, 20].map((d) => `<button type="button" data-mapdays="${d}" aria-pressed="${mapDays === d}">${d}일</button>`).join("");
   const has = !!(IMAP.flows && IMAP.flows[market]);
   return `<section class="card map-card">${head}
-    <p class="sub" id="map-sub">${mapFocus ? `<b>${esc(mapFocus)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로, 빈 곳을 누르면 이전으로 가요.`
-      : "산업을 누르면 이어진 산업만 선으로 모아 보여 줘요."}</p>
+    <p class="sub" id="map-sub">${mapFocus ? `<b>${esc(mapFocus)}</b>에 이어진 산업이에요. 둘레 산업을 누르거나 두 손가락으로 벌리면 그 산업으로, 빈 곳을 누르거나 오므리면 이전으로 가요.`
+      : "산업을 누르거나 두 손가락으로 벌리면 이어진 산업만 선으로 모아 보여 줘요."}</p>
     <div class="map-tools"><div class="period" role="group" aria-label="점 색">${colors}</div>
       <div class="period" role="group" aria-label="흐름 기간">${days}</div>
       <button type="button" class="map-all" data-mapall ${mapFocus ? "" : "hidden"}>‹ 전체 보기</button></div>
@@ -1574,8 +1574,8 @@ function setMapFocus(name, back = false) {
   svg.classList.toggle("focused", !!name);
   placeMap(svg, true);
   const sub = $("#map-sub");
-  if (sub) sub.innerHTML = name ? `<b>${esc(name)}</b>에 이어진 산업이에요. 둘레 산업을 누르면 그 산업으로, 빈 곳을 누르면 이전으로 가요.`
-    : "산업을 누르면 이어진 산업만 선으로 모아 보여 줘요.";
+  if (sub) sub.innerHTML = name ? `<b>${esc(name)}</b>에 이어진 산업이에요. 둘레 산업을 누르거나 두 손가락으로 벌리면 그 산업으로, 빈 곳을 누르거나 오므리면 이전으로 가요.`
+    : "산업을 누르거나 두 손가락으로 벌리면 이어진 산업만 선으로 모아 보여 줘요.";
   const all = $("[data-mapall]");
   if (all) all.hidden = !name;
   const old = $("#map-detail");
@@ -1597,6 +1597,72 @@ function bindMapDetail(el) {
   }));
   bindResults(el);
 }
+// 두 손가락 확대·축소: 벌리면 손가락 사이에 가장 가까운 산업으로 들어가 연관 산업만 모이고 나머지는 흐려져요.
+// 이미 들어가 있으면 둘레 산업 중 가까운 것으로 한 단계 더. 오므리면 이전으로 (빈 곳 누르기와 같아요).
+// 벌리는 동안 지도가 손가락을 따라 커지고, 손을 떼면 정해요. 노트북 터치패드(ctrl+휠)도 같아요.
+const PINCH_IN = 1.18, PINCH_OUT = 0.85;
+function mapPinchDone(svg, ratio, cx, cy) {
+  if (ratio >= PINCH_IN) {
+    // 화면 좌표 → 지도 좌표, 진한 산업 중 가장 가까운 것 (가운데 산업은 빼요: 그 산업 둘레로 더 들어가요)
+    const m = svg.getScreenCTM();
+    const pt = m ? new DOMPoint(cx, cy).matrixTransform(m.inverse()) : { x: MAP_W / 2, y: MAP_H / 2 };
+    let best = null, bd = Infinity;
+    IMAP.nodes.forEach((n, i) => {
+      const g = svg.querySelector(`[data-n="${i}"]`);
+      if (!g || g.classList.contains("dim") || n.name === mapFocus) return;
+      const d = Math.hypot(n.x - pt.x, n.y - pt.y);
+      if (d < bd) { bd = d; best = n.name; }
+    });
+    if (best) setMapFocus(best);
+  } else if (ratio <= PINCH_OUT && mapFocus) {
+    setMapFocus(mapTrail.pop() || "", true);
+  }
+}
+function bindMapPinch(svg) {
+  let start = null;  // { d, cx, cy }
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const zoom = (k, cx, cy) => {
+    if (k == null) { svg.style.transform = ""; svg.style.transformOrigin = ""; return; }
+    const r = svg.getBoundingClientRect();
+    svg.style.transformOrigin = `${cx - r.left}px ${cy - r.top}px`;
+    svg.style.transform = `scale(${Math.max(0.8, Math.min(1.4, k)).toFixed(3)})`;
+  };
+  let ratio = 1;
+  svg.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 2) return;
+    const t = e.touches;
+    start = { d: dist(t) || 1, cx: (t[0].clientX + t[1].clientX) / 2, cy: (t[0].clientY + t[1].clientY) / 2 };
+    ratio = 1;
+  }, { passive: true });
+  svg.addEventListener("touchmove", (e) => {
+    if (!start || e.touches.length !== 2) return;
+    e.preventDefault();  // 화면 전체 확대 대신 지도 확대
+    ratio = dist(e.touches) / start.d;
+    zoom(ratio, start.cx, start.cy);
+  }, { passive: false });
+  const end = (e) => {
+    if (!start || e.touches.length) return;
+    const s0 = start;
+    start = null;
+    zoom(null);
+    svg.dataset.pinched = "1";  // 손 뗄 때 생기는 클릭은 무시
+    setTimeout(() => { delete svg.dataset.pinched; }, 350);
+    mapPinchDone(svg, ratio, s0.cx, s0.cy);
+  };
+  svg.addEventListener("touchend", end);
+  svg.addEventListener("touchcancel", end);
+  // 노트북 터치패드 두 손가락 확대(ctrl+휠): 한 번에 한 단계씩
+  let wheelAt = 0;
+  svg.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const now = Date.now();
+    if (now - wheelAt < 500) return;
+    wheelAt = now;
+    mapPinchDone(svg, e.deltaY < 0 ? PINCH_IN : PINCH_OUT, e.clientX, e.clientY);
+  }, { passive: false });
+}
+
 function bindMap() {
   if (!IMAP) {
     loadMap().then(() => {
@@ -1611,6 +1677,7 @@ function bindMap() {
   placeMap(svg, false);
   svg.querySelectorAll("[data-n]").forEach((g) => {
     const pick = () => {
+      if (svg.dataset.pinched) return;
       const name = IMAP.nodes[Number(g.dataset.n)].name;
       if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (CSS로 터치를 안 받아요)
       setMapFocus(name === mapFocus ? "" : name);
@@ -1620,9 +1687,10 @@ function bindMap() {
   });
   // 빈 곳(또는 흐린 산업)을 누르면 이전 산업으로, 처음 고른 산업이었으면 전체 보기로
   svg.addEventListener("click", (e) => {
-    if (!mapFocus || e.target.closest("[data-n]:not(.dim)")) return;
+    if (svg.dataset.pinched || !mapFocus || e.target.closest("[data-n]:not(.dim)")) return;
     setMapFocus(mapTrail.pop() || "", true);
   });
+  bindMapPinch(svg);
   const all = $("[data-mapall]");
   if (all) all.addEventListener("click", () => setMapFocus(""));
   document.querySelectorAll("[data-mapdays]").forEach((b) => b.addEventListener("click", () => {
@@ -4125,6 +4193,7 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 $(".search-btn").addEventListener("click", () => go("search"));
+$(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
   if (screen === "map") { mapTrail = []; setMapFocus(""); window.scrollTo(0, 0); } else openMap("");
