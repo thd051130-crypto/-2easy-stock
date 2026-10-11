@@ -17,7 +17,7 @@ on:
 
 permissions:
   contents: write  # paper/kr/disclosures.json 저장
-  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
+  actions: write  # 고장 알림이 바로 전 실행 결과를 봐요, 새 공시가 있으면 pages 다시 올리기
 
 concurrency:
   group: disclosures
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 10
     env:
       DART_API_KEY: ${{ secrets.DART_API_KEY }}
@@ -41,6 +41,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python disclosures.py --days "${{ inputs.days || '1' }}"
       - name: commit
+        id: commit
         run: |
           [ -f paper/kr/disclosures.json ] || exit 0
           git config user.name "github-actions[bot]"
@@ -48,8 +49,14 @@ jobs:
           git add paper/kr/disclosures.json
           if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
           git commit -m "공시 기록 $(TZ=Asia/Seoul date '+%F %H:%M')"
-          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          for i in 1 2 3; do git pull --rebase && git push && echo "pushed=true" >> "$GITHUB_OUTPUT" && exit 0; sleep 5; done
           exit 1
+      # 봇 커밋은 push 이벤트를 안 일으켜서, 새 공시가 저장됐을 때만 앱(pages)을 직접 다시 올려요
+      - name: redeploy dashboard
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
       - name: 고장 알림
         if: failure()
         env:

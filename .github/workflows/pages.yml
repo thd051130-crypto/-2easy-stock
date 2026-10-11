@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 15
     environment:
       name: github-pages

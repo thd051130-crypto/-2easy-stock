@@ -127,6 +127,20 @@ def runs_since(repo, token, workflow, since):
         page += 1
 
 
+def workflow_age_days(repo, token, workflow, now):
+    """워크플로 파일이 main에 생긴 지 며칠 됐는지 (새로 생긴 작업은 한 주 몫을 다 채울 수 없어서)."""
+    created = gh_get(f"/repos/{repo}/actions/workflows/{workflow}.yml", token).get("created_at")
+    if not created:
+        return None
+    return (now - dt.datetime.fromisoformat(created.replace("Z", "+00:00"))).total_seconds() / 86400
+
+
+def never_started(repo, token, run):
+    """GitHub가 서버(러너)를 못 붙여서 한 단계도 못 돈 실행인지. 우리 코드 고장이 아니라 GitHub 쪽 사정이에요."""
+    jobs = gh_get(f"/repos/{repo}/actions/runs/{run['id']}/jobs", token).get("jobs", [])
+    return bool(jobs) and all(not j.get("steps") for j in jobs)
+
+
 def previous_failed(repo, token, workflow, run_id):
     """바로 전에 끝난 실행도 실패였는지 (같은 고장 알림을 15분마다 보내지 않으려고)."""
     data = gh_get(f"/repos/{repo}/actions/workflows/{workflow}.yml/runs", token, per_page=10, status="completed")
@@ -153,17 +167,27 @@ def failure_message(workflow, run_url, step=None, note=None):
     return "\n".join(lines)
 
 
-def summarize(runs_by_workflow, now):
-    """{워크플로: [실행]} → 주간 점검 결과 dict (health.json에 저장하는 모양)."""
+def summarize(runs_by_workflow, now, ages=None):
+    """{워크플로: [실행]} → 주간 점검 결과 dict (health.json에 저장하는 모양).
+
+    ages: {워크플로: 생긴 지 며칠} — 7일이 안 된 새 작업은 예정 횟수를 그만큼 줄여요.
+    실행 dict에 github_side=True가 있으면 GitHub가 서버를 못 붙여 못 돈 것이라 고장으로 세지 않아요.
+    """
     rows, ok_all = [], True
+    ages = ages or {}
     for wf, runs in runs_by_workflow.items():
         label, expected = WORKFLOWS.get(wf, (wf, None))
+        age = ages.get(wf)
+        if expected and age is not None and age < 7:
+            expected = int(expected * max(age, 0) / 7)  # 생긴 날부터 지난 날만큼만
         good = sum(r.get("conclusion") == "success" for r in runs)
-        failed = [r for r in runs if r.get("conclusion") == "failure"]
-        healthy = not failed and (expected is None or good >= expected)
+        failed = [r for r in runs if r.get("conclusion") == "failure" and not r.get("github_side")]
+        skipped = sum(bool(r.get("github_side")) for r in runs)
+        healthy = not failed and (not expected or good + skipped >= expected)
         ok_all &= healthy
-        rows.append(dict(workflow=wf, label=label, success=good, failure=len(failed), expected=expected,
-                         ok=healthy, last_failure=failed[0].get("created_at") if failed else None))
+        rows.append(dict(workflow=wf, label=label, success=good, failure=len(failed), expected=expected or None,
+                         github_skipped=skipped, ok=healthy,
+                         last_failure=failed[0].get("created_at") if failed else None))
     return dict(checked=now.isoformat(timespec="minutes"), ok=ok_all, workflows=rows)
 
 
@@ -173,7 +197,8 @@ def weekly_message(result):
         mark = "정상" if r["ok"] else "확인 필요"
         count = f"성공 {r['success']}회" + (f"/{r['expected']}회 예정" if r["expected"] else "")
         fail = f", 실패 {r['failure']}회" if r["failure"] else ""
-        lines.append(f"- {r['label']}: {count}{fail} → {mark}")
+        skip = f", GitHub 서버 사정으로 못 돈 것 {r['github_skipped']}회" if r.get("github_skipped") else ""
+        lines.append(f"- {r['label']}: {count}{fail}{skip} → {mark}")
     lines.append("전부 정상이에요." if result["ok"] else
                  "확인 필요 항목은 Actions(작업) 화면에서 빨간 X 표시 실행을 눌러 보면 돼요. 대개 야후·GitHub 쪽 일시 오류예요.")
     return "\n".join(lines)
@@ -208,7 +233,16 @@ def main():
     now = dt.datetime.now(dt.timezone.utc)
     since = now - dt.timedelta(days=7)
     runs = {wf: runs_since(repo, token, wf, since) for wf in WORKFLOWS}
-    result = summarize(runs, now.astimezone(KST))
+    ages = {}
+    for wf, wf_runs in runs.items():
+        try:
+            ages[wf] = workflow_age_days(repo, token, wf, now)
+            for r in wf_runs:
+                if r.get("conclusion") == "failure" and never_started(repo, token, r):
+                    r["github_side"] = True
+        except Exception as e:  # 못 알아내면 예전처럼 그대로 세요
+            print(f"{wf} 추가 확인 실패: {e!r}")
+    result = summarize(runs, now.astimezone(KST), ages)
     text = weekly_message(result)
     print(text)
     args.out.parent.mkdir(parents=True, exist_ok=True)
