@@ -2212,8 +2212,8 @@ function trendCard(d) {
 
 function candleLegend() {
   return `<div class="legend">
-      <span class="key"><i class="sw" style="background:var(--up)"></i>상승</span>
-      <span class="key"><i class="sw" style="background:var(--down)"></i>하락</span>
+      <span class="key"><i class="sw" style="background:var(--c-up)"></i>상승</span>
+      <span class="key"><i class="sw" style="background:var(--c-down)"></i>하락</span>
       ${IND.ma ? `<span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
       <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span>` : ""}
       ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>`;

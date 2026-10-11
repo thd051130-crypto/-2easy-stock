@@ -17,6 +17,9 @@
   /* 한국식: 오르면 빨강, 내리면 파랑 (항상 +/- 기호와 같이 써요) */
   --up: #d03b3a;
   --down: #2a6cc4;
+  /* 캔들·거래량 막대 색 (어두운 화면에선 같은 빨강·파랑을 채도만 낮춰서 눈이 덜 부시게) */
+  --c-up: var(--up);
+  --c-down: var(--down);
   --good-bg: #e3f4ea;
   --good-fg: #146c3a;
   --wait-bg: #fbefd9;
@@ -45,6 +48,8 @@
     --rsi: #f07e46;
     --up: #ff6b6a;
     --down: #6aa6f2;
+    --c-up: hsl(0 42% 58%);
+    --c-down: hsl(213 40% 58%);
     --good-bg: #173a26;
     --good-fg: #8fe0b0;
     --wait-bg: #3d2f12;
@@ -60,7 +65,7 @@
   --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #9a998f;
   --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ma50: #eda100; --ma200: #199e70;
   --bb: #a58cff; --rsi: #f07e46;
-  --up: #ff6b6a; --down: #6aa6f2; --good-bg: #173a26; --good-fg: #8fe0b0; --wait-bg: #3d2f12; --wait-fg: #f2c46b;
+  --up: #ff6b6a; --down: #6aa6f2; --c-up: hsl(0 42% 58%); --c-down: hsl(213 40% 58%); --good-bg: #173a26; --good-fg: #8fe0b0; --wait-bg: #3d2f12; --wait-fg: #f2c46b;
   --accent: #3987e5; --accent-bg: #1b2a3d; --accent-fg: #8ab8f5;
 }
 
@@ -237,8 +242,8 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart.candle.scrubbing { cursor: crosshair; }
 .chart.candle.scrubbing .cross { stroke: var(--text-secondary); }
 .chart .wick { stroke-width: 1; }
-.chart .wick.up, .chart .body.up { stroke: var(--up); fill: var(--up); }
-.chart .wick.down, .chart .body.down { stroke: var(--down); fill: var(--down); }
+.chart .wick.up, .chart .body.up { stroke: var(--c-up); fill: var(--c-up); }
+.chart .wick.down, .chart .body.down { stroke: var(--c-down); fill: var(--c-down); }
 .chart .wick.flat, .chart .body.flat { stroke: var(--text-muted); fill: var(--text-muted); }
 .chart .ma { fill: none; stroke-width: 1.5; }
 .chart .ma50 { stroke: var(--ma50); }
@@ -247,8 +252,8 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart text.mark-text { fill: var(--text-primary); font-weight: 600; }
 .chart text.mark-text tspan.mark-diff.up { fill: var(--up); } .chart text.mark-text tspan.mark-diff.down { fill: var(--down); }
 .chart .now { stroke-width: 1; stroke-dasharray: 2 3; }
-.chart .now.up { stroke: var(--up); } .chart .now.down { stroke: var(--down); }
-.chart .tag.up { fill: var(--up); } .chart .tag.down { fill: var(--down); }
+.chart .now.up { stroke: var(--c-up); } .chart .now.down { stroke: var(--c-down); }
+.chart .tag.up { fill: var(--c-up); } .chart .tag.down { fill: var(--c-down); }
 .chart text.tag-text { fill: #fff; font-weight: 700; }
 
 /* 보조지표 버튼과 그림 */
@@ -263,7 +268,7 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart .bb-mid { stroke-dasharray: 4 3; }
 .chart .bb-fill { fill: var(--bb); opacity: .1; stroke: none; }
 .chart .vol { opacity: .55; }
-.chart .vol.up { fill: var(--up); } .chart .vol.down { fill: var(--down); } .chart .vol.flat { fill: var(--text-muted); }
+.chart .vol.up { fill: var(--c-up); } .chart .vol.down { fill: var(--c-down); } .chart .vol.flat { fill: var(--text-muted); }
 .chart .vol-ma { fill: none; stroke: var(--text-secondary); stroke-width: 1.2; }
 .chart .rsi { fill: none; stroke: var(--rsi); stroke-width: 1.5; }
 .chart .guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
