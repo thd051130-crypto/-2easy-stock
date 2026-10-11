@@ -1,0 +1,87 @@
+{
+ "checked": "2026-10-11T10:15+09:00",
+ "ok": false,
+ "workflows": [
+  {
+   "workflow": "swing-signals",
+   "label": "매매 신호·가상매매",
+   "success": 11,
+   "failure": 0,
+   "expected": 10,
+   "ok": true,
+   "last_failure": null
+  },
+  {
+   "workflow": "telegram-bot",
+   "label": "텔레그램 봇",
+   "success": 466,
+   "failure": 7,
+   "expected": null,
+   "ok": false,
+   "last_failure": "2026-10-05T20:52:03Z"
+  },
+  {
+   "workflow": "learner",
+   "label": "학습팀",
+   "success": 6,
+   "failure": 1,
+   "expected": 7,
+   "ok": false,
+   "last_failure": "2026-10-05T20:03:32Z"
+  },
+  {
+   "workflow": "pages",
+   "label": "대시보드 배포",
+   "success": 54,
+   "failure": 1,
+   "expected": null,
+   "ok": false,
+   "last_failure": "2026-10-04T13:27:19Z"
+  },
+  {
+   "workflow": "fundamentals",
+   "label": "재무·종목 목록",
+   "success": 2,
+   "failure": 0,
+   "expected": 1,
+   "ok": true,
+   "last_failure": null
+  },
+  {
+   "workflow": "macro",
+   "label": "경기 리포트",
+   "success": 3,
+   "failure": 0,
+   "expected": 5,
+   "ok": false,
+   "last_failure": null
+  },
+  {
+   "workflow": "world",
+   "label": "세계 지수·환율",
+   "success": 4,
+   "failure": 0,
+   "expected": 5,
+   "ok": false,
+   "last_failure": null
+  },
+  {
+   "workflow": "all-stocks",
+   "label": "전 종목 차트",
+   "success": 3,
+   "failure": 0,
+   "expected": 10,
+   "ok": false,
+   "last_failure": null
+  },
+  {
+   "workflow": "disclosures",
+   "label": "공시 알림",
+   "success": 8,
+   "failure": 0,
+   "expected": null,
+   "ok": true,
+   "last_failure": null
+  }
+ ]
+}
