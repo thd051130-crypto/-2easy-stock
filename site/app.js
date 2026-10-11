@@ -2400,6 +2400,20 @@ const savWon = (x) => {
   if (a >= 1e8) { const man = Math.round((a % 1e8) / 1e4); return `${s}${Math.floor(a / 1e8)}억${man ? ` ${man.toLocaleString("ko-KR")}만` : ""}원`; }
   return `${s}${Math.round(a / 1e4).toLocaleString("ko-KR")}만원`;
 };
+// 지금 가격이면 매달 넣는 돈(처음 넣는 돈)으로 몇 주 사는지. 미장은 환율로 원화를 달러로 바꿔요.
+function savShares(p, o) {
+  if (!p.m || !p.code) return "";
+  const q = QUOTES[p.m] && QUOTES[p.m].q[p.code];
+  const dash = DATA.markets[p.m] && stocksOf(DATA.markets[p.m]).find((x) => x.code === p.code);
+  const px = (q && q[0]) || (dash && dash.close);
+  if (!px) return "";
+  const fx = p.m === "us" ? (DATA.total && DATA.total.fx) || (DATA.markets.us.signal && DATA.markets.us.signal.usdkrw) || 1350 : 1;
+  const n = (won) => { const v = won / fx / px; return v < 0.1 ? "0.1주 미만" : `${v.toFixed(1)}주`; };
+  const parts = [`지금 ${price(p.m, px)}`];
+  if (o.monthly) parts.push(`매달 ${savWon(o.monthly)} ≈ ${n(o.monthly)}`);
+  if (o.start) parts.push(`처음 ${savWon(o.start)} ≈ ${n(o.start)}`);
+  return `<div class="meta">${parts.join(" · ")}${p.m === "us" ? ` (환율 ${num(fx)}원)` : ""}</div>`;
+}
 let savQuery = "";
 // 고른 종목 (× 로 빼요)
 function savPicked() {
@@ -2479,7 +2493,7 @@ function savOut() {
       ${bar}
       <div class="meta">${[r.divs > 0 ? `배당·이자 ${savWon(r.divs)}` : "배당 없음", cash.slice(3), r.tax > 0 ? `세금 ${savWon(r.tax)}` : "",
         p.fee ? `${term("총보수")} 연 ${p.fee}%` : ""].filter(Boolean).join(" · ")}</div>
-      <div class="meta">${esc(p.note)}</div>${worst}</li>`;
+      ${savShares(p, o)}<div class="meta">${esc(p.note)}</div>${worst}</li>`;
   }).join("");
   return `<div class="sav-hero"><div><small>넣은 돈 (${SAV.years}년)</small><b>${savWon(paid)}</b></div>
       <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 최고</small><b class="${sign(Math.max(...list.map((x) => x.r.after)) - paid)}">${savWon(Math.max(...list.map((x) => x.r.after)))}</b></div></div>
@@ -2630,6 +2644,8 @@ function bindSavings() {
   drawSavings();
   // 종목 목록·수익률 파일은 처음 열 때 받아요
   if (!RET.kr || !SYM.kr || !SYM.us) Promise.all([loadSymbols(), loadReturns()]).then(() => { if (card.isConnected) { redrawPicks(); refresh(); } });
+  // 몇 주인지 보려면 지금 가격이 필요해요 (전 종목 종가 _quotes.json)
+  if (!QUOTES.kr || !QUOTES.us) Promise.all([loadQuotes("kr"), loadQuotes("us")]).then(() => { if (card.isConnected) refresh(); });
 }
 
 // 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).
