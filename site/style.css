@@ -469,12 +469,14 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .heat-box { position: relative; width: 100%; aspect-ratio: 1; container-type: inline-size; border-radius: 10px; overflow: hidden; background: var(--surface-1); }
 .heat-grp { position: absolute; box-sizing: border-box; border: 1.5px solid var(--surface-1); overflow: hidden; }
 .heat-grp .heat-head { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 4px;
-  padding: 0 3px; font-size: 2.7cqw; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+  padding: 0 3px; font-size: 2.6cqw; font-weight: 500; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.heat-grp .heat-head b { font-weight: 500; }
 .heat-grp .heat-head span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .heat-tile { position: absolute; box-sizing: border-box; border: 1px solid var(--surface-1); border-radius: 3px; padding: 0.4cqw 0.8cqw; margin: 0; font-family: inherit; text-align: left; cursor: pointer;
   display: flex; flex-direction: column; justify-content: center; color: var(--text-primary); min-width: 0; overflow: hidden; line-height: 1.15; }
+.heat-tile { font-weight: 300; letter-spacing: -0.01em; }
 .heat-tile span { font-size: 1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.heat-tile b { font-size: 0.95em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.heat-tile b { font-size: 0.92em; font-weight: 400; opacity: .9; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
 .heat-tile.strong { color: #fff; }
 
 /* 비교 차트 */

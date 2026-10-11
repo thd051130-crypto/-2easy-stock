@@ -2943,7 +2943,7 @@ function heatmapCard(d) {
     const flat = r == null || Math.abs(r) < 0.0005;
     const bg = flat ? "var(--surface-0)" : `color-mix(in srgb, var(${r > 0 ? "--up" : "--down"}) ${mix}%, var(--surface-0))`;
     const aw = (w * gw) / 100, ah = (h * gh) / 100;  // 전체 네모 기준 크기(%)
-    const fs = Math.max(2.1, Math.min(4.2, Math.sqrt(aw * ah) / 4.2, aw / 3.4));  // 좁은 칸은 글자도 작게
+    const fs = Math.max(2.1, Math.min(3.6, Math.sqrt(aw * ah) / 4.6, aw / 3.6));  // 좁은 칸은 글자도 작게
     const fit = aw >= 7 && ah >= 4.5, two = fit && ah >= fs * 2.6;
     return `<button type="button" class="heat-tile${!flat && mix > 55 ? " strong" : ""}" style="left:${P(x)};top:${P(y)};width:${P(w)};height:${P(h)};background:${bg};font-size:${fs.toFixed(2)}cqw"
       data-stock="${esc(s.code)}" aria-label="${esc(s.name)} ${r == null ? "자료 없음" : pct(r)}">${fit ? `<span>${esc(s.name)}</span>` : ""}${two ? `<b>${r == null ? "-" : pct(r)}</b>` : ""}</button>`;
