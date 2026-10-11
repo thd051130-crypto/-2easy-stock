@@ -1179,14 +1179,14 @@ function bindResults(el) {
 }
 
 // ---------------------------------------------------------------- 산업 지도 (industry_map.py → industry.json)
-// 산업 36개를 점으로, 서로 이어진 산업을 선으로. 산업을 누르면 그 산업이 가운데로 오고 연결된 산업만 둘레에 모여요.
+// 산업 44개를 점으로, 서로 이어진 산업을 선으로. 산업을 누르면 그 산업이 가운데로 오고 연결된 산업만 둘레에 모여요.
 let IMAP = null;  // { groups, kinds, nodes, links, flows?, corr?, hidden?, day? }
 let imapLoading = null;
 let mapFocus = mapStart;
 let mapColor = "group";
 try { mapColor = localStorage.getItem("map_color") === "flow" ? "flow" : "group"; } catch (e) { /* 기본값 */ }
-const MAP_W = 360, MAP_H = 470;
-const MAP_ANCHOR = { tech: [92, 80], energy: [270, 100], industry: [180, 238], consumer: [96, 380], finance: [272, 392] };
+const MAP_W = 360, MAP_H = 560;  // 산업 44개라 세로를 늘렸어요 (36개 땐 470)
+const MAP_ANCHOR = { tech: [92, 92], energy: [270, 112], industry: [180, 282], consumer: [96, 452], finance: [272, 466] };
 const MAP_KIND = { s: "공급망", c: "같은 요인", n: "반대", h: "주가로 찾음" };
 function loadMap() {
   if (!imapLoading) {
