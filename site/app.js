@@ -3745,7 +3745,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     const vsNow = (price) => last / price - 1;  // 최고 대비는 0 또는 마이너스, 최저 대비는 0 또는 플러스
     // 최고·최저 표시 (캔들 옆에 가격 + 지금 값이 얼마나 떨어져 있는지). 글자 길이를 어림해서 오른쪽 가격 축을 덮지 않는 쪽에 써요.
     const mark = (i, price, label, above) => {
-      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`, diff = pct(vsNow(price)), tail = `지금 ${diff}`;
+      const text = `${label} ${fmt(price)} (${frameLabel(c, i, "short")})`, diff = pct(vsNow(price)), tail = diff;
       const w = [...`${text} ${tail}`].reduce((sum, ch) => sum + (/[가-힣]/.test(ch) ? 11 : 6.5), 0);
       const x = X(i), y = Y(price), right = x + 6 + w <= pad.l + iw || x - 6 - w < pad.l;
       const tx = right ? x + 6 : x - 6, ty = above ? y - 6 : y + 14;
@@ -3842,7 +3842,7 @@ function hiLoLine(hi, lo, now, fmt) {
     const d = now - p, r = now / p - 1;
     return `<span class="${sign(r)}">${d > 0 ? "+" : d < 0 ? "-" : ""}${esc(fmt(Math.abs(d)))} (${pct(r)})</span>`;
   };
-  return `<span class="nowrap">최고 ${esc(fmt(hi))} 대비 지금 ${gap(hi)}</span> · <span class="nowrap">최저 ${esc(fmt(lo))} 대비 지금 ${gap(lo)}</span>`;
+  return `<span class="nowrap">최고 ${esc(fmt(hi))} 대비 ${gap(hi)}</span> · <span class="nowrap">최저 ${esc(fmt(lo))} 대비 ${gap(lo)}</span>`;
 }
 
 // 차트 손가락·마우스 조작 (캔들 차트·비교 차트 같이): 옆으로 밀기, 두 손가락 확대·축소, 누르면 세부정보,
