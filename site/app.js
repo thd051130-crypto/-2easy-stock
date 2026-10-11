@@ -361,6 +361,7 @@ function render() {
   const app = $("#app");
   app.classList.remove(...FX);
   app.innerHTML = VIEWS[screen](d).join("");
+  foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") {
@@ -2952,7 +2953,10 @@ function bindSavings() {
       const k = p.dataset.savP, at = SAV.picks.indexOf(k);
       if (at >= 0) SAV.picks.splice(at, 1); else SAV.picks.push(k);
     } else return;
+    // 위에 고른 종목 줄이 늘거나 줄어도 누른 버튼(검색창 아래)이 제자리에 있게 화면을 맞춰요
+    const q = $("#sav-q"), top = q && q.getBoundingClientRect().top;
     redrawPicks(); refresh();
+    if (q) window.scrollBy(0, q.getBoundingClientRect().top - top);
   });
   const q = $("#sav-q");
   if (q) q.addEventListener("input", () => { savQuery = q.value; const b = $("#sav-res"); if (b) b.innerHTML = savResults(); });
