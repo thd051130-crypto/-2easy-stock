@@ -334,8 +334,8 @@ const VIEWS = {
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
   perf: (d) => [trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
-    firstAccountCard(d), savingsCard(),
-    rulebookAccountCard(d), memoCard(), healthCard()],
+    savingsCard(),
+    rulebookAccountCard(d), memoCard(), healthCard(), firstAccountCard(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
   stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
@@ -363,6 +363,8 @@ function render() {
   if (screen === "perf") {
     drawTrack(d); drawEquity(d); bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
     if (!RET[market]) loadReturns().then(() => { if (screen === "perf") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
+    const fc = $("#first-card details");
+    if (fc) fc.addEventListener("toggle", () => { FIRST_OPEN = fc.open; });
     app.querySelectorAll("[data-first]").forEach((b) => b.addEventListener("click", () => {
       FIRST_DONE[b.dataset.first] = !FIRST_DONE[b.dataset.first];
       try { localStorage.setItem("first_steps", JSON.stringify(FIRST_DONE)); } catch (e) { /* 이번만 */ }
@@ -2642,6 +2644,7 @@ const FIRST_STEPS = [
   ["never", "안 하기로 약속하기", "레버리지·인버스, 신용·미수, 유료 리딩방, 한 종목 몰빵은 하지 않아요. 낙폭을 작게가 우리 원칙이에요."],
 ];
 let FIRST_DONE = {};
+let FIRST_OPEN = false;  // 실전 전엔 쓸 데가 없어 맨 아래에 접어 둬요. 펼치면 앱을 닫기 전까지 펼친 채로.
 try { FIRST_DONE = JSON.parse(localStorage.getItem("first_steps") || "{}"); } catch (e) { /* 처음 */ }
 function firstAccountCard(d) {
   if (market !== "kr" && market !== "us") return "";
@@ -2652,11 +2655,11 @@ function firstAccountCard(d) {
   const rows = FIRST_STEPS.map(([key, title, why], i) => `<li><button type="button" class="step${done(key) ? " on" : ""}" data-first="${key}"
       aria-pressed="${done(key)}"${key === "auto" ? " disabled" : ""}><span class="box" aria-hidden="true">${done(key) ? "✓" : i + 1}</span>
       <span class="l"><span class="name">${esc(title)}</span><span class="meta">${esc(why)}</span></span></button></li>`).join("");
-  return `<section class="card" id="first-card"><h2>실전 첫 계좌 체크리스트 <small>${n}/${FIRST_STEPS.length}</small></h2>
-    <div class="bar" aria-hidden="true"><i style="width:${Math.round((n / FIRST_STEPS.length) * 100)}%"></i></div>
+  return `<section class="card" id="first-card"><details${FIRST_OPEN ? " open" : ""}><summary>실전 첫 계좌 체크리스트 ${n}/${FIRST_STEPS.length} <small class="muted">(아직은 접어 둬요)</small></summary>
+    <div class="bar" style="margin-top:10px" aria-hidden="true"><i style="width:${Math.round((n / FIRST_STEPS.length) * 100)}%"></i></div>
     <ul class="list steps">${rows}</ul>
     <p class="muted note" style="margin:10px 0 0">체크는 이 폰 브라우저에만 저장돼요. 계좌 개설 조건·세금 혜택은 바뀔 수 있어서 만들 때 증권사 안내를 꼭 확인하세요.
-      복무 중이면 장병내일준비적금 같은 정부 매칭 적금이 예금 중에선 가장 유리할 수 있어요.</p></section>`;
+      복무 중이면 장병내일준비적금 같은 정부 매칭 적금이 예금 중에선 가장 유리할 수 있어요.</p></details></section>`;
 }
 
 function readinessCard(d) {
