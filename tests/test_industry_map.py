@@ -52,3 +52,11 @@ def test_yahoo_symbol():
     assert im.yahoo_symbol("kr", "247540", "KQ") == "247540.KQ"
     assert im.yahoo_symbol("kr", "005930", "KS") == "005930.KS"
     assert im.yahoo_symbol("us", "BRK.B") == "BRK-B"
+
+
+def test_minor_themes_are_real_nodes():
+    names = {t["name"] for t in themes.THEMES}
+    assert im.MINOR <= names
+    nodes = {n["name"]: n for n in im.static_map()["nodes"]}
+    assert nodes["희토류·핵심광물"].get("minor") is True
+    assert "minor" not in nodes["조선"]

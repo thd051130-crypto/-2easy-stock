@@ -51,6 +51,10 @@ SHORT = {"AI반도체·HBM": "AI반도체", "반도체 장비·소재": "반도�
          "광통신·네트워크": "광통신", "PCB·유리기판": "PCB·기판", "스마트폰·IT부품": "스마트폰", "희토류·핵심광물": "희토류",
          "지주사·밸류업": "지주사", "핀테크·결제": "핀테크", "디지털헬스·의료AI": "의료AI"}
 
+# 큰 틀(주요 산업)에서 벗어난 세부 테마: 지도에서 점을 작게, 글자를 흐리게 그려요. 누르면 똑같이 연결을 보여 줘요
+MINOR = {"광통신·네트워크", "PCB·유리기판", "스마트폰·IT부품", "희토류·핵심광물", "드론·UAM", "지주사·밸류업", "핀테크·결제",
+         "디지털헬스·의료AI"}
+
 # 연결 종류: s 공급망·수요 (앞 → 뒤: 앞 산업이 뒤 산업에 들어가요), c 같은 요인, n 반대
 KINDS = {"s": "공급망·수요", "c": "같은 요인", "n": "반대"}
 
@@ -160,7 +164,8 @@ def static_map():
     for gid, gname, names in GROUPS:
         for n in names:
             t = by_name[n]
-            nodes.append(dict(name=n, short=SHORT.get(n, n), group=gid, why=t["why"], q=t["keys"].split()[0]))
+            nodes.append(dict(name=n, short=SHORT.get(n, n), group=gid, why=t["why"], q=t["keys"].split()[0],
+                              **({"minor": True} if n in MINOR else {})))
     links = [dict(a=a, b=b, kind=k, why=w) for a, b, k, w in LINKS]
     return dict(groups=[dict(id=g, name=n) for g, n, _ in GROUPS], kinds=KINDS, nodes=nodes, links=links)
 
