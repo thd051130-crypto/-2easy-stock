@@ -2521,10 +2521,8 @@ function savShares(p, o, r) {
   const parts = [`${day ? `${md(day)} 종가` : "지금"} ${price(p.m, px)}`];
   if (o.monthly) parts.push(`매달 ${savWon(o.monthly)} ≈ ${n(o.monthly)}`);
   if (o.start) parts.push(`처음 ${savWon(o.start)} ≈ ${n(o.start)}`);
-  // 끝에 모인 주식 수: 주가가 위 가정(연 p.price%)대로 오른다고 치고, 그때 주식 평가액(배당 현금 빼고)을 그때 1주 가격으로 나눠요.
-  const pxEnd = px * Math.pow(1 + p.price / 100, o.years);
-  const held = (r.bal - r.cash) / fx / pxEnd;
-  const total = `<div class="meta"><b>${o.years}년 뒤 모인 주식 약 ${cnt(held)}</b> · 그때 1주 ${price(p.m, pxEnd)} 가정</div>`;
+  // 총 몇 주인지: 넣은 돈 전부와 끝 금액을 지금 주가로 나눠요 (미래 주가는 가정하지 않아요).
+  const total = `<div class="meta"><b>넣은 돈 ${savWon(r.paid)} ≈ ${n(r.paid)} · ${o.years}년 뒤 ${savWon(r.after)} ≈ ${n(r.after)}</b> (지금 주가로)</div>`;
   return `<div class="meta">${parts.join(" · ")}${p.m === "us" ? ` (환율 ${num(fx)}원)` : ""}</div>${total}`;
 }
 let savQuery = "";
