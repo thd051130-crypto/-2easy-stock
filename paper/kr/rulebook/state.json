@@ -2,41 +2,128 @@
   "version": 2,
   "market": "kr",
   "capital": 10000000,
-  "cash": 10000000,
-  "equity": 10000000,
+  "cash": 7000000.0,
+  "equity": 9926945.957494516,
   "start": "2026-10-08",
   "index_start": 6625.93017578125,
-  "last_day": "2026-10-08",
-  "positions": [],
-  "orders": [
+  "last_day": "2026-10-12",
+  "positions": [
     {
-      "side": "buy",
       "code": "066570",
       "name": "LG전자",
-      "kind": "new"
+      "qty": 2.9905748296026533,
+      "cost": 600000.0,
+      "buy_price": 200500.00000000003,
+      "raw": 599610.253335332,
+      "slot": 2000000.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-12",
+      "last_buy": 200500.0,
+      "last_price": 184700.0
     },
     {
-      "side": "buy",
       "code": "005930",
       "name": "삼성전자",
-      "kind": "new"
+      "qty": 2.3061932820589695,
+      "cost": 600000.0,
+      "buy_price": 260000.0,
+      "raw": 599610.253335332,
+      "slot": 2000000.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-12",
+      "last_buy": 260000.0,
+      "last_price": 250500.0
     },
     {
-      "side": "buy",
       "code": "033780",
       "name": "KT&G",
-      "kind": "new"
+      "qty": 3.38762854991713,
+      "cost": 600000.0,
+      "buy_price": 177000.0,
+      "raw": 599610.253335332,
+      "slot": 2000000.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-12",
+      "last_buy": 177000.0,
+      "last_price": 180200.0
     },
     {
-      "side": "buy",
       "code": "009150",
       "name": "삼성전기",
-      "kind": "new"
+      "qty": 0.38659590801762217,
+      "cost": 600000.0,
+      "buy_price": 1551000.0000000002,
+      "raw": 599610.253335332,
+      "slot": 2000000.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-12",
+      "last_buy": 1551000.0,
+      "last_price": 1487000.0
+    },
+    {
+      "code": "021240",
+      "name": "코웨이",
+      "qty": 5.9781680292655235,
+      "cost": 600000.0,
+      "buy_price": 100300.0,
+      "raw": 599610.253335332,
+      "slot": 2000000.0,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-12",
+      "last_buy": 100300.0,
+      "last_price": 102300.0
+    }
+  ],
+  "orders": [
+    {
+      "side": "sell",
+      "code": "066570",
+      "frac": 1.0,
+      "reason": "손절 (평균가 -2% 아래)",
+      "tp": 0
+    },
+    {
+      "side": "sell",
+      "code": "005930",
+      "frac": 1.0,
+      "reason": "손절 (평균가 -2% 아래)",
+      "tp": 0
+    },
+    {
+      "side": "sell",
+      "code": "033780",
+      "frac": 0.3,
+      "reason": "익절 +1%",
+      "tp": 1
+    },
+    {
+      "side": "sell",
+      "code": "009150",
+      "frac": 1.0,
+      "reason": "손절 (평균가 -2% 아래)",
+      "tp": 0
+    },
+    {
+      "side": "sell",
+      "code": "021240",
+      "frac": 0.3,
+      "reason": "익절 +1%",
+      "tp": 1
     },
     {
       "side": "buy",
-      "code": "021240",
-      "name": "코웨이",
+      "code": "006400",
+      "name": "삼성SDI",
       "kind": "new"
     }
   ],
@@ -44,7 +131,7 @@
   "halt_week": null,
   "halt_month": null,
   "week": {
-    "key": "2026-W41",
+    "key": "2026-W42",
     "base": 10000000
   },
   "month": {
@@ -53,25 +140,30 @@
   },
   "pending_buys": [
     {
+      "code": "006400",
+      "name": "삼성SDI"
+    }
+  ],
+  "pending_sells": [
+    {
       "code": "066570",
-      "name": "LG전자"
+      "reason": "손절 (평균가 -2% 아래)"
     },
     {
       "code": "005930",
-      "name": "삼성전자"
+      "reason": "손절 (평균가 -2% 아래)"
     },
     {
       "code": "033780",
-      "name": "KT&G"
+      "reason": "익절 +1%"
     },
     {
       "code": "009150",
-      "name": "삼성전기"
+      "reason": "손절 (평균가 -2% 아래)"
     },
     {
       "code": "021240",
-      "name": "코웨이"
+      "reason": "익절 +1%"
     }
-  ],
-  "pending_sells": []
+  ]
 }
