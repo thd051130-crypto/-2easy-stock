@@ -2,11 +2,11 @@
   "version": 2,
   "market": "us",
   "capital": 7470,
-  "cash": 5229.000000000001,
-  "equity": 7499.2075957299485,
+  "cash": 5605.695635819048,
+  "equity": 7523.762130632164,
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
-  "last_day": "2026-10-09",
+  "last_day": "2026-10-12",
   "positions": [
     {
       "code": "MDT",
@@ -18,73 +18,80 @@
       "slot": 1494.0,
       "tranches": 1,
       "tp": 0,
-      "days": 0,
+      "days": 1,
       "buy_date": "2026-10-09",
       "last_buy": 88.48999786376953,
-      "last_price": 88.4800033569336
+      "last_price": 91.93000030517578
     },
     {
       "code": "DIS",
       "name": "디즈니",
-      "qty": 4.167687153957162,
-      "cost": 448.2,
-      "buy_price": 107.22000122070312,
-      "raw": 446.8594217347956,
+      "qty": 8.309108983572429,
+      "cost": 896.4,
+      "buy_price": 107.55892662336278,
+      "raw": 893.7188434695913,
       "slot": 1494.0,
-      "tranches": 1,
+      "tranches": 2,
       "tp": 0,
-      "days": 0,
+      "days": 1,
       "buy_date": "2026-10-09",
-      "last_buy": 107.22000122070312,
-      "last_price": 108.0500030517578
+      "last_buy": 107.9000015258789,
+      "last_price": 108.48999786376952
     },
     {
       "code": "LLY",
       "name": "일라이릴리",
-      "qty": 0.3873742146373728,
-      "cost": 448.2,
+      "qty": 0.15494968585494914,
+      "cost": 179.28000000000003,
       "buy_price": 1153.56005859375,
       "raw": 446.85942173479566,
       "slot": 1494.0,
       "tranches": 1,
-      "tp": 0,
-      "days": 0,
+      "tp": 2,
+      "days": 1,
       "buy_date": "2026-10-09",
       "last_buy": 1153.56005859375,
-      "last_price": 1179.27001953125
+      "last_price": 1182.6199951171875
     },
     {
       "code": "PFE",
       "name": "화이자",
-      "qty": 16.18469438089251,
-      "cost": 448.2,
+      "qty": 6.473877752357003,
+      "cost": 179.28000000000003,
       "buy_price": 27.61000061035156,
       "raw": 446.8594217347956,
       "slot": 1494.0,
       "tranches": 1,
-      "tp": 0,
-      "days": 0,
+      "tp": 2,
+      "days": 1,
       "buy_date": "2026-10-09",
       "last_buy": 27.61000061035156,
-      "last_price": 28.280000686645508
+      "last_price": 28.399999618530277
     },
     {
       "code": "MA",
       "name": "마스터카드",
-      "qty": 0.7783515931379532,
-      "cost": 448.2,
+      "qty": 0.3113406372551813,
+      "cost": 179.28000000000003,
       "buy_price": 574.1099853515625,
       "raw": 446.85942173479566,
       "slot": 1494.0,
       "tranches": 1,
-      "tp": 0,
-      "days": 0,
+      "tp": 2,
+      "days": 1,
       "buy_date": "2026-10-09",
       "last_buy": 574.1099853515625,
-      "last_price": 589.1400146484375
+      "last_price": 595.0900268554688
     }
   ],
   "orders": [
+    {
+      "side": "sell",
+      "code": "MDT",
+      "frac": 1.0,
+      "reason": "익절 +3%",
+      "tp": 3
+    },
     {
       "side": "buy",
       "code": "DIS",
@@ -93,32 +100,24 @@
     },
     {
       "side": "sell",
-      "code": "LLY",
-      "frac": 0.6,
-      "reason": "익절 +2%",
-      "tp": 2
-    },
-    {
-      "side": "sell",
-      "code": "PFE",
-      "frac": 0.6,
-      "reason": "익절 +2%",
-      "tp": 2
-    },
-    {
-      "side": "sell",
       "code": "MA",
-      "frac": 0.6,
-      "reason": "익절 +2%",
-      "tp": 2
+      "frac": 1.0,
+      "reason": "익절 +3%",
+      "tp": 3
+    },
+    {
+      "side": "buy",
+      "code": "UNH",
+      "name": "유나이티드헬스",
+      "kind": "new"
     }
   ],
   "halt_next": false,
   "halt_week": null,
   "halt_month": null,
   "week": {
-    "key": "2026-W41",
-    "base": 7470
+    "key": "2026-W42",
+    "base": 7499.2075957299485
   },
   "month": {
     "key": "2026-10",
@@ -128,20 +127,20 @@
     {
       "code": "DIS",
       "name": "디즈니"
+    },
+    {
+      "code": "UNH",
+      "name": "유나이티드헬스"
     }
   ],
   "pending_sells": [
     {
-      "code": "LLY",
-      "reason": "익절 +2%"
-    },
-    {
-      "code": "PFE",
-      "reason": "익절 +2%"
+      "code": "MDT",
+      "reason": "익절 +3%"
     },
     {
       "code": "MA",
-      "reason": "익절 +2%"
+      "reason": "익절 +3%"
     }
   ]
 }
