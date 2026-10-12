@@ -1,32 +1,32 @@
 {
- "day": "2026-10-12",
+ "day": "2026-10-13",
  "items": {
   "us-fed": [
    {
-    "title": "미국 증시 선물 하락, 높아진 금리와 연준 동결 기대감 저울질",
-    "source": "Investing.com 한국어",
-    "date": "2026-10-05",
-    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE80ZV9KZFlfUF9zdVJTVXdocmR1M1dHM3RjcW9tRlBJdmxEMUVLQUU4VXNzSld2WV9jMmhWYnJpNUdyRl9waFBOcjhtLUpsV1NxN3hjX2lFZFlwSmdaUlpDaHRIdjgydTlvUmYyc1ZMZjI?oc=5"
+    "title": "美, 2연속 금리 인상? 연준 인사들은 신중론",
+    "source": "조선일보",
+    "date": "2026-10-09",
+    "link": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxQN1NJNGhKZzQyQWhENGhjNzZVTDRsYlN6QkdITml5U09MRjRNcnpQcmttOG9ZNVd3MVJQN3U2UU5JVnF0SVVFNnp1X3dyLVZGSGFNQU91bWxNWlJ1ZTVfZHI5T0Q5S3hsUmIzTXdLV3pJTEtidVNnazMyMmFLaUMwRW1xcFJkVWF0UmlZ?oc=5"
    },
    {
-    "title": "Fed's Waller: More hikes needed, but there is 'flexibility' about the pace",
+    "title": "Fed policymakers divided over rate-hike logic in September, minutes show",
     "source": "Reuters",
-    "date": "2026-10-08",
-    "link": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNVlJjTS1oeE1aRmVEcC05dTZkd25ONVRidzJkTlozaEE3Q0tvQ2hPd0dYemMxNWUzTUZORnFfb0FWZUdDOVp3QUVwelQ5cjJzcV9oMl9mZmpCTnJOaGh6XzZXLXlxOWJBUVhTX05oOVhwS2hhZG1WbmppWlRRRGNDOGZneGNneTRiLXBhVHd1Z3FGc1JaZC14Qm14SVRlYi1Cd3MxSjVR?oc=5"
+    "date": "2026-10-07",
+    "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQOVl1b0t4RWF0WnFRODUzeHAydHMzOFl1U0lKbEhOa3ZSbG1GdDdubllBRG9raTZ0VllPeWJsUEFmOUlLaGZKYkd1QXo0dEFyUzZCUjdKM0NQeHdCeUZWU1hBcTBNaGJIaVJwVkluZ3Y0elloSXRyRHJkek1VdUxJdkV0NV8xSXJxUFdOVjBJVmFRcm5Na3M2ZGlodGdtcEk2NFlnWnZXVUNQSlJBUUFUSmJiOA?oc=5"
    }
   ],
   "kr-rate": [
    {
-    "title": "‘같은 3% 기준금리인데 분위기 왜 이렇게 달라?’…2022년과는 격이 다른 DCM",
-    "source": "에너지경제신문",
-    "date": "2026-10-08",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE16MzlGNzQzeHpCYkY4a3NJQXFzOVpITFNZekhOb3oyTU55Yjh3TDhWSjRBNGVsd2cwX0JBMWRER0VxUGNDYW05TzhuR0RtdmFJemtDMi16MWR5ak0?oc=5"
+    "title": "한은, ‘금리 추가 인상’ 가능성 거듭 시사…시장선 “연내” 전망",
+    "source": "한겨레",
+    "date": "2026-10-12",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5JQ2xXb2xzM0VVZ0dLVkU5LVJxMzg4WnY3QWUwZkZJNF9KRWd3c3lZVlgzc01oTXpDLVEyZW1DSUg1TjM5enl2X2xFRkN5blNtdnk5b2RKOF9YMWZkd2x5WXRDRWZteHI0TmF3OHVzYzRBQQ?oc=5"
    },
    {
-    "title": "잡히지 않는 물가…한은·미 연준 ‘기준금리’ 올릴까 [10월 경제캘린더]",
-    "source": "더스쿠프",
-    "date": "2026-10-09",
-    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTFBkUVpZeUxyYkJvbzFNbzR2cHdSdnN3VVFtSFhUbjc3STVZeGZqT3VIeEZnQWx5R2J1QlhpR3pwbTlWOVlXTUVFa2dFRjJDaUZISW1XcUdwakY3UlNEWE04Y2MzUDVKYnFabFBxWUpn?oc=5"
+    "title": "기준금리 추가 인상 시사…신현송 \"물가 등 고려해 시기 결정\"",
+    "source": "연합뉴스",
+    "date": "2026-10-12",
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE1CUEJzSVFyaG5NSkxRRlRZc1ZFeVYwY2tHQ3VYSmNmUlVNUWNUMVZRcERKRnVwTzdjLWNEUjFsbWJLelZ0QjJkSHFhZnNTbHA0cGlHTl9iaW5BVUhPSk1GVtIBYEFVX3lxTE1CUEJzSVFyaG5NSkxRRlRZc1ZFeVYwY2tHQ3VYSmNmUlVNUWNUMVZRcERKRnVwTzdjLWNEUjFsbWJLelZ0QjJkSHFhZnNTbHA0cGlHTl9iaW5BVUhPSk1GVg?oc=5"
    }
   ],
   "kr-us-deal": [
@@ -45,16 +45,16 @@
   ],
   "world-oil": [
    {
-    "title": "\"비축유도 바닥났다\"...국제유가, 100달러 돌파 카운트다운?",
-    "source": "코인리더스",
+    "title": "국제유가 100달러 시대 지속되나…호르무즈·美재고 시험대",
+    "source": "톱스타뉴스",
     "date": "2026-10-11",
-    "link": "https://news.google.com/rss/articles/CBMiSkFVX3lxTE1XZVI4dzk0QW53UDlBVkxwRzJpcWk1ZktxUUVqZ1RQdzVuekVJUVpNVUxPM050MHpQTlBCdVNnbUcxV2d5cGg4clJn?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE4zaXFlYmhsY1VjMC10Q0x0WThRM2VvcXpYY3FmcDdGTWFWM0hMT0ZOSmFpN0JRdEJEZ24ydnYzV1ZwZ1o0blpHOXNUUzRtVUh4MzdFb0VzNmhsZFBVWng2QkFvdTg0cERVaVk4SlgxOHc5Zw?oc=5"
    },
    {
-    "title": "Oil Prices Fall as G-7 Plans Crude, Diesel Release But Hormuz Shipping Risks Persist",
-    "source": "WSJ",
-    "date": "2026-10-05",
-    "link": "https://news.google.com/rss/articles/CBMizAFBVV95cUxPOFA5UUZFdndtdnBodnFleklOcmpCZmdBUzlROTlFSkFiWkZsNG5sMHU4M0VoR2ZLNFVNYlhKbmpjYlc4Q0NObmdDdFNLenRmU0VQdVZfWXU1YU44NWFUcnlWeUNtQkhBMlAyZGpDemdPY3VkY3NzdDRpNWlOcTlabURzNE1udEdkOVVYeW5qcmhndjM3VHVHYVFSZy0yQzYyR1VnSnJGWVdZdEZTUV9IeF84OXpEaFcyNUxzNFIwaFAybGplVHN3cTM1THc?oc=5"
+    "title": "Iran war impact on global oil markets",
+    "source": "Oil & Gas Journal",
+    "date": "2026-10-08",
+    "link": "https://news.google.com/rss/articles/CBMiQEFVX3lxTE1UVDNzMnV4NzBqQXJ4NUM4OTBKQlJSdnlOQjdGbXlSZkJSMDBvQkJITkgydndPR1ZPZTZPeEpmTjI?oc=5"
    }
   ],
   "world-us-china": [
@@ -73,16 +73,16 @@
   ],
   "kr-budget-ai": [
    {
-    "title": "온라인카지노 고객센터 닥터베가스 비교 팀 협업 체계적 방법",
+    "title": "메뉴 깊이로 비교하는 푸우 게임 트레이너 조작 편의",
     "source": "Calgary Roughnecks",
-    "date": "2026-10-05",
-    "link": "https://news.google.com/rss/articles/CBMif0FVX3lxTFB6S0RrZS1rYmxORnBUbDFnLVJzbXA0MVFGRnhFZEd4bmtnUnVxSUp3NGRfTWhMSGdmbFNqaWNPam5Wb3A3aG9XSHFxVEhVUzU0RUtiSFNsZlhpMjBqUURUZ05nXzlGQUJ0YVBKNjVteTJuVFNNQkd2YnJ6bDNfMFU?oc=5"
+    "date": "2026-10-08",
+    "link": "https://news.google.com/rss/articles/CBMi_wFBVV95cUxQbnhwX1ZuMU5XV1RZcHJVTnVBTEpGU2NsS3hya2NvZ05SWjdJajNkLVlIV3lvTVlkOTM3dHFXQXhDZ0lRbWJZRkFnNWt2dVk2V21JSmlWZHhmS2hya2hnYmxXbW1kS3NoY21UWk5fbHhUSFpuVm5jeDVpN0IwYVlidGt6YVlidVFQTzZaWThVYVZoRzI2X0xsREkwM3hoWGdQcUwzdWpGUlp3RmRTUjR3blRwR05ob1hYamJpYzlORkFPaEY3X0FSUXNBVC1ZSjlCanU2N0hqMzZXd3R4QzZhd29icW14cjJYYnJVWm1PNE5ZUlFENUkwakVFSTloMjA?oc=5"
    },
    {
-    "title": "최정호號 100일…피지컬AI·반도체 앞세워 ‘익산 대전환’",
-    "source": "전북제일신문",
-    "date": "2026-10-07",
-    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE8yMlhiVDF6clR4NkljR2tvVFRCVUdiVXVvVDlxNnNPaVZhLW1uYXdvZHozTktJTkh0Tm5KemkzMHZ2MlBWMjRkcWdqZDNFMTllYlUxQUs4d3ZiX2tCOUpPemNKS2ZQY2Jvbnc?oc=5"
+    "title": "내년 821조 슈퍼예산, '가보지 않은 길'의 미래",
+    "source": "생글생글",
+    "date": "2026-10-12",
+    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE9WNmQxZ2dmSzJpXzd3ODEzbkoyNjQ5a1NYN1dGT0VZTzJHM0xlTklHODVzcGVza2QycXpiQXlIU0M2X2NFUmpHWFFNZjlsQlhPS0ZOMGhnRnFBcVE?oc=5"
    }
   ],
   "kr-buyback": [
@@ -115,38 +115,38 @@
   ],
   "us-301": [
    {
-    "title": "트럼프 '강제노동 관세' 위법 논란에도…세계 각국 규제 고삐",
-    "source": "뉴시스",
+    "title": "대미 투자 다음은 301조 관세…부처 합동 통상현안 대응 - 머니투데이",
+    "source": "머니투데이",
     "date": "2026-10-08",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE4yTnROS184NldScy1Gcm9LcFlHTEQzRXZQR3diX2Q4R1kyczMzanVSNE5GZE5LN2V0ZGxXcmZhNm1pOXRkMG0ySlpManFPaWpqekhXV1k5VXExTW0zSEVrRtIBeEFVX3lxTE5RTEhQNlBRWXFqakVHYXl0bjBSb0dacGJXNFYzMlRBd1M5MjRFMmZnVld0ak16VXlfdm5CZ0lYMEdoZ3lRYlpFbjVFQno0bjY2TFY3MzZwellnV2tKbm5GNXpDQlRHQk1yNzdsS19jVllZQ0VfSk1KRg?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE5Od1N6UmFSY1RER3M2WnowN2JVcUx5UUVNNFdsbERFSE5ta1FaWnJLQWFwcmRqTVJ2QWg4Vno3dWplRGRHRV9zNDd1aDZ3WU1scGIzQm1kSmJlNXdWVURoR0Q0TFNLeVFrZk0w0gFwQVVfeXFMT3Q2LXhXOXpKclF2MzlLUnlHLWpMbmxKc1NXSDd3Wk91LUQtSlJKdDhCMmtGVG9XTjZkWWlfVERMZ0NKWFdKT2V0R3RjVzcxTGNSdmF6UEdVcVpUWU11YkRBaFREeDBSSzFSYmUwUWxYZA?oc=5"
    },
    {
     "title": "Trump’s Tariffs Put a Spotlight on Forced Labor. It Isn’t Going Away.",
     "source": "WSJ",
-    "date": "2026-10-11",
+    "date": "2026-10-07",
     "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxNLTd1YThtaDdsOEtGUlQ2R3VsX2ZGNDRDT0hjNzFWZ2JkMXA5WnN0aHhkM2gzaC1BWGpFOHN1YUlFQ2J4V1Q2djhNbGdDUENWZXZzYjVJMGdjR3NhbzA0X2xSODhibWpyNHotNHVzdTU0SEVNbmpGRDRKU3pzZG5TRGp3RGdaemltc293WURWTFg2dEhmS19BMzFPaUZGcnoxYUYzWF9DaEZwWDFW?oc=5"
    }
   ],
   "us-pharma": [
    {
-    "title": "美 의약품 관세 발효…삼성에피스, 테바와 시밀러 동맹 확대 [바이오 주간 결산]",
-    "source": "팜이데일리",
-    "date": "2026-10-04",
-    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE1kT19iaEszSExCdHN4RWstVFZzYUZsQ0V5aDRLVFNOQUpUSW8yNWs5eDlKdnRJT1pUM1BMNnBLVFFsSzR5OFRoN1ZTSkJrWk54RkFBUER3X2llZV9nWE5MWjVKMFFWQU85aFd1bEhn?oc=5"
+    "title": "美 의약품 관세 일주일…K바이오 생존법 된 ’Made in USA’ By EBN",
+    "source": "Investing.com 한국어",
+    "date": "2026-10-06",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBaLTFPdElVUkkyNE5nS000YWl1bGRqaGprU2Y4cVF4eTdnNC03RW9iR0ZBWnNiXzBGbnFKRVhEWjFzRkJDcWV6WXl6WWFFWlMzdjBzSmdHbmxMSXY5dklqbm1RdTRVRUVYSG1RUEJGcTM?oc=5"
    },
    {
-    "title": "Biotech companies are struggling to navigate Trump’s new tariffs",
-    "source": "STAT",
-    "date": "2026-10-08",
-    "link": "https://news.google.com/rss/articles/CBMiugFBVV95cUxPVko4LW5hWElwUFFOeldVT0h5TXRBSktUaXJ1RUZKcmt0M1RvakVDeUxhTjY1SGdGQ1lBazRad0U0NHZYbE16Y1FtUnV6b3lXbHl1aWYxN2VPNEpFTl96TzZSekl4T2ZCTC1MM05XckxITGxlTWluLWZjMnEtMGNPM0Vzc2IwMmNJQkx5ZGFlamlQc2tvU2xvb3hGaUZwM1pVdG9VRlYtSW91Yk9tUHlIb3JTNDRDNThrUUE?oc=5"
+    "title": "Trump Administration Expands Tariffs Under Alternative Trade Laws",
+    "source": "Legis1",
+    "date": "2026-10-09",
+    "link": "https://news.google.com/rss/articles/CBMic0FVX3lxTE5EVkx4dUR0Y3J6SVZyaTAtYTl6dUhZMGVqbE5aVllkbmo3OFo2Qnc4Vm1FckE5UkphMTc1MWhYdHg3TXhVVWpiVFNXakhUQXJmNmdmVHJHZkxXNmh4SDI4U2RXa2VuRmRMMnJGOGw1UUYwQkk?oc=5"
    }
   ],
   "kr-dividend-tax": [
    {
-    "title": "찬 바람 불면 역시?…\"주가 뛰고 배당도 빵빵\" 증권가 콕 집은 종목 - 머니투데이",
-    "source": "머니투데이",
-    "date": "2026-10-09",
-    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE9QMFN5TGpYU3ROX0JvelRKX3VfY09adFlQOUQ3d3cwVks2ZW0tLUthaVdWRGlaUExmNTNhWjloLXVQVnNNczl4Z1JQR2U0MDVpblQteE5nNmsyeEdEVWFIcFVhcVNfTG83OUwxSzlR0gFuQVVfeXFMT1AwU3lMalhTdE5fQm96VEpfdV9jT1p0WVA5RDd3dzBWSzZlbS0tS2FpV1ZEaVpQTGY1M2FaOWgtdVBWc01zOXhnUlBHZTQwNWluVC14Tmc2azJ4R0RVYUhwVWFxU19Mbzc5TDFLOVE?oc=5"
+    "title": "'배당의 계절' 분리과세 고배당주 주목…옥석 가를 건 '현금 흐름'",
+    "source": "뉴스1",
+    "date": "2026-10-12",
+    "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE5ZMmZUUUNLVFV3R0tqNGdCRWNFSzFWYW1zRnVsXzNMQ0xOdndvY3BqSWNfczdrMmt1V2hPSkhXbmlZSTNmMTdmZWRuUldidC15Vl9PTUJxSUJqSFpqX1lF?oc=5"
    },
    {
     "title": "화면에 남은 심벌을 해석하는 토토야 어디있니 유지 기능 안내",
@@ -158,10 +158,10 @@
   "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "일본은행 임원 \"추가 금리 인상 지지…소비 부진은 우려\"",
-    "source": "블루밍비트",
-    "date": "2026-10-06",
-    "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE4tcXhPUlZaakR0SHI0WEotTzQ5a3FvN19ZLXZJSk1NYlI4T19Ub09QOWVDR1BqSVY5Ri1DMDI3MXJUZ0trbXB1R3c5Zk9TU3JG?oc=5"
+    "title": "日, 이달 또 금리 올리나",
+    "source": "조선일보",
+    "date": "2026-10-09",
+    "link": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxQVWptQjdLbk1HeXJnakl2YUZUaXFEZ2ZsUzZWNFh6ZmFDMF93eGp0WUxjekZGTHEwV2tXMVBSeWozVl9qMTFZRmJic1NLVmQ0ZXFfZkpnNEU1bVItM3Ixa0IxNm56bV9SOEpkaTRvRVcxa2wxQXRZRnVwdnpuZHdCVjhVVGxiQk5QWmdj?oc=5"
    },
    {
     "title": "BOJ's dovish dissenter signals support for future rate hikes",
