@@ -2,11 +2,11 @@
   "version": 2,
   "market": "us",
   "capital": 7470,
-  "cash": 5207.750772364821,
-  "equity": 7492.657035123073,
+  "cash": 5639.157317144544,
+  "equity": 7514.09218637304,
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
-  "last_day": "2026-10-13",
+  "last_day": "2026-10-14",
   "positions": [
     {
       "code": "DIS",
@@ -18,10 +18,10 @@
       "slot": 1494.0,
       "tranches": 3,
       "tp": 0,
-      "days": 2,
+      "days": 3,
       "buy_date": "2026-10-09",
       "last_buy": 109.5199966430664,
-      "last_price": 108.58000183105467
+      "last_price": 108.98999786376952
     },
     {
       "code": "LLY",
@@ -33,10 +33,10 @@
       "slot": 1494.0,
       "tranches": 1,
       "tp": 2,
-      "days": 2,
+      "days": 3,
       "buy_date": "2026-10-09",
       "last_buy": 1153.56005859375,
-      "last_price": 1166.510009765625
+      "last_price": 1208.739990234375
     },
     {
       "code": "PFE",
@@ -48,34 +48,44 @@
       "slot": 1494.0,
       "tranches": 1,
       "tp": 2,
-      "days": 2,
+      "days": 3,
       "buy_date": "2026-10-09",
       "last_buy": 27.61000061035156,
-      "last_price": 28.3700008392334
-    },
-    {
-      "code": "UNH",
-      "name": "유나이티드헬스",
-      "qty": 1.1319094657879363,
-      "cost": 451.42572783792986,
-      "buy_price": 397.625,
-      "raw": 450.0755013339282,
-      "slot": 1504.752426126433,
-      "tranches": 1,
-      "tp": 0,
-      "days": 0,
-      "buy_date": "2026-10-13",
-      "last_buy": 397.625,
-      "last_price": 377.760009765625
+      "last_price": 29.209999084472656
     }
   ],
   "orders": [
     {
       "side": "sell",
-      "code": "UNH",
+      "code": "LLY",
       "frac": 1.0,
-      "reason": "손절 (평균가 -2% 아래)",
-      "tp": 0
+      "reason": "익절 +3%",
+      "tp": 3
+    },
+    {
+      "side": "sell",
+      "code": "PFE",
+      "frac": 1.0,
+      "reason": "익절 +3%",
+      "tp": 3
+    },
+    {
+      "side": "buy",
+      "code": "TXN",
+      "name": "텍사스인스트루먼트",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "JPM",
+      "name": "JP모건",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "GOOGL",
+      "name": "알파벳",
+      "kind": "new"
     }
   ],
   "halt_next": false,
@@ -89,11 +99,28 @@
     "key": "2026-10",
     "base": 7470
   },
-  "pending_buys": [],
+  "pending_buys": [
+    {
+      "code": "TXN",
+      "name": "텍사스인스트루먼트"
+    },
+    {
+      "code": "JPM",
+      "name": "JP모건"
+    },
+    {
+      "code": "GOOGL",
+      "name": "알파벳"
+    }
+  ],
   "pending_sells": [
     {
-      "code": "UNH",
-      "reason": "손절 (평균가 -2% 아래)"
+      "code": "LLY",
+      "reason": "익절 +3%"
+    },
+    {
+      "code": "PFE",
+      "reason": "익절 +3%"
     }
   ]
 }
