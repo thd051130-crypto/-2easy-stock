@@ -2,11 +2,11 @@
   "version": 2,
   "market": "us",
   "capital": 7470,
-  "cash": 5639.157317144544,
-  "equity": 7514.09218637304,
+  "cash": 4668.262463893366,
+  "equity": 7548.2254669042795,
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
-  "last_day": "2026-10-14",
+  "last_day": "2026-10-15",
   "positions": [
     {
       "code": "DIS",
@@ -18,73 +18,83 @@
       "slot": 1494.0,
       "tranches": 3,
       "tp": 0,
-      "days": 3,
+      "days": 4,
       "buy_date": "2026-10-09",
       "last_buy": 109.5199966430664,
-      "last_price": 108.98999786376952
+      "last_price": 110.68000030517578
     },
     {
-      "code": "LLY",
-      "name": "일라이릴리",
-      "qty": 0.15494968585494914,
-      "cost": 179.28000000000003,
-      "buy_price": 1153.56005859375,
-      "raw": 446.85942173479566,
-      "slot": 1494.0,
+      "code": "TXN",
+      "name": "텍사스인스트루먼트",
+      "qty": 1.6322198197201274,
+      "cost": 450.84553118238244,
+      "buy_price": 275.3900146484375,
+      "raw": 449.4970400621959,
+      "slot": 1502.8184372746082,
       "tranches": 1,
-      "tp": 2,
-      "days": 3,
-      "buy_date": "2026-10-09",
-      "last_buy": 1153.56005859375,
-      "last_price": 1208.739990234375
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-15",
+      "last_buy": 275.3900146484375,
+      "last_price": 279.1199951171875
     },
     {
-      "code": "PFE",
-      "name": "화이자",
-      "qty": 6.473877752357003,
-      "cost": 179.28000000000003,
-      "buy_price": 27.61000061035156,
-      "raw": 446.8594217347956,
-      "slot": 1494.0,
+      "code": "JPM",
+      "name": "JP모건",
+      "qty": 1.3328303634164445,
+      "cost": 450.84553118238244,
+      "buy_price": 337.25,
+      "raw": 449.4970400621959,
+      "slot": 1502.8184372746082,
       "tranches": 1,
-      "tp": 2,
-      "days": 3,
-      "buy_date": "2026-10-09",
-      "last_buy": 27.61000061035156,
-      "last_price": 29.209999084472656
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-15",
+      "last_buy": 337.25,
+      "last_price": 335.5299987792969
+    },
+    {
+      "code": "GOOGL",
+      "name": "알파벳",
+      "qty": 1.3040427929360776,
+      "cost": 450.84553118238244,
+      "buy_price": 344.69500732421875,
+      "raw": 449.49704006219594,
+      "slot": 1502.8184372746082,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-15",
+      "last_buy": 344.69500732421875,
+      "last_price": 349.2200012207031
     }
   ],
   "orders": [
     {
       "side": "sell",
-      "code": "LLY",
-      "frac": 1.0,
-      "reason": "익절 +3%",
-      "tp": 3
+      "code": "DIS",
+      "frac": 0.6,
+      "reason": "익절 +2%",
+      "tp": 2
     },
     {
       "side": "sell",
-      "code": "PFE",
-      "frac": 1.0,
-      "reason": "익절 +3%",
-      "tp": 3
-    },
-    {
-      "side": "buy",
       "code": "TXN",
-      "name": "텍사스인스트루먼트",
-      "kind": "new"
+      "frac": 0.3,
+      "reason": "익절 +1%",
+      "tp": 1
     },
     {
-      "side": "buy",
-      "code": "JPM",
-      "name": "JP모건",
-      "kind": "new"
-    },
-    {
-      "side": "buy",
+      "side": "sell",
       "code": "GOOGL",
-      "name": "알파벳",
+      "frac": 0.3,
+      "reason": "익절 +1%",
+      "tp": 1
+    },
+    {
+      "side": "buy",
+      "code": "MRK",
+      "name": "머크",
       "kind": "new"
     }
   ],
@@ -101,26 +111,22 @@
   },
   "pending_buys": [
     {
-      "code": "TXN",
-      "name": "텍사스인스트루먼트"
-    },
-    {
-      "code": "JPM",
-      "name": "JP모건"
-    },
-    {
-      "code": "GOOGL",
-      "name": "알파벳"
+      "code": "MRK",
+      "name": "머크"
     }
   ],
   "pending_sells": [
     {
-      "code": "LLY",
-      "reason": "익절 +3%"
+      "code": "DIS",
+      "reason": "익절 +2%"
     },
     {
-      "code": "PFE",
-      "reason": "익절 +3%"
+      "code": "TXN",
+      "reason": "익절 +1%"
+    },
+    {
+      "code": "GOOGL",
+      "reason": "익절 +1%"
     }
   ]
 }
