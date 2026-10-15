@@ -6,9 +6,28 @@
   "equity": 9883765.244856445,
   "start": "2026-10-08",
   "index_start": 6625.93017578125,
-  "last_day": "2026-10-14",
+  "last_day": "2026-10-15",
   "positions": [],
-  "orders": [],
+  "orders": [
+    {
+      "side": "buy",
+      "code": "006400",
+      "name": "삼성SDI",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "096770",
+      "name": "SK이노베이션",
+      "kind": "new"
+    },
+    {
+      "side": "buy",
+      "code": "010950",
+      "name": "S-Oil",
+      "kind": "new"
+    }
+  ],
   "halt_next": false,
   "halt_week": null,
   "halt_month": null,
@@ -20,6 +39,19 @@
     "key": "2026-10",
     "base": 10000000
   },
-  "pending_buys": [],
+  "pending_buys": [
+    {
+      "code": "006400",
+      "name": "삼성SDI"
+    },
+    {
+      "code": "096770",
+      "name": "SK이노베이션"
+    },
+    {
+      "code": "010950",
+      "name": "S-Oil"
+    }
+  ],
   "pending_sells": []
 }
