@@ -19,3 +19,5 @@ date,market,propose,candidate,cur_recent_cagr,cur_recent_mdd,cand_recent_cagr,ca
 2026-10-13,us,0,"{""ma_long"": 150, ""vol_max"": 0.25, ""weight"": 0.3}",0.0558,-0.095,0.0462,-0.0349
 2026-10-13,kr,0,"{""breadth_min"": 0.6, ""rsi_th"": 5, ""stock_vol_max"": 0.35, ""stop"": 0.05}",0.03,-0.005,0.03,-0.005
 2026-10-14,us,0,"{""ma_long"": 150, ""vol_max"": 0.25, ""weight"": 0.3}",0.0525,-0.095,0.0443,-0.0349
+2026-10-14,kr,0,"{""breadth_min"": 0.6, ""rsi_th"": 5, ""stock_vol_max"": 0.35, ""stop"": 0.05}",0.03,-0.005,0.03,-0.005
+2026-10-15,us,0,"{""ma_long"": 150, ""vol_max"": 0.25, ""weight"": 0.3}",0.052,-0.095,0.0439,-0.0349
