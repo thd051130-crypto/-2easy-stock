@@ -143,7 +143,7 @@ def explain(code, closes, index_close, volumes=None, names=None, index_name="지
             reasons.append(f"{index_name}도 {idx:+.1%}라 시장 전체 영향이 커요")
             main = main or "시장 전체"
         else:
-            reasons.append(f"{index_name} {idx:+.1%}보다 {r - idx:+.1%}p 더 {'움직였' if up else '빠졌'}어요")
+            reasons.append(f"{index_name} {idx:+.1%}보다 {abs(r - idx):.1%}p 더 {'움직였' if up else '빠졌'}어요")
             solo = "이 종목만의 움직임"
 
     vr = volume_ratio(volumes[code]) if volumes is not None and code in volumes else None
