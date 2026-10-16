@@ -331,7 +331,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [homeSignalCard(d), dropCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
@@ -452,6 +452,7 @@ function render() {
     bindWatch(d); bindIncome(d);
     if (!RET[market]) loadReturns().then(() => { if (screen === "watch") { const c = $("#income-card"); if (c) { c.outerHTML = incomeCard(d); bindIncome(d); } redrawDiv(d); } });
   }
+  if (screen === "home") bindDrop(d);
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
   if (screen === "map") bindMap();
@@ -504,7 +505,7 @@ function drawEquity(d) {
 // zero: 추천일(0)부터의 수익률이면 0 기준선을 점선으로 그려요. 값은 세로 눈금의 최소 폭(±zero)이라
 // 1%도 안 움직인 종목은 거의 평평하게, 그보다 크게 움직이면 그래프 높이를 다 써서 모양이 보여요.
 function spark(values, label, zero) {
-  const v = values.filter((x) => x != null);
+  const v = (values || []).filter((x) => x != null);
   if (v.length < 2) return "";
   const w = 120, h = 40;
   const lo = zero ? Math.min(...v, -zero) : Math.min(...v), hi = zero ? Math.max(...v, zero) : Math.max(...v);
@@ -549,6 +550,80 @@ function homeSignalCard(d) {
   return `<section class="${look.cls}"><h2><span>오늘의 신호${look.badge}</span><small>${md(s.day)} 종가 기준</small></h2>${chip}
     <p class="headline">${esc(head)}</p><p class="sub">${esc(sub)}</p>${extra}${rbLine}
     ${more("signal", "신호 자세히 보기")}</section>`;
+}
+
+// 급락 점검: 기준 지수가 한 주(5거래일)에 5% 넘게 빠졌거나 1년 고점에서 10% 넘게 내려와 있을 때만 홈 신호 아래에 떠요.
+// 지수 전체 기록(indexes/<지수>.json, 차트와 같은 파일)에서 비슷하게 빠졌던 때를 찾아 그 뒤 1개월~1년이 어땠는지 보여 줘요.
+// 한 번 찾으면 3개월(63거래일)은 건너뛰어서 같은 하락을 여러 번 세지 않아요. 참고용이고 매매 규칙은 그대로예요.
+const DROP_AFTER = [[21, "1개월"], [63, "3개월"], [126, "6개월"], [252, "1년"]];
+const DROP_GAP = 63;
+const median = (xs) => { const s = [...xs].sort((a, b) => a - b), k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
+function dropNow(d) {
+  const sym = OWN_IDX[market];
+  const r = ((DATA.world && DATA.world.groups) || []).flatMap((g) => g.items).find((x) => x.sym === sym);
+  if (!r || !r.closes || r.closes.length < 6) return null;
+  const cl = r.closes, last = cl[cl.length - 1];
+  const w1 = last / cl[cl.length - 6] - 1, dd = last / Math.max(...cl.slice(-252)) - 1;
+  if (w1 > -0.05 && dd > -0.1) return null;
+  return { sym, name: r.name || d.index_name, day: r.day, last, w1, dd, weekly: w1 <= -0.05 };
+}
+function dropStats(c, now) {
+  const cl = c.c, dates = c.dates, n = cl.length;
+  // 한 주 낙폭이면 지금의 3/4 넘게 빠진 주, 아니면 1년 고점 대비 지금의 3/4 넘게 내려온 날
+  const thr = (now.weekly ? now.w1 : now.dd) * 0.75;
+  const hiOf = (i) => { let h = 0; for (let k = Math.max(0, i - 251); k <= i; k++) if (cl[k] > h) h = cl[k]; return h; };
+  const hit = now.weekly ? (i) => cl[i - 5] > 0 && cl[i] / cl[i - 5] - 1 <= thr : (i) => cl[i] / hiOf(i) - 1 <= thr;
+  const ev = [];
+  for (let i = 5; i < n - DROP_GAP; i++) if (cl[i] > 0 && hit(i)) { ev.push(i); i += DROP_GAP - 1; }  // 최근 3개월은 지금 하락이라 빼요
+  const after = DROP_AFTER.map(([h, label]) => {
+    const r = ev.filter((i) => i + h < n).map((i) => cl[i + h] / cl[i] - 1);
+    return { label, n: r.length, med: r.length ? median(r) : null, up: r.length ? r.filter((x) => x > 0).length / r.length : null,
+      worst: r.length ? Math.min(...r) : null };
+  });
+  const lows = ev.map((i) => Math.min(...cl.slice(i + 1, i + 1 + DROP_GAP)) / cl[i] - 1);
+  let hiI = Math.max(0, n - 252);
+  for (let k = hiI; k < n; k++) if (cl[k] > cl[hiI]) hiI = k;
+  return { thr, from: dates[0], years: ev.map((i) => dates[i].slice(0, 4)), after, low: lows.length ? median(lows) : null,
+    lowWorst: lows.length ? Math.min(...lows) : null, hiDay: dates[hiI], hi: cl[hiI] };
+}
+function dropCard(d) {
+  const now = dropNow(d);
+  if (!now) return "";
+  const c = IDX_READY.get(now.sym);
+  const head = `<p class="headline">${esc(now.name)} ${now.weekly ? `한 주 ${pct(now.w1)}` : `1년 고점 대비 ${pct(now.dd)}`}</p>`;
+  let body;
+  if (c === undefined) body = `<p class="muted">과거 비슷한 하락을 찾는 중이에요…</p>`;
+  else if (!c || !c.candles) body = `<p class="muted">지수 기록을 못 받았어요. 차트 화면에서 지수를 열어 보세요.</p>`;
+  else {
+    const s = dropStats(c.candles, now);
+    const what = now.weekly ? `한 주에 ${pct(s.thr)} 넘게 빠졌던 때` : `1년 고점에서 ${pct(s.thr)} 넘게 내려왔던 때`;
+    const years = [...new Set(s.years)];
+    body = `<p class="sub">1년 고점(${s.hiDay.slice(2, 4)}.${md(s.hiDay)} ${num(s.hi)})보다 ${pct(now.dd)}${now.weekly ? "" : ` · 한 주 ${pct(now.w1)}`}</p>
+      ${s.years.length ? `<p class="muted" style="margin:10px 0 6px">${s.from.slice(0, 4)}년 이후 ${what} <b>${s.years.length}번</b>
+        <small>(${years.join(", ")})</small>. 그 뒤 ${esc(now.name)}는</p>
+      <table class="fin"><thead><tr><th></th><th>보통</th><th>오른 비율</th><th>가장 나쁠 때</th></tr></thead><tbody>
+        ${s.after.filter((a) => a.n).map((a) => `<tr><th>${a.label} 뒤</th><td class="${sign(a.med)}">${pct(a.med)}</td>
+          <td>${Math.round(a.up * 100)}%</td><td class="${sign(a.worst)}">${pct(a.worst)}</td></tr>`).join("")}</tbody></table>
+      <p class="muted" style="margin:8px 0 0">그때도 바로 멈추지 않고 3개월 안에 보통 ${pct(s.low)}, 가장 심할 땐 ${pct(s.lowWorst)}까지 더 빠진 날이 있었어요.
+        '보통'은 가운데 값이에요.</p>`
+        : `<p class="muted" style="margin:10px 0 0">${s.from.slice(0, 4)}년 이후 이만큼 빠진 적이 없어서 비교할 때가 없어요.</p>`}`;
+  }
+  const a = d.account, sig = d.signal || {};
+  const stock = a && a.equity ? 1 - a.cash / a.equity : null;
+  const rule = a ? `<p class="${a.gain >= a.index_gain ? "good-line" : "caution"}" style="margin-top:12px">우리 가상계좌는 ${md(a.start)} 시작 뒤 <b>${pct(a.gain)}</b>
+      (${esc(d.index_name)} ${pct(a.index_gain)}) · 지금 주식 ${Math.round((stock || 0) * 100)}%, 현금 ${Math.round((1 - (stock || 0)) * 100)}%.
+      ${market === "kr" && sig.ok === false ? "규칙상 지수가 50일선·200일선 위로 올라올 때까지 새로 안 사요." : ""}</p>` : "";
+  return `<section class="card" id="drop-card"><h2>급락 점검 <small>${md(now.day)} 종가 · 참고</small></h2>${head}${body}${rule}
+    <p class="muted note" style="margin:10px 0 0">과거에 비슷하게 빠졌던 뒤 어땠는지 지수 기록으로 센 거예요. 과거가 앞으로를 보장하진 않아요.
+      바닥은 지나서야 알 수 있어서, 우리 규칙은 바닥을 맞히려 하지 않고 지수가 다시 오를 때 들어가요.</p></section>`;
+}
+function bindDrop(d) {
+  const now = dropNow(d);
+  if (!now || IDX_READY.has(now.sym)) return;
+  idxData(now.sym).then(() => {
+    const el = $("#drop-card");
+    if (el && screen === "home") el.outerHTML = dropCard(d);
+  });
 }
 
 // 홈 성과 카드: 가상계좌 요약 + 추천 종목이 그 뒤 얼마나 올랐는지 한 줄
@@ -630,8 +705,11 @@ function myStocks(d) {
   const all = stocksOf(d);
   const out = [], wait = [];
   for (const c of WATCH[market]) {
-    const s = all.find((x) => x.code === c) || liteStock(market, c);
-    if (s) out.push(s); else wait.push(c);
+    // 텔레그램으로 넣은 종목은 stock_pages.py가 시세를 채워요. 그게 실패해 시세가 없으면 전 종목 파일로 보여요.
+    const hit = all.find((x) => x.code === c);
+    const s = hit && hit.close != null ? hit : liteStock(market, c) || hit;
+    if (!s || s.close == null) wait.push(c);
+    if (s) out.push(s);
   }
   loadLite(market, wait);
   return out;
@@ -2550,7 +2628,7 @@ function healthLine() {
   const h = DATA.health;
   if (!h || h.ok) return "";
   const bad = h.workflows.filter((w) => !w.ok).map((w) => esc(w.label)).join(", ");
-  return `<p class="caution">지난 주 자동 실행 확인 필요: ${bad}</p>`;
+  return `<p class="caution">${md(h.checked)} 주간 점검, 지난 7일 자동 실행 확인 필요: ${bad}</p>`;
 }
 
 // 적립식 복리 계산기: 국장·미장 아무 종목·ETF나 검색해서 원하는 만큼 넣고, 매달 N만 원씩 넣으면 몇 년 뒤 얼마인지 나란히 봐요.
