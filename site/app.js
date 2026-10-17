@@ -1581,9 +1581,10 @@ function setMapFocus(name, back = false) {
 }
 function bindMapDetail(el) {
   el.querySelectorAll("[data-mapgo]").forEach((b) => b.addEventListener("click", () => {
+    // 아래 '산업 흐름' 칸에서 눌러도 화면은 그 자리 그대로예요 (위 지도로 올라가지 않게, 사용자 요청 2026-10-17)
+    const y = window.scrollY;
     setMapFocus(b.dataset.mapgo);
-    const card = $(".map-card");
-    if (card) card.scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
+    window.scrollTo(0, y);
   }));
   el.querySelectorAll("[data-mapq]").forEach((b) => b.addEventListener("click", () => {
     searchQuery = `${b.dataset.mapq} 관련 종목`;
