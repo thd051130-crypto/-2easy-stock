@@ -492,6 +492,14 @@ function render() {
     polJump = null;
     if (x) requestAnimationFrame(() => { x.scrollIntoView(); window.scrollBy(0, -70); });
   }
+  app.querySelectorAll("[data-ecday]").forEach((b) => b.addEventListener("click", () => {
+    econPick = econPick === b.dataset.ecday ? null : b.dataset.ecday;
+    render();
+  }));
+  app.querySelectorAll("[data-ecm]").forEach((b) => b.addEventListener("click", () => { econMonth = b.dataset.ecm; econPick = null; render(); }));
+  app.querySelectorAll("[data-ecstep]").forEach((b) => b.addEventListener("click", () => {
+    econMonth = ymAdd(econMonth, Number(b.dataset.ecstep)); econPick = null; render();
+  }));
   app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
     calAll = !calAll;
     const y = window.scrollY;
@@ -3539,20 +3547,63 @@ function calRows(list) {
   const flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" }, days = "일월화수목금토";
   let last = "";
   return list.map((e) => {
-    const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
+    const head = e.date !== last ? `<li class="cal-day${e.date < TODAY() ? " past" : ""}"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
+    const cls = [e.big ? "cal-big" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
+    return `${head}<li${tap}${cls ? ` class="${cls}"` : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
 }
+// 다가오는 일정 달력: 이번 달부터 6개월(지난달도 볼 수 있어요). 칸엔 일정 표시, 아래엔 그달(또는 고른 날) 목록. 지난 일정은 연하게
+const ECON_MONTHS = 6;
+let econMonth = null, econPick = null;
+const ymAdd = (ym, k) => { const [y, m] = ym.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + k, 1)); return t.toISOString().slice(0, 7); };
 function calendarCard() {
+  const all = ((DATA && DATA.calendar) || []).filter((e) => !STOCK_KINDS.includes(e.kind));
   if (!((DATA && DATA.calendar) || []).length) return "";
-  const rows = calRows(calNear(CAL_DAYS).filter((e) => !STOCK_KINDS.includes(e.kind)));
-  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 경제 일정</small></h2>
-    ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}
-    <p class="muted note" style="margin:10px 0 0">🚨는 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표예요 (한국시간). 금리 결정·만기일 날에도 시장이 크게 출렁일 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요. 월요일 아침엔 텔레그램으로도 와요.</p></section>`;
+  const today = TODAY(), now = today.slice(0, 7), lo = ymAdd(now, -1), hi = ymAdd(now, ECON_MONTHS - 1);
+  if (!econMonth || econMonth < lo || econMonth > hi) econMonth = now;
+  const [y, m] = econMonth.split("-").map(Number);
+  const byDay = {};
+  all.forEach((e) => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+  const icon = (e) => (e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || "•");
+  // 월~금 다섯 칸 (주말 일정은 거의 없어서 금요일 칸에 같이 보여 줘요)
+  const first = new Date(Date.UTC(y, m - 1, 1)), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let cells = "";
+  const lead = (first.getUTCDay() + 6) % 7;
+  if (lead < 5) cells += `<span class="cal-cell blank"></span>`.repeat(lead);
+  for (let dd = 1; dd <= dim; dd++) {
+    const wd = new Date(Date.UTC(y, m - 1, dd)).getUTCDay();
+    if (wd === 0 || wd === 6) continue;
+    const key = `${econMonth}-${String(dd).padStart(2, "0")}`;
+    const wk = [key, ...(wd === 5 ? [1, 2].map((k) => `${econMonth}-${String(dd + k).padStart(2, "0")}`) : [])];
+    const ev = wk.flatMap((k) => byDay[k] || []);
+    const marks = [...new Set(ev.map(icon))].slice(0, 3).join("");
+    const cls = ["cal-cell", "ec-cell", key < today ? "past" : "", key === today ? "today" : "", ev.some((e) => e.big) ? "big" : "", econPick === key ? "picked" : ""].filter(Boolean).join(" ");
+    cells += `<button type="button" class="${cls}" data-ecday="${key}" aria-label="${m}월 ${dd}일 ${ev.length ? ev.map((e) => e.title).join(", ") : "일정 없음"}">
+      <span class="cd">${dd}</span><span class="em">${marks}</span></button>`;
+  }
+  const months = [];
+  for (let k = -1; k < ECON_MONTHS; k++) {
+    const key = ymAdd(now, k), n = all.filter((e) => e.date.startsWith(key)).length;
+    months.push(`<button type="button" class="cal-m${key === econMonth ? " on" : ""}${k < 0 ? " past" : ""}" data-ecm="${key}"><span>${Number(key.slice(5))}월</span><b>${n ? `${n}개` : "-"}</b></button>`);
+  }
+  const pick = econPick && econPick.startsWith(econMonth) ? econPick : null;
+  // 금요일을 누르면 그 주말 일정도 같이
+  const pickDays = pick ? [0, 1, 2].slice(0, new Date(pick + "T00:00:00Z").getUTCDay() === 5 ? 3 : 1).map((k) => `${econMonth}-${String(Number(pick.slice(8)) + k).padStart(2, "0")}`) : null;
+  const pickList = all.filter((e) => (pickDays ? pickDays.includes(e.date) : e.date.startsWith(econMonth)));
+  const rows = calRows(pickList);
+  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${ECON_MONTHS}개월 · 경제 일정</small></h2>
+    <div class="cal-months ec-months">${months.join("")}</div>
+    <div class="cal-head"><button type="button" class="cal-nav" data-ecstep="-1" aria-label="이전 달" ${econMonth <= lo ? "disabled" : ""}>‹</button>
+      <div><b>${y}년 ${m}월</b><small>${pick ? `${Number(pick.slice(5, 7))}.${Number(pick.slice(8))} 일정 · 다시 누르면 한 달 전체` : `일정 ${all.filter((e) => e.date.startsWith(econMonth)).length}개 · 날짜를 누르면 그날만`}</small></div>
+      <button type="button" class="cal-nav" data-ecstep="1" aria-label="다음 달" ${econMonth >= hi ? "disabled" : ""}>›</button></div>
+    <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
+    ${rows ? `<ul class="list cal" style="margin-top:10px">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표, 📌 PPI·소매판매, 🏦 금리 결정, ⏳ 만기일, 📊 국장 실적 시즌이에요 (한국시간). 지난 일정은 연하게 보여요.
+      미국 발표 날짜는 FRED가 올린 만큼만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
 }
 function earningsCard() {
   if (!((DATA && DATA.calendar) || []).length) return "";
@@ -4814,9 +4865,9 @@ function fillCheck() {
   if (el && DATA) el.outerHTML = checkCard(DATA.markets[market]);
 }
 
-// ---------------------------------------------------------------- 전역일 목표 트래커
-// 전역일·지금 모은 돈·매달 저축·목표를 넣으면 남은 날, 진척도, 그 속도로 전역 때 얼마인지 세 가지로 보여줘요 (이 폰에만 저장).
-const GOAL = { end: "", now: 0, monthly: 50, target: 0 };
+// ---------------------------------------------------------------- 목표 트래커
+// 목표 이름·날짜·지금 모은 돈·매달 저축·목표를 넣으면 남은 날, 진척도, 그 속도로 그날 얼마인지 세 가지로 보여줘요 (이 폰에만 저장).
+const GOAL = { title: "목표", end: "", now: 0, monthly: 50, target: 0 };
 try { Object.assign(GOAL, JSON.parse(localStorage.getItem("goal") || "{}")); } catch (e) { /* 처음 */ }
 const GOAL_PLANS = [
   ["예금", 0.03 * (1 - 0.154), "연 3% 예금 (이자세 15.4% 뗀 뒤)"],
@@ -4828,6 +4879,7 @@ function goalRate(p) {
   const r = RET.kr && RET.kr["360750"];
   return r ? (r[1] + r[2]) / 100 : 0.12;
 }
+const goalTitle = () => (GOAL.title || "").trim() || "목표";
 function monthsLeft() {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(GOAL.end)) return null;
   const days = Math.round((Date.parse(GOAL.end) - Date.parse(TODAY())) / 864e5);
@@ -4843,8 +4895,8 @@ function futureValue(now, monthly, rate, months) {
 const man = (v) => (Math.abs(v) >= 1e4 ? `${(v / 1e4).toFixed(Math.abs(v) >= 1e5 ? 0 : 1).replace(/\.0$/, "")}억` : `${Math.round(v).toLocaleString("ko-KR")}만`);
 function goalOut() {
   const left = monthsLeft();
-  if (!left) return `<p class="muted" style="margin:10px 0 0">전역일을 넣으면 계산해요.</p>`;
-  if (left.days < 0) return `<p class="good-line">🎉 전역일이 지났어요. 새 목표 날짜를 넣어 보세요.</p>`;
+  if (!left) return `<p class="muted" style="margin:10px 0 0">목표 날짜를 넣으면 계산해요.</p>`;
+  if (left.days < 0) return `<p class="good-line">🎉 목표 날짜가 지났어요. 새 날짜를 넣어 보세요.</p>`;
   const prog = GOAL.target > 0 ? Math.min(1, GOAL.now / GOAL.target) : null;
   const plans = GOAL_PLANS.map((p) => ({ name: p[0], note: p[2], v: futureValue(GOAL.now, GOAL.monthly, goalRate(p), left.months) }));
   const max = Math.max(GOAL.target || 0, ...plans.map((p) => p.v), 1);
@@ -4854,11 +4906,11 @@ function goalOut() {
     const k = r ? (Math.pow(1 + r, n) - 1) / r : n;
     return n >= 1 ? Math.max(0, gap / k) : null;
   })() : null;
-  return `<div class="goal-top"><div><small>전역까지</small><b>D-${left.days}</b><small>${Math.floor(left.months)}개월</small></div>
+  return `<div class="goal-top"><div><small>목표일까지</small><b>D-${left.days}</b><small>${Math.floor(left.months)}개월</small></div>
       <div><small>지금</small><b>${man(GOAL.now)}원</b>${prog != null ? `<small>목표의 ${Math.round(prog * 100)}%</small>` : ""}</div>
       <div><small>매달</small><b>${man(GOAL.monthly)}원</b><small>${GOAL.target ? `목표 ${man(GOAL.target)}원` : "목표 없음"}</small></div></div>
     ${prog != null ? `<div class="goal-prog" role="img" aria-label="목표의 ${Math.round(prog * 100)}%"><i style="width:${prog * 100}%"></i></div>` : ""}
-    <h3 class="sav-h">이 속도로 모으면 전역 때</h3>
+    <h3 class="sav-h">이 속도로 모으면 목표일에</h3>
     <ul class="list goal-list">${plans.map((p) => `<li><div class="l"><div class="name">${p.name}</div><div class="meta">${p.note}</div>
         <div class="goal-bar"><i style="width:${(p.v / max) * 100}%"></i>${GOAL.target ? `<em style="left:${(GOAL.target / max) * 100}%" title="목표"></em>` : ""}</div></div>
       <div class="r"><b>${man(p.v)}원</b>${GOAL.target ? `<div class="meta ${p.v >= GOAL.target ? "up" : ""}">${p.v >= GOAL.target ? "목표 달성" : `${man(GOAL.target - p.v)} 모자람`}</div>` : ""}</div></li>`).join("")}</ul>
@@ -4867,11 +4919,12 @@ function goalOut() {
 }
 function goalCard() {
   const inp = (k, label, unit, type = "text") => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-goal="${k}" type="${type}" ${type === "text" ? `inputmode="decimal"` : ""} value="${esc(GOAL[k] || (type === "date" ? "" : 0))}">${unit ? `<span>${unit}</span>` : ""}</span></label>`;
-  return `<section class="card" id="goal-card"><h2>전역일 목표 <small>이 폰에만 저장</small></h2>
-    <div class="sav-grid">${inp("end", "전역일", "", "date")}${inp("target", "목표 금액", "만 원")}${inp("now", "지금 모은 돈", "만 원")}${inp("monthly", "매달 저축", "만 원")}</div>
+  return `<section class="card" id="goal-card"><h2><span id="goal-title">${esc(goalTitle())}</span> <small>이 폰에만 저장</small></h2>
+    <label class="sav-in goal-name"><span>목표 이름</span><span class="alert-input"><input data-goal="title" type="text" maxlength="30" placeholder="목표" value="${esc(GOAL.title || "")}"></span></label>
+    <div class="sav-grid">${inp("end", "목표 날짜", "", "date")}${inp("target", "목표 금액", "만 원")}${inp("now", "지금 모은 돈", "만 원")}${inp("monthly", "매달 저축", "만 원")}</div>
     <div id="goal-out">${goalOut()}</div>
     <p class="muted note" style="margin:10px 0 0">세 가지 모두 과거 수익률을 그대로 가정한 계산이라 보장이 아니에요. 주식 쪽은 중간에 낙폭이 와도 팔지 않고 버틴다는 가정이에요.
-      전역이 가까우면(1~2년) 쓸 돈은 예금에 두는 게 보수적이에요.</p></section>`;
+      목표일이 가까우면(1~2년) 쓸 돈은 예금에 두는 게 보수적이에요.</p></section>`;
 }
 function bindGoal() {
   const card = $("#goal-card");
@@ -4879,17 +4932,18 @@ function bindGoal() {
   card.querySelectorAll("[data-goal]").forEach((i) => i.addEventListener(i.type === "date" ? "change" : "input", () => {
     const k = i.dataset.goal;
     if (k === "end") GOAL.end = i.value;
+    else if (k === "title") { GOAL.title = i.value.slice(0, 30); const h = $("#goal-title"); if (h) h.textContent = goalTitle(); }
     else { const v = parseFloat(i.value.replace(/[,\s]/g, "")); GOAL[k] = Number.isFinite(v) && v >= 0 ? Math.min(v, 1e6) : 0; }
     try { localStorage.setItem("goal", JSON.stringify(GOAL)); } catch (e) { /* 이번만 */ }
     const out = $("#goal-out"); if (out) out.innerHTML = goalOut();
   }));
 }
-// 홈 성과 카드에 한 줄 (전역일을 넣었을 때만)
+// 홈 성과 카드에 한 줄 (목표 날짜를 넣었을 때만)
 function goalLine() {
   const left = monthsLeft();
   if (!left || left.days < 0) return "";
   const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, GOAL.now / GOAL.target) * 100)}%` : "";
-  return `<p class="muted" style="margin:10px 0 0">🎖️ 전역까지 <b>D-${left.days}</b>${prog}</p>`;
+  return `<p class="muted" style="margin:10px 0 0">🎯 ${esc(goalTitle())}까지 <b>D-${left.days}</b>${prog}</p>`;
 }
 
 // ---------------------------------------------------------------- 수익률 달력
