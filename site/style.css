@@ -790,3 +790,4 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .list li.world-graph { display: block; border-top: 0; background: var(--surface-0); border-radius: 0 0 10px 10px; margin: 0 -8px; padding: 4px 8px 10px; }
 .list li.world-graph .chart { min-height: 190px; }
 .list li.world-graph .more { margin-top: 6px; }
+.goal-name { margin: 0 0 8px; }
