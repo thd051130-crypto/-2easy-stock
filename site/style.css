@@ -779,3 +779,7 @@ details.desk > summary::after { content: "›"; position: absolute; right: 2px; 
 details.desk[open] > summary::after { transform: rotate(90deg); top: 2px; margin-top: 0; }
 details.desk:not([open]) .desk-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; }
+
+/* 성과 화면 맨 위 선택 바: 옆으로 밀어서 고르고, 내려도 머리 바로 아래에 붙어 있어요 */
+.perf-tabs { position: sticky; top: var(--top-h, 56px); z-index: 4; background: var(--surface-0); margin: -4px -16px 2px; padding: 8px 16px; }
+.perf-tabs button { padding: 8px 14px; font-size: 14px; }
