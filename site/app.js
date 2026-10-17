@@ -347,9 +347,9 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 사용자가 고른 순서로 세계 지수 → 성과 → 더 보기 → 신호.
+  // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 사용자가 고른 순서로 세계 지수 → 더 보기 → 신호 → 성과.
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
-  home: (d) => [bigEventsCard(), worldCard(), homePerfCard(d), homeMoreCard(d), homeSignalCard(d)],
+  home: (d) => [bigEventsCard(), worldCard(), homeMoreCard(d), homeSignalCard(d), homePerfCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
   perf: (d) => [savingsCard(), trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
