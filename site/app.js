@@ -2581,7 +2581,7 @@ function candleLegend() {
 // 이동평균선 표시: 누르면 설정 창이 열리고 닫혀요
 function maKeys() {
   const on = MA_SET.map((m, i) => (m.on ? `<span class="key"><i class="sw" style="background:${MA_COLORS[i]}"></i>${m.p}일선</span>` : "")).join("");
-  return `<button type="button" class="ma-key ma-edit" aria-expanded="${maOpen}">${on || "이동평균선 꺼짐"}<span class="ma-gear">설정 ${maOpen ? "▴" : "▾"}</span></button>`;
+  return `<button type="button" class="ma-key ma-edit" aria-expanded="${maOpen}">${on || "이동평균선 꺼짐"}</button>`;
 }
 function maPanel() {
   const rows = MA_SET.map((m, i) => `<div class="ma-row">
