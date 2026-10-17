@@ -347,8 +347,9 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), dropCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
-    homeIndexCard(d)],
+  // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 사용자가 고른 순서로 세계 지수 → 성과 → 더 보기 → 신호.
+  // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
+  home: (d) => [bigEventsCard(), worldCard(), homePerfCard(d), homeMoreCard(d), homeSignalCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
   perf: (d) => [savingsCard(), trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
@@ -377,6 +378,7 @@ function render() {
   const app = $("#app");
   app.classList.remove(...FX);
   app.innerHTML = VIEWS[screen](d).join("");
+  if (screen === "home") tidyHomeMore(app);
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
@@ -400,6 +402,7 @@ function render() {
   }));
   app.querySelectorAll("[data-sector-go]").forEach((b) => b.addEventListener("click", () => {
     SECTOR[market] = b.dataset.sectorGo;
+    openHomeMore("sectors");
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
     jumpSectors = true;  // 홈이 다시 그려지면 업종 칸으로 내려가요 (뒤로 가기로 돌아가는 경우가 있어서 render에서)
     if (screen === "home") render(); else go("home");  // 홈 정부 정책 칸에서 누르면 바로 다시 그려요
@@ -426,6 +429,7 @@ function render() {
   app.querySelectorAll("[data-pol-go]").forEach((b) => b.addEventListener("click", () => {
     polJump = b.dataset.polGo;  // 홈이 다시 그려지면 그 정책을 펼쳐서 보여 줘요
     POL_OPEN.add(polJump);
+    openHomeMore("policy");
     polR = "";
     if (screen === "home") render(); else go("home");
   }));
@@ -639,7 +643,7 @@ function bindDrop(d) {
   if (!now || IDX_READY.has(now.sym)) return;
   idxData(now.sym).then(() => {
     const el = $("#drop-card");
-    if (el && screen === "home") el.outerHTML = dropCard(d);
+    if (el && screen === "home") { el.outerHTML = dropCard(d); trimHeads($("#app")); }
   });
 }
 
@@ -1945,6 +1949,72 @@ function homeIndexCard(d) {
       50일선보다 ${s.index >= s.ma50 ? "위" : "아래"}</p>` : ""}
     ${more("chart", "차트 크게 보기")}</section>`;
 }
+
+// 홈 '더 보기': 칸마다 제목 + 한 줄 요약만 보이고, 누르면 원래 칸이 그 자리에서 펼쳐져요. 펼친 칸은 기억해요.
+let HOME_OPEN = new Set();
+try { HOME_OPEN = new Set(JSON.parse(localStorage.getItem("home_open") || "[]")); } catch (e) { /* 처음 */ }
+function saveHomeOpen() { try { localStorage.setItem("home_open", JSON.stringify([...HOME_OPEN])); } catch (e) { /* 이번만 기억 */ } }
+const upDown = (r) => (r == null ? "" : `<b class="${sign(r)}">${pct(r)}</b>`);
+function homeMoreRows(d) {
+  const s = d.signal || {};
+  const rows = [];
+  const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
+  const dn = dropNow(d);
+  add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
+  // 다가오는 일정: 가장 가까운 큰 일정
+  const ev = ((DATA && DATA.calendar) || []).filter((e) => e.date >= TODAY() && !["earn", "exdiv"].includes(e.kind));
+  add("cal", "📅", "다가오는 일정", ev.length ? `${md(ev[0].date)} ${esc(ev[0].title)} · ${dday(ev[0].date)}` : "2주 안 큰 일정 없음", calendarCard(d));
+  const mine = myStocks(d);
+  add("watch", "⭐", "관심종목", mine.length ? `${mine.length}개 · ${esc(mine[0].name)}${mine.length > 1 ? " 외" : ""}` : "", homeWatchCard(d));
+  const mv = s.movers;
+  const top = (l) => (l && l[0] ? `${esc(l[0].name)} ${upDown(l[0].r5)}` : "");
+  add("movers", "❓", "왜 움직였나", mv ? [top(mv.up), top(mv.down)].filter(Boolean).join(" · ") || "크게 움직인 종목 없음" : "", moversCard(d));
+  const all = stocksOf(d).filter((x) => !x.extra && x.d1 != null);
+  const ups = all.filter((x) => x.d1 > 0).length, downs = all.filter((x) => x.d1 < 0).length;
+  add("heat", "🟥", "시장 히트맵", `오늘 오른 <b class="up">${ups}</b> · 내린 <b class="down">${downs}</b>`, heatmapCard(d));
+  const secs = (s.sectors || []).filter((x) => x.r5 != null);
+  const sb = secs.length ? [...secs].sort((a, b) => b.r5 - a.r5) : [];
+  add("sectors", "🏭", "업종별 호재·악재", sb.length ? `${esc(sb[0].name)} ${upDown(sb[0].r5)} · ${esc(sb[sb.length - 1].name)} ${upDown(sb[sb.length - 1].r5)}` : "", sectorsCard(d));
+  const f = market === "kr" && d.flows;
+  add("flows", "🏦", "외국인·기관 수급", f ? ((f.warn || []).length ? `⚠️ 같이 파는 종목 ${f.warn.length}개` : "같이 파는 종목 없음") : "", flowsCard(d));
+  if (market === "kr" && d.disclosures) {
+    const since = new Date(Date.parse(TODAY()) - 7 * 864e5).toISOString().slice(0, 10);
+    const n = d.disclosures.filter((x) => x.day >= since && x.tone === "warn").length;
+    add("disclose", "📄", "최근 공시", n ? `⚠️ 주의 공시 ${n}건` : "주의 공시 없음", discloseHomeCard(d));
+  }
+  const q = s.quiet_volume;
+  add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", quietVolumeCard(d));
+  const P = DATA && DATA.policies;
+  add("policy", "🏛️", "정부 정책", P && P.items ? `${P.items.length}개 정리${P.stale ? " · ⚠️ 오래됨" : ""}` : "", policyCard());
+  const m = DATA && DATA.macro;
+  add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", macroCard());
+  const close = s.series ? s.series.close.filter((v) => v != null) : [];
+  add("index", "📈", esc(d.index_name || "지수"), close.length > 1 ? `${num(close[close.length - 1])} <b class="${sign(close[close.length - 1] / close[close.length - 2] - 1)}">${pct(close[close.length - 1] / close[close.length - 2] - 1, 2)}</b>` : "", homeIndexCard(d));
+  return rows;
+}
+function homeMoreCard(d) {
+  const rows = homeMoreRows(d);
+  if (!rows.length) return "";
+  return `<section class="card home-more"><h2>더 보기 <small>누르면 펼쳐져요</small></h2>${rows.map((r) =>
+    `<details class="hm" data-hm="${r.key}"${HOME_OPEN.has(r.key) ? " open" : ""}><summary><span class="hm-ico" aria-hidden="true">${r.icon}</span>
+      <span class="hm-t"><b>${r.title}</b>${r.sum ? `<span class="hm-s">${r.sum}</span>` : ""}</span><span class="hm-arrow" aria-hidden="true">›</span></summary>
+      <div class="hm-body">${r.html}</div></details>`).join("")}</section>`;
+}
+// 펼친 칸 안의 원래 제목 줄은 한 줄 요약과 겹쳐서, 날짜 같은 작은 글씨만 남겨요.
+function trimHeads(root) {
+  root.querySelectorAll(".hm-body > .card > h2:first-child").forEach((h) => {
+    const sm = h.querySelector("small");
+    if (sm) { const p = document.createElement("p"); p.className = "hm-meta"; p.innerHTML = sm.innerHTML; h.replaceWith(p); } else h.remove();
+  });
+}
+function tidyHomeMore(app) {
+  trimHeads(app);
+  app.querySelectorAll("details.hm").forEach((x) => x.addEventListener("toggle", () => {
+    if (x.open) HOME_OPEN.add(x.dataset.hm); else HOME_OPEN.delete(x.dataset.hm);
+    saveHomeOpen();
+  }));
+}
+function openHomeMore(key) { HOME_OPEN.add(key); saveHomeOpen(); }
 
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
 // 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프
@@ -3345,10 +3415,53 @@ function discloseHomeCard(d) {
     <p class="muted note" style="margin:8px 0 0">평일 한 시간마다 금감원 전자공시를 봐요. ⚠️ 공시는 텔레그램으로 바로 와요.</p></section>`;
 }
 
+// 큰 발표 (big_events.py): CPI·고용·FOMC처럼 지수를 크게 흔드는 발표를 홈 맨 위에 눈에 띄게.
+// 앞으로 48시간 일정(예상치·이전 값), 지난 24시간 결과(실제 값·예상과 비교·선물 반응), 24시간 안의 지수 급변.
+// 아무것도 없으면 칸을 안 보여 줘요. 텔레그램으로도 전날·1시간 전·발표 뒤에 와요.
+function bigEventsCard() {
+  const data = (DATA && DATA.events) || {};
+  const now = Date.now(), H = 3600e3;
+  const ev = (data.events || []).filter((e) => { const t = Date.parse(e.at); return t > now - 24 * H && t < now + 48 * H; });
+  const shocks = (data.shocks || []).filter((x) => Date.parse(x.at) > now - 24 * H);
+  if (!ev.length && !shocks.length) return "";
+  const days = "일월화수목금토";
+  const when = (iso) => { const k = new Date(Date.parse(iso) + 9 * H); return `${k.getUTCMonth() + 1}.${String(k.getUTCDate()).padStart(2, "0")}(${days[k.getUTCDay()]}) ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`; };
+  const left = (iso) => { const m = Math.round((Date.parse(iso) - now) / 60e3); return m <= 0 ? "발표됨" : m < 60 ? `${m}분 뒤` : m < 24 * 60 ? `${Math.floor(m / 60)}시간 뒤` : `${Math.floor(m / 1440)}일 뒤`; };
+  const num = (t) => { const m = /^\s*([-+]?\d+(?:\.\d+)?)/.exec(t || ""); return m ? parseFloat(m[1]) : null; };
+  const vs = (e) => {
+    const a = num(e.actual), f = num(e.forecast);
+    if (a === null || f === null) return "";
+    const dec = ((e.forecast || "").split(".")[1] || "").replace(/[^0-9]/g, "").length;
+    if (Math.abs(a - f) < Math.pow(10, -dec) / 2 + 1e-9) return `<span class="muted">예상과 같음</span>`;
+    return a > f ? `<b class="big-hot">예상보다 높음</b>` : `<b class="big-cold">예상보다 낮음</b>`;
+  };
+  const groups = [];
+  ev.forEach((e) => { const g = groups.find((x) => x.at === e.at); g ? g.items.push(e) : groups.push({ at: e.at, items: [e] }); });
+  const rows = groups.map((g) => {
+    const done = Date.parse(g.at) <= now, tier = g.items.some((e) => e.tier1);
+    const items = g.items.map((e) => {
+      const bits = [e.actual && done ? `실제 <b>${esc(e.actual)}</b>` : "", e.forecast ? `예상 ${esc(e.forecast)}` : "", e.previous ? `이전 ${esc(e.previous)}` : ""].filter(Boolean).join(" · ");
+      return `<div class="big-item"><div class="name">${esc(e.flag || "")} ${esc(e.ko)}</div>${bits ? `<div class="meta">${bits} ${done && e.actual ? vs(e) : ""}</div>` : ""}</div>`;
+    }).join("");
+    const g0 = g.items.find((e) => e.react && e.react.length) || {};
+    const news = (g.items.find((e) => e.news && e.news.length) || {}).news || [];
+    const extra = done ? `${g0.react ? `<div class="meta">📈 발표 뒤 ${g0.react.map(esc).join(" · ")}</div>` : ""}
+      ${news.slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}` : "";
+    return `<li class="big-row${tier ? " tier1" : ""}${done ? " done" : ""}"><div class="big-when"><b>${when(g.at)}</b> <span class="pill">${left(g.at)}</span></div>${items}${extra}</li>`;
+  }).join("");
+  const shockRows = shocks.map((x) => `<li class="big-row tier1"><div class="big-when"><b>⚡ ${when(x.at)}</b> <span class="pill">지수 급변</span></div>
+      <div class="big-item"><div class="name">${esc(x.label)} 1시간 <span class="${x.move > 0 ? "up" : "down"}">${pct(x.move)}</span></div></div>
+      ${(x.news || []).slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}</li>`).join("");
+  return `<section class="card big-card" id="big-card"><h2>🚨 큰 발표·지수 급변 <small>한국시간 · 참고</small></h2>
+    <ul class="list big-list">${shockRows}${rows}</ul>
+    <p class="muted note" style="margin:10px 0 0">물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표예요. 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
+      실제 값은 FRED(미국 연준 무료 자료)에서 계산해서 공식 발표와 소수 둘째 자리가 다를 수 있어요. 매매 규칙은 그대로예요.</p></section>`;
+}
+
 // 다가오는 일정 (econ_calendar.py): 금리 결정·만기일·실적 시즌은 다 보여 주고, 종목 실적 발표·배당락은
 // 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만. 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
-const CAL_ICON = { rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
+const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
 let calAll = false;
 function calendarCard(d) {
   const ev = (DATA && DATA.calendar) || [];
@@ -3358,20 +3471,20 @@ function calendarCard(d) {
   const near = ev.filter((e) => e.date >= today && e.date < end);
   const shown = near.filter((e) => !["earn", "exdiv"].includes(e.kind) || mineOf(e) || (calAll && e.kind === "earn"));
   const hidden = near.filter((e) => e.kind === "earn" && !mineOf(e)).length;
-  const flag = { kr: "🇰🇷", us: "🇺🇸" }, days = "일월화수목금토";
+  const flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" }, days = "일월화수목금토";
   let last = "";
   const rows = shown.map((e) => {
     const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    return `${head}<li${tap}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
+    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
   const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
   return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 국장·미장</small></h2>
     ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}${more}
-    <p class="muted note" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 월요일 아침엔 텔레그램으로도 와요. 미국 물가·고용 발표일은 아직 못 넣었어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 🚨는 물가·고용·금리처럼 지수를 크게 흔드는 발표예요 (물가·고용은 이번 주 일정만 보여요). 월요일 아침엔 텔레그램으로도 와요.</p></section>`;
 }
 
 // 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)

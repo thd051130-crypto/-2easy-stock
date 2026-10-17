@@ -189,8 +189,10 @@ def us_economy(get=fred):
         rows.append(dict(key="sahm", name="삼 법칙", value=f"{x:.2f}%p ({sahm.index[-1]:%Y-%m})",
                          note="0.5 넘으면 경기 침체가 시작됐을 가능성이 높다는 신호", warn=bool(x >= 0.5)))
     cpi = get("CPIAUCSL")
-    if cpi is not None and len(cpi) >= 13:
-        yoy = cpi.iloc[-1] / cpi.iloc[-13] - 1
+    # 1년 전 값은 날짜로 찾아요 (2025-10처럼 빠진 달이 있으면 13칸 전이 1년 전이 아니에요)
+    year_ago = cpi.get(cpi.index[-1] - pd.DateOffset(years=1)) if cpi is not None and len(cpi) else None
+    if year_ago is not None and not pd.isna(year_ago):
+        yoy = cpi.iloc[-1] / year_ago - 1
         rows.append(dict(key="cpi", name="미국 물가", value=f"1년 {yoy:+.1%} ({cpi.index[-1]:%Y-%m})",
                          note="연준 목표 2%", warn=bool(yoy >= 0.035)))
     claims = get("ICSA")

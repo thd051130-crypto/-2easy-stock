@@ -739,3 +739,38 @@ details.pol-sec { margin-top: 6px; }
 .div-mh small { font-weight: 400; color: var(--text-muted); font-size: 12px; }
 details > summary.div-mh { cursor: pointer; }
 .div-buy { font-size: 11px; opacity: .8; }
+
+/* 큰 발표·지수 급변 (홈 맨 위) */
+.big-card { border: 2px solid var(--wait-fg); background: color-mix(in srgb, var(--wait-bg) 55%, var(--surface-1, transparent)); }
+.big-card h2 { color: var(--wait-fg); }
+.big-list .big-row { display: block; padding: 10px 0; }
+.big-list .big-row.tier1 .big-when b { color: var(--wait-fg); }
+.big-list .big-row.done { opacity: .95; }
+.big-when { margin-bottom: 4px; }
+.big-when .pill { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--wait-bg); color: var(--wait-fg); margin-left: 4px; }
+.big-item { margin: 4px 0 0 2px; }
+.big-item .name { font-weight: 600; }
+.big-hot { color: var(--up); } .big-cold { color: var(--down); }
+.cal li.cal-big .name { font-weight: 700; color: var(--wait-fg); }
+
+/* 홈 '더 보기': 칸마다 한 줄, 누르면 그 자리에서 펼쳐져요 */
+.home-more { padding-bottom: 6px; }
+.home-more > h2 { margin-bottom: 2px; }
+details.hm { border-top: 1px solid var(--border); }
+details.hm:first-of-type { border-top: 0; }
+details.hm > summary {
+  list-style: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0;
+  font-weight: 400; color: var(--text-primary); -webkit-tap-highlight-color: transparent;
+}
+details.hm > summary::-webkit-details-marker { display: none; }
+.hm-ico { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--surface-0); font-size: 16px; }
+.hm-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-t > b { font-size: 15px; font-weight: 600; }
+.hm-s { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-s b { font-weight: 600; }
+.hm-arrow { font-size: 20px; line-height: 1; color: var(--text-muted); transition: transform .2s; }
+details.hm[open] > summary .hm-arrow { transform: rotate(90deg); }
+.hm-body { padding: 0 0 14px; }
+.hm-body > .card { border: 0; background: none; padding: 0; border-radius: 0; box-shadow: none; }
+.hm-meta { margin: 0 0 8px; font-size: 12px; color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .hm-arrow { transition: none; } }
