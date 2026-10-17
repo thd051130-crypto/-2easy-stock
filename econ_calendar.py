@@ -8,7 +8,8 @@
     거래소 휴일이면 하루 앞당겨질 수 있어요
   - 국장 실적 시즌: 우리 규칙이 새로 사지 않는 기간 (strategy.EARNINGS_SEASONS)
   - 종목 실적 발표일·배당락: fundamentals.py가 매주 받는 야후 자료 (감시 종목·텔레그램으로 넣은 종목·가상계좌 보유 종목)
-미국 물가(CPI)·고용 발표일은 미국 노동부 홈페이지가 자동 접속을 막아서 아직 못 넣었어요.
+  - 미국 물가(CPI)·고용·금리 결정 같은 큰 발표: big_events.py가 받아 둔 paper/events.json (이번 주 일정만, 예상치 포함).
+    미국 노동부 홈페이지는 자동 접속을 막아서 몇 달 뒤 날짜는 아직 못 넣어요.
 
 매일 06:50 macro 워크플로가 돌려서 paper/calendar.json에 저장하고(앱 홈 '다가오는 일정'),
 월요일엔 텔레그램으로 '[이번 주 일정]'을 보내요. 홈페이지를 못 받으면 지난번에 받은 날짜를 그대로 써요.
@@ -160,13 +161,16 @@ def build(today, fomc, bok, paper):
     ev = []
     for x in fomc:
         if f"{start:%Y-%m-%d}" <= x["date"] <= f"{end:%Y-%m-%d}":
-            ev.append(dict(date=x["date"], market="us", kind="rate", title="미국 금리 결정 (FOMC)",
+            ev.append(dict(date=x["date"], market="us", kind="rate", title="미국 금리 결정 (FOMC)", big=True,
                            note="한국시간 다음 날 새벽 3~4시 발표" + (" · 경제전망도 같이 나와요" if x["sep"] else "")))
     for d in bok:
         if f"{start:%Y-%m-%d}" <= d <= f"{end:%Y-%m-%d}":
             ev.append(dict(date=d, market="kr", kind="rate", title="한국 금리 결정 (금통위)", note="보통 오전 10시쯤 발표"))
+    import big_events
+
+    ev += big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
     ev += expiries(start, end) + seasons(start, end) + stock_events(paper, start, end)
-    ev.sort(key=lambda x: (x["date"], x["kind"] != "rate", -(x.get("cap") or 0)))
+    ev.sort(key=lambda x: (x["date"], x["kind"] not in ("big", "rate"), -(x.get("cap") or 0)))
     return ev
 
 
@@ -183,9 +187,13 @@ def week_text(events, today, limit=EARN_MAX):
     for e in sorted(big + stocks, key=lambda e: e["date"]):
         d = dt.date.fromisoformat(e["date"])
         star = " ⭐" if e.get("mine") else ""
-        lines.append(f"- {d:%m.%d}({days[d.weekday()]}) {flag.get(e['market'], '')} {e['title']}{star}")
+        mark = "🚨 " if e.get("big") else ""
+        when = f" ({e['note']})" if e["kind"] == "big" else ""
+        lines.append(f"- {d:%m.%d}({days[d.weekday()]}) {flag.get(e['market'], '🌐')} {mark}{e['title']}{when}{star}")
     if len(lines) == 2:
         lines.append("- 이번 주엔 큰 일정이 없어요.")
+    if any(e.get("big") for e in big):
+        lines.append("🚨 지수가 크게 움직일 수 있는 발표예요. 전날과 발표 뒤에 따로 알려 드려요.")
     if any(e.get("mine") for e in stocks):
         lines.append("⭐ 텔레그램으로 넣은 종목이나 가상계좌에 있는 종목이에요.")
     return "\n".join(lines)

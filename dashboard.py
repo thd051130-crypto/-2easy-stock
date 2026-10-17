@@ -11,6 +11,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/policies.json, policy_news.json : 정부 정책과 최근 뉴스 (policies.py)
   - paper/world.json : 세계 지수·환율 (world.py)
   - paper/calendar.json : 경제 일정 (econ_calendar.py)
+  - paper/events.json   : 큰 발표(CPI·고용·FOMC) 예상·결과, 지수 급변 (big_events.py)
   - paper/kr/disclosures.json : 국장 종목 공시 (disclosures.py, 오픈DART 키가 있을 때만)
   - paper/kr/flows.json : 국장 외국인·기관 수급 (flows.py) → 홈 경고·요약만 (종목별 막대는 stock_pages.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
@@ -212,7 +213,7 @@ def build(paper_dir):
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets,
                 bot=watchlist.bot_username(paper_dir), health=health,
                 macro=read_json(paper_dir / "macro.json"), policies=policies.payload(paper_dir),
-                calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
+                calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), events=read_json(paper_dir / "events.json"), world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
                 total=total_assets(markets, etf_acct, fx))
 
 
