@@ -8,8 +8,9 @@
     거래소 휴일이면 하루 앞당겨질 수 있어요
   - 국장 실적 시즌: 우리 규칙이 새로 사지 않는 기간 (strategy.EARNINGS_SEASONS)
   - 종목 실적 발표일·배당락: fundamentals.py가 매주 받는 야후 자료 (감시 종목·텔레그램으로 넣은 종목·가상계좌 보유 종목)
-  - 미국 물가(CPI)·고용·금리 결정 같은 큰 발표: big_events.py가 받아 둔 paper/events.json (이번 주 일정만, 예상치 포함).
-    미국 노동부 홈페이지는 자동 접속을 막아서 몇 달 뒤 날짜는 아직 못 넣어요.
+  - 미국 물가(CPI)·고용·PCE·GDP 같은 큰 발표: 몇 달 치 날짜는 FRED(세인트루이스 연준) 발표 일정표
+    (fred.stlouisfed.org/releases/calendar, 미국 중부 시간 → 한국시간). 미국 노동부 홈페이지는 자동 접속을 막아서 FRED로 받아요.
+    이번 주 일정은 big_events.py가 받아 둔 paper/events.json(예상치 포함)이 같은 시각 FRED 일정 대신 들어가요.
 
 매일 06:50 macro 워크플로가 돌려서 paper/calendar.json에 저장하고(앱 홈 '다가오는 일정'),
 월요일엔 텔레그램으로 '[이번 주 일정]'을 보내요. 홈페이지를 못 받으면 지난번에 받은 날짜를 그대로 써요.
@@ -28,6 +29,7 @@ import pathlib
 import re
 
 import requests
+from zoneinfo import ZoneInfo
 
 import strategy
 import watchlist
@@ -37,6 +39,17 @@ KST = dt.timezone(dt.timedelta(hours=9))
 HEADERS = {"User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36"}
 FOMC_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
 BOK_URL = "https://www.bok.or.kr/portal/singl/crncyPolicyDrcMtg/listYear.do?mtgSe=A&menuNo=200755"
+FRED_CAL = "https://fred.stlouisfed.org/releases/calendar?rid={rid}&y={year}"
+# FRED 발표 번호 → (한국어 이름, 지수를 크게 흔드는 1급인지). 1급은 🚨로 강조해요
+FRED_RELEASES = {
+    10: ("미국 소비자물가(CPI)", True),
+    50: ("미국 고용 보고서 (실업률·일자리)", True),
+    54: ("미국 PCE 물가 (연준이 보는 물가)", True),
+    53: ("미국 GDP (경제성장률)", True),
+    46: ("미국 생산자물가(PPI)", False),
+    9: ("미국 소매판매", False),
+}
+CENTRAL = ZoneInfo("America/Chicago")
 MONTHS = {m: i for i, m in enumerate(calendar.month_name) if m}
 AHEAD = 120   # 앞으로 며칠 치를 저장할지
 BEHIND = 7    # 지난 일정도 며칠은 남겨요 (앱에서 '어제 있었던 일'로)
@@ -85,6 +98,56 @@ def parse_bok(html):
         except ValueError:
             continue
     return sorted(set(out))
+
+
+def parse_fred(html, rid):
+    """FRED 발표 일정표 → [{'at': 한국시간 ISO, 'rid': 번호}]. 날짜 줄('Tuesday November 10, 2026') 다음 줄에
+    시각('7:30 am', 미국 중부 시간)과 그 발표 링크(release?rid=번호)가 있어요."""
+    out, day = [], None
+    for row in re.split(r"<tr", html):
+        t = text_of(row)
+        m = re.search(r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) ([A-Z][a-z]+) (\d{1,2}), (\d{4})", t)
+        if m and m.group(1) in MONTHS:
+            day = dt.date(int(m.group(3)), MONTHS[m.group(1)], int(m.group(2)))
+            continue
+        hm = re.search(r"(\d{1,2}):(\d{2}) (am|pm)", t)
+        if day and hm and f"release?rid={rid}\"" in row:
+            h = int(hm.group(1)) % 12 + (12 if hm.group(3) == "pm" else 0)
+            at = dt.datetime(day.year, day.month, day.day, h, int(hm.group(2)), tzinfo=CENTRAL).astimezone(KST)
+            out.append(dict(at=at.isoformat(timespec="minutes"), rid=rid))
+    return out
+
+
+def fetch_fred(today):
+    """올해·내년 큰 발표 날짜. FRED는 브라우저 흉내(User-Agent)를 보내면 막혀서 그냥 요청해요."""
+    out = []
+    for rid in FRED_RELEASES:
+        for year in (today.year, today.year + 1):
+            r = requests.get(FRED_CAL.format(rid=rid, year=year), timeout=20)
+            r.raise_for_status()
+            out += parse_fred(r.text, rid)
+    return sorted(out, key=lambda x: x["at"])
+
+
+def release_events(releases, start, end, taken=()):
+    """FRED 일정 → 달력 줄. taken: 이미 events.json(이번 주, 예상치 포함)에 있는 (날짜, 메모) — 같은 시각이면 빼요."""
+    out = []
+    for x in releases:
+        at = dt.datetime.fromisoformat(x["at"])
+        name, tier1 = FRED_RELEASES.get(x["rid"], (None, False))
+        d, note = f"{at:%Y-%m-%d}", f"한국시간 {at:%H:%M} 발표"
+        if name and f"{start:%Y-%m-%d}" <= d <= f"{end:%Y-%m-%d}" and (d, note) not in taken:
+            out.append(dict(date=d, market="us", kind="big", title=name, big=tier1, note=note))
+    # 같은 시각 발표는 한 줄로 (예: CPI와 소매판매가 같은 날 같은 시각)
+    merged = {}
+    for e in out:
+        k = (e["date"], e["note"])
+        if k in merged:
+            merged[k]["title"] += f" · {e['title']}"
+            merged[k]["big"] = merged[k]["big"] or e["big"]
+        else:
+            merged[k] = e
+    return list(merged.values())
 
 
 def fetch(url):
@@ -156,7 +219,7 @@ def stock_events(paper, start, end):
     return out
 
 
-def build(today, fomc, bok, paper):
+def build(today, fomc, bok, paper, releases=()):
     start, end = today - dt.timedelta(days=BEHIND), today + dt.timedelta(days=AHEAD)
     ev = []
     for x in fomc:
@@ -168,7 +231,8 @@ def build(today, fomc, bok, paper):
             ev.append(dict(date=d, market="kr", kind="rate", title="한국 금리 결정 (금통위)", note="보통 오전 10시쯤 발표"))
     import big_events
 
-    ev += big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
+    week = big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
+    ev += week + release_events(releases, start, end, {(e["date"], e["note"]) for e in week})
     ev += expiries(start, end) + seasons(start, end) + stock_events(paper, start, end)
     ev.sort(key=lambda x: (x["date"], x["kind"] not in ("big", "rate"), -(x.get("cap") or 0)))
     return ev
@@ -218,9 +282,14 @@ def main():
         bok = sorted(set(got) | {d for d in bok if d[:4] != (got[0][:4] if got else "")}) if got else bok
     except Exception as e:
         print(f"금통위 일정을 못 받았어요 (지난번 날짜를 써요): {e!r}")
-    events = build(today, fomc, bok, args.paper)
+    releases = old.get("releases") or []
+    try:
+        releases = fetch_fred(today) or releases
+    except Exception as e:
+        print(f"FRED 발표 일정을 못 받았어요 (지난번 날짜를 써요): {e!r}")
+    events = build(today, fomc, bok, args.paper, releases)
     args.save.parent.mkdir(parents=True, exist_ok=True)
-    payload = dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), fomc=fomc, bok=bok, events=events)
+    payload = dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), fomc=fomc, bok=bok, releases=releases, events=events)
     args.save.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     text = week_text(events, today)
     print(text)

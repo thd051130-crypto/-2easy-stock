@@ -9,10 +9,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests pandas
       - run: |
-          for r in 10 50; do
-            curl -sS --http1.1 -m 25 -o out.html "https://fred.stlouisfed.org/releases/calendar?rid=$r&y=2026" || true
-            echo "=== rid $r"; tr -s ' \n' ' ' < out.html | sed 's/<tr/\n<tr/g; s/<h[0-9]/\n&/g' | grep -i -E '2026|November|December|<tr' | grep -v option | cut -c1-400 | head -60
-          done
-          curl -sS --http1.1 -m 25 -o out.html "https://fred.stlouisfed.org/releases/calendar?rid=10&y=2027"
-          echo "=== 2027"; tr -s ' \n' ' ' < out.html | sed 's/<tr/\n<tr/g' | grep '<tr' | cut -c1-300 | head -20
+          python econ_calendar.py --save /tmp/cal.json --dry-run | head -30
+          python -c "
+          import json;c=json.load(open('/tmp/cal.json'));print(len(c['releases']));[print(e['date'],e['title'],e['note']) for e in c['events'] if e['kind']=='big']"

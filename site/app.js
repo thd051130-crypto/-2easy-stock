@@ -3512,7 +3512,7 @@ function calRows(list) {
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
+    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
 }
