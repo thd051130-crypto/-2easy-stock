@@ -25,6 +25,7 @@ def test_snapshot_groups_and_changes():
     ks = rows["^KS11"]
     assert ks["d1"] > 0 and ks["w1"] > ks["d1"] and ks["y1"] > ks["m1"] > 0
     assert len(ks["closes"]) == world.KEEP
+    assert len(ks["dates"]) == world.KEEP and ks["dates"][-1] == ks["day"]  # 앱에서 누르면 그래프 가로축
     assert rows["CNYKRW"]["last"] == 200.0  # 1400원 ÷ 7위안
     assert rows["JPYKRW=X"]["last"] == 900.0  # 100엔 기준
     assert snap["updated"] == "2026-10-08T07:05+09:00"

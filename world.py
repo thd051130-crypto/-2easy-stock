@@ -96,7 +96,7 @@ def item(sym, name, kind, s):
     keep = s.iloc[-KEEP:]
     return dict(sym=sym, name=name, kind=kind, day=s.index[-1].date().isoformat(), last=round(float(s.iloc[-1]), 4),
                 d1=round(float(s.iloc[-1] / s.iloc[-2] - 1), 5), w1=change(s, 7), m1=change(s, 30), y1=change(s, 365),
-                closes=[float(f"{x:.6g}") for x in keep])
+                closes=[float(f"{x:.6g}") for x in keep], dates=[x.date().isoformat() for x in keep.index])
 
 
 def snapshot(closes, now=None):

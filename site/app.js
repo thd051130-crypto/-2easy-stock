@@ -352,9 +352,8 @@ const VIEWS = {
   home: (d) => [bigEventsCard(), worldCard(), homeMoreCard(d), homeSignalCard(d), homePerfCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
-  // 성과: 수익률 달력 → 내 규칙표 검증 → 가상계좌(핵심 숫자만, 그래프는 접기) → 추천 종목 성과(요약 + 3개, 나머지 접기) 순 (사용자가 정함, 2026-10-17)
-  perf: (d) => [retCalendarCard(d), rulebookAccountCard(d), accountCard(d), positionsCard(d), trackCard(d), savingsCard(), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
-    memoCard(), healthCard(), firstAccountCard(d)],
+  // 성과: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
+  perf: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
   stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
@@ -378,12 +377,23 @@ function render() {
   const d = DATA.markets[market];
   const app = $("#app");
   app.classList.remove(...FX);
+  const top = $(".top");
+  if (top) document.documentElement.style.setProperty("--top-h", `${top.offsetHeight}px`);
   app.innerHTML = VIEWS[screen](d).join("");
   if (screen === "home") tidyHomeMore(app);
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") {
+    const bar = $(".perf-tabs", app);
+    const on = bar && bar.querySelector('[aria-pressed="true"]');
+    if (on) bar.scrollLeft = Math.max(0, on.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2);  // 고른 버튼이 가운데 보이게
+    app.querySelectorAll("[data-perf-tab]").forEach((b) => b.addEventListener("click", () => {
+      perfTabKey = b.dataset.perfTab;
+      try { localStorage.setItem("perf_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
+      render();
+      window.scrollTo(0, 0);  // 고른 묶음의 처음부터 (선택 바는 늘 맨 위에 붙어 있어요)
+    }));
     // 접힌 그래프는 펼칠 때 그려요 (접힌 채로 그리면 폭이 0이라서). 펼친 건 이 폰에 기억해요.
     [["equity-fold", () => drawEquity(d)], ["track-fold", () => drawTrack(d, true)]].forEach(([id, draw]) => {
       const f = $(`#${id}`);
@@ -472,6 +482,20 @@ function render() {
     render();
     window.scrollTo(0, y);
   }));
+  const keepY = (f) => () => { const y = window.scrollY; f(); render(); window.scrollTo(0, y); };
+  app.querySelectorAll("[data-world]").forEach((b) => b.addEventListener("click", keepY(() => {
+    worldPick = worldPick === b.dataset.world ? null : b.dataset.world;
+  })));
+  app.querySelectorAll("[data-world-g]").forEach((b) => b.addEventListener("click", keepY(() => {
+    worldG = b.dataset.worldG;
+    try { localStorage.setItem("world_g", worldG); } catch (e) { /* 이번만 기억 */ }
+  })));
+  app.querySelectorAll("[data-world-chart]").forEach((b) => b.addEventListener("click", () => {
+    CHART_IDX[market] = b.dataset.worldChart;
+    try { localStorage.setItem("chart_idx", JSON.stringify(CHART_IDX)); } catch (e) { /* 이번만 기억 */ }
+    go("chart");
+  }));
+  drawWorldGraph();
   const wd = $("#world-all");
   if (wd) wd.addEventListener("toggle", () => {
     worldOpen = wd.open;
@@ -579,7 +603,7 @@ function homeSignalCard(d) {
         <div class="meta">손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("")}</ul>`;
   }
   const rb = s.rulebook || [];
-  const rbLine = rb.length ? `<p class="muted" style="margin:10px 0 0">내 규칙표 후보 ${rb.length}개: ${rb.map((p) => esc(p.name)).join(" · ")}</p>` : "";
+  const rbLine = rb.length ? `<p class="muted" style="margin:10px 0 0">내 규칙표 후보 ${rb.length}개: ${rb.slice(0, RB_FIRST).map((p) => esc(p.name)).join(" · ")}${rb.length > RB_FIRST ? ` 외 ${rb.length - RB_FIRST}개` : ""}</p>` : "";
   const look = sigLook(s);
   return `<section class="${look.cls}"><h2><span>오늘의 신호${look.badge}</span><small>${md(s.day)} 종가 기준</small></h2>${chip}
     <p class="headline">${esc(head)}</p><p class="sub">${esc(sub)}</p>${extra}${rbLine}
@@ -1581,9 +1605,10 @@ function setMapFocus(name, back = false) {
 }
 function bindMapDetail(el) {
   el.querySelectorAll("[data-mapgo]").forEach((b) => b.addEventListener("click", () => {
+    // 아래 '산업 흐름' 칸에서 눌러도 화면은 그 자리 그대로예요 (위 지도로 올라가지 않게, 사용자 요청 2026-10-17)
+    const y = window.scrollY;
     setMapFocus(b.dataset.mapgo);
-    const card = $(".map-card");
-    if (card) card.scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
+    window.scrollTo(0, y);
   }));
   el.querySelectorAll("[data-mapq]").forEach((b) => b.addEventListener("click", () => {
     searchQuery = `${b.dataset.mapq} 관련 종목`;
@@ -1814,6 +1839,31 @@ function trackCard(d) {
 
 let PERF_OPEN = new Set();
 try { PERF_OPEN = new Set(JSON.parse(localStorage.getItem("perf_open") || "[]")); } catch (e) { /* 처음 */ }
+// 성과 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 수익률 달력, 고른 건 이 폰에 기억해요
+const PERF_TABS = [
+  ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
+  ["acc", "가상계좌", (d) => [accountCard(d), positionsCard(d), tradesCard(d)]],
+  ["rule", "내 규칙표", (d) => [rulebookAccountCard(d)]],
+  ["track", "추천 종목", (d) => [trackCard(d)]],
+  ["sav", "적립식 계산기", () => [savingsCard()]],
+  ["stress", "폭락 대비", (d) => [stressCard(d)]],
+  ["etf", "ETF 계좌", (d) => [etfAccountCard(d)]],
+  ["ready", "실전 준비", (d) => [readinessCard(d), goalCard(), firstAccountCard(d)]],
+  ["memo", "메모·점검", () => [memoCard(), healthCard()]],
+];
+let perfTabKey = "cal";
+try { perfTabKey = localStorage.getItem("perf_tab") || "cal"; } catch (e) { /* 처음 */ }
+const perfTabList = (d) => PERF_TABS.filter(([k, , cards]) => k === "cal" || cards(d).some(Boolean)).map(([k, label, cards]) => ({ k, label, cards }));
+function perfTab(d) {
+  const list = perfTabList(d);
+  return list.find((t) => t.k === perfTabKey) || list[0];
+}
+function perfTabsBar(d) {
+  const cur = perfTab(d).k;
+  return `<nav class="chips idx-chips perf-tabs" aria-label="성과 화면 고르기">${perfTabList(d).map((t) =>
+    `<button type="button" data-perf-tab="${t.k}" aria-pressed="${t.k === cur}">${esc(t.label)}</button>`).join("")}</nav>`;
+}
+
 function drawTrack(d, chart) {
   const t = d.signal && d.signal.tracked;
   if (!chart) {
@@ -1868,8 +1918,12 @@ function homeMoreRows(d) {
   const dn = dropNow(d);
   add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
   // 다가오는 일정: 가장 가까운 큰 일정
-  const ev = ((DATA && DATA.calendar) || []).filter((e) => e.date >= TODAY() && !["earn", "exdiv"].includes(e.kind));
-  add("cal", "📅", "다가오는 일정", ev.length ? `${md(ev[0].date)} ${esc(ev[0].title)} · ${dday(ev[0].date)}` : "2주 안 큰 일정 없음", calendarCard(d));
+  const ev = calNear(CAL_DAYS).filter((e) => !STOCK_KINDS.includes(e.kind));
+  const ev1 = ev.find((e) => e.big) || ev[0];  // 큰 발표가 있으면 그걸 먼저
+  add("cal", "📅", "다가오는 일정", ev1 ? `${md(ev1.date)} ${esc(ev1.title)} · ${dday(ev1.date)}` : "2주 안 큰 일정 없음", calendarCard());
+  // 실적·배당 발표: 가장 가까운 내 종목 일정
+  const er = calNear(EARN_DAYS).filter((e) => STOCK_KINDS.includes(e.kind) && calMine(e));
+  add("earn", "📢", "실적·배당 발표", er.length ? `${md(er[0].date)} ${esc(er[0].title)} · ${dday(er[0].date)}${er.length > 1 ? ` 외 ${er.length - 1}건` : ""}` : "한 달 안 내 종목 일정 없음", earningsCard());
   const mine = myStocks(d);
   add("watch", "⭐", "관심종목", mine.length ? `${mine.length}개 · ${esc(mine[0].name)}${mine.length > 1 ? " 외" : ""}` : "", homeWatchCard(d));
   const mv = s.movers;
@@ -2655,17 +2709,23 @@ function indHelp() {
 
 // 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요).
 // 오늘 후보와 규칙은 신호 화면, 계좌 성과는 성과 화면에 보여요.
+const RB_FIRST = 3;
 function rulebookPicksCard(d) {
   const rb = d.rulebook;
   if (!rb) return "";
   const picks = (d.signal && d.signal.rulebook) || [];
   const unit = market === "kr" ? "원" : "달러";
   const first = ((rb.account && rb.account.equity) || d.capital) / 5 * 0.3;  // 종목당 계좌의 1/5, 첫 매수는 그중 30%
-  const items = picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
-      <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${opinion(p.opinion)}</div>
-      <div class="r">${num(p.close)}${unit}<div class="meta">1차 ${canBuy(market, first, p.close)}</div></div></li>`).join("");
+  // 후보가 많으면 길어져서 앞의 RB_FIRST개만 한 줄씩(이름·가격), 나머지와 매매 의견은 접어 둬요 (사용자 요청 2026-10-17)
+  const row = (p, i, full) => `<li data-stock="${esc(p.code)}"><div class="l">
+      <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${full ? opinion(p.opinion) : ""}</div>
+      <div class="r">${num(p.close)}${unit}<div class="meta">1차 ${canBuy(market, first, p.close)}</div></div></li>`;
+  const top = picks.slice(0, RB_FIRST).map((p, i) => row(p, i, false)).join("");
+  const rest = picks.length > RB_FIRST ? ` · 나머지 ${picks.length - RB_FIRST}개` : "";
+  const fold = picks.length ? `<details class="more-list" style="margin-top:8px"><summary class="muted">후보 ${picks.length}개 매매 의견까지 보기${rest}</summary>
+      <ul class="list">${picks.map((p, i) => row(p, i, true)).join("")}</ul></details>` : "";
   return `<section class="card"><h2>내 규칙표 후보 <small>${picks.length}개 · 검증용 가상계좌에 기록</small></h2>
-    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
+    ${top ? `<ul class="list">${top}</ul>${fold}` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
     <details style="margin-top:12px"><summary>규칙표 보기</summary><ol>${rb.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details>
   </section>`;
 }
@@ -3190,13 +3250,49 @@ function worldValue(r) {
   const v = r.last.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return r.kind === "krw" ? `${v}원` : v;
 }
+// 줄을 누르면 바로 아래에 그 지수·환율 그래프가 펼쳐져요 (다시 누르면 접혀요). 지수는 차트 화면 캔들로도 갈 수 있어요
+let worldPick = null;
+const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월", 130], ["y1", "1년", 0]];
+let worldG = "m3";
+try { worldG = localStorage.getItem("world_g") || "m3"; } catch (e) { /* 처음 */ }
+if (!WORLD_G.some((p) => p[0] === worldG)) worldG = "m3";
 function worldRow(r) {
   const [key, , n, line] = WORLD_P.find((p) => p[0] === worldP);
   const closes = n ? r.closes.slice(-n) : r.closes;
-  return `<li class="stock spark-row no-star"><div class="name">${esc(r.name)}</div>
+  const open = worldPick === r.sym;
+  return `<li class="stock spark-row no-star world-row${open ? " open" : ""}" data-world="${esc(r.sym)}" role="button" aria-expanded="${open}"><div class="name">${esc(r.name)}</div>
     <div class="meta">${md(r.day)} 종가${n && closes.length > 1 ? ` · ${line} ${pct(closes[closes.length - 1] / closes[0] - 1)}` : ""}</div>
     <div class="mini">${spark(closes, `${r.name} 최근 ${line}`)}</div>
-    <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${pct(r[key], 2)}</div></li>`;
+    <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${pct(r[key], 2)}</div></li>${open ? worldGraph(r) : ""}`;
+}
+function worldGraph(r) {
+  const [, , n] = WORLD_G.find((p) => p[0] === worldG);
+  const c = n ? r.closes.slice(-n) : r.closes;
+  const ch = c.length > 1 ? c[c.length - 1] / c[0] - 1 : null;
+  const hi = Math.max(...c), lo = Math.min(...c);
+  const chips = WORLD_G.map(([k, l]) => `<button type="button" data-world-g="${k}" aria-pressed="${k === worldG}">${l}</button>`).join("");
+  const toChart = r.kind === "idx" ? `<button type="button" class="more" data-world-chart="${esc(r.sym)}">${esc(r.name)} 캔들 차트로 크게 보기<span aria-hidden="true">›</span></button>` : "";
+  return `<li class="world-graph"><div class="period" role="group" aria-label="그래프 기간">${chips}</div>
+    <p class="muted" style="margin:8px 0 4px">${ch == null ? "" : `이 기간 <b class="${sign(ch)}">${pct(ch, 2)}</b> · `}최고 ${worldValue({ ...r, last: hi })} · 최저 ${worldValue({ ...r, last: lo })}</p>
+    <div class="chart" id="world-chart"></div>${toChart}</li>`;
+}
+function drawWorldGraph() {
+  const el = $("#world-chart");
+  const w = DATA && DATA.world;
+  if (!el || !w) return;
+  const r = w.groups.flatMap((g) => g.items).find((x) => x.sym === worldPick);
+  if (!r) return;
+  const [, , n] = WORLD_G.find((p) => p[0] === worldG);
+  const c = n ? r.closes.slice(-n) : r.closes;
+  // 옛 자료엔 날짜가 없어서 'N일 전'으로 써요 (world 워크플로가 한 번 돌면 날짜가 생겨요)
+  const dates = r.dates && r.dates.length === r.closes.length ? (n ? r.dates.slice(-n) : r.dates) : c.map((_, i) => (i === c.length - 1 ? r.day : `${c.length - 1 - i}거래일 전`));
+  const digits = Math.max(...c) >= 1000 ? 0 : 2;
+  lineChart(el, {
+    dates,
+    xfmt: (s) => (/^\d{4}-/.test(s) ? s.slice(2).replace(/-/g, ".") : s),
+    series: [{ name: r.name, color: c[c.length - 1] >= c[0] ? "var(--up)" : "var(--down)", values: c }],
+    fmt: (v) => v.toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits }),
+  });
 }
 function worldCard() {
   const w = DATA.world;
@@ -3395,33 +3491,48 @@ function bigEventsCard() {
       실제 값은 FRED(미국 연준 무료 자료)에서 계산해서 공식 발표와 소수 둘째 자리가 다를 수 있어요. 매매 규칙은 그대로예요.</p></section>`;
 }
 
-// 다가오는 일정 (econ_calendar.py): 금리 결정·만기일·실적 시즌은 다 보여 주고, 종목 실적 발표·배당락은
-// 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만. 나머지 대형주 실적은 개수만.
+// 다가오는 일정 (econ_calendar.py): 경제 일정(큰 발표·금리 결정·만기일·실적 시즌)과 종목 실적·배당 발표를 두 칸으로 나눠요 (사용자 요청 2026-10-17).
+// 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만, 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
+const EARN_DAYS = 30;  // 실적·배당은 한 달 치
 const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
+const STOCK_KINDS = ["earn", "exdiv"];
 let calAll = false;
-function calendarCard(d) {
+const calMine = (e) => e.mine || (e.code && WATCH[e.market] && WATCH[e.market].includes(e.code));
+function calNear(days) {
   const ev = (DATA && DATA.calendar) || [];
-  if (!ev.length) return "";
-  const today = TODAY(), end = new Date(Date.parse(today) + CAL_DAYS * 864e5).toISOString().slice(0, 10);
-  const mineOf = (e) => e.mine || (e.code && WATCH[e.market].includes(e.code));
-  const near = ev.filter((e) => e.date >= today && e.date < end);
-  const shown = near.filter((e) => !["earn", "exdiv"].includes(e.kind) || mineOf(e) || (calAll && e.kind === "earn"));
-  const hidden = near.filter((e) => e.kind === "earn" && !mineOf(e)).length;
+  const today = TODAY(), end = new Date(Date.parse(today) + days * 864e5).toISOString().slice(0, 10);
+  return ev.filter((e) => e.date >= today && e.date < end);
+}
+function calRows(list) {
   const flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" }, days = "일월화수목금토";
   let last = "";
-  const rows = shown.map((e) => {
+  return list.map((e) => {
     const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
+    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
+}
+function calendarCard() {
+  if (!((DATA && DATA.calendar) || []).length) return "";
+  const rows = calRows(calNear(CAL_DAYS).filter((e) => !STOCK_KINDS.includes(e.kind)));
+  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 경제 일정</small></h2>
+    ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}
+    <p class="muted note" style="margin:10px 0 0">🚨는 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표예요 (한국시간). 금리 결정·만기일 날에도 시장이 크게 출렁일 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요. 월요일 아침엔 텔레그램으로도 와요.</p></section>`;
+}
+function earningsCard() {
+  if (!((DATA && DATA.calendar) || []).length) return "";
+  const near = calNear(EARN_DAYS).filter((e) => STOCK_KINDS.includes(e.kind));
+  const shown = near.filter((e) => calMine(e) || (calAll && e.kind === "earn"));
+  const hidden = near.filter((e) => e.kind === "earn" && !calMine(e)).length;
+  const rows = calRows(shown);
   const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
-  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 국장·미장</small></h2>
-    ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}${more}
-    <p class="muted note" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 🚨는 물가·고용·금리처럼 지수를 크게 흔드는 발표예요 (물가·고용은 이번 주 일정만 보여요). 월요일 아침엔 텔레그램으로도 와요.</p></section>`;
+  return `<section class="card" id="earn-card"><h2>실적·배당 발표 <small>${EARN_DAYS}일 · 국장·미장</small></h2>
+    ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${EARN_DAYS}일 동안 내 종목 실적·배당 일정이 없어요.</p>`}${more}
+    <p class="muted note" style="margin:10px 0 0">📢 실적 발표, 💰 배당락이에요. ⭐는 내 관심종목·가상계좌 종목이에요. 종목을 누르면 종목 화면으로 가요.</p></section>`;
 }
 
 // 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)

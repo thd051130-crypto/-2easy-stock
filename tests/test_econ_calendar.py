@@ -66,3 +66,27 @@ def test_build_and_week_text(tmp_path):
     assert "SK하이닉스 실적 발표 ⭐" in text and "삼성전자 실적 발표" in text and "FOMC" in text
     assert "삼성전자 배당락" not in text  # 다음 주 밖
     assert "큰 일정이 없어요" in ec.week_text([], dt.date(2026, 10, 22))
+
+
+FRED_HTML = """<table><tbody>
+<tr class="odd"> <td text-align="left" colspan="2"> <span style="font-weight: bold;">Tuesday November 10, 2026</span> </td> </tr>
+<tr> <td nowrap style="width:5%; text-align:right"> 7:30 am </td> <td text-align="left"> <a href="/release?rid=10">Consumer Price Index</a> </td> </tr>
+<tr class="odd"> <td text-align="left" colspan="2"> <span style="font-weight: bold;">Thursday December 10, 2026</span> </td> </tr>
+<tr> <td nowrap style="width:5%; text-align:right"> 7:30 am </td> <td text-align="left"> <a href="/release?rid=10">Consumer Price Index</a> </td> </tr>
+<tr> <td nowrap style="width:5%; text-align:right"> 7:30 am </td> <td text-align="left"> <a href="/release?rid=100">Other</a> </td> </tr>
+</tbody></table>"""
+
+
+def test_parse_fred_converts_central_time_to_kst():
+    got = ec.parse_fred(FRED_HTML, 10)
+    # 11월 10일은 미국 서머타임이 끝난 뒤(중부 표준시 UTC-6) → 한국시간 22:30
+    assert got == [dict(at="2026-11-10T22:30+09:00", rid=10), dict(at="2026-12-10T22:30+09:00", rid=10)]
+
+
+def test_release_events_merges_same_time_and_skips_this_week():
+    rel = [dict(at="2026-11-10T22:30+09:00", rid=10), dict(at="2026-11-10T22:30+09:00", rid=9),
+           dict(at="2026-11-06T22:30+09:00", rid=50), dict(at="2027-06-01T21:30+09:00", rid=53)]
+    start, end = dt.date(2026, 11, 1), dt.date(2026, 12, 31)
+    ev = ec.release_events(rel, start, end, taken={("2026-11-06", "한국시간 22:30 발표")})
+    assert ev == [dict(date="2026-11-10", market="us", kind="big", title="미국 소비자물가(CPI) · 미국 소매판매", big=True,
+                       note="한국시간 22:30 발표")]
