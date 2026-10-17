@@ -801,3 +801,4 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .ec-cell.today.picked { outline-width: 3px; }
 .ec-cell.past { opacity: .4; }
 .list.cal li.past { opacity: .45; }
+.goal-name { margin: 0 0 8px; }
