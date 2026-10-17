@@ -352,8 +352,9 @@ const VIEWS = {
   home: (d) => [bigEventsCard(), worldCard(), homeMoreCard(d), homeSignalCard(d), homePerfCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
-  perf: (d) => [savingsCard(), trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
-    rulebookAccountCard(d), memoCard(), healthCard(), firstAccountCard(d)],
+  // 성과: 수익률 달력 → 내 규칙표 검증 → 가상계좌(핵심 숫자만, 그래프는 접기) → 추천 종목 성과(요약 + 3개, 나머지 접기) 순 (사용자가 정함, 2026-10-17)
+  perf: (d) => [retCalendarCard(d), rulebookAccountCard(d), accountCard(d), positionsCard(d), trackCard(d), savingsCard(), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
+    memoCard(), healthCard(), firstAccountCard(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
   stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
@@ -383,7 +384,17 @@ function render() {
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "perf") {
-    drawTrack(d); drawEquity(d); bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
+    // 접힌 그래프는 펼칠 때 그려요 (접힌 채로 그리면 폭이 0이라서). 펼친 건 이 폰에 기억해요.
+    [["equity-fold", () => drawEquity(d)], ["track-fold", () => drawTrack(d, true)]].forEach(([id, draw]) => {
+      const f = $(`#${id}`);
+      if (!f) return;
+      if (PERF_OPEN.has(id)) { f.open = true; draw(); }
+      f.addEventListener("toggle", () => {
+        if (f.open) { PERF_OPEN.add(id); draw(); } else PERF_OPEN.delete(id);
+        try { localStorage.setItem("perf_open", JSON.stringify([...PERF_OPEN])); } catch (e) { /* 이번만 기억 */ }
+      });
+    });
+    drawTrack(d, false); bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
     if (!RET[market]) loadReturns().then(() => { if (screen === "perf") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
     const fc = $("#first-card details");
     if (fc) fc.addEventListener("toggle", () => { FIRST_OPEN = fc.open; });
@@ -1897,16 +1908,17 @@ function trackCard(d) {
         <div class="meta">${md(p.date)} ${px(market, p.close)} → ${px(market, p.last)} · ${p.days ? `${p.days}거래일` : "오늘"}</div>
         <div class="mini">${spark(p.path, `${p.name} 추천 뒤 수익률`, 0.01)}</div></li>`;
     });
-    const shown = rows.slice(0, 10).join(""), rest = rows.slice(10).join("");
+    const TOP = 3;  // 처음엔 최근 3개만, 나머지는 접어 둬요
+    const shown = rows.slice(0, TOP).join(""), rest = rows.slice(TOP).join("");
     body = `<p class="muted" style="margin:0 0 4px">추천 ${s.count}개 (${md(s.first)}부터) · 추천일 종가에서 그 뒤 종가까지, 배당 포함</p>
       <div class="stats">${stats}</div>
-      <div style="margin-top:14px"><div class="legend">
+      <details class="fold-chart" id="track-fold"><summary>평균 수익률 그래프</summary><div class="legend">
         <span class="key"><i class="sw" style="background:var(--series-1)"></i>추천 종목 평균</span>
         <span class="key"><i class="sw" style="background:var(--series-2)"></i>${esc(d.index_name)} 같은 기간</span></div>
-        <div class="chart" id="track-chart"></div></div>
+        <div class="chart" id="track-chart"></div></details>
       <p class="sub" style="margin:14px 0 6px">최근 추천 <small class="muted">작은 그래프 = 추천일부터 날마다 수익률</small></p>
       <ul class="list">${shown}</ul>
-      ${rest ? `<details class="more-list"><summary>${s.recent.length - 10}개 더 보기</summary><ul class="list">${rest}</ul></details>` : ""}
+      ${rest ? `<details class="more-list"><summary>최근 추천 ${s.recent.length - TOP}개 더 보기</summary><ul class="list">${rest}</ul></details>` : ""}
       <p class="muted note" style="margin:10px 0 0">같은 종목이 ${t.gap}거래일 안에 다시 후보에 오르면 처음 추천만 세요. 실제로는 다음 날 시가에 사서 조금 달라요.
         ${live ? "" : "아직은 전부 지금 규칙을 과거 날짜에 적용해서 채운 기록이에요."}</p>`;
   }
@@ -1914,12 +1926,19 @@ function trackCard(d) {
     <div class="period" role="group" aria-label="추천 출처" style="margin-bottom:10px">${buttons}</div>${body}</section>`;
 }
 
-function drawTrack(d) {
+let PERF_OPEN = new Set();
+try { PERF_OPEN = new Set(JSON.parse(localStorage.getItem("perf_open") || "[]")); } catch (e) { /* 처음 */ }
+function drawTrack(d, chart) {
   const t = d.signal && d.signal.tracked;
-  document.querySelectorAll("[data-src]").forEach((b) => b.addEventListener("click", () => {
-    trackSrc[market] = b.dataset.src;
-    render();
-  }));
+  if (!chart) {
+    document.querySelectorAll("[data-src]").forEach((b) => b.addEventListener("click", () => {
+      const y = window.scrollY;
+      trackSrc[market] = b.dataset.src;
+      render();
+      window.scrollTo(0, y);
+    }));
+    return;
+  }
   if (!t) return;
   const s = t.srcs[pickSrc(t)];
   if (!s || !s.count) return;
@@ -2235,18 +2254,18 @@ function accountCard(d) {
       <p class="empty">아직 첫 기록 전이에요. ${NEXT_RUN[market]} 첫 자동 실행부터 신호대로 샀다고 치고 날마다 기록해요.</p></section>`;
   }
   return `<section class="card"><h2>가상계좌 <small>${md(a.start)} 시작 · ${md(a.last_day)} 종가</small></h2>
-    <p class="hero">${cnt(a.equity, "money", money(market, a.equity))}</p>
-    <p class="sub"><span class="${sign(a.gain)}">${pct(a.gain)}</span> · 시작 ${money(market, a.capital)} · 현금 ${money(market, a.cash)}</p>
+    <p class="acc-line"><b class="acc-eq">${cnt(a.equity, "money", money(market, a.equity))}</b>
+      <span class="muted">시작 ${money(market, a.capital)} · 현금 ${money(market, a.cash)}</span></p>
     <div class="stats">
       <div class="stat"><span>가상계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
       <div class="stat"><span>${esc(d.index_name)}</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
       <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
     </div>
-    <div style="margin-top:14px"><div class="legend">
+    <details class="fold-chart" id="equity-fold"><summary>수익률 그래프</summary><div class="legend">
       <span class="key"><i class="sw" style="background:var(--series-1)"></i>가상계좌</span>
       <span class="key"><i class="sw" style="background:var(--series-2)"></i>${esc(d.index_name)}</span>
       <span class="muted">시작일 대비 수익률</span></div>
-      <div class="chart" id="equity-chart"></div></div>
+      <div class="chart" id="equity-chart"></div></details>
     ${pendingLines(a)}
   </section>`;
 }
