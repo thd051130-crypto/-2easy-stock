@@ -423,6 +423,9 @@ function render() {
   }));
   const pm = $("#pol-more");
   if (pm) pm.addEventListener("toggle", () => { polMore = pm.open; });
+  app.querySelectorAll("details[data-desk]").forEach((x) => x.addEventListener("toggle", () => {
+    if (x.open) DESK_OPEN.add(x.dataset.desk); else DESK_OPEN.delete(x.dataset.desk);
+  }));
   app.querySelectorAll("details[data-pol]").forEach((x) => x.addEventListener("toggle", () => {
     if (x.open) POL_OPEN.add(x.dataset.pol); else POL_OPEN.delete(x.dataset.pol);
   }));
@@ -2209,12 +2212,14 @@ function signalCard(d) {
 }
 
 // 부서별 보고 (스크리닝·기술적 분석·펀더멘탈·마켓·리스크관리·운용부). 예전 기록엔 없을 수 있어요.
+// 설명은 한 줄만 보이고, 부서를 누르면 전체가 펼쳐져요.
+const DESK_OPEN = new Set();
 function desksCard(d) {
   const desks = d.signal && d.signal.desks;
   if (!desks || !desks.length) return "";
-  const items = desks.map((x) => `<li><div class="l"><div class="name">${esc(x.dept)}</div>
-      <div class="meta">${esc(x.text)}</div></div></li>`).join("");
-  return `<section class="card"><h2>부서별 보고 <small>규칙 코드로 계산</small></h2><ul class="list">${items}</ul></section>`;
+  const items = desks.map((x) => `<li><details class="desk" data-desk="${esc(x.dept)}"${DESK_OPEN.has(x.dept) ? " open" : ""}><summary>
+      <div class="name">${esc(x.dept)}</div><div class="meta desk-text">${esc(x.text)}</div></summary></details></li>`).join("");
+  return `<section class="card"><h2>부서별 보고 <small>누르면 자세히</small></h2><ul class="list">${items}</ul></section>`;
 }
 
 // 규칙으로 만든 매매 의견 (이유, 위험 등). 예전 기록엔 없을 수 있어요.
