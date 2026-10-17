@@ -11,6 +11,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - run: |
+          set +e
           UA='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'
           for u in \
             "https://nfs.faireconomy.media/ff_calendar_thisweek.json" \
@@ -24,16 +25,16 @@ jobs:
             "https://fred.stlouisfed.org/graph/fredgraph.csv?id=PAYEMS" \
             "https://www.bea.gov/news/schedule" \
             "https://news.google.com/rss/search?q=CPI+inflation&hl=en-US&gl=US&ceid=US:en" ; do
-            code=$(curl -s -L -o /tmp/out -w '%{http_code}' -m 20 -A "$UA" "$u"); echo "=== $code $(wc -c </tmp/out) $u"
+            code=$(curl --http1.1 -s -L -o /tmp/out -w '%{http_code}' -m 20 -A "$UA" "$u" || true); echo "=== $code $(wc -c </tmp/out) $u"
             head -c 600 /tmp/out | tr '\n' ' '; echo
           done
           echo "=== FF high USD"
           curl -s -m 20 -A "$UA" https://nfs.faireconomy.media/ff_calendar_thisweek.json | python3 -c "import json,sys;[print(x) for x in json.load(sys.stdin) if x.get('impact')=='High']" || true
           echo "=== FRED cal CPI dates"
-          curl -s -L -m 20 -A "$UA" "https://fred.stlouisfed.org/releases/calendar?rid=10&y=2026" | grep -oE '(January|February|March|April|May|June|July|August|September|October|November|December) [0-9]{1,2}, 2026' | sort -u | head -40 || true
+          curl --http1.1 -s -L -m 20 -A "$UA" "https://fred.stlouisfed.org/releases/calendar?rid=10&y=2026" | grep -oE '(January|February|March|April|May|June|July|August|September|October|November|December) [0-9]{1,2}, 2026' | sort -u | head -40 || true
           echo "=== FRED cal NFP dates"
-          curl -s -L -m 20 -A "$UA" "https://fred.stlouisfed.org/releases/calendar?rid=50&y=2026" | grep -oE '(January|February|March|April|May|June|July|August|September|October|November|December) [0-9]{1,2}, 2026' | sort -u | head -40 || true
+          curl --http1.1 -s -L -m 20 -A "$UA" "https://fred.stlouisfed.org/releases/calendar?rid=50&y=2026" | grep -oE '(January|February|March|April|May|June|July|August|September|October|November|December) [0-9]{1,2}, 2026' | sort -u | head -40 || true
           echo "=== BLS ics"
           curl -s -m 20 -A "$UA" https://www.bls.gov/schedule/news_release/bls.ics | grep -A3 -i "consumer price" | head -30 || true
-          echo "=== CPI tail"; curl -s -m 20 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL" | tail -15
-          echo "=== core tail"; curl -s -m 20 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPILFESL" | tail -15
+          echo "=== CPI tail"; curl --http1.1 -s -m 20 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL" | tail -15
+          echo "=== core tail"; curl --http1.1 -s -m 20 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPILFESL" | tail -15
