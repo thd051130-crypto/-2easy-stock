@@ -331,8 +331,9 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [bigEventsCard(), homeSignalCard(d), dropCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
-    homeIndexCard(d)],
+  // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 사용자가 고른 순서로 세계 지수 → 성과 → 더 보기 → 신호.
+  // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
+  home: (d) => [bigEventsCard(), worldCard(), homePerfCard(d), homeMoreCard(d), homeSignalCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
   perf: (d) => [savingsCard(), trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
@@ -361,6 +362,7 @@ function render() {
   const app = $("#app");
   app.classList.remove(...FX);
   app.innerHTML = VIEWS[screen](d).join("");
+  if (screen === "home") tidyHomeMore(app);
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
@@ -384,6 +386,7 @@ function render() {
   }));
   app.querySelectorAll("[data-sector-go]").forEach((b) => b.addEventListener("click", () => {
     SECTOR[market] = b.dataset.sectorGo;
+    openHomeMore("sectors");
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
     jumpSectors = true;  // 홈이 다시 그려지면 업종 칸으로 내려가요 (뒤로 가기로 돌아가는 경우가 있어서 render에서)
     if (screen === "home") render(); else go("home");  // 홈 정부 정책 칸에서 누르면 바로 다시 그려요
@@ -410,6 +413,7 @@ function render() {
   app.querySelectorAll("[data-pol-go]").forEach((b) => b.addEventListener("click", () => {
     polJump = b.dataset.polGo;  // 홈이 다시 그려지면 그 정책을 펼쳐서 보여 줘요
     POL_OPEN.add(polJump);
+    openHomeMore("policy");
     polR = "";
     if (screen === "home") render(); else go("home");
   }));
@@ -622,7 +626,7 @@ function bindDrop(d) {
   if (!now || IDX_READY.has(now.sym)) return;
   idxData(now.sym).then(() => {
     const el = $("#drop-card");
-    if (el && screen === "home") el.outerHTML = dropCard(d);
+    if (el && screen === "home") { el.outerHTML = dropCard(d); trimHeads($("#app")); }
   });
 }
 
@@ -1928,6 +1932,72 @@ function homeIndexCard(d) {
       50일선보다 ${s.index >= s.ma50 ? "위" : "아래"}</p>` : ""}
     ${more("chart", "차트 크게 보기")}</section>`;
 }
+
+// 홈 '더 보기': 칸마다 제목 + 한 줄 요약만 보이고, 누르면 원래 칸이 그 자리에서 펼쳐져요. 펼친 칸은 기억해요.
+let HOME_OPEN = new Set();
+try { HOME_OPEN = new Set(JSON.parse(localStorage.getItem("home_open") || "[]")); } catch (e) { /* 처음 */ }
+function saveHomeOpen() { try { localStorage.setItem("home_open", JSON.stringify([...HOME_OPEN])); } catch (e) { /* 이번만 기억 */ } }
+const upDown = (r) => (r == null ? "" : `<b class="${sign(r)}">${pct(r)}</b>`);
+function homeMoreRows(d) {
+  const s = d.signal || {};
+  const rows = [];
+  const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
+  const dn = dropNow(d);
+  add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
+  // 다가오는 일정: 가장 가까운 큰 일정
+  const ev = ((DATA && DATA.calendar) || []).filter((e) => e.date >= TODAY() && !["earn", "exdiv"].includes(e.kind));
+  add("cal", "📅", "다가오는 일정", ev.length ? `${md(ev[0].date)} ${esc(ev[0].title)} · ${dday(ev[0].date)}` : "2주 안 큰 일정 없음", calendarCard(d));
+  const mine = myStocks(d);
+  add("watch", "⭐", "관심종목", mine.length ? `${mine.length}개 · ${esc(mine[0].name)}${mine.length > 1 ? " 외" : ""}` : "", homeWatchCard(d));
+  const mv = s.movers;
+  const top = (l) => (l && l[0] ? `${esc(l[0].name)} ${upDown(l[0].r5)}` : "");
+  add("movers", "❓", "왜 움직였나", mv ? [top(mv.up), top(mv.down)].filter(Boolean).join(" · ") || "크게 움직인 종목 없음" : "", moversCard(d));
+  const all = stocksOf(d).filter((x) => !x.extra && x.d1 != null);
+  const ups = all.filter((x) => x.d1 > 0).length, downs = all.filter((x) => x.d1 < 0).length;
+  add("heat", "🟥", "시장 히트맵", `오늘 오른 <b class="up">${ups}</b> · 내린 <b class="down">${downs}</b>`, heatmapCard(d));
+  const secs = (s.sectors || []).filter((x) => x.r5 != null);
+  const sb = secs.length ? [...secs].sort((a, b) => b.r5 - a.r5) : [];
+  add("sectors", "🏭", "업종별 호재·악재", sb.length ? `${esc(sb[0].name)} ${upDown(sb[0].r5)} · ${esc(sb[sb.length - 1].name)} ${upDown(sb[sb.length - 1].r5)}` : "", sectorsCard(d));
+  const f = market === "kr" && d.flows;
+  add("flows", "🏦", "외국인·기관 수급", f ? ((f.warn || []).length ? `⚠️ 같이 파는 종목 ${f.warn.length}개` : "같이 파는 종목 없음") : "", flowsCard(d));
+  if (market === "kr" && d.disclosures) {
+    const since = new Date(Date.parse(TODAY()) - 7 * 864e5).toISOString().slice(0, 10);
+    const n = d.disclosures.filter((x) => x.day >= since && x.tone === "warn").length;
+    add("disclose", "📄", "최근 공시", n ? `⚠️ 주의 공시 ${n}건` : "주의 공시 없음", discloseHomeCard(d));
+  }
+  const q = s.quiet_volume;
+  add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", quietVolumeCard(d));
+  const P = DATA && DATA.policies;
+  add("policy", "🏛️", "정부 정책", P && P.items ? `${P.items.length}개 정리${P.stale ? " · ⚠️ 오래됨" : ""}` : "", policyCard());
+  const m = DATA && DATA.macro;
+  add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", macroCard());
+  const close = s.series ? s.series.close.filter((v) => v != null) : [];
+  add("index", "📈", esc(d.index_name || "지수"), close.length > 1 ? `${num(close[close.length - 1])} <b class="${sign(close[close.length - 1] / close[close.length - 2] - 1)}">${pct(close[close.length - 1] / close[close.length - 2] - 1, 2)}</b>` : "", homeIndexCard(d));
+  return rows;
+}
+function homeMoreCard(d) {
+  const rows = homeMoreRows(d);
+  if (!rows.length) return "";
+  return `<section class="card home-more"><h2>더 보기 <small>누르면 펼쳐져요</small></h2>${rows.map((r) =>
+    `<details class="hm" data-hm="${r.key}"${HOME_OPEN.has(r.key) ? " open" : ""}><summary><span class="hm-ico" aria-hidden="true">${r.icon}</span>
+      <span class="hm-t"><b>${r.title}</b>${r.sum ? `<span class="hm-s">${r.sum}</span>` : ""}</span><span class="hm-arrow" aria-hidden="true">›</span></summary>
+      <div class="hm-body">${r.html}</div></details>`).join("")}</section>`;
+}
+// 펼친 칸 안의 원래 제목 줄은 한 줄 요약과 겹쳐서, 날짜 같은 작은 글씨만 남겨요.
+function trimHeads(root) {
+  root.querySelectorAll(".hm-body > .card > h2:first-child").forEach((h) => {
+    const sm = h.querySelector("small");
+    if (sm) { const p = document.createElement("p"); p.className = "hm-meta"; p.innerHTML = sm.innerHTML; h.replaceWith(p); } else h.remove();
+  });
+}
+function tidyHomeMore(app) {
+  trimHeads(app);
+  app.querySelectorAll("details.hm").forEach((x) => x.addEventListener("toggle", () => {
+    if (x.open) HOME_OPEN.add(x.dataset.hm); else HOME_OPEN.delete(x.dataset.hm);
+    saveHomeOpen();
+  }));
+}
+function openHomeMore(key) { HOME_OPEN.add(key); saveHomeOpen(); }
 
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
 // 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프
