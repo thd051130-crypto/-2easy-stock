@@ -2087,7 +2087,8 @@ const dropFirst = (f) => (f.keys.length > 1 ? Object.fromEntries(Object.entries(
 
 // 일봉(5년치)·월봉(전체 기간)으로 고른 기간의 캔들을 만들어요.
 // 이동평균선(N일선)은 각 캔들 기간 마지막 거래일의 값이에요 (일봉이 있는 최근 몇 년만, 년봉엔 안 그려요).
-function frameCandles(c, fr) {
+// 캔들만 묶어요 (보조지표 없이). 비교 차트는 이것만 써요.
+function frameBase(c, fr) {
   // 상장일부터 받은 일봉(full: 종목 화면)은 첫 주·첫 달·첫 해가 상장 직후라 그대로 둬요.
   // 중간부터 자른 일봉(지수)은 첫 주가 중간부터일 수 있어서 빼요.
   const cut = c.full ? (x) => x : dropFirst;
@@ -2098,6 +2099,10 @@ function frameCandles(c, fr) {
     f = groupCandles(c.monthly, fr === "m" ? KEY.m : KEY.y);
     if (fr === "y" && f.first[0].slice(5, 7) !== "01") f = dropFirst(f);  // 1월부터가 아닌 첫 해는 빼요
   } else f = cut(groupCandles(c, KEY[fr]));  // 월봉이 없으면 일봉을 묶어요
+  return f;
+}
+function frameCandles(c, fr) {
+  const f = frameBase(c, fr);
   const lastDay = new Map();
   c.dates.forEach((dt, i) => lastDay.set(KEY[fr](dt), i));
   const pick = (vals) => f.keys.map((k) => (fr === "y" || !lastDay.has(k) ? null : vals[lastDay.get(k)]));
@@ -2309,6 +2314,7 @@ let cmpF = "d";        // 일봉·주봉·월봉·년봉
 let cmpLine = false;   // false면 캔들, true면 선
 let cmpQuery = "";
 let cmpDrawn = null;   // 마지막으로 그린 항목·기간 (바뀌면 보던 구간을 처음으로)
+let cmpIdxOpen = false; // '지수 바로 넣기'를 펼쳐 뒀는지 (하나 넣어도 안 닫혀요)
 try {
   Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}"));
   cmpF = localStorage.getItem("cmp_f") || "d"; cmpLine = localStorage.getItem("cmp_line") === "1";
@@ -2347,7 +2353,7 @@ function cmpResults(d) {
     const idx = chartIndexes(d).filter((r) => !items.includes(`i:${r.sym}`)).map((r) => btn(`i:${r.sym}`, r.name)).join("");
     // 지수 버튼은 많아서 접어 둬요 (차트가 아래로 밀리지 않게)
     return (watch ? `<div class="sav-quick"><span class="muted">내 관심종목</span><div class="chips">${watch}</div></div>` : "")
-      + `<details class="fold" style="margin-top:6px"><summary class="muted">지수 바로 넣기</summary><div class="chips">${idx}</div></details>`;
+      + `<details class="fold" id="cmp-idx" style="margin-top:6px"${cmpIdxOpen ? " open" : ""}><summary class="muted">지수 바로 넣기</summary><div class="chips">${idx}</div></details>`;
   }
   const qs = queryKeys(q), hits = [];
   chartIndexes(d).forEach((r, i) => {
@@ -2386,30 +2392,39 @@ function compareCard(d) {
     <p class="muted note" id="cmp-note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들은 항목마다 자기 색이고, 오른 캔들은 꽉 차고 내린 캔들은 속이 비어요. 누르면 그날 각자 몇 % 올랐는지 보이고, 길게 누른 채 움직이면 세부정보가 손가락을 따라와요.
       화면에 보이는 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. 8배 넘게 차이 나면 '로그 눈금'으로 그려요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
 }
-// 항목마다 고른 기간 캔들(지수 차트와 같은 frameCandles)을 만들고, 모든 항목의 날짜를 합쳐 한 줄로 세워요.
+// 항목마다 고른 기간 캔들(지수 차트와 같은 묶음)을 만들고, 모든 항목의 날짜를 합쳐 한 줄로 세워요.
 // 쉬는 날(국장·미장 휴일이 달라요)은 직전 값으로 이어요.
+// 지수는 상장일부터라 수만 칸이에요: 묶은 캔들은 자료마다 기억하고, 날짜는 이미 순서대로라 정렬 없이 한 번에 합쳐요
+// (전에는 넣을 때마다 보조지표까지 다 계산하고 전체를 다시 정렬해서 폰에서 버벅였어요).
+const CMP_FRAME = new WeakMap();  // 자료 → { 기간: 묶은 캔들 }
+function cmpFrame(c, fr) {
+  let m = CMP_FRAME.get(c);
+  if (!m) CMP_FRAME.set(c, (m = {}));
+  return m[fr] || (m[fr] = frameBase(c, fr));
+}
 function cmpRows(got) {
-  const fs = got.map((x) => (x ? frameCandles(x, cmpF) : null));
-  const info = new Map();
-  fs.forEach((f) => f && f.keys.forEach((k, i) => {
-    const r = info.get(k);
-    if (!r) info.set(k, { first: f.first[i], last: f.last[i] });
-    else { if (f.first[i] < r.first) r.first = f.first[i]; if (f.last[i] > r.last) r.last = f.last[i]; }
-  }));
-  const keys = [...info.keys()].sort();
-  const series = fs.map((f) => {
-    const out = { c: [], o: [], h: [], l: [] };
-    const at = f ? new Map(f.keys.map((k, i) => [k, i])) : new Map();
-    let prev = null;
-    keys.forEach((k) => {
-      const i = at.get(k);
-      if (i != null) prev = i;
-      out.c.push(prev == null ? null : f.c[prev]);
-      out.o.push(i == null ? null : f.o[i]); out.h.push(i == null ? null : f.h[i]); out.l.push(i == null ? null : f.l[i]);  // 쉬는 날은 캔들 없이
-    });
-    return out;
-  });
-  return { f: { keys, first: keys.map((k) => info.get(k).first), last: keys.map((k) => info.get(k).last), frame: cmpF }, series };
+  const fs = got.map((x) => (x ? cmpFrame(x, cmpF) : null)), n = fs.length;
+  const keys = [], first = [], last = [];
+  const series = fs.map(() => ({ c: [], o: [], h: [], l: [] }));
+  const at = new Array(n).fill(0), prev = new Array(n).fill(null);
+  for (;;) {
+    let k = null;
+    for (let j = 0; j < n; j++) { const f = fs[j]; if (f && at[j] < f.keys.length && (k == null || f.keys[at[j]] < k)) k = f.keys[at[j]]; }
+    if (k == null) break;
+    let fi = null, la = null;
+    for (let j = 0; j < n; j++) {
+      const f = fs[j], s = series[j], i = f && at[j] < f.keys.length && f.keys[at[j]] === k ? at[j]++ : null;
+      if (i != null) {
+        prev[j] = i;
+        if (fi == null || f.first[i] < fi) fi = f.first[i];
+        if (la == null || f.last[i] > la) la = f.last[i];
+        s.o.push(f.o[i]); s.h.push(f.h[i]); s.l.push(f.l[i]);
+      } else { s.o.push(null); s.h.push(null); s.l.push(null); }  // 쉬는 날은 캔들 없이
+      s.c.push(prev[j] == null ? null : f.c[prev[j]]);
+    }
+    keys.push(k); first.push(fi); last.push(la);
+  }
+  return { f: { keys, first, last, frame: cmpF }, series };
 }
 function drawCompare(d) {
   const el = $("#cmp-chart");
@@ -2561,11 +2576,25 @@ function bindCompare(d) {
   const save = () => {
     try { localStorage.setItem("compare", JSON.stringify(COMPARE)); localStorage.setItem("cmp_f", cmpF); localStorage.setItem("cmp_line", cmpLine ? "1" : "0"); } catch (e) { /* 이번만 */ }
   };
-  const redraw = () => { save(); const y = window.scrollY; render(); window.scrollTo(0, y); };
+  // 비교 차트 칸만 다시 그려요 (화면 전체를 다시 그리면 위 지수 차트까지 새로 그려서 느려요).
+  // 새 차트가 준비될 때까지 보던 차트를 그대로 둬서 '불러오는 중'으로 깜빡이거나 칸이 줄었다 늘지 않아요.
+  const redraw = () => {
+    save();
+    const card = $("#cmp-card");
+    if (!card) { render(); return; }
+    const y = window.scrollY, old = $("#cmp-chart"), keep = old && old.querySelector("svg") ? old.innerHTML : "";
+    card.outerHTML = compareCard(d);
+    const nc = $("#cmp-card");
+    foldNotes(nc);
+    if (keep) $("#cmp-chart").innerHTML = keep;
+    bindCompare(d);
+    window.scrollTo(0, y);
+  };
   document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
     COMPARE[market] = cmpItems(d).filter((k) => k !== b.dataset.cmpDel); redraw();
   }));
   const res = $("#cmp-res");
+  if (res) res.addEventListener("toggle", (e) => { if (e.target.id === "cmp-idx") cmpIdxOpen = e.target.open; }, true);
   if (res) res.addEventListener("click", (e) => {
     const b = e.target.closest("[data-cmp-add]");
     if (!b) return;
