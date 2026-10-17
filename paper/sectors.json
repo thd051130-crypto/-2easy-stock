@@ -92,6 +92,10 @@
 "운송",
 "Airlines"
 ],
+"003530": [
+"금융",
+"Capital Markets"
+],
 "003540": [
 "금융",
 "Capital Markets"
@@ -809,7 +813,7 @@
 "Security & Protection Services"
 ]
 },
-"updated": "2026-10-10T15:19+09:00",
+"updated": "2026-10-17T09:14+09:00",
 "us": {
 "AAPL": [
 "IT·전자",
@@ -1179,6 +1183,10 @@
 "반도체",
 "Semiconductors"
 ],
+"INTU": [
+"인터넷·게임·SW",
+"Software - Application"
+],
 "ISRG": [
 "바이오·헬스",
 "Medical Instruments & Supplies"
@@ -1286,6 +1294,10 @@
 "MRNA": [
 "바이오·헬스",
 "Biotechnology"
+],
+"MRSH": [
+"금융",
+"Insurance Brokers"
 ],
 "MRVL": [
 "반도체",
@@ -1499,6 +1511,10 @@
 "IT·전자",
 "Computer Hardware"
 ],
+"SU": [
+"에너지·정유",
+"Oil & Gas Integrated"
+],
 "SYK": [
 "바이오·헬스",
 "Medical Devices"
@@ -1602,6 +1618,10 @@
 "WFC": [
 "금융",
 "Banks - Diversified"
+],
+"WM": [
+"지주·기타",
+"Waste Management"
 ],
 "WMB": [
 "에너지·정유",
