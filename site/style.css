@@ -12,6 +12,8 @@
   --series-3: #1baf7a;
   --ma50: #c98500;
   --ma200: #1baf7a;
+  --ma1: #8b5cd6;
+  --ma2: #d6457a;
   --bb: #7b5ce0;
   --rsi: #e0662f;
   /* 한국식: 오르면 빨강, 내리면 파랑 (항상 +/- 기호와 같이 써요) */
@@ -44,6 +46,8 @@
     --series-3: #199e70;
     --ma50: #eda100;
     --ma200: #199e70;
+    --ma1: #a98be8;
+    --ma2: #e0789c;
     --bb: #a58cff;
     --rsi: #f07e46;
     --up: #ff6b6a;
@@ -63,7 +67,7 @@
   color-scheme: dark;
   --surface-0: #111110; --surface-1: #1a1a19; --border: #2f2f2c; --grid: #2a2a27;
   --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #9a998f;
-  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ma50: #eda100; --ma200: #199e70;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ma50: #eda100; --ma200: #199e70; --ma1: #a98be8; --ma2: #e0789c;
   --bb: #a58cff; --rsi: #f07e46;
   --up: #ff6b6a; --down: #6aa6f2; --c-up: hsl(0 42% 58%); --c-down: hsl(213 40% 58%); --good-bg: #173a26; --good-fg: #8fe0b0; --wait-bg: #3d2f12; --wait-fg: #f2c46b;
   --accent: #3987e5; --accent-bg: #1b2a3d; --accent-fg: #8ab8f5;
@@ -251,6 +255,31 @@ details.more-list .list li:first-child { border-top: 1px solid var(--border); pa
 .chart .ma { fill: none; stroke-width: 1.5; }
 .chart .ma50 { stroke: var(--ma50); }
 .chart .ma200 { stroke: var(--ma200); }
+.chart .ma1 { stroke: var(--ma1); }
+.chart .ma2 { stroke: var(--ma2); }
+.chart .ma3 { stroke: var(--ma50); }
+.chart .ma4 { stroke: var(--ma200); }
+/* 이동평균선 표시 (누르면 설정 창) */
+.ma-edit { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font: inherit; color: inherit;
+  background: none; border: 0; padding: 0; min-height: 28px; cursor: pointer; text-align: left; }
+.ma-panel { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin: 0 0 8px; background: var(--surface-1); }
+.ma-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.ma-head .muted { font-size: 11px; }
+.ma-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+.ma-row .sw { width: 14px; height: 4px; border-radius: 2px; flex: none; }
+.ma-row input { width: 56px; min-height: 34px; text-align: center; font: inherit; font-size: 15px; border: 1px solid var(--border);
+  border-radius: 6px; background: transparent; color: var(--text-primary); }
+.ma-step { width: 34px; min-height: 34px; font-size: 18px; border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text-primary); cursor: pointer; }
+.ma-unit { font-size: 13px; color: var(--text-secondary); }
+.ma-on { margin-left: auto; min-width: 56px; min-height: 34px; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+.ma-on[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-fg); }
+.ma-quick, .ma-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ma-quick button, .ma-foot button { min-height: 32px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--text-primary); font: inherit; font-size: 12px; cursor: pointer; }
+.ma-foot button[data-ma-close] { margin-left: auto; }
+.ma-panel .note { font-size: 11px; margin: 8px 0 0; }
 .chart .mark { stroke: var(--text-secondary); stroke-width: 1; }
 .chart text.mark-text { fill: var(--text-primary); font-weight: 600; }
 .chart text.mark-text tspan.mark-diff.up { fill: var(--up); } .chart text.mark-text tspan.mark-diff.down { fill: var(--down); }
