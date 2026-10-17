@@ -1646,10 +1646,11 @@ function mapDetailCard() {
   return `<section class="card"><h2>${esc(mapFocus)} <small>${esc(group ? group.name : "")} · 참고</small></h2>
     <p class="sub">${esc(node.why)}</p>
     ${f ? `<p class="headline ${sign(fv(f))}" style="margin-top:10px">${pct(fv(f))} <small class="muted" style="font-size:13px;font-weight:400">${MK_NAME[market]} ${mapDays}일 중간값 · ${mapDays === 20 ? `5일 ${pct(f.r5)}` : `20일 ${pct(f.r20)}`}</small></p>` : ""}
-    <h3 class="muted" style="margin:12px 0 4px">이어진 산업 ${nb.length}개 <small>누르면 그 산업으로</small></h3>
+    <h3 class="map-sec">🔗 이어진 산업 ${nb.length}개 <small>누르면 그 산업으로</small></h3>
     <ul class="list">${lines}</ul>
-    ${stocks ? `<h3 class="muted" style="margin:12px 0 4px">${MK_NAME[market]} 대표 종목${day ? ` · ${md(day)} 종가` : ""}</h3><ul class="list">${stocks}</ul>`
-      : `<p class="muted" style="margin:10px 0 0">${MK_NAME[market]} 대표 종목 시세가 아직 없어요.</p>`}
+    <div class="map-stocks">
+    ${stocks ? `<h3 class="map-sec stk">📈 ${MK_NAME[market]} 대표 종목 <small>${day ? `${md(day)} 종가` : ""}</small></h3><ul class="list">${stocks}</ul>`
+      : `<p class="muted" style="margin:0">${MK_NAME[market]} 대표 종목 시세가 아직 없어요.</p>`}</div>
     <button type="button" class="more" data-mapq="${esc(node.q)}">${esc(mapFocus)} 관련 종목 전체 보기 (국장·미장)<span aria-hidden="true">›</span></button>
     <p class="muted note" style="margin:10px 0 0">주가 동행은 최근 120거래일 하루 등락률의 상관계수(1이면 똑같이, 0이면 따로)예요.
       연결은 사람이 정리한 참고 자료라 사라는 뜻이 아니고 매매 규칙도 안 바꿔요.</p></section>`;
