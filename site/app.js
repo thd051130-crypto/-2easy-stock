@@ -351,7 +351,7 @@ const VIEWS = {
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
   home: (d) => [bigEventsCard(), worldCard(), homePerfCard(d), homeMoreCard(d), homeSignalCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
-  watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
+  watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
   perf: (d) => [savingsCard(), trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
     rulebookAccountCard(d), memoCard(), healthCard(), firstAccountCard(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
@@ -469,8 +469,7 @@ function render() {
     if (card) requestAnimationFrame(() => { card.scrollIntoView(); window.scrollBy(0, -70); });
   }
   if (screen === "watch") {
-    bindWatch(d); bindIncome(d);
-    if (!RET[market]) loadReturns().then(() => { if (screen === "watch") { const c = $("#income-card"); if (c) { c.outerHTML = incomeCard(d); bindIncome(d); } redrawDiv(d); } });
+    bindWatch(d);
   }
   if (screen === "home") bindDrop(d);
   if (screen === "stock") bindStock();
@@ -832,122 +831,6 @@ function screenerCard(d) {
     ${scrAll ? `<p class="muted note" style="margin:10px 0 0">전 종목은 주가 조건(200일선·52주 고점·RSI)을 다 봐요. PER·배당 같은 재무 조건은 재무를 받는 대형주만 남아요.</p>` : ""}
     <p class="muted note" style="margin:10px 0 0">뜻이 궁금하면: ${["200일선", "52주 고점", "RSI", "PER", "PBR", "배당수익률", "ROE", "부채비율", "목표주가"].map((t) => term(t)).join(" · ")}</p>
     <p class="muted note" style="margin:6px 0 0">재무 조건은 매주 토요일, 주가 조건은 장 마감 뒤 갱신돼요.${noPrice ? " 200일선·RSI·52주 고점 조건은 다음 장 마감 뒤부터 써요." : ""} 자료가 없는 종목은 빠져요.</p></section>`;
-}
-
-// 배당 달력: 회사 기준일(배당락)이 아니라 "내 계좌에 돈이 들어오는 날" 기준이에요.
-// 관심종목·가상계좌 보유 종목(예상 배당금 칸과 같은 선택)의 앞으로 1년 입금을 받는 달마다 묶고, 세후 금액도 같이 보여요.
-// 날짜: 미장은 야후 지급일 + 국내 증권사 입금 2일쯤. 국장은 야후에 지급일이 없어서 배당락일로 추정해요
-// (연말 배당 → 다음 해 4월 20일쯤, 분기 말 배당 → 7주쯤 뒤, 그 밖의 기준일 → 한 달쯤 뒤, ETF 분배금 → 3일쯤 뒤).
-const KR_ETF_RE = /^(KODEX|TIGER|ACE|RISE|SOL|PLUS|HANARO|KOSEF|KIWOOM|KBSTAR|ARIRANG|TIMEFOLIO|WON|BNK|1Q|TRUSTON|UNICORN|FOCUS|VITA|KCGI|ITF|TREX|HK|KTOP|마이티|에셋플러스|파워|히어로즈|마이다스|DAISHIN343)\b/i;
-const isEtfStock = (m, s) => s.code === "SPY" || s.kind === "e" || (m === "kr" && KR_ETF_RE.test(s.name || ""));
-const addDays = (day, n) => new Date(Date.parse(day) + n * 864e5).toISOString().slice(0, 10);
-const prevBizDay = (day) => { let d = addDays(day, -1); while ([0, 6].includes(new Date(d).getUTCDay())) d = addDays(d, -1); return d; };
-const lastOfMonth = (y, mo) => new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
-// 배당락일(과 있으면 지급일) → { day: 입금 예상일, sure: 회사가 발표한 지급일로 계산했는지 }
-// lag: 같은 종목의 지난 회차에서 본 배당락→지급 간격(일). 미장 짐작 회차에 써요
-function receiveDay(m, exdiv, paydiv, etf, lag) {
-  if (m === "us") {
-    if (paydiv && paydiv >= exdiv) return { day: addDays(paydiv, 2), sure: true };
-    return { day: addDays(exdiv, (lag ?? (etf ? 5 : 23)) + 2), sure: false };
-  }
-  if (paydiv && paydiv >= exdiv) return { day: paydiv, sure: true };
-  if (etf) return { day: addDays(exdiv, 3), sure: false };
-  const mo = +exdiv.slice(5, 7), dd = +exdiv.slice(8, 10);
-  if (mo === 12 && dd >= 20) return { day: `${+exdiv.slice(0, 4) + 1}-04-20`, sure: false };
-  if ([3, 6, 9].includes(mo) && dd >= 20) return { day: addDays(exdiv, 48), sure: false };
-  return { day: addDays(exdiv, 30), sure: false };
-}
-// 한 종목의 앞으로 1년 입금: 야후 다음(또는 지난) 배당락 1번 + 최근 12개월 배당 달을 1년 뒤로 옮긴 것(추정)
-function divCycles(m, s, d) {
-  const e = ((d.funds || {})[s.code] || {}).events || {};
-  const etf = isEtfStock(m, s), today = TODAY(), until = addDays(today, 366);
-  const out = [];
-  const lag = e.exdiv && e.paydiv && e.paydiv >= e.exdiv && e.paydiv <= addDays(e.exdiv, 90)
-    ? Math.round((Date.parse(e.paydiv) - Date.parse(e.exdiv)) / 864e5) : null;
-  const push = (exdiv, amt, paydiv, projected) => {
-    if (!amt || !(amt > 0)) return;
-    const r = receiveDay(m, exdiv, paydiv, etf, lag);
-    if (r.day < today || r.day > until) return;
-    // projected: 아직 안 온 배당락을 작년 기록으로 짐작한 회차
-    out.push({ s, exdiv, amt, recv: r.day, sure: r.sure && !projected, projected: projected && exdiv > today });
-  };
-  if (e.exdiv) push(e.exdiv, e.div_last || (e.div_rate && e.div_rate / 4), e.paydiv, false);
-  const hist = divHist(m, s.code);
-  const y = +today.slice(0, 4), curMo = +today.slice(5, 7);
-  const exDay = e.exdiv ? +e.exdiv.slice(8, 10) : m === "kr" ? 31 : 15;
-  hist.forEach(([mo, amt]) => {
-    const histY = mo <= curMo ? y : y - 1;  // 최근 12개월 안의 그 달
-    [histY, histY + 1].forEach((yy) => {
-      const key = `${yy}-${String(mo).padStart(2, "0")}`;
-      if (e.exdiv && e.exdiv.slice(0, 7) === key) return;  // 야후 날짜가 있는 회차는 그걸 써요
-      if (e.exdiv && yy === histY && key < e.exdiv.slice(0, 7)) return;  // 이미 지난 회차
-      const end = lastOfMonth(yy, mo);
-      const day = m === "kr" && !etf ? prevBizDay(addDays(end, 1)) : `${key}-${String(Math.min(exDay, +end.slice(8))).padStart(2, "0")}`;
-      push(day, amt, null, true);
-    });
-  });
-  return out;
-}
-// 받을 달 (1~12) 기준으로 1주당 배당을 나눠요 (예상 배당금 칸 막대용)
-function recvMonths(m, s, dv) {
-  const etf = isEtfStock(m, s), y = +TODAY().slice(0, 4);
-  return dv.months.map(([mo, amt]) => {
-    const end = lastOfMonth(y, mo);
-    return [+receiveDay(m, m === "kr" && !etf ? prevBizDay(addDays(end, 1)) : `${end.slice(0, 8)}15`, null, etf).day.slice(5, 7), amt];
-  });
-}
-// 예상 배당금 칸에서 종목·금액을 바꾸면 달력도 다시 그려요
-function redrawDiv(d) { const c = $("#div-card"); if (!c) return; c.outerHTML = dividendCard(d); const n = $("#div-card"); if (n) bindRows(n, d); }
-// 최근 12개월 배당 [[배당락 달, 1주당]]. 분기 배당인데 야후 월봉에 한 회차가 아직 안 잡혔으면(삼성전자 9월 같은) 가장 최근 금액으로 채워요
-function divHist(m, code) {
-  const hist = ((RET[m] && RET[m][code] && RET[m][code][6]) || []).slice();
-  const ms = [...new Set(hist.map((x) => x[0]))];
-  if (ms.length === 3 && ms.every((x) => x % 3 === ms[0] % 3)) {
-    const gap = [0, 1, 2, 3].map((i) => ((ms[0] % 3) + i * 3) || 12).find((x) => !ms.includes(x));
-    if (gap) hist.push([gap, hist[hist.length - 1][1]]);
-  }
-  return hist;
-}
-function dividendCard(d) {
-  const funds = d.funds || {};
-  if (!Object.keys(funds).length) return `<section class="card" id="div-card"><h2>배당 달력</h2><p class="empty">배당 자료는 매주 토요일에 받아요.</p></section>`;
-  const all = stocksOf(d);
-  const hold = divHoldings(d).filter((h) => h.qty > 0);
-  const mine = hold.length > 0;
-  // 내 종목이 없으면 배당 주는 대형주 전체를 1주 기준으로 보여 줘요
-  const base = mine ? hold.map((h) => ({ ...(all.find((s) => s.code === h.code) || { code: h.code, name: h.name }), qty: h.qty }))
-    : all.map((s) => ({ ...s, qty: 1 }));
-  const tax = DIV_TAX[market], today = TODAY();
-  const items = base.flatMap((s) => divCycles(market, s, d)).sort((a, b) => a.recv.localeCompare(b.recv));
-  const fx = market === "us" ? (DATA.total && DATA.total.fx) || (d.signal && d.signal.usdkrw) || 1350 : 1;
-  const won = (v) => (market === "us" ? `${num(v * fx)}원` : `${num(v)}원`);
-  const amtOf = (it) => it.amt * it.s.qty * (1 - tax);
-  const head = `<h2>배당 달력 <small>${mine ? `내가 받는 날 · ${DIVQ.src === "acct" ? "가상계좌 보유" : "관심종목"}` : "받는 날 · 대형주 1주 기준 (☆ 누르면 내 종목만)"}</small></h2>`;
-  if (!items.length) return `<section class="card" id="div-card">${head}<p class="empty">앞으로 1년 안에 들어올 배당이 없어요.</p></section>`;
-  const byMonth = new Map();
-  items.forEach((it) => { const k = it.recv.slice(0, 7); if (!byMonth.has(k)) byMonth.set(k, []); byMonth.get(k).push(it); });
-  const row = (it) => {
-    const buy = it.exdiv > today ? `${ymd(prevBizDay(it.exdiv)).slice(3)}까지 사야 받아요` : `배당락 ${ymd(it.exdiv).slice(3)} 지남 · ${mine ? "받을 몫 정해짐" : "지금 사면 이번엔 못 받아요"}`;
-    const when = it.projected ? `${+it.recv.slice(5, 7)}월쯤` : `${ymd(it.recv).slice(3)}${it.sure ? "" : "쯤"} (${dday(it.recv)})`;
-    return `<li data-stock="${esc(it.s.code)}"><div class="l"><div class="name">${esc(it.s.name)}</div>
-      <div class="meta">${when} 입금${it.sure ? "" : " · 추정"}</div><div class="meta div-buy">${it.projected ? "작년 이맘때 배당 기준" : buy}</div></div>
-      <div class="r"><b>${mine ? won(amtOf(it)) : money(market, Math.round(it.amt * (1 - tax) * 100) / 100)}</b><div class="meta">${mine ? "세후" : "1주 세후"}</div></div></li>`;
-  };
-  const months = [...byMonth.entries()];
-  const total = items.reduce((a, it) => a + amtOf(it), 0);
-  const blocks = months.map(([k, list], i) => {
-    const sum = list.reduce((a, it) => a + amtOf(it), 0);
-    const title = `${k.slice(0, 4) === today.slice(0, 4) ? "" : `${k.slice(2, 4)}년 `}${+k.slice(5)}월 <small>${list.length}건${mine ? ` · ${won(sum)}` : ""}</small>`;
-    const cap = mine ? list.length : 12;  // 대형주 전체일 땐 달마다 12개까지만
-    const ul = `<ul class="list">${list.slice(0, cap).map(row).join("")}</ul>${list.length > cap ? `<p class="muted note" style="margin:4px 0 0">외 ${list.length - cap}개</p>` : ""}`;
-    return i < (mine ? 3 : 1) ? `<h3 class="div-mh">${title}</h3>${ul}` : `<details><summary class="div-mh">${title}</summary>${ul}</details>`;
-  }).join("");
-  return `<section class="card" id="div-card">${head}
-    ${mine ? `<p class="muted" style="margin:0 0 4px">앞으로 1년 세후 <b>${won(total)}</b> · 가장 가까운 입금 ${ymd(items[0].recv).slice(3)}${items[0].sure ? "" : "쯤"}</p>` : ""}
-    ${blocks}
-    <p class="muted note" style="margin:10px 0 0">날짜는 배당이 내 계좌에 들어오는 날이에요. 미장은 회사 지급일 뒤 이틀쯤(국내 증권사 입금)이고, 국장은 야후에 지급일이 없어 배당락일로 추정했어요
-      (연말 배당은 다음 해 4월, 분기 배당은 7주쯤 뒤, ETF는 며칠 뒤). "추정"이 붙은 건 실제와 며칠~몇 주 다를 수 있어요.
-      배당을 받으려면 배당락 전 영업일까지 사 둬야 해요. 금액은 최근 배당이 그대로라고 친 값이고 세금(국장 15.4%, 미장 15%)을 뺐어요${market === "us" ? `, 원화는 환율 ${num(fx)}원 기준이에요` : ""}.</p></section>`;
 }
 
 // 관심 화면 업종 버튼: 대시보드 종목에 있는 업종만 (업종 지도 paper/sectors.json 기준)
@@ -4811,93 +4694,6 @@ function goalLine() {
   if (!left || left.days < 0) return "";
   const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, GOAL.now / GOAL.target) * 100)}%` : "";
   return `<p class="muted" style="margin:10px 0 0">🎖️ 전역까지 <b>D-${left.days}</b>${prog}</p>`;
-}
-
-// ---------------------------------------------------------------- 예상 배당금
-// 관심종목(또는 가상계좌 보유 종목)을 가졌다면 1년에 배당을 얼마 받는지, 달마다 언제 들어오는지.
-// 1주당 배당은 최근 12개월 실제 배당(returns.py, 야후 월봉)으로, 없으면 재무 화면의 연 배당금으로 계산해요.
-const DIVQ = { mode: "amount", amount: 1000, qty: { kr: {}, us: {} }, src: "watch" };
-try { Object.assign(DIVQ, JSON.parse(localStorage.getItem("div_plan") || "{}")); } catch (e) { /* 처음 */ }
-DIVQ.qty = { kr: {}, us: {}, ...(DIVQ.qty || {}) };
-const DIV_TAX = { kr: 0.154, us: 0.15 };
-function divPerShare(m, code, d) {
-  const months = divHist(m, code);
-  if (months.length) return { total: months.reduce((a, x) => a + x[1], 0), months };
-  const e = ((d.funds || {})[code] || {}).events || {};
-  if (e.div_rate) {
-    const mo = e.exdiv ? +e.exdiv.slice(5, 7) : 12;
-    return { total: e.div_rate, months: [[mo, e.div_rate]], guess: true };
-  }
-  return null;
-}
-function divHoldings(d) {
-  const all = stocksOf(d);
-  if (DIVQ.src === "acct") {
-    return ((d.account && d.account.positions) || []).map((p) => ({ code: p.code, name: p.name, price: p.price, qty: p.qty, fixed: true }));
-  }
-  const list = all.filter((s) => WATCH[market].includes(s.code));
-  const fx = market === "us" ? (DATA.total && DATA.total.fx) || (d.signal && d.signal.usdkrw) || 1350 : 1;
-  const each = list.length ? (DIVQ.amount * 1e4) / fx / list.length : 0;
-  return list.map((s) => ({ code: s.code, name: s.name, price: s.close,
-    qty: DIVQ.mode === "amount" ? (s.close ? each / s.close : 0) : +(DIVQ.qty[market][s.code] || 0) }));
-}
-function incomeCard(d) {
-  if (!RET[market]) return `<section class="card" id="income-card"><h2>예상 배당금</h2><p class="muted">배당 자료를 불러오는 중이에요…</p></section>`;
-  const hold = divHoldings(d);
-  const fx = market === "us" ? (DATA.total && DATA.total.fx) || (d.signal && d.signal.usdkrw) || 1350 : 1;
-  const tax = DIV_TAX[market];
-  const byMonth = Array(12).fill(0);
-  let total = 0, invest = 0;
-  const rows = hold.map((h) => {
-    const dv = divPerShare(market, h.code, d);
-    const year = dv ? dv.total * h.qty : 0;
-    if (dv) recvMonths(market, h, dv).forEach(([mo, amt]) => { byMonth[mo - 1] += amt * h.qty * (1 - tax); });
-    total += year;
-    invest += (h.price || 0) * h.qty;
-    const yld = dv && h.price ? dv.total / h.price : null;
-    const qtyBox = DIVQ.mode === "qty" && !h.fixed
-      ? `<span class="alert-input div-qty"><input data-divq="${esc(h.code)}" type="text" inputmode="decimal" value="${h.qty || ""}" placeholder="0" aria-label="${esc(h.name)} 주식 수"><span>주</span></span>` : "";
-    return `<li><div class="l"><div class="name">${esc(h.name)}</div>
-        <div class="meta">${h.qty ? `${shares(Math.round(h.qty * 1000) / 1000)} · ` : ""}${dv ? `1주 연 ${money(market, Math.round(dv.total * 100) / 100)}${yld != null ? ` (${(yld * 100).toFixed(1)}%)` : ""} · ${dv.months.length}번${dv.guess ? " (추정)" : ""}` : "배당 없음"}</div>${qtyBox}</div>
-      <div class="r">${year ? `<b>${money(market, Math.round(year * (1 - tax) * 100) / 100)}</b><div class="meta">세후 / 1년</div>` : `<span class="muted">-</span>`}</div></li>`;
-  }).join("");
-  const after = total * (1 - tax);
-  const won = (v) => `${num(v * fx)}원`;
-  const top = Math.max(...byMonth, 1e-9);
-  const bars = byMonth.map((v, i) => `<div class="mbar"><i style="height:${(v / top) * 100}%" class="${v ? "" : "zero"}"></i><span>${i + 1}</span></div>`).join("");
-  const srcChips = [["watch", "관심종목"], ["acct", "가상계좌 보유"]].map(([k, l]) => `<button type="button" data-divsrc="${k}" aria-pressed="${DIVQ.src === k}">${l}</button>`).join("");
-  const modeChips = [["amount", "금액 나눠 넣기"], ["qty", "주식 수 직접"]].map(([k, l]) => `<button type="button" data-divmode="${k}" aria-pressed="${DIVQ.mode === k}">${l}</button>`).join("");
-  const empty = !hold.length ? (DIVQ.src === "acct" ? "가상계좌가 지금 보유한 종목이 없어요." : "관심 화면에서 ☆를 눌러 종목을 넣으면 계산해요.") : "";
-  return `<section class="card" id="income-card"><h2>예상 배당금 <small>${DIVQ.src === "acct" ? "가상계좌 보유" : "관심종목"} 기준</small></h2>
-    <div class="period" role="group" aria-label="어떤 종목">${srcChips}</div>
-    ${DIVQ.src === "watch" ? `<div class="period" role="group" aria-label="넣는 방법" style="margin:8px 0 0">${modeChips}</div>
-      ${DIVQ.mode === "amount" ? `<div class="sav-grid" style="margin-top:8px"><label class="sav-in"><span>똑같이 나눠 넣을 돈</span><span class="alert-input"><input data-divamt type="text" inputmode="decimal" value="${DIVQ.amount}"><span>만 원</span></span></label></div>` : ""}` : ""}
-    ${empty ? `<p class="empty" style="margin-top:10px">${empty}</p>` : `
-    <div class="sav-hero" style="margin-top:12px"><div><small>1년 세후</small><b>${market === "us" ? won(after) : `${num(after)}원`}</b></div>
-      <div><small>한 달 평균</small><b>${market === "us" ? won(after / 12) : `${num(after / 12)}원`}</b></div></div>
-    <p class="muted" style="margin:6px 0 0">세전 ${money(market, Math.round(total * 100) / 100)} · 넣은 돈 ${money(market, Math.round(invest))} 대비 ${invest ? ((total / invest) * 100).toFixed(1) : "0"}%${market === "us" ? ` · 환율 ${num(fx)}원` : ""}</p>
-    <h3 class="sav-h">달마다 (내가 받는 달 기준, 세후)</h3>
-    <div class="mbars" role="img" aria-label="달마다 예상 배당">${bars}</div>
-    <ul class="list" style="margin-top:10px">${rows}</ul>`}
-    <p class="muted note" style="margin:10px 0 0">최근 12개월 실제 배당이 앞으로도 같다고 친 계산이에요. 막대는 배당락 달이 아니라 실제로 돈이 들어오는 달이에요(국장 연말 배당은 다음 해 4월).
-      날짜별 입금은 위 배당 달력에서 볼 수 있어요.
-      세금은 국장 15.4%, 미장 15%(미국에서 떼요)로 뺐어요. 1년 배당·이자가 2,000만 원을 넘으면 금융소득종합과세가 붙어요. 배당은 회사가 줄이거나 끊을 수 있어요.</p></section>`;
-}
-function bindIncome(d) {
-  const card = $("#income-card");
-  if (!card) return;
-  const save = () => { try { localStorage.setItem("div_plan", JSON.stringify(DIVQ)); } catch (e) { /* 이번만 */ } };
-  const redraw = () => { save(); const c = $("#income-card"); if (c) { c.outerHTML = incomeCard(d); bindIncome(d); } redrawDiv(d); };
-  card.querySelectorAll("[data-divsrc]").forEach((b) => b.addEventListener("click", () => { DIVQ.src = b.dataset.divsrc; redraw(); }));
-  card.querySelectorAll("[data-divmode]").forEach((b) => b.addEventListener("click", () => { DIVQ.mode = b.dataset.divmode; redraw(); }));
-  // 숫자 입력은 칸을 다시 그리지 않고(키보드가 닫히지 않게) 입력이 끝나면(change) 다시 계산해요
-  const amt = $("[data-divamt]", card);
-  if (amt) amt.addEventListener("change", () => { const v = parseFloat(amt.value.replace(/[,\s]/g, "")); DIVQ.amount = Number.isFinite(v) && v >= 0 ? Math.min(v, 1e6) : 0; redraw(); });
-  card.querySelectorAll("[data-divq]").forEach((i) => i.addEventListener("change", () => {
-    const v = parseFloat(i.value.replace(/[,\s]/g, ""));
-    if (Number.isFinite(v) && v > 0) DIVQ.qty[market][i.dataset.divq] = Math.min(v, 1e7); else delete DIVQ.qty[market][i.dataset.divq];
-    redraw();
-  }));
 }
 
 // ---------------------------------------------------------------- 수익률 달력

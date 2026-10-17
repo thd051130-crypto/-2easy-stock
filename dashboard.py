@@ -150,7 +150,7 @@ FUND_KEYS = ("name", "per", "loss", "pbr", "div", "roe", "debt", "financial", "c
 
 
 def fund_table(path):
-    """조건 검색·배당 달력·히트맵·실적 일정용 종목별 재무 한 줄 (fundamentals.json에서 화면에 쓰는 것만).
+    """조건 검색·히트맵·실적 일정용 종목별 재무 한 줄 (fundamentals.json에서 화면에 쓰는 것만).
     등급은 [등급, 점수, 만점]으로 줄여요. 종목 화면의 연간·분기 재무제표는 stock_pages.py가 따로 붙여요."""
     stocks = (read_json(path) or {}).get("stocks") or {}
     out = {}

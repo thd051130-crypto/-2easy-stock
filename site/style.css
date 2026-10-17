@@ -679,15 +679,6 @@ details.fold > summary + * { margin-top: 2px !important; }
 .goal-bar em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--wait-fg); }
 .goal-list .l { flex: 1; }
 
-/* 예상 배당금 */
-.mbars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; height: 90px; align-items: end; }
-.mbar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
-.mbar i { display: block; width: 100%; background: var(--series-3); border-radius: 4px 4px 0 0; min-height: 2px; }
-.mbar i.zero { background: var(--grid); }
-.mbar span { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
-.div-qty { margin-top: 6px; max-width: 150px; }
-.div-qty input { width: 100%; min-width: 0; }
-
 /* 수익률 달력 */
 .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 8px; text-align: center; }
 .cal-head b { display: block; font-size: 16px; }
@@ -739,12 +730,6 @@ button.pol-pill { cursor: pointer; min-height: 28px; font-weight: 600; }
 .pol-glance .pol-fx { margin-top: 4px; }
 .pol-stale { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--wait-bg); color: var(--wait-fg); font-size: 13px; }
 details.pol-sec { margin-top: 6px; }
-/* 배당 달력: 받는 달 제목, "언제까지 사야" 줄은 작게 */
-.div-mh { font-size: 15px; margin: 12px 0 4px; }
-.div-mh small { font-weight: 400; color: var(--text-muted); font-size: 12px; }
-details > summary.div-mh { cursor: pointer; }
-.div-buy { font-size: 11px; opacity: .8; }
-
 /* 큰 발표·지수 급변 (홈 맨 위) */
 .big-card { border: 2px solid var(--wait-fg); background: color-mix(in srgb, var(--wait-bg) 55%, var(--surface-1, transparent)); }
 .big-card h2 { color: var(--wait-fg); }
