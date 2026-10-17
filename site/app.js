@@ -362,6 +362,33 @@ const VIEWS = {
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
 };
 
+let lastView = "", holdH = 0;
+// 누른 버튼이 다시 그린 뒤에도 화면의 같은 높이에 있게 맞춰요 (위 칸 높이가 바뀌어도, 차트가 늦게 그려져도)
+let lastTap = null;
+const tapSig = (el) => {
+  const data = el.getAttributeNames().filter((a) => a.startsWith("data-")).map((a) => `${a}=${el.getAttribute(a)}`).join("&");
+  return `${el.tagName}|${data || (el.textContent || "").trim().slice(0, 40)}`;
+};
+// 같은 표시의 버튼이 여럿이면(예: '자세히') 몇 번째였는지로 찾아요
+const tapAll = (sig) => [...document.querySelectorAll(`#app ${sig.split("|")[0]}`)].filter((x) => tapSig(x) === sig);
+document.addEventListener("click", (e) => {
+  const el = e.target.closest && e.target.closest("#app button, #app summary, #app li, #app [role=button]");
+  if (!el) { lastTap = null; return; }
+  const sig = tapSig(el);
+  lastTap = { sig, idx: tapAll(sig).indexOf(el), top: el.getBoundingClientRect().top, at: performance.now() };
+}, true);
+function keepTap() {
+  const t = lastTap;
+  if (!t || performance.now() - t.at > 1000) return;
+  lastTap = null;
+  const fix = () => {
+    const el = tapAll(t.sig)[t.idx];
+    if (el) { const dy = el.getBoundingClientRect().top - t.top; if (Math.abs(dy) > 1) window.scrollBy(0, dy); }
+  };
+  fix();
+  requestAnimationFrame(fix);
+  setTimeout(fix, 250);
+}
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
   const sb = $(".search-btn");
@@ -377,9 +404,13 @@ function render() {
   const d = DATA.markets[market];
   const app = $("#app");
   app.classList.remove(...FX);
-  const top = $(".top");
-  if (top) document.documentElement.style.setProperty("--top-h", `${top.offsetHeight}px`);
+  // 같은 화면을 다시 그릴 땐(버튼·칩·탭을 눌러서) 보던 위치 그대로예요. 화면을 바꾸면 go()가 맨 위로 올려요 (사용자 규칙 2026-10-17)
+  const view = `${screen}|${market}|${stockCode}`, keepAt = view === lastView ? window.scrollY : null;
+  lastView = view;
+  // 다시 그리는 동안 차트·재무제표가 잠깐 비어 화면이 짧아지면 위치가 밀려요. 그동안만 높이를 붙잡아 둬요
+  if (keepAt != null) { app.style.minHeight = `${app.offsetHeight}px`; clearTimeout(holdH); holdH = setTimeout(() => { app.style.minHeight = ""; }, 1500); }
   app.innerHTML = VIEWS[screen](d).join("");
+  if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
   if (screen === "home") tidyHomeMore(app);
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
@@ -392,7 +423,6 @@ function render() {
       perfTabKey = b.dataset.perfTab;
       try { localStorage.setItem("perf_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
       render();
-      window.scrollTo(0, 0);  // 고른 묶음의 처음부터 (선택 바는 늘 맨 위에 붙어 있어요)
     }));
     // 접힌 그래프는 펼칠 때 그려요 (접힌 채로 그리면 폭이 0이라서). 펼친 건 이 폰에 기억해요.
     [["equity-fold", () => drawEquity(d)], ["track-fold", () => drawTrack(d, true)]].forEach(([id, draw]) => {
@@ -2550,6 +2580,7 @@ function bindCompare(d) {
     if (keep) $("#cmp-chart").innerHTML = keep;
     bindCompare(d);
     window.scrollTo(0, y);
+    keepTap();
   };
   document.querySelectorAll("[data-cmp-del]").forEach((b) => b.addEventListener("click", () => {
     COMPARE[market] = cmpItems(d).filter((k) => k !== b.dataset.cmpDel); redraw();
@@ -3256,11 +3287,11 @@ const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월",
 let worldG = "m3";
 try { worldG = localStorage.getItem("world_g") || "m3"; } catch (e) { /* 처음 */ }
 if (!WORLD_G.some((p) => p[0] === worldG)) worldG = "m3";
-function worldRow(r) {
+function worldRow(r, where = "main") {
   const [key, , n, line] = WORLD_P.find((p) => p[0] === worldP);
   const closes = n ? r.closes.slice(-n) : r.closes;
-  const open = worldPick === r.sym;
-  return `<li class="stock spark-row no-star world-row${open ? " open" : ""}" data-world="${esc(r.sym)}" role="button" aria-expanded="${open}"><div class="name">${esc(r.name)}</div>
+  const open = worldPick === `${where}:${r.sym}`;  // 위 4개 목록과 '전체 보기' 목록에 같은 줄이 있어서 누른 쪽만 펼쳐요
+  return `<li class="stock spark-row no-star world-row${open ? " open" : ""}" data-world="${where}:${esc(r.sym)}" role="button" aria-expanded="${open}"><div class="name">${esc(r.name)}</div>
     <div class="meta">${md(r.day)} 종가${n && closes.length > 1 ? ` · ${line} ${pct(closes[closes.length - 1] / closes[0] - 1)}` : ""}</div>
     <div class="mini">${spark(closes, `${r.name} 최근 ${line}`)}</div>
     <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${pct(r[key], 2)}</div></li>${open ? worldGraph(r) : ""}`;
@@ -3280,7 +3311,7 @@ function drawWorldGraph() {
   const el = $("#world-chart");
   const w = DATA && DATA.world;
   if (!el || !w) return;
-  const r = w.groups.flatMap((g) => g.items).find((x) => x.sym === worldPick);
+  const r = worldPick && w.groups.flatMap((g) => g.items).find((x) => x.sym === worldPick.slice(worldPick.indexOf(":") + 1));
   if (!r) return;
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
   const c = n ? r.closes.slice(-n) : r.closes;
@@ -3303,9 +3334,9 @@ function worldCard() {
   const chips = `<div class="chips" role="group" aria-label="기간 고르기" style="margin:0 0 6px">${WORLD_P.map(([k, l]) =>
     `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
   const groups = w.groups.map((g) => `<h3 class="muted" style="margin:12px 0 4px">${esc(g.name)}</h3>
-    <ul class="list">${g.items.map(worldRow).join("")}</ul>`).join("");
+    <ul class="list">${g.items.map((r) => worldRow(r, "all")).join("")}</ul>`).join("");
   return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
-    <ul class="list">${main.map(worldRow).join("")}</ul>
+    <ul class="list">${main.map((r) => worldRow(r)).join("")}</ul>
     <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
     <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
@@ -3916,7 +3947,7 @@ function readPrice(t) {
 
 function bindAlert(s) {
   const toggle = $("[data-alert-toggle]");
-  if (toggle) toggle.addEventListener("click", () => { alertOpen = !alertOpen; render(); if (alertOpen) { const i = $("#alert-price"); if (i) i.focus(); } });
+  if (toggle) toggle.addEventListener("click", () => { alertOpen = !alertOpen; render(); if (alertOpen) { const i = $("#alert-price"); if (i) i.focus({ preventScroll: true }); } });
   const input = $("#alert-price"), send = $("#alert-send"), hint = $("#alert-hint");
   if (!input || !send || !hint) return;
   const now = s && s.close != null ? s.close : null;
@@ -4583,7 +4614,7 @@ document.addEventListener("click", (e) => {
   document.body.appendChild(box);
   $(".term-x", box).addEventListener("click", closeTerm);
   $(".term-all", box).addEventListener("click", () => { closeTerm(); go("search"); requestAnimationFrame(() => { const g = $("#glossary"); if (g) g.scrollIntoView(); }); });
-  $(".term-x", box).focus();
+  $(".term-x", box).focus({ preventScroll: true });
 }, true);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTerm(); });
 window.addEventListener("popstate", closeTerm);
@@ -4707,6 +4738,7 @@ function bindStress(d) {
     try { localStorage.setItem("stress_of", stressOf); } catch (e) { /* 이번만 */ }
     card.outerHTML = stressCard(d);
     bindStress(d);
+    keepTap();
   }));
 }
 
@@ -4958,7 +4990,7 @@ function retCalendarCard(d) {
 function bindRetCal(d) {
   const card = $("#retcal-card");
   if (!card) return;
-  const redraw = () => { const c = $("#retcal-card"); if (c) { c.outerHTML = retCalendarCard(d); bindRetCal(d); } };
+  const redraw = () => { const c = $("#retcal-card"); if (c) { c.outerHTML = retCalendarCard(d); bindRetCal(d); keepTap(); } };
   card.querySelectorAll("[data-calsrc]").forEach((b) => b.addEventListener("click", () => {
     calSrc = b.dataset.calsrc; calMonth = null; calPick = null;
     try { localStorage.setItem("cal_src", calSrc); } catch (e) { /* 이번만 */ }
