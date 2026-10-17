@@ -331,9 +331,9 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  // 홈은 핵심(신호·급락 점검·내 계좌·세계 지수)만 펼치고, 나머지는 '더 보기' 칸에 한 줄씩 접어 둬요.
-  // 큰 경제 발표 같은 강조 칸이 생기면 신호 칸 바로 아래에 넣어요.
-  home: (d) => [homeSignalCard(d), dropCard(d), homePerfCard(d), worldCard(), homeMoreCard(d)],
+  // 홈은 사용자가 고른 순서로 세계 지수 → 성과 → 더 보기 → 신호. 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
+  // 큰 경제 발표 같은 강조 칸이 생기면 맨 위에 넣어요.
+  home: (d) => [worldCard(), homePerfCard(d), homeMoreCard(d), homeSignalCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
   perf: (d) => [savingsCard(), trackCard(d), accountCard(d), retCalendarCard(d), positionsCard(d), stressCard(d), tradesCard(d), etfAccountCard(d), readinessCard(d), goalCard(),
@@ -626,7 +626,7 @@ function bindDrop(d) {
   if (!now || IDX_READY.has(now.sym)) return;
   idxData(now.sym).then(() => {
     const el = $("#drop-card");
-    if (el && screen === "home") el.outerHTML = dropCard(d);
+    if (el && screen === "home") { el.outerHTML = dropCard(d); trimHeads($("#app")); }
   });
 }
 
@@ -1942,6 +1942,8 @@ function homeMoreRows(d) {
   const s = d.signal || {};
   const rows = [];
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
+  const dn = dropNow(d);
+  add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
   // 다가오는 일정: 가장 가까운 큰 일정
   const ev = ((DATA && DATA.calendar) || []).filter((e) => e.date >= TODAY() && !["earn", "exdiv"].includes(e.kind));
   add("cal", "📅", "다가오는 일정", ev.length ? `${md(ev[0].date)} ${esc(ev[0].title)} · ${dday(ev[0].date)}` : "2주 안 큰 일정 없음", calendarCard(d));
@@ -1982,11 +1984,14 @@ function homeMoreCard(d) {
       <div class="hm-body">${r.html}</div></details>`).join("")}</section>`;
 }
 // 펼친 칸 안의 원래 제목 줄은 한 줄 요약과 겹쳐서, 날짜 같은 작은 글씨만 남겨요.
-function tidyHomeMore(app) {
-  app.querySelectorAll(".hm-body > .card > h2:first-child").forEach((h) => {
+function trimHeads(root) {
+  root.querySelectorAll(".hm-body > .card > h2:first-child").forEach((h) => {
     const sm = h.querySelector("small");
     if (sm) { const p = document.createElement("p"); p.className = "hm-meta"; p.innerHTML = sm.innerHTML; h.replaceWith(p); } else h.remove();
   });
+}
+function tidyHomeMore(app) {
+  trimHeads(app);
   app.querySelectorAll("details.hm").forEach((x) => x.addEventListener("toggle", () => {
     if (x.open) HOME_OPEN.add(x.dataset.hm); else HOME_OPEN.delete(x.dataset.hm);
     saveHomeOpen();
