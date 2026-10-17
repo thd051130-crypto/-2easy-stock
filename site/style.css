@@ -434,6 +434,11 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --g-consumer: #eda100; --g-finance: #e87ba4; } }
 :root[data-theme="dark"] { --g-consumer: #eda100; --g-finance: #e87ba4; }
 .imap-wrap { margin: 10px -8px 0; }
+/* 산업 화면: 이어진 산업과 대표 종목이 한눈에 갈리게 제목에 색 막대, 종목은 옅은 상자 */
+.map-sec { margin: 16px 0 8px; padding-left: 8px; border-left: 3px solid var(--accent); font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+.map-sec small { font-weight: 400; color: var(--text-muted); font-size: 12px; margin-left: 2px; }
+.map-sec.stk { margin-top: 0; border-left-color: var(--series-2); }
+.map-stocks { margin: 16px -4px 0; padding: 12px 12px 4px; background: var(--surface-0); border: 1px solid var(--border); border-radius: 12px; }
 .imap { display: block; width: 100%; height: auto; max-height: 72vh; touch-action: pan-y;  /* 두 손가락 확대는 지도가 받아요 */ user-select: none; -webkit-user-select: none; }
 .imap .edge { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-opacity: .28; transition: stroke-opacity .3s, stroke-width .3s; }
 .imap .edge.k-c { stroke-dasharray: 4 3; }

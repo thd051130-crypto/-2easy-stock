@@ -15,5 +15,6 @@ PR #50 (branch claude/project-thread-5os4k7) adds 8 themes to themes.py and indu
 - PR #56 (merged 2026-10-11 16:29 KST): header .map-btn next to 이지스톡 opens map; map 5일/20일 toggle (mapDays, localStorage map_days, fv()); flows stocks rows now [code, ko, close, r5, r1, r20].
 - PR #58 (merged 2026-10-11 16:34 KST): two-finger pinch on map (spread ≥1.18 → nearest lit node, pinch ≤0.85 → back; ctrl+wheel same), .imap touch-action pan-y, MAP_H 660, GAP 14; header .home-link (logo+이지스톡) → home.
 - PR #59 (merged 2026-10-11 16:45 KST): pinch morphs live (mapPreview lerps nodes/opacity toward mapTargets(focus) by spread: full at 2x / 0.5x); release ≥30% commits via setMapFocus, else placeMap springs back.
+- PR #66 (2026-10-17): industry detail card splits sections: h3.map-sec (accent left bar + 🔗 이어진 산업 / 📈 대표 종목), stocks wrapped in .map-stocks tinted box (user said the two lists ran together). Previews sep-*.png.
 - Previews: /mnt/project-files/industry-map-preview/new-*.png.
 Related: [[industry-map-pr31]], [[theme-search-pr30]]
