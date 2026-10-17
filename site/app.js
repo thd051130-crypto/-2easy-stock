@@ -28,6 +28,22 @@ try {
   const saved = JSON.parse(localStorage.getItem("ind") || "{}");
   for (const [k] of IND_KEYS) if (typeof (saved && saved[k]) === "boolean") IND[k] = saved[k];
 } catch (e) { /* 기본값 */ }
+// 이동평균선 설정: 선 4개의 기간(일)과 켜기·끄기 (이 폰 브라우저에 기억해요, 종목·지수 캔들 차트 모두 같이).
+// 처음엔 예전처럼 50일선·200일선만 켜져 있어요. 비교 차트에는 이동평균선을 안 그려요.
+const MA_COLORS = ["var(--ma1)", "var(--ma2)", "var(--ma50)", "var(--ma200)"];
+const MA_DEFAULT = [{ p: 5, on: false }, { p: 20, on: false }, { p: 50, on: true }, { p: 200, on: true }];
+const MA_MAX = 300;
+let MA_SET = MA_DEFAULT.map((m) => ({ ...m }));
+try {
+  const saved = JSON.parse(localStorage.getItem("ma_set") || "null");
+  if (Array.isArray(saved) && saved.length === MA_DEFAULT.length) {
+    MA_SET = saved.map((m, i) => ({
+      p: Number.isInteger(m && m.p) && m.p >= 2 && m.p <= MA_MAX ? m.p : MA_DEFAULT[i].p,
+      on: typeof (m && m.on) === "boolean" ? m.on : MA_DEFAULT[i].on,
+    }));
+  }
+} catch (e) { /* 기본값 */ }
+let maOpen = false;  // 이동평균선 설정 창이 열려 있는지 (다시 그려도 열린 채로)
 // 차트 화면 지수 버튼: 시장마다 고른 지수 (이 폰 브라우저에 기억해요). 기본은 그 시장 매매 기준 지수.
 const OWN_IDX = { kr: "^KS11", us: "^GSPC" };
 const CHART_IDX = { ...OWN_IDX };
@@ -483,6 +499,7 @@ function render() {
     try { localStorage.setItem("ind", JSON.stringify(IND)); } catch (e) { /* 이번만 기억 */ }
     render();  // 보던 구간·확대는 그대로 두고 지표만 다시 그려요
   }));
+  bindMa(app);
   playMotion(app);
 }
 
@@ -1998,7 +2015,7 @@ function groupCandles(src, keyOf) {
 const dropFirst = (f) => (f.keys.length > 1 ? Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v.slice(1)])) : f);
 
 // 일봉(5년치)·월봉(전체 기간)으로 고른 기간의 캔들을 만들어요.
-// 50일선·200일선은 각 캔들 기간 마지막 거래일의 값이에요 (일봉이 있는 최근 몇 년만, 년봉엔 안 그려요).
+// 이동평균선(N일선)은 각 캔들 기간 마지막 거래일의 값이에요 (일봉이 있는 최근 몇 년만, 년봉엔 안 그려요).
 function frameCandles(c, fr) {
   // 상장일부터 받은 일봉(full: 종목 화면)은 첫 주·첫 달·첫 해가 상장 직후라 그대로 둬요.
   // 중간부터 자른 일봉(지수)은 첫 주가 중간부터일 수 있어서 빼요.
@@ -2010,10 +2027,13 @@ function frameCandles(c, fr) {
     f = groupCandles(c.monthly, fr === "m" ? KEY.m : KEY.y);
     if (fr === "y" && f.first[0].slice(5, 7) !== "01") f = dropFirst(f);  // 1월부터가 아닌 첫 해는 빼요
   } else f = cut(groupCandles(c, KEY[fr]));  // 월봉이 없으면 일봉을 묶어요
-  const ma50 = smaOf(c.c, 50), ma200 = smaOf(c.c, 200), lastDay = new Map();
+  const lastDay = new Map();
   c.dates.forEach((dt, i) => lastDay.set(KEY[fr](dt), i));
   const pick = (vals) => f.keys.map((k) => (fr === "y" || !lastDay.has(k) ? null : vals[lastDay.get(k)]));
-  return withIndicators({ ...f, ma50: pick(ma50), ma200: pick(ma200), frame: fr });
+  // 켜 둔 이동평균선만 계산해요 (기간은 일 단위라 주봉·월봉에서도 N일선 그대로)
+  const mas = MA_SET.map((m, i) => ({ ...m, color: MA_COLORS[i], cls: `ma${i + 1}` }))
+    .filter((m) => m.on).map((m) => ({ ...m, vals: pick(smaOf(c.c, m.p)) }));
+  return withIndicators({ ...f, mas, frame: fr });
 }
 
 // 보조지표는 지금 보는 캔들로 계산해요 (주봉이면 20주 볼린저밴드, 14주 RSI). 앞쪽 계산이 모자란 캔들은 null.
@@ -2554,9 +2574,56 @@ function candleLegend() {
   return `<div class="legend">
       <span class="key"><i class="sw" style="background:var(--c-up)"></i>상승</span>
       <span class="key"><i class="sw" style="background:var(--c-down)"></i>하락</span>
-      ${IND.ma ? `<span class="key ma-key"><i class="sw" style="background:var(--ma50)"></i>50일선</span>
-      <span class="key ma-key"><i class="sw" style="background:var(--ma200)"></i>200일선</span>` : ""}
-      ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>`;
+      ${IND.ma ? maKeys() : ""}
+      ${IND.bb ? `<span class="key"><i class="sw" style="background:var(--bb)"></i>볼린저밴드</span>` : ""}</div>${IND.ma && maOpen ? maPanel() : ""}`;
+}
+
+// 이동평균선 표시: 누르면 설정 창이 열리고 닫혀요
+function maKeys() {
+  const on = MA_SET.map((m, i) => (m.on ? `<span class="key"><i class="sw" style="background:${MA_COLORS[i]}"></i>${m.p}일선</span>` : "")).join("");
+  return `<button type="button" class="ma-key ma-edit" aria-expanded="${maOpen}">${on || "이동평균선 꺼짐"}<span class="ma-gear">설정 ${maOpen ? "▴" : "▾"}</span></button>`;
+}
+function maPanel() {
+  const rows = MA_SET.map((m, i) => `<div class="ma-row">
+      <i class="sw" style="background:${MA_COLORS[i]}"></i>
+      <button type="button" class="ma-step" data-ma-step="${i}" data-d="-1" aria-label="${m.p}일선 기간 줄이기">−</button>
+      <input type="number" inputmode="numeric" min="2" max="${MA_MAX}" value="${m.p}" data-ma-p="${i}" aria-label="${i + 1}번 선 기간(일)">
+      <button type="button" class="ma-step" data-ma-step="${i}" data-d="1" aria-label="${m.p}일선 기간 늘리기">+</button>
+      <span class="ma-unit">일선</span>
+      <button type="button" class="ma-on" data-ma-on="${i}" aria-pressed="${m.on}">${m.on ? "켜짐" : "꺼짐"}</button>
+    </div>`).join("");
+  return `<div class="ma-panel" role="group" aria-label="이동평균선 설정">
+    <div class="ma-head"><b>이동평균선</b><span class="muted">기간은 일 단위 (2~${MA_MAX}일)</span></div>${rows}
+    <div class="ma-quick">${[[5, 20, 60, 120], [20, 60, 120, 200], [5, 20, 50, 200]].map((q) =>
+      `<button type="button" data-ma-quick="${q.join(",")}">${q.join("·")}</button>`).join("")}</div>
+    <div class="ma-foot"><button type="button" data-ma-reset>처음대로 (50·200)</button><button type="button" data-ma-close>닫기</button></div>
+    <p class="muted note">모든 종목·지수 차트에 같이 적용되고 이 폰에 기억해요. 년봉엔 안 그려요.</p></div>`;
+}
+function saveMa() {
+  try { localStorage.setItem("ma_set", JSON.stringify(MA_SET)); } catch (e) { /* 이번만 기억 */ }
+  render();  // 보던 구간·확대는 그대로 두고 선만 다시 그려요
+}
+function bindMa(root) {
+  root.querySelectorAll(".ma-edit").forEach((b) => b.addEventListener("click", () => { maOpen = !maOpen; render(); }));
+  root.querySelectorAll("[data-ma-close]").forEach((b) => b.addEventListener("click", () => { maOpen = false; render(); }));
+  root.querySelectorAll("[data-ma-on]").forEach((b) => b.addEventListener("click", () => {
+    const m = MA_SET[Number(b.dataset.maOn)]; m.on = !m.on; saveMa();
+  }));
+  root.querySelectorAll("[data-ma-step]").forEach((b) => b.addEventListener("click", () => {
+    const m = MA_SET[Number(b.dataset.maStep)];
+    m.p = Math.max(2, Math.min(MA_MAX, m.p + Number(b.dataset.d))); m.on = true; saveMa();
+  }));
+  root.querySelectorAll("[data-ma-p]").forEach((inp) => inp.addEventListener("change", () => {
+    const m = MA_SET[Number(inp.dataset.maP)], v = Math.round(Number(inp.value));
+    if (Number.isFinite(v) && v >= 2) { m.p = Math.min(MA_MAX, v); m.on = true; }
+    saveMa();
+  }));
+  root.querySelectorAll("[data-ma-quick]").forEach((b) => b.addEventListener("click", () => {
+    MA_SET = b.dataset.maQuick.split(",").map((p) => ({ p: Number(p), on: true })); saveMa();
+  }));
+  root.querySelectorAll("[data-ma-reset]").forEach((b) => b.addEventListener("click", () => {
+    MA_SET = MA_DEFAULT.map((m) => ({ ...m })); saveMa();
+  }));
 }
 
 // 보조지표 버튼 (여러 개 같이 켤 수 있어요). 거래량 자료가 없는 예전 기록이면 거래량 버튼은 못 눌러요.
@@ -3947,7 +4014,7 @@ const MAX_SHOW = 1300;  // 한 화면 최대 캔들 수 (상장일부터 일봉�
 function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", ind = IND } = {}) {
   if (!el) return;
   const n = c.keys.length;
-  const { ma50, ma200, bb, rsi } = c;
+  const { mas: maLines = [], bb, rsi } = c;
   const key = el.id;
   if (reset || !VIEW[key] || VIEW[key].n !== n || VIEW[key].frame !== c.frame) {
     VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: c.frame, pick: null };
@@ -4023,7 +4090,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
           + line(bb.up, "bb") + line(bb.lo, "bb") + line(bb.mid, "bb bb-mid");
       }
     }
-    const mas = ind.ma ? line(ma200, "ma ma200") + line(ma50, "ma ma50") : "";
+    const mas = ind.ma ? maLines.slice().reverse().map((m) => line(m.vals, `ma ${m.cls}`)).join("") : "";
     // 지금 값 (가장 최근 캔들 종가). 과거로 밀어 봐도 보이는 구간의 최고·최저를 지금 값과 비교해요.
     const last = c.c[n - 1], lastCls = last >= c.o[n - 1] ? "up" : "down";
     const vsNow = (price) => last / price - 1;  // 최고 대비는 0 또는 마이너스, 최저 대비는 0 또는 플러스
@@ -4089,7 +4156,7 @@ function candleChart(el, c, show, reset, onRange, { fmt = num, name = "지수", 
     const prev = i > 0 ? c.c[i - 1] : c.o[i], ch = c.c[i] / prev - 1;
     const row = (label, val) => `<div class="row">${label} <b>${val}</b></div>`;
     let more = "";
-    if (ind.ma) more += (ma50[i] ? row("50일선", fmt(ma50[i])) : "") + (ma200[i] ? row("200일선", fmt(ma200[i])) : "");
+    if (ind.ma) more += maLines.map((m) => (m.vals[i] ? row(`${m.p}일선`, fmt(m.vals[i])) : "")).join("");
     if (ind.bb && bb.up[i] != null) more += row("볼린저 위", fmt(bb.up[i])) + row("볼린저 아래", fmt(bb.lo[i]));
     if (volOn && c.vma && c.vma[i]) more += row("거래량", `평소의 ${(c.v[i] / c.vma[i]).toFixed(1)}배`);
     if (ind.rsi && rsi[i] != null) more += row("RSI", Math.round(rsi[i]));
