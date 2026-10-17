@@ -13,3 +13,5 @@ On 2026-10-11 the user asked for the 배당 달력 to show when they actually re
 - Holdings and qty come from the 예상 배당금 card (DIVQ: watch/acct). With no holdings it falls back to large caps at 1 share. incomeCard bars are now by receive month, after tax.
 
 Status: merged 2026-10-11 15:49 KST. Previews in /mnt/project-files/dividend-receive-preview/. Related: [[app-compare-features-pr33]], [[phone-dashboard]]
+
+**Removed (2026-10-17, PR #70):** the user asked to drop both 배당 달력 and 예상 배당금 cards; all their code (dividendCard, incomeCard, DIVQ, receiveDay…) is gone from site/app.js. Don't re-add without asking. returns.py r[6] dividend history is still generated but unused by the app.
