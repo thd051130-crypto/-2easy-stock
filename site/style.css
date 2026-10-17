@@ -710,3 +710,16 @@ details.pol-sec { margin-top: 6px; }
 .div-mh small { font-weight: 400; color: var(--text-muted); font-size: 12px; }
 details > summary.div-mh { cursor: pointer; }
 .div-buy { font-size: 11px; opacity: .8; }
+
+/* 큰 발표·지수 급변 (홈 맨 위) */
+.big-card { border: 2px solid var(--wait-fg); background: color-mix(in srgb, var(--wait-bg) 55%, var(--surface-1, transparent)); }
+.big-card h2 { color: var(--wait-fg); }
+.big-list .big-row { display: block; padding: 10px 0; }
+.big-list .big-row.tier1 .big-when b { color: var(--wait-fg); }
+.big-list .big-row.done { opacity: .95; }
+.big-when { margin-bottom: 4px; }
+.big-when .pill { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--wait-bg); color: var(--wait-fg); margin-left: 4px; }
+.big-item { margin: 4px 0 0 2px; }
+.big-item .name { font-weight: 600; }
+.big-hot { color: var(--up); } .big-cold { color: var(--down); }
+.cal li.cal-big .name { font-weight: 700; color: var(--wait-fg); }

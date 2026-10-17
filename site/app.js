@@ -331,7 +331,7 @@ function sigLook(s) {
 }
 
 const VIEWS = {
-  home: (d) => [homeSignalCard(d), dropCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
+  home: (d) => [bigEventsCard(), homeSignalCard(d), dropCard(d), worldCard(), macroCard(), policyCard(), calendarCard(d), discloseHomeCard(d), heatmapCard(d), sectorsCard(d), homeWatchCard(d), moversCard(d), flowsCard(d), quietVolumeCard(d), homePerfCard(d),
     homeIndexCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), dividendCard(d), incomeCard(d), allStocksCard(d)],
@@ -3278,10 +3278,53 @@ function discloseHomeCard(d) {
     <p class="muted note" style="margin:8px 0 0">평일 한 시간마다 금감원 전자공시를 봐요. ⚠️ 공시는 텔레그램으로 바로 와요.</p></section>`;
 }
 
+// 큰 발표 (big_events.py): CPI·고용·FOMC처럼 지수를 크게 흔드는 발표를 홈 맨 위에 눈에 띄게.
+// 앞으로 48시간 일정(예상치·이전 값), 지난 24시간 결과(실제 값·예상과 비교·선물 반응), 24시간 안의 지수 급변.
+// 아무것도 없으면 칸을 안 보여 줘요. 텔레그램으로도 전날·1시간 전·발표 뒤에 와요.
+function bigEventsCard() {
+  const data = (DATA && DATA.events) || {};
+  const now = Date.now(), H = 3600e3;
+  const ev = (data.events || []).filter((e) => { const t = Date.parse(e.at); return t > now - 24 * H && t < now + 48 * H; });
+  const shocks = (data.shocks || []).filter((x) => Date.parse(x.at) > now - 24 * H);
+  if (!ev.length && !shocks.length) return "";
+  const days = "일월화수목금토";
+  const when = (iso) => { const k = new Date(Date.parse(iso) + 9 * H); return `${k.getUTCMonth() + 1}.${String(k.getUTCDate()).padStart(2, "0")}(${days[k.getUTCDay()]}) ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`; };
+  const left = (iso) => { const m = Math.round((Date.parse(iso) - now) / 60e3); return m <= 0 ? "발표됨" : m < 60 ? `${m}분 뒤` : m < 24 * 60 ? `${Math.floor(m / 60)}시간 뒤` : `${Math.floor(m / 1440)}일 뒤`; };
+  const num = (t) => { const m = /^\s*([-+]?\d+(?:\.\d+)?)/.exec(t || ""); return m ? parseFloat(m[1]) : null; };
+  const vs = (e) => {
+    const a = num(e.actual), f = num(e.forecast);
+    if (a === null || f === null) return "";
+    const dec = ((e.forecast || "").split(".")[1] || "").replace(/[^0-9]/g, "").length;
+    if (Math.abs(a - f) < Math.pow(10, -dec) / 2 + 1e-9) return `<span class="muted">예상과 같음</span>`;
+    return a > f ? `<b class="big-hot">예상보다 높음</b>` : `<b class="big-cold">예상보다 낮음</b>`;
+  };
+  const groups = [];
+  ev.forEach((e) => { const g = groups.find((x) => x.at === e.at); g ? g.items.push(e) : groups.push({ at: e.at, items: [e] }); });
+  const rows = groups.map((g) => {
+    const done = Date.parse(g.at) <= now, tier = g.items.some((e) => e.tier1);
+    const items = g.items.map((e) => {
+      const bits = [e.actual && done ? `실제 <b>${esc(e.actual)}</b>` : "", e.forecast ? `예상 ${esc(e.forecast)}` : "", e.previous ? `이전 ${esc(e.previous)}` : ""].filter(Boolean).join(" · ");
+      return `<div class="big-item"><div class="name">${esc(e.flag || "")} ${esc(e.ko)}</div>${bits ? `<div class="meta">${bits} ${done && e.actual ? vs(e) : ""}</div>` : ""}</div>`;
+    }).join("");
+    const g0 = g.items.find((e) => e.react && e.react.length) || {};
+    const news = (g.items.find((e) => e.news && e.news.length) || {}).news || [];
+    const extra = done ? `${g0.react ? `<div class="meta">📈 발표 뒤 ${g0.react.map(esc).join(" · ")}</div>` : ""}
+      ${news.slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}` : "";
+    return `<li class="big-row${tier ? " tier1" : ""}${done ? " done" : ""}"><div class="big-when"><b>${when(g.at)}</b> <span class="pill">${left(g.at)}</span></div>${items}${extra}</li>`;
+  }).join("");
+  const shockRows = shocks.map((x) => `<li class="big-row tier1"><div class="big-when"><b>⚡ ${when(x.at)}</b> <span class="pill">지수 급변</span></div>
+      <div class="big-item"><div class="name">${esc(x.label)} 1시간 <span class="${x.move > 0 ? "up" : "down"}">${pct(x.move)}</span></div></div>
+      ${(x.news || []).slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}</li>`).join("");
+  return `<section class="card big-card" id="big-card"><h2>🚨 큰 발표·지수 급변 <small>한국시간 · 참고</small></h2>
+    <ul class="list big-list">${shockRows}${rows}</ul>
+    <p class="muted note" style="margin:10px 0 0">물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표예요. 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
+      실제 값은 FRED(미국 연준 무료 자료)에서 계산해서 공식 발표와 소수 둘째 자리가 다를 수 있어요. 매매 규칙은 그대로예요.</p></section>`;
+}
+
 // 다가오는 일정 (econ_calendar.py): 금리 결정·만기일·실적 시즌은 다 보여 주고, 종목 실적 발표·배당락은
 // 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만. 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
-const CAL_ICON = { rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
+const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
 let calAll = false;
 function calendarCard(d) {
   const ev = (DATA && DATA.calendar) || [];
@@ -3291,20 +3334,20 @@ function calendarCard(d) {
   const near = ev.filter((e) => e.date >= today && e.date < end);
   const shown = near.filter((e) => !["earn", "exdiv"].includes(e.kind) || mineOf(e) || (calAll && e.kind === "earn"));
   const hidden = near.filter((e) => e.kind === "earn" && !mineOf(e)).length;
-  const flag = { kr: "🇰🇷", us: "🇺🇸" }, days = "일월화수목금토";
+  const flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" }, days = "일월화수목금토";
   let last = "";
   const rows = shown.map((e) => {
     const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    return `${head}<li${tap}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
+    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${mineOf(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
   const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
   return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 국장·미장</small></h2>
     ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}${more}
-    <p class="muted note" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 월요일 아침엔 텔레그램으로도 와요. 미국 물가·고용 발표일은 아직 못 넣었어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">금리 결정·만기일 날엔 시장이 크게 출렁일 수 있어요. ⭐는 내 관심종목·가상계좌 종목이에요. 🚨는 물가·고용·금리처럼 지수를 크게 흔드는 발표예요 (물가·고용은 이번 주 일정만 보여요). 월요일 아침엔 텔레그램으로도 와요.</p></section>`;
 }
 
 // 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)

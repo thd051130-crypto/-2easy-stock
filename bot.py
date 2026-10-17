@@ -13,6 +13,7 @@
   도움말
 웹앱의 '추가'·'텔레그램으로 알림 받기' 버튼은 같은 명령을 시작 링크(t.me/봇?start=c_…)에 담아 보내요.
 기록: paper/watch.json, paper/alerts.json, paper/bot.json (watchlist.py). 매매 신호·가상매매와는 따로예요.
+같이 도는 큰 발표 알림(CPI·고용·FOMC 예고와 결과, 지수 급변)은 big_events.py, 기록은 paper/events.json.
 
 사용법:
     python bot.py                 # 메시지 처리 + 알림 확인 (워크플로에 결과를 GITHUB_OUTPUT으로 넘겨요)
@@ -374,15 +375,18 @@ class Telegram:
             raise RuntimeError(f"텔레그램 {method} 실패: {data.get('description')}")
         return data["result"]
 
-    def send(self, chat_id, text):
-        """보기 좋게(tgfmt.py: 굵은 제목·이모지) HTML로. 태그 때문에 거절되면 보통 글로 다시 보내요."""
+    def send(self, chat_id, text, silent=False):
+        """보기 좋게(tgfmt.py: 굵은 제목·이모지) HTML로. 태그 때문에 거절되면 보통 글로 다시 보내요.
+        silent=True면 소리·진동 없이 (밤에 오는 큰 발표 결과)."""
         for part in tgfmt.render(text):
             try:
-                self.call("sendMessage", chat_id=chat_id, text=part, parse_mode="HTML", disable_web_page_preview=True)
+                self.call("sendMessage", chat_id=chat_id, text=part, parse_mode="HTML", disable_web_page_preview=True,
+                          disable_notification=silent)
             except RuntimeError as e:
                 if "parse" not in str(e).lower():
                     raise
-                self.call("sendMessage", chat_id=chat_id, text=tgfmt.plain(part)[:4000], disable_web_page_preview=True)
+                self.call("sendMessage", chat_id=chat_id, text=tgfmt.plain(part)[:4000], disable_web_page_preview=True,
+                          disable_notification=silent)
 
 
 def output(**values):
@@ -450,6 +454,12 @@ def main():
     offset = run(tg, chat_id, bot)
     add_fundamentals(bot)
     changed = bot.saved != before or bool(bot.added)
+    try:  # 큰 발표 예고·결과, 지수 급변 (big_events.py). 실패해도 봇 명령 처리는 그대로
+        import big_events
+
+        changed = big_events.run(bot.paper, send=lambda text, silent: tg.send(chat_id, text, silent)) or changed
+    except Exception as e:
+        print(f"큰 발표 알림 실패: {e!r}")
     output(offset=offset or "", changed=str(changed).lower())
 
 
