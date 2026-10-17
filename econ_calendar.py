@@ -51,8 +51,8 @@ FRED_RELEASES = {
 }
 CENTRAL = ZoneInfo("America/Chicago")
 MONTHS = {m: i for i, m in enumerate(calendar.month_name) if m}
-AHEAD = 120   # 앞으로 며칠 치를 저장할지
-BEHIND = 7    # 지난 일정도 며칠은 남겨요 (앱에서 '어제 있었던 일'로)
+AHEAD = 186   # 앞으로 며칠 치를 저장할지 (앱 달력이 6개월 치를 보여 줘요)
+BEHIND = 40   # 지난 일정도 남겨요 (앱 달력에서 이번 달·지난달 지난 일정을 연하게)
 WEEK = 7      # 텔레그램 주간 일정 범위
 EARN_MAX = 12  # 텔레그램 주간 일정에 넣을 실적 발표 종목 수
 

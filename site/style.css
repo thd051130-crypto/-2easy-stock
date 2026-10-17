@@ -790,3 +790,14 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .list li.world-graph { display: block; border-top: 0; background: var(--surface-0); border-radius: 0 0 10px 10px; margin: 0 -8px; padding: 4px 8px 10px; }
 .list li.world-graph .chart { min-height: 190px; }
 .list li.world-graph .more { margin-top: 6px; }
+
+/* 다가오는 일정 달력: 칸엔 일정 표시만, 지난 날·지난 일정은 연하게 */
+.ec-months { grid-template-columns: repeat(7, 1fr); margin-top: 4px; }
+.cal-m.past { opacity: .55; }
+.ec-cell { min-height: 50px; }
+.ec-cell .em { font-size: 13px; line-height: 1.2; min-height: 16px; letter-spacing: -2px; }
+.ec-cell.big { border-color: var(--wait-fg); }
+.ec-cell.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ec-cell.today.picked { outline-width: 3px; }
+.ec-cell.past { opacity: .4; }
+.list.cal li.past { opacity: .45; }

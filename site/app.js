@@ -492,6 +492,14 @@ function render() {
     polJump = null;
     if (x) requestAnimationFrame(() => { x.scrollIntoView(); window.scrollBy(0, -70); });
   }
+  app.querySelectorAll("[data-ecday]").forEach((b) => b.addEventListener("click", () => {
+    econPick = econPick === b.dataset.ecday ? null : b.dataset.ecday;
+    render();
+  }));
+  app.querySelectorAll("[data-ecm]").forEach((b) => b.addEventListener("click", () => { econMonth = b.dataset.ecm; econPick = null; render(); }));
+  app.querySelectorAll("[data-ecstep]").forEach((b) => b.addEventListener("click", () => {
+    econMonth = ymAdd(econMonth, Number(b.dataset.ecstep)); econPick = null; render();
+  }));
   app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
     calAll = !calAll;
     const y = window.scrollY;
@@ -3539,20 +3547,63 @@ function calRows(list) {
   const flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" }, days = "일월화수목금토";
   let last = "";
   return list.map((e) => {
-    const head = e.date !== last ? `<li class="cal-day"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
+    const head = e.date !== last ? `<li class="cal-day${e.date < TODAY() ? " past" : ""}"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    return `${head}<li${tap}${e.big ? ' class="cal-big"' : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
+    const cls = [e.big ? "cal-big" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
+    return `${head}<li${tap}${cls ? ` class="${cls}"` : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
 }
+// 다가오는 일정 달력: 이번 달부터 6개월(지난달도 볼 수 있어요). 칸엔 일정 표시, 아래엔 그달(또는 고른 날) 목록. 지난 일정은 연하게
+const ECON_MONTHS = 6;
+let econMonth = null, econPick = null;
+const ymAdd = (ym, k) => { const [y, m] = ym.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + k, 1)); return t.toISOString().slice(0, 7); };
 function calendarCard() {
+  const all = ((DATA && DATA.calendar) || []).filter((e) => !STOCK_KINDS.includes(e.kind));
   if (!((DATA && DATA.calendar) || []).length) return "";
-  const rows = calRows(calNear(CAL_DAYS).filter((e) => !STOCK_KINDS.includes(e.kind)));
-  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${CAL_DAYS}일 · 경제 일정</small></h2>
-    ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${CAL_DAYS}일 동안 큰 일정이 없어요.</p>`}
-    <p class="muted note" style="margin:10px 0 0">🚨는 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표예요 (한국시간). 금리 결정·만기일 날에도 시장이 크게 출렁일 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요. 월요일 아침엔 텔레그램으로도 와요.</p></section>`;
+  const today = TODAY(), now = today.slice(0, 7), lo = ymAdd(now, -1), hi = ymAdd(now, ECON_MONTHS - 1);
+  if (!econMonth || econMonth < lo || econMonth > hi) econMonth = now;
+  const [y, m] = econMonth.split("-").map(Number);
+  const byDay = {};
+  all.forEach((e) => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+  const icon = (e) => (e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || "•");
+  // 월~금 다섯 칸 (주말 일정은 거의 없어서 금요일 칸에 같이 보여 줘요)
+  const first = new Date(Date.UTC(y, m - 1, 1)), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let cells = "";
+  const lead = (first.getUTCDay() + 6) % 7;
+  if (lead < 5) cells += `<span class="cal-cell blank"></span>`.repeat(lead);
+  for (let dd = 1; dd <= dim; dd++) {
+    const wd = new Date(Date.UTC(y, m - 1, dd)).getUTCDay();
+    if (wd === 0 || wd === 6) continue;
+    const key = `${econMonth}-${String(dd).padStart(2, "0")}`;
+    const wk = [key, ...(wd === 5 ? [1, 2].map((k) => `${econMonth}-${String(dd + k).padStart(2, "0")}`) : [])];
+    const ev = wk.flatMap((k) => byDay[k] || []);
+    const marks = [...new Set(ev.map(icon))].slice(0, 3).join("");
+    const cls = ["cal-cell", "ec-cell", key < today ? "past" : "", key === today ? "today" : "", ev.some((e) => e.big) ? "big" : "", econPick === key ? "picked" : ""].filter(Boolean).join(" ");
+    cells += `<button type="button" class="${cls}" data-ecday="${key}" aria-label="${m}월 ${dd}일 ${ev.length ? ev.map((e) => e.title).join(", ") : "일정 없음"}">
+      <span class="cd">${dd}</span><span class="em">${marks}</span></button>`;
+  }
+  const months = [];
+  for (let k = -1; k < ECON_MONTHS; k++) {
+    const key = ymAdd(now, k), n = all.filter((e) => e.date.startsWith(key)).length;
+    months.push(`<button type="button" class="cal-m${key === econMonth ? " on" : ""}${k < 0 ? " past" : ""}" data-ecm="${key}"><span>${Number(key.slice(5))}월</span><b>${n ? `${n}개` : "-"}</b></button>`);
+  }
+  const pick = econPick && econPick.startsWith(econMonth) ? econPick : null;
+  // 금요일을 누르면 그 주말 일정도 같이
+  const pickDays = pick ? [0, 1, 2].slice(0, new Date(pick + "T00:00:00Z").getUTCDay() === 5 ? 3 : 1).map((k) => `${econMonth}-${String(Number(pick.slice(8)) + k).padStart(2, "0")}`) : null;
+  const pickList = all.filter((e) => (pickDays ? pickDays.includes(e.date) : e.date.startsWith(econMonth)));
+  const rows = calRows(pickList);
+  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${ECON_MONTHS}개월 · 경제 일정</small></h2>
+    <div class="cal-months ec-months">${months.join("")}</div>
+    <div class="cal-head"><button type="button" class="cal-nav" data-ecstep="-1" aria-label="이전 달" ${econMonth <= lo ? "disabled" : ""}>‹</button>
+      <div><b>${y}년 ${m}월</b><small>${pick ? `${Number(pick.slice(5, 7))}.${Number(pick.slice(8))} 일정 · 다시 누르면 한 달 전체` : `일정 ${all.filter((e) => e.date.startsWith(econMonth)).length}개 · 날짜를 누르면 그날만`}</small></div>
+      <button type="button" class="cal-nav" data-ecstep="1" aria-label="다음 달" ${econMonth >= hi ? "disabled" : ""}>›</button></div>
+    <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
+    ${rows ? `<ul class="list cal" style="margin-top:10px">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표, 📌 PPI·소매판매, 🏦 금리 결정, ⏳ 만기일, 📊 국장 실적 시즌이에요 (한국시간). 지난 일정은 연하게 보여요.
+      미국 발표 날짜는 FRED가 올린 만큼만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
 }
 function earningsCard() {
   if (!((DATA && DATA.calendar) || []).length) return "";

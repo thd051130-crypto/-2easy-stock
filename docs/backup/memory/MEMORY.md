@@ -52,4 +52,5 @@
 - PR #69 (2026-10-17): 신호 화면 부서별 보고 설명 한 줄만, 부서 누르면 전체 펼침(desksCard details.desk, DESK_OPEN).
 - PR #70 (2026-10-17): 관심 화면 배당 달력·예상 배당금 칸 삭제(사용자 요청). 계산기 배당 재투자·배당수익률은 그대로 → [[dividend-receive-calendar-pr49]].
 - PR #72 머지됨 (2026-10-17 17:03 KST): 성과 화면 맨 위 가로 선택 바(묶음 하나씩, perf_tab 기억), 내 규칙표 후보 3개만+접기, 홈 세계 지수 줄 누르면 그래프, 다가오는 일정(경제)과 실적·배당 발표 분리, FRED로 CPI·고용·PCE·GDP 몇 달 치 일정, 산업 흐름 탭 스크롤 유지 → [[perf-cleanup]], [[calendar-split-pr72]].
-- PR #73 (2026-10-17): 성과 선택 바 sticky 뺌, 앱 전체 버튼 눌러도 화면 위치 그대로(render 같은 화면 scrollY 유지 + keepTap). 사용자 규칙 → [[ui-no-jump-rule]].
+- PR #73 머지됨 (2026-10-17 18:07 KST): 성과 선택 바 sticky 뺌, 앱 전체 버튼 눌러도 화면 위치 그대로(render 같은 화면 scrollY 유지 + keepTap). 사용자 규칙 → [[ui-no-jump-rule]].
+- PR #74 (2026-10-17): 다가오는 일정을 6개월 달력으로(지난 일정 연하게, 날짜 누르면 그날만), 일정 186일 치 저장 → [[calendar-split-pr72]].
