@@ -2855,7 +2855,7 @@ const SAV_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "va
 const savColor = (i) => SAV_COLORS[i] || `hsl(${Math.round((i * 137.5) % 360)} 60% 50%)`;
 // 절세 계좌: 여러 개 같이 고를 수 있고, 위에서부터 한도만큼 채운 뒤 남는 돈은 다음 계좌, 마지막은 일반 계좌로 넣어요.
 const SAV_ACCTS = [["isa", "ISA"], ["pension", "연금저축"], ["irp", "IRP"]];
-// each: 종목마다 따로 정한 값 {종목: {mode: "sh"(주 수로), amt·start(만 원), sh·ssh(주), from(N년 뒤부터), len(N년 동안)}}. 없는 값은 위 기본값을 따라가요.
+// each: 종목마다 따로 정한 값 {종목: {mode: "sh"(주 수로), amt·start(만 원), sh·ssh(주), every(주 수로 살 때 w 매주·d 매일, 없으면 매달), from(N년 뒤부터), len(N년 동안)}}. 없는 값은 위 기본값을 따라가요.
 const SAV = { monthly: 50, years: 10, start: 0, accts: ["isa"], taxOn: true, reinvest: true, picks: ["dep", "kr:360750", "us:SCHD"], price: 6, div: 2, mdd: 30, each: {} };
 const savOk = (k) => SAV_FIXED.some((p) => p.key === k) || /^(kr|us):[0-9A-Z.\-^=]+$/.test(k);
 try {
@@ -2987,14 +2987,17 @@ function savPx(p) {
   const fx = p.m === "us" ? (DATA.total && DATA.total.fx) || (DATA.markets.us.signal && DATA.markets.us.signal.usdkrw) || 1350 : 1;
   return { px, fx, day, won: px * fx };
 }
+// 주 수로 살 때 얼마나 자주: 한 달에 몇 번인지 (매주는 52주/12달, 매일은 장 서는 날 252일/12달)
+const SAV_FREQ = { m: ["매달", 1], w: ["매주", 52 / 12], d: ["매일", 252 / 12] };
 // 한 종목을 어떻게 넣는지: 따로 정한 값이 없으면 위 기본값(매달·처음에, 지금부터 끝까지)
 function savPlan(k, p) {
   const e = SAV.each[k] || {}, q = savPx(p);
   const sh = e.mode === "sh" && !!q;
-  const monthly = sh ? (e.sh ?? 1) * q.won : (e.amt ?? (+SAV.monthly || 0)) * 1e4;
+  const every = sh && SAV_FREQ[e.every] ? e.every : "m";
+  const monthly = sh ? (e.sh ?? 1) * q.won * SAV_FREQ[every][1] : (e.amt ?? (+SAV.monthly || 0)) * 1e4;
   const start = sh ? (e.ssh ?? 0) * q.won : (e.start ?? (+SAV.start || 0)) * 1e4;
   const from = e.from ?? 0, len = e.len ?? null;
-  return { custom: !!SAV.each[k], sh, shN: e.sh ?? 1, sshN: e.ssh ?? 0, monthly, start, from, len, end: from + (len ?? 0) };
+  return { custom: !!SAV.each[k], sh, shN: e.sh ?? 1, sshN: e.ssh ?? 0, every, monthly, start, from, len, end: from + (len ?? 0) };
 }
 // 달마다 넣는 돈: from년 뒤에 처음 돈을 넣고, 그다음 달부터 len년 동안(없으면 끝까지) 매달
 function savFlow(plan, m) {
@@ -3043,7 +3046,7 @@ function savShares(p, plan, r, years) {
   const n = (won) => cnt(won / q.won);
   const parts = [`${q.day ? `${md(q.day)} 종가` : "지금"} ${price(p.m, q.px)}`];
   if (plan.sh) {
-    if (plan.monthly) parts.push(`매달 ${savDec(plan.shN)}주 ≈ ${savWon(plan.monthly)}`);
+    if (plan.monthly) parts.push(`${SAV_FREQ[plan.every][0]} ${savDec(plan.shN)}주 ≈ ${plan.every === "m" ? "" : "한 달 "}${savWon(plan.monthly)}`);
     if (plan.start) parts.push(`처음 ${savDec(plan.sshN)}주 ≈ ${savWon(plan.start)}`);
   } else {
     if (plan.monthly) parts.push(`매달 ${savWon(plan.monthly)} ≈ ${n(plan.monthly)}`);
@@ -3057,7 +3060,7 @@ function savShares(p, plan, r, years) {
 const savDec = (x) => (+x).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
 function savEachSum(k) {
   const p = savProduct(k), pl = savPlan(k, p);
-  const how = [pl.sh ? `매달 ${savDec(pl.shN)}주(≈${savWon(pl.monthly)})` : `매달 ${savWon(pl.monthly)}`];
+  const how = [pl.sh ? `${SAV_FREQ[pl.every][0]} ${savDec(pl.shN)}주(≈${pl.every === "m" ? "" : "월 "}${savWon(pl.monthly)})` : `매달 ${savWon(pl.monthly)}`];
   if (pl.start) how.push(pl.sh ? `처음 ${savDec(pl.sshN)}주` : `처음 ${savWon(pl.start)}`);
   if (pl.from) how.push(`${savDec(pl.from)}년 뒤부터`);
   if (pl.len != null) how.push(`${savDec(pl.len)}년 동안`);
@@ -3071,12 +3074,15 @@ function savEachRow(k, i) {
     value="${e[f] ?? ""}" placeholder="${ph}"><span>${unit}</span></span></label>`;
   const mode = q ? `<div class="chips" role="group" aria-label="넣는 방법"><button type="button" data-sav-m="won" aria-pressed="${!sh}">금액으로</button>
     <button type="button" data-sav-m="sh" aria-pressed="${sh}">주 수로</button></div>` : "";
-  const amt = sh ? inp("sh", "매달", "주", 1) + inp("ssh", "처음에", "주", 0) : inp("amt", "매달", "만 원", SAV.monthly) + inp("start", "처음에", "만 원", SAV.start);
+  const every = sh && SAV_FREQ[e.every] ? e.every : "m";
+  const freq = sh ? `<div class="chips sav-freq" role="group" aria-label="얼마나 자주">${Object.entries(SAV_FREQ).map(([f, [l]]) =>
+    `<button type="button" data-sav-f="${f}" aria-pressed="${every === f}">${l}</button>`).join("")}</div>` : "";
+  const amt = sh ? inp("sh", SAV_FREQ[every][0], "주", 1) + inp("ssh", "처음에", "주", 0) : inp("amt", "매달", "만 원", SAV.monthly) + inp("start", "처음에", "만 원", SAV.start);
   return `<details class="sav-each" data-sav-k="${esc(k)}" style="--c:${savColor(i)}"${SAV_OPEN.has(k) ? " open" : ""}>
     <summary><i class="sw"></i><span class="nm">${esc(p.name)}</span><span class="sum">${esc(savEachSum(k))}</span></summary>
-    <div class="sav-each-b">${mode}<div class="sav-grid">${amt}</div>
+    <div class="sav-each-b">${mode}${freq}<div class="sav-grid">${amt}</div>
       <div class="sav-grid">${inp("from", "시작", "년 뒤부터", 0)}${inp("len", "넣는 기간", "년 동안", "끝까지")}</div>
-      <p class="muted sav-each-note">${sh ? `지금 가격 1주 ${savWon(q.won)}으로 쳐서 금액으로 바꿔요. ` : ""}비운 칸은 위 기본값을 따라가요. 넣는 기간이 끝나도 넣은 돈은 끝까지 그대로 굴려요.</p>
+      <p class="muted sav-each-note">${sh ? `지금 가격 1주 ${savWon(q.won)}으로 쳐서 금액으로 바꿔요${every === "w" ? " (한 달 약 4.3주)" : every === "d" ? " (장 서는 날만, 한 달 약 21일)" : ""}. ` : ""}비운 칸은 위 기본값을 따라가요. 넣는 기간이 끝나도 넣은 돈은 끝까지 그대로 굴려요.</p>
       <button type="button" class="sav-clear" data-sav-reset${SAV.each[k] ? "" : " hidden"}>이 종목 기본값으로</button></div></details>`;
 }
 function savEachList() {
@@ -3325,11 +3331,14 @@ function bindSavings() {
   // 종목 넣기·빼기: 검색 결과·자주 찾는 버튼은 눌러서 넣고 다시 누르면 빼요
   card.addEventListener("click", (e) => {
     const x = e.target.closest("[data-sav-x]"), p = e.target.closest("[data-sav-p]");
-    const mb = e.target.closest("[data-sav-m]"), rs = e.target.closest("[data-sav-reset]");
-    if (mb || rs) {  // 금액으로·주 수로 바꾸기, 기본값으로: 그 종목 칸만 다시 그려요 (누른 버튼은 제자리)
+    const mb = e.target.closest("[data-sav-m]"), rs = e.target.closest("[data-sav-reset]"), fb = e.target.closest("[data-sav-f]");
+    if (mb || rs || fb) {  // 금액으로·주 수로 바꾸기, 기본값으로: 그 종목 칸만 다시 그려요 (누른 버튼은 제자리)
       const d = e.target.closest(".sav-each"), k = d.dataset.savK, i = SAV.picks.indexOf(k);
       if (rs) delete SAV.each[k];
-      else {
+      else if (fb) {  // 매달·매주·매일: 주 수는 그대로 두고 자주 사는 만큼 금액이 늘어요
+        const ed = SAV.each[k] || (SAV.each[k] = {});
+        if (fb.dataset.savF === "m") delete ed.every; else ed.every = fb.dataset.savF;
+      } else {
         const p = savProduct(k), q = savPx(p), pl = savPlan(k, p), ed = SAV.each[k] || (SAV.each[k] = {});
         if (mb.dataset.savM === "sh") {
           // 처음 주 수로 바꿀 때는 지금 금액이 몇 주인지로 채워요
