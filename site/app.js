@@ -496,6 +496,17 @@ function render() {
     econPick = econPick === b.dataset.ecday ? null : b.dataset.ecday;
     render();
   }));
+  const ecBar = app.querySelector(".ec-months");
+  if (ecBar) {
+    // 달 버튼 줄: 밀어 둔 가로 위치를 그대로, 고른 달이 안 보이면 가로로만 맞춰요 (화면 세로 위치는 안 건드려요)
+    if (econBarX != null) ecBar.scrollLeft = econBarX;
+    const on = ecBar.querySelector(".cal-m.on");
+    if (on && (on.offsetLeft < ecBar.scrollLeft || on.offsetLeft + on.offsetWidth > ecBar.scrollLeft + ecBar.clientWidth)) {
+      ecBar.scrollLeft = on.offsetLeft - (ecBar.clientWidth - on.offsetWidth) / 2;
+    }
+    econBarX = ecBar.scrollLeft;
+    ecBar.addEventListener("scroll", () => { econBarX = ecBar.scrollLeft; }, { passive: true });
+  }
   app.querySelectorAll("[data-ecm]").forEach((b) => b.addEventListener("click", () => { econMonth = b.dataset.ecm; econPick = null; render(); }));
   app.querySelectorAll("[data-ecstep]").forEach((b) => b.addEventListener("click", () => {
     econMonth = ymAdd(econMonth, Number(b.dataset.ecstep)); econPick = null; render();
@@ -3688,14 +3699,17 @@ function calRows(list) {
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
 }
-// 다가오는 일정 달력: 이번 달부터 6개월(지난달도 볼 수 있어요). 칸엔 일정 표시, 아래엔 그달(또는 고른 날) 목록. 지난 일정은 연하게
-const ECON_MONTHS = 6;
-let econMonth = null, econPick = null;
+// 다가오는 일정 달력: 일정이 있는 모든 달(작년 1월~내년 12월). 지난달~5개월 뒤 버튼은 눈에 띄게.
+// 칸엔 일정 표시, 아래엔 그달(또는 고른 날) 목록. 지난 일정은 연하게
+const ECON_NEAR = 6;
+let econMonth = null, econPick = null, econBarX = null;
 const ymAdd = (ym, k) => { const [y, m] = ym.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + k, 1)); return t.toISOString().slice(0, 7); };
 function calendarCard() {
   const all = ((DATA && DATA.calendar) || []).filter((e) => !STOCK_KINDS.includes(e.kind));
   if (!((DATA && DATA.calendar) || []).length) return "";
-  const today = TODAY(), now = today.slice(0, 7), lo = ymAdd(now, -1), hi = ymAdd(now, ECON_MONTHS - 1);
+  const today = TODAY(), now = today.slice(0, 7), nearLo = ymAdd(now, -1), nearHi = ymAdd(now, ECON_NEAR - 1);
+  const ms = all.map((e) => e.date.slice(0, 7));
+  const lo = [nearLo, ...ms].reduce((a, b) => (b < a ? b : a)), hi = [nearHi, ...ms].reduce((a, b) => (b > a ? b : a));
   if (!econMonth || econMonth < lo || econMonth > hi) econMonth = now;
   const [y, m] = econMonth.split("-").map(Number);
   const byDay = {};
@@ -3718,24 +3732,26 @@ function calendarCard() {
       <span class="cd">${dd}</span><span class="em">${marks}</span></button>`;
   }
   const months = [];
-  for (let k = -1; k < ECON_MONTHS; k++) {
-    const key = ymAdd(now, k), n = all.filter((e) => e.date.startsWith(key)).length;
-    months.push(`<button type="button" class="cal-m${key === econMonth ? " on" : ""}${k < 0 ? " past" : ""}" data-ecm="${key}"><span>${Number(key.slice(5))}월</span><b>${n ? `${n}개` : "-"}</b></button>`);
+  for (let key = lo; key <= hi; key = ymAdd(key, 1)) {
+    const n = all.filter((e) => e.date.startsWith(key)).length, near = key >= nearLo && key <= nearHi;
+    const cls = ["cal-m", key === econMonth ? "on" : "", near ? "near" : key < now ? "past" : "", key === now ? "now" : ""].filter(Boolean).join(" ");
+    const lab = key.endsWith("-01") || key === lo ? `<i>${key.slice(2, 4)}년</i>` : "";
+    months.push(`<button type="button" class="${cls}" data-ecm="${key}"><span>${lab}${Number(key.slice(5))}월</span><b>${n ? `${n}개` : "-"}</b></button>`);
   }
   const pick = econPick && econPick.startsWith(econMonth) ? econPick : null;
   // 금요일을 누르면 그 주말 일정도 같이
   const pickDays = pick ? [0, 1, 2].slice(0, new Date(pick + "T00:00:00Z").getUTCDay() === 5 ? 3 : 1).map((k) => `${econMonth}-${String(Number(pick.slice(8)) + k).padStart(2, "0")}`) : null;
   const pickList = all.filter((e) => (pickDays ? pickDays.includes(e.date) : e.date.startsWith(econMonth)));
   const rows = calRows(pickList);
-  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${ECON_MONTHS}개월 · 경제 일정</small></h2>
-    <div class="cal-months ec-months">${months.join("")}</div>
+  return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${Number(lo.slice(0, 4))}~${Number(hi.slice(0, 4))}년 · 경제 일정</small></h2>
+    <div class="ec-months" aria-label="달 고르기">${months.join("")}</div>
     <div class="cal-head"><button type="button" class="cal-nav" data-ecstep="-1" aria-label="이전 달" ${econMonth <= lo ? "disabled" : ""}>‹</button>
       <div><b>${y}년 ${m}월</b><small>${pick ? `${Number(pick.slice(5, 7))}.${Number(pick.slice(8))} 일정 · 다시 누르면 한 달 전체` : `일정 ${all.filter((e) => e.date.startsWith(econMonth)).length}개 · 날짜를 누르면 그날만`}</small></div>
       <button type="button" class="cal-nav" data-ecstep="1" aria-label="다음 달" ${econMonth >= hi ? "disabled" : ""}>›</button></div>
     <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
     ${rows ? `<ul class="list cal" style="margin-top:10px">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}
     <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표, 📌 PPI·소매판매, 🏦 금리 결정, ⏳ 만기일, 📊 국장 실적 시즌이에요 (한국시간). 지난 일정은 연하게 보여요.
-      미국 발표 날짜는 FRED가 올린 만큼만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
+      위 달 버튼은 옆으로 밀면 작년·내년도 볼 수 있고, 지난달~5개월 뒤는 파랗게 표시돼요. 미국 발표·FOMC 날짜는 올라온 해까지만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
 }
 function earningsCard() {
   if (!((DATA && DATA.calendar) || []).length) return "";
