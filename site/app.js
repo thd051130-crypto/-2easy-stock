@@ -2322,11 +2322,14 @@ function idxChips(d) {
 // 항목 키: "i:^KS11"(지수) / "s:kr:005930"·"s:us:AAPL"(국장·미장 아무 종목). 옛 "s:005930"은 지금 시장 종목이에요. 시장마다 따로 기억해요.
 const cmpColor = (i) => savColor(i);
 const CMP_MAX = 8;
+// 처음 보이는 길이: 일봉 1년, 주봉 5년, 월봉 20년, 년봉 전체 (지수 차트보다 길게. 더 길게는 밀거나 오므리거나 '처음부터')
+const CMP_SHOW = { d: 250, w: 260, m: 240, y: Infinity };
 const COMPARE = { kr: null, us: null };
 let cmpF = "d";        // 일봉·주봉·월봉·년봉
 let cmpLine = false;   // false면 캔들, true면 선
 let cmpQuery = "";
 let cmpDrawn = null;   // 마지막으로 그린 항목·기간 (바뀌면 보던 구간을 처음으로)
+let cmpAll = false;     // '처음부터 전부'로 기간을 바꿨으면 새로 그릴 때도 전부 보여요
 let cmpIdxOpen = false; // '지수 바로 넣기'를 펼쳐 뒀는지 (하나 넣어도 안 닫혀요)
 try {
   Object.assign(COMPARE, JSON.parse(localStorage.getItem("compare") || "{}"));
@@ -2399,10 +2402,11 @@ function compareCard(d) {
       placeholder="지수·종목 검색 (예: 나스닥, 엔비디아)" aria-label="비교 차트에 넣을 지수·종목 검색" value="${esc(cmpQuery)}">
     <div id="cmp-res">${cmpResults(d)}</div>
     <div class="period" role="group" aria-label="비교 기간" style="margin:10px 0 0">${frames}</div>
-    <div class="chips" role="group" aria-label="모양"><button type="button" data-cmp-line="0" aria-pressed="${!cmpLine}">캔들</button><button type="button" data-cmp-line="1" aria-pressed="${cmpLine}">선</button></div>
+    <div class="chips" role="group" aria-label="모양"><button type="button" data-cmp-line="0" aria-pressed="${!cmpLine}">캔들</button><button type="button" data-cmp-line="1" aria-pressed="${cmpLine}">선</button><button type="button" data-cmp-all>처음부터 전부</button></div>
     <p class="muted" id="cmp-range" style="margin:8px 0 4px"></p>
     <div class="chart candle" id="cmp-chart"><p class="empty">불러오는 중이에요…</p></div>
     <p class="muted note" id="cmp-note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들은 항목마다 자기 색이고, 오른 캔들은 꽉 차고 내린 캔들은 속이 비어요. 누르면 그날 각자 몇 % 올랐는지 보이고, 길게 누른 채 움직이면 세부정보가 손가락을 따라와요.
+      처음엔 일봉 1년·주봉 5년·월봉 20년·년봉 전체가 보이고, '처음부터 전부'를 누르면 넣은 것 중 가장 오래된 날부터 지금까지 한 화면에 보여요.
       화면에 보이는 첫날을 0%로 맞춰서 누가 더 올랐는지 봐요. 8배 넘게 차이 나면 '로그 눈금'으로 그려요. ×를 누르면 빠져요. 최대 ${CMP_MAX}개까지 겹쳐요.</p></section>`;
 }
 // 항목마다 고른 기간 캔들(지수 차트와 같은 묶음)을 만들고, 모든 항목의 날짜를 합쳐 한 줄로 세워요.
@@ -2415,8 +2419,9 @@ function cmpFrame(c, fr) {
   if (!m) CMP_FRAME.set(c, (m = {}));
   return m[fr] || (m[fr] = frameBase(c, fr));
 }
-function cmpRows(got) {
-  const fs = got.map((x) => (x ? cmpFrame(x, cmpF) : null)), n = fs.length;
+const cmpGot = (items) => items.map((k) => { const x = cmpReady(k); return x && x.candles && x.candles.dates && x.candles.dates.length > 1 ? x.candles : null; });
+function cmpRows(got, fr = cmpF) {
+  const fs = got.map((x) => (x ? cmpFrame(x, fr) : null)), n = fs.length;
   const keys = [], first = [], last = [];
   const series = fs.map(() => ({ c: [], o: [], h: [], l: [] }));
   const at = new Array(n).fill(0), prev = new Array(n).fill(null);
@@ -2437,7 +2442,7 @@ function cmpRows(got) {
     }
     keys.push(k); first.push(fi); last.push(la);
   }
-  return { f: { keys, first, last, frame: cmpF }, series };
+  return { f: { keys, first, last, frame: fr }, series };
 }
 function drawCompare(d) {
   const el = $("#cmp-chart");
@@ -2448,7 +2453,7 @@ function drawCompare(d) {
   Promise.all(items.map(cmpLoad)).then(() => {
     if (screen !== "chart" || !$("#cmp-chart") || cmpItems(d).join(",") + cmpF + market !== want) return;  // 받는 사이 바뀌었으면 안 그려요
     const el2 = $("#cmp-chart");
-    const got = items.map((k) => { const x = cmpReady(k); return x && x.candles && x.candles.dates && x.candles.dates.length > 1 ? x.candles : null; });
+    const got = cmpGot(items);
     if (!got.some(Boolean)) { el2.innerHTML = `<p class="empty">자료를 못 받았어요. 대시보드가 다음에 새로 올라갈 때 다시 받아요.</p>`; return; }
     const { f, series } = cmpRows(got);
     const list = items.map((k, j) => {
@@ -2456,14 +2461,17 @@ function drawCompare(d) {
       return { name: cmpName(d, k), color: cmpColor(j), ok: Boolean(got[j]), ...series[j],
         fmt: m ? (v) => px(m, v) : (v) => (Math.abs(v) >= 1000 ? num(v) : px("us", v)) };
     });
-    const show = (FRAMES.find((x) => x[0] === cmpF) || FRAMES[0])[2];
-    compareChart(el2, f, list, show, cmpDrawn !== want, (txt) => { const t = $("#cmp-range"); if (t) t.innerHTML = txt; });
+    const show = CMP_SHOW[cmpF] || 250;
+    const fit = cmpAll; cmpAll = false;
+    compareChart(el2, f, list, fit ? Infinity : show, fit || cmpDrawn !== want, (txt) => { const t = $("#cmp-range"); if (t) t.innerHTML = txt; });
     cmpDrawn = want;
     const missing = list.filter((s) => !s.ok).map((s) => s.name);
     const note = $("#cmp-note");
     if (note && missing.length && !note.dataset.miss) { note.dataset.miss = "1"; note.insertAdjacentText("afterbegin", `${missing.join(", ")} 자료를 못 받았어요. `); }
   });
 }
+// 10배 넘게 오르면 %가 너무 길어서 (+43271.7%) '434배'로 써요 (오른쪽 딱지가 안 잘리게)
+const cmpPct = (r) => (r != null && r >= 9 ? `${num(r + 1)}배` : pct(r));
 // 비교 선 차트: 화면에 보이는 첫 칸을 0%로 (밀거나 확대하면 다시 맞춰요). 조작은 캔들 차트와 같아요.
 function compareChart(el, f, list, show, reset, onRange) {
   const n = f.keys.length, key = el.id;
@@ -2504,7 +2512,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     Yp = Y;
     const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => sLo + (sHi - sLo) * (0.06 + 0.88 * t)).map((t) => (logY ? Math.exp(t) : t));
     const grid = ticks.map((t) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>
-      <text x="${pad.l + 2}" y="${Y(t) - 4}">${esc(pct(t - 1))}</text>`).join("");
+      <text x="${pad.l + 2}" y="${Y(t) - 4}">${esc(cmpPct(t - 1))}</text>`).join("");
     const path = (vals, j, extra) => {
       if (base[j] == null) return "";
       let dstr = "", pen = false;
@@ -2518,15 +2526,17 @@ function compareChart(el, f, list, show, reset, onRange) {
     const bw = Math.max(1, cw * 0.6);
     const candles = (s, j) => {
       if (base[j] == null) return "";
-      let out = "";
+      // 꼬리는 항목마다 path 하나로 (길게 보면 캔들이 수천 개라 하나씩 그리면 밀 때 버벅여요)
+      let wick = "", out = "";
       for (let i = start; i <= endI; i++) {
         if (s.o[i] == null || s.c[i] == null) continue;
         const b = base[j], x = X(i), up = s.c[i] >= s.o[i];
+        wick += `M${x.toFixed(1)},${Y(s.h[i] / b).toFixed(1)}V${Y(s.l[i] / b).toFixed(1)}`;
+        if (cw < 3) continue;
         const top = Y(Math.max(s.o[i], s.c[i]) / b), bh = Math.max(1, Math.abs(Y(s.o[i] / b) - Y(s.c[i] / b)));
-        out += `<line x1="${x}" x2="${x}" y1="${Y(s.h[i] / b)}" y2="${Y(s.l[i] / b)}" stroke="${s.color}" stroke-width="1"/>`
-          + (cw >= 3 ? `<rect x="${x - bw / 2}" y="${top}" width="${bw}" height="${bh}" stroke="${s.color}" stroke-width="1" fill="${up ? s.color : "var(--surface-1)"}"/>` : "");
+        out += `<rect x="${(x - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" stroke="${s.color}" stroke-width="1" fill="${up ? s.color : "var(--surface-1)"}"/>`;
       }
-      return out;
+      return (wick ? `<path d="${wick}" stroke="${s.color}" stroke-width="1" fill="none"/>` : "") + out;
     };
     const lines = list.map((s, j) => (cmpLine ? path(s.c, j, 'stroke-width="2"') : candles(s, j))).join("");
     // 오른쪽 끝: 각자 지금 몇 % (선 색 딱지, 겹치면 위아래로 벌려요)
@@ -2537,7 +2547,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     }).filter(Boolean).sort((a, b) => a.y - b.y);
     for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 18) ends[k].y = ends[k - 1].y + 18;
     const tags = ends.map((e) => `<rect x="${pad.l + iw + 1}" y="${e.y - 9}" width="${pad.r - 2}" height="18" rx="3" fill="${list[e.j].color}"/>
-      <text class="tag-text" x="${pad.l + iw + 6}" y="${e.y + 4}">${esc(pct(e.r))}</text>`).join("");
+      <text class="tag-text" x="${pad.l + iw + 6}" y="${e.y + 4}">${esc(cmpPct(e.r))}</text>`).join("");
     const zero = `<line class="zero" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(1)}" y2="${Y(1)}"/>`;
     const xs = [start, Math.round((start + endI) / 2), endI];
     const xl = xs.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === 2 ? "end" : "middle"}">${esc(frameLabel(f, i, "axis"))}</text>`).join("");
@@ -2551,7 +2561,7 @@ function compareChart(el, f, list, show, reset, onRange) {
       <div class="tip" style="display:none"></div>`;
     const best = ends.slice().sort((a, b) => b.r - a.r)[0];
     onRange(`${esc(frameLabel(f, start, "axis"))} ~ ${esc(frameLabel(f, endI, "axis"))} (${Math.round(v.count)}${UNIT[f.frame]})`
-      + (best && ends.length > 1 ? ` · 가장 많이 오른 건 <b>${esc(list[best.j].name)}</b> <b class="${sign(best.r)}">${pct(best.r)}</b>` : ""));
+      + (best && ends.length > 1 ? ` · 가장 많이 오른 건 <b>${esc(list[best.j].name)}</b> <b class="${sign(best.r)}">${cmpPct(best.r)}</b>` : ""));
     if (picked) showTip(v.pick, X(v.pick));
   };
   const showTip = (i, x) => {
@@ -2559,7 +2569,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     const rows = list.map((s, j) => {
       if (base[j] == null || s.c[i] == null) return "";
       const r = s.c[i] / base[j] - 1;
-      return `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.name)} <b class="${sign(r)}">${pct(r)}</b> <span class="muted">${esc(s.fmt(s.c[i]))}</span></div>`;
+      return `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.name)} <b class="${sign(r)}">${cmpPct(r)}</b> <span class="muted">${esc(s.fmt(s.c[i]))}</span></div>`;
     }).join("");
     tip.innerHTML = `<div class="muted">${esc(frameLabel(f, i, "full"))}</div>${rows}`;
     tip.style.display = "";
@@ -2619,6 +2629,15 @@ function bindCompare(d) {
   const q = $("#cmp-q");
   if (q) q.addEventListener("input", () => { cmpQuery = q.value; const r = $("#cmp-res"); if (r) r.innerHTML = cmpResults(d); });
   document.querySelectorAll("[data-cmp-f]").forEach((b) => b.addEventListener("click", () => { cmpF = b.dataset.cmpF; redraw(); }));
+  // 넣은 항목 중 가장 오래된 날부터 지금까지 한 화면에 (일봉은 한 화면 최대 캔들 수까지라 넘치면 주봉·월봉으로)
+  document.querySelectorAll("[data-cmp-all]").forEach((b) => b.addEventListener("click", () => {
+    const el = $("#cmp-chart"), v = VIEW["cmp-chart"], got = cmpGot(cmpItems(d));
+    if (!el || !el._draw || !v || !got.some(Boolean)) return;
+    const order = FRAMES.map((x) => x[0]), from = order.indexOf(cmpF);
+    const fr = order.slice(from).find((k) => k === "y" || cmpRows(got, k).f.keys.length <= MAX_SHOW) || cmpF;
+    if (fr !== cmpF) { cmpF = fr; cmpAll = true; redraw(); return; }
+    v.count = v.n; v.end = v.n - 1; v.pick = null; el._draw();
+  }));
   document.querySelectorAll("[data-cmp-line]").forEach((b) => b.addEventListener("click", () => { cmpLine = b.dataset.cmpLine === "1"; redraw(); }));  // 보던 구간은 그대로
   drawCompare(d);
   // 전 종목 목록은 처음 열 때 받아요. 다른 시장 종목은 받은 뒤 이름을 채워요.
