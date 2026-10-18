@@ -2822,7 +2822,8 @@ const SAV_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "va
 const savColor = (i) => SAV_COLORS[i] || `hsl(${Math.round((i * 137.5) % 360)} 60% 50%)`;
 // 절세 계좌: 여러 개 같이 고를 수 있고, 위에서부터 한도만큼 채운 뒤 남는 돈은 다음 계좌, 마지막은 일반 계좌로 넣어요.
 const SAV_ACCTS = [["isa", "ISA"], ["pension", "연금저축"], ["irp", "IRP"]];
-const SAV = { monthly: 50, years: 10, start: 0, accts: ["isa"], taxOn: true, reinvest: true, picks: ["dep", "kr:360750", "us:SCHD"], price: 6, div: 2, mdd: 30 };
+// each: 종목마다 따로 정한 값 {종목: {mode: "sh"(주 수로), amt·start(만 원), sh·ssh(주), from(N년 뒤부터), len(N년 동안)}}. 없는 값은 위 기본값을 따라가요.
+const SAV = { monthly: 50, years: 10, start: 0, accts: ["isa"], taxOn: true, reinvest: true, picks: ["dep", "kr:360750", "us:SCHD"], price: 6, div: 2, mdd: 30, each: {} };
 const savOk = (k) => SAV_FIXED.some((p) => p.key === k) || /^(kr|us):[0-9A-Z.\-^=]+$/.test(k);
 try {
   const s = JSON.parse(localStorage.getItem("savings") || "{}") || {};
@@ -2833,6 +2834,7 @@ try {
   SAV.accts = (Array.isArray(SAV.accts) ? SAV.accts : []).filter((k) => SAV_ACCTS.some(([a]) => a === k));
   SAV.picks = [...new Set((SAV.picks || []).map((k) => SAV_OLD[k] || k))].filter(savOk);
   if (!SAV.picks.length) SAV.picks = ["kr:360750"];
+  if (!SAV.each || typeof SAV.each !== "object" || Array.isArray(SAV.each)) SAV.each = {};
 } catch (e) { /* 처음 */ }
 const PENSION_TAX = 0.055;  // 55세 이후 연금으로 받을 때 연금소득세 (70세 전 5.5%, 그 뒤 4.4%·3.3%)
 const TAX = 0.154;  // 이자·배당소득세 (국내 상장 해외 ETF 매매차익도 배당소득으로 15.4%)
@@ -2905,33 +2907,35 @@ function savSim(p, { monthly, years, start, acct, taxOn, reinvest }) {
 }
 // 넣는 돈을 고른 절세 계좌 한도대로 나눠요: ISA 한 해 2,000만·총 1억, 연금저축+IRP 합쳐 한 해 1,800만, 남는 건 일반 계좌.
 // 미국 상장 종목은 절세 계좌로 못 사서 전부 일반 계좌예요. 처음 넣는 돈은 첫해 한도에서 먼저 써요.
-function savSplit(o, us) {
-  const m = Math.round(o.years * 12), order = o.taxOn && !us ? SAV_ACCTS.map(([k]) => k).filter((k) => SAV.accts.includes(k)) : [];
-  const out = {};
-  [...order, "normal"].forEach((k) => { out[k] = { start: 0, monthly: new Array(m + 1).fill(0) }; });
+// items: [{flow: 달마다 넣는 돈(0번은 처음 넣는 돈), us}]. 여러 개를 같이 넣으면 한도를 위 종목부터 나눠 써요.
+function savSplit(items) {
+  const m = items[0].flow.length - 1, order = SAV.taxOn ? SAV_ACCTS.map(([k]) => k).filter((k) => SAV.accts.includes(k)) : [];
+  const outs = items.map((it) => { const o = {}; [...(it.us ? [] : order), "normal"].forEach((k) => { o[k] = new Array(m + 1).fill(0); }); return o; });
   let isaAll = 0, year = -1, isaY = 0, penY = 0;
   for (let i = 0; i <= m; i++) {
     const y = i === 0 ? 0 : Math.floor((i - 1) / 12);
     if (y !== year) { year = y; isaY = 0; penY = 0; }
-    let left = i === 0 ? o.start : o.monthly;
-    for (const k of order) {
-      if (left <= 0) break;
-      const room = k === "isa" ? Math.min(2e7 - isaY, 1e8 - isaAll) : 1.8e7 - penY;
-      const take = Math.max(0, Math.min(left, room));
-      if (!take) continue;
-      if (k === "isa") { isaY += take; isaAll += take; } else penY += take;
-      if (i === 0) out[k].start += take; else out[k].monthly[i] += take;
-      left -= take;
-    }
-    if (left > 0) { if (i === 0) out.normal.start += left; else out.normal.monthly[i] += left; }
+    items.forEach((it, j) => {
+      let left = it.flow[i];
+      if (!it.us) for (const k of order) {
+        if (left <= 0) break;
+        const room = k === "isa" ? Math.min(2e7 - isaY, 1e8 - isaAll) : 1.8e7 - penY;
+        const take = Math.max(0, Math.min(left, room));
+        if (!take) continue;
+        if (k === "isa") { isaY += take; isaAll += take; } else penY += take;
+        outs[j][k][i] += take;
+        left -= take;
+      }
+      if (left > 0) outs[j].normal[i] += left;
+    });
   }
-  return out;
+  return outs;
 }
 // 계좌별로 따로 굴린 뒤 더해요
-function savSimSplit(p, o) {
-  const parts = Object.entries(savSplit(o, p.tax === "us")).filter(([, b]) => b.start || b.monthly.some(Boolean))
-    .map(([k, b]) => ({ k, r: savSim(p, { ...o, acct: k, start: b.start, monthly: b.monthly }) }));
-  if (!parts.length) return { ...savSim(p, { ...o, acct: "normal" }), by: [] };
+function savSimSplit(p, split, o) {
+  const parts = Object.entries(split).filter(([, f]) => f.some(Boolean))
+    .map(([k, f]) => ({ k, r: savSim(p, { ...o, acct: k, start: f[0], monthly: f }) }));
+  if (!parts.length) return { ...savSim(p, { ...o, acct: "normal", start: 0, monthly: 0 }), by: [] };
   const sum = (f) => parts.reduce((a, x) => a + x.r[f], 0);
   const r = { paid: sum("paid"), bal: sum("bal"), divs: sum("divs"), divTax: sum("divTax"), cash: sum("cash"), tax: sum("tax"), after: sum("after"),
     series: parts[0].r.series.map((_, i) => parts.reduce((a, x) => a + x.r.series[i], 0)),
@@ -2939,15 +2943,56 @@ function savSimSplit(p, o) {
   r.by = parts.map(({ k, r: x }) => ({ k, paid: x.paid }));
   return r;
 }
+// 지금 가격(원화로 1주 얼마). 미장은 환율로 바꿔요. 예금·직접 입력처럼 가격이 없으면 null
+function savPx(p) {
+  if (!p.m || !p.code) return null;
+  const q = QUOTES[p.m] && QUOTES[p.m].q[p.code];
+  const dash = !q && DATA.markets[p.m] && stocksOf(DATA.markets[p.m]).find((x) => x.code === p.code);
+  const px = (q && q[0]) || (dash && dash.close);
+  if (!px) return null;
+  const day = q ? QUOTES[p.m].day : DATA.markets[p.m].signal && DATA.markets[p.m].signal.day;
+  const fx = p.m === "us" ? (DATA.total && DATA.total.fx) || (DATA.markets.us.signal && DATA.markets.us.signal.usdkrw) || 1350 : 1;
+  return { px, fx, day, won: px * fx };
+}
+// 한 종목을 어떻게 넣는지: 따로 정한 값이 없으면 위 기본값(매달·처음에, 지금부터 끝까지)
+function savPlan(k, p) {
+  const e = SAV.each[k] || {}, q = savPx(p);
+  const sh = e.mode === "sh" && !!q;
+  const monthly = sh ? (e.sh ?? 1) * q.won : (e.amt ?? (+SAV.monthly || 0)) * 1e4;
+  const start = sh ? (e.ssh ?? 0) * q.won : (e.start ?? (+SAV.start || 0)) * 1e4;
+  const from = e.from ?? 0, len = e.len ?? null;
+  return { custom: !!SAV.each[k], sh, shN: e.sh ?? 1, sshN: e.ssh ?? 0, monthly, start, from, len, end: from + (len ?? 0) };
+}
+// 달마다 넣는 돈: from년 뒤에 처음 돈을 넣고, 그다음 달부터 len년 동안(없으면 끝까지) 매달
+function savFlow(plan, m) {
+  const f = new Array(m + 1).fill(0), a = Math.min(m, Math.round(plan.from * 12));
+  const b = plan.len == null ? m : Math.min(m, a + Math.round(plan.len * 12));
+  if (a === 0) f[0] = plan.start; else if (a < m) f[a + 1] += plan.start;
+  for (let i = a + 1; i <= b; i++) f[i] += plan.monthly;
+  return f;
+}
+// 종목마다 따로 정한 게 하나라도 있으면 '내 계획'으로 보고 모두 합쳐요 (절세 계좌 한도도 같이 나눠 써요).
+// 아니면 예전처럼 같은 돈을 종목마다 넣었을 때를 나란히 비교해요.
 function savRun() {
-  const o = { monthly: (+SAV.monthly || 0) * 1e4, start: (+SAV.start || 0) * 1e4, years: SAV.years, taxOn: SAV.taxOn, reinvest: SAV.reinvest };
-  const all = SAV.picks.map((k, i) => ({ p: savProduct(k), color: savColor(i) }));
-  return { o, all, list: all.filter((x) => !x.p.missing).map((x) => ({ ...x, r: savSimSplit(x.p, o) })) };
+  const all = SAV.picks.map((k, i) => { const p = savProduct(k); return { k, p, color: savColor(i), plan: savPlan(k, p) }; });
+  const ok = all.filter((x) => !x.p.missing);
+  const plan = ok.some((x) => x.plan.custom);
+  const years = Math.min(60, Math.max(SAV.years, ...ok.map((x) => Math.ceil(x.plan.end))));
+  const m = Math.round(years * 12);
+  const items = ok.map((x) => ({ flow: savFlow(x.plan, m), us: x.p.tax === "us" }));
+  const splits = !items.length ? [] : plan ? savSplit(items) : items.map((it) => savSplit([it])[0]);
+  const o = { years, taxOn: SAV.taxOn, reinvest: SAV.reinvest };
+  return { o, all, plan, years, list: ok.map((x, j) => ({ ...x, r: savSimSplit(x.p, splits[j], o) })) };
 }
 // 계좌마다 얼마씩 들어갔는지 한 줄 (국내 상장 종목 기준, 미국 상장은 전부 일반 계좌)
-function savSplitLine(list) {
+function savSplitLine(list, plan) {
   if (!SAV.taxOn || !SAV.accts.length) return "";
-  const x = list.find((l) => l.p.tax !== "us");
+  let x = list.find((l) => l.p.tax !== "us");
+  if (plan && x) {  // 내 계획이면 국내 상장 종목을 다 더해서
+    const by = {};
+    list.filter((l) => l.p.tax !== "us").forEach((l) => l.r.by.forEach((b) => { by[b.k] = (by[b.k] || 0) + b.paid; }));
+    x = { r: { by: [...SAV_ACCTS.map(([k]) => k), "normal"].filter((k) => by[k]).map((k) => ({ k, paid: by[k] })) } };
+  }
   if (!x || x.r.by.length < 2) return x && x.r.by.length === 1 ? `<p class="muted" style="margin:8px 0 0">넣은 돈 전부 ${ACCT_NAME[x.r.by[0].k]}에 들어가요.</p>` : "";
   return `<p class="muted" style="margin:8px 0 0">계좌별 넣은 돈: ${x.r.by.map((b) => `${ACCT_NAME[b.k]} ${savWon(b.paid)}`).join(" · ")}</p>`;
 }
@@ -2957,23 +3002,52 @@ const savWon = (x) => {
   if (a >= 1e8) { const man = Math.round((a % 1e8) / 1e4); return `${s}${Math.floor(a / 1e8)}억${man ? ` ${man.toLocaleString("ko-KR")}만` : ""}원`; }
   return `${s}${Math.round(a / 1e4).toLocaleString("ko-KR")}만원`;
 };
-// 지금 가격이면 매달 넣는 돈(처음 넣는 돈)으로 몇 주 사는지. 미장은 환율로 원화를 달러로 바꿔요.
-function savShares(p, o, r) {
-  if (!p.m || !p.code) return "";
-  const q = QUOTES[p.m] && QUOTES[p.m].q[p.code];
-  const dash = !q && DATA.markets[p.m] && stocksOf(DATA.markets[p.m]).find((x) => x.code === p.code);
-  const px = (q && q[0]) || (dash && dash.close);
-  if (!px) return "";
-  const day = q ? QUOTES[p.m].day : DATA.markets[p.m].signal && DATA.markets[p.m].signal.day;
-  const fx = p.m === "us" ? (DATA.total && DATA.total.fx) || (DATA.markets.us.signal && DATA.markets.us.signal.usdkrw) || 1350 : 1;
+// 지금 가격이면 매달 넣는 돈(처음 넣는 돈)으로 몇 주 사는지. 주 수로 정했으면 그게 얼마인지.
+function savShares(p, plan, r, years) {
+  const q = savPx(p);
+  if (!q) return "";
   const cnt = (v) => (v < 0.1 ? "0.1주 미만" : v >= 100 ? `${Math.round(v).toLocaleString("ko-KR")}주` : `${v.toFixed(1)}주`);
-  const n = (won) => cnt(won / fx / px);
-  const parts = [`${day ? `${md(day)} 종가` : "지금"} ${price(p.m, px)}`];
-  if (o.monthly) parts.push(`매달 ${savWon(o.monthly)} ≈ ${n(o.monthly)}`);
-  if (o.start) parts.push(`처음 ${savWon(o.start)} ≈ ${n(o.start)}`);
+  const n = (won) => cnt(won / q.won);
+  const parts = [`${q.day ? `${md(q.day)} 종가` : "지금"} ${price(p.m, q.px)}`];
+  if (plan.sh) {
+    if (plan.monthly) parts.push(`매달 ${savDec(plan.shN)}주 ≈ ${savWon(plan.monthly)}`);
+    if (plan.start) parts.push(`처음 ${savDec(plan.sshN)}주 ≈ ${savWon(plan.start)}`);
+  } else {
+    if (plan.monthly) parts.push(`매달 ${savWon(plan.monthly)} ≈ ${n(plan.monthly)}`);
+    if (plan.start) parts.push(`처음 ${savWon(plan.start)} ≈ ${n(plan.start)}`);
+  }
   // 총 몇 주인지: 넣은 돈 전부와 끝 금액을 지금 주가로 나눠요 (미래 주가는 가정하지 않아요).
-  const total = `<div class="meta"><b>넣은 돈 ${savWon(r.paid)} ≈ ${n(r.paid)} · ${o.years}년 뒤 ${savWon(r.after)} ≈ ${n(r.after)}</b> (지금 주가로)</div>`;
-  return `<div class="meta">${parts.join(" · ")}${p.m === "us" ? ` (환율 ${num(fx)}원)` : ""}</div>${total}`;
+  const total = `<div class="meta"><b>넣은 돈 ${savWon(r.paid)} ≈ ${n(r.paid)} · ${years}년 뒤 ${savWon(r.after)} ≈ ${n(r.after)}</b> (지금 주가로)</div>`;
+  return `<div class="meta">${parts.join(" · ")}${p.m === "us" ? ` (환율 ${num(q.fx)}원)` : ""}</div>${total}`;
+}
+// 종목마다 넣는 방법 한 줄 요약
+const savDec = (x) => (+x).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+function savEachSum(k) {
+  const p = savProduct(k), pl = savPlan(k, p);
+  const how = [pl.sh ? `매달 ${savDec(pl.shN)}주(≈${savWon(pl.monthly)})` : `매달 ${savWon(pl.monthly)}`];
+  if (pl.start) how.push(pl.sh ? `처음 ${savDec(pl.sshN)}주` : `처음 ${savWon(pl.start)}`);
+  if (pl.from) how.push(`${savDec(pl.from)}년 뒤부터`);
+  if (pl.len != null) how.push(`${savDec(pl.len)}년 동안`);
+  return `${pl.custom ? "" : "기본 · "}${how.join(" · ")}`;
+}
+// 종목마다 정하기: 금액이나 주 수, 처음 넣는 돈, 언제부터 몇 년 동안. 비운 칸은 위 기본값을 따라가요.
+const SAV_OPEN = new Set();
+function savEachRow(k, i) {
+  const p = savProduct(k), e = SAV.each[k] || {}, q = savPx(p), sh = e.mode === "sh" && !!q;
+  const inp = (f, label, unit, ph) => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-sav-e="${f}" type="text" inputmode="decimal"
+    value="${e[f] ?? ""}" placeholder="${ph}"><span>${unit}</span></span></label>`;
+  const mode = q ? `<div class="chips" role="group" aria-label="넣는 방법"><button type="button" data-sav-m="won" aria-pressed="${!sh}">금액으로</button>
+    <button type="button" data-sav-m="sh" aria-pressed="${sh}">주 수로</button></div>` : "";
+  const amt = sh ? inp("sh", "매달", "주", 1) + inp("ssh", "처음에", "주", 0) : inp("amt", "매달", "만 원", SAV.monthly) + inp("start", "처음에", "만 원", SAV.start);
+  return `<details class="sav-each" data-sav-k="${esc(k)}" style="--c:${savColor(i)}"${SAV_OPEN.has(k) ? " open" : ""}>
+    <summary><i class="sw"></i><span class="nm">${esc(p.name)}</span><span class="sum">${esc(savEachSum(k))}</span></summary>
+    <div class="sav-each-b">${mode}<div class="sav-grid">${amt}</div>
+      <div class="sav-grid">${inp("from", "시작", "년 뒤부터", 0)}${inp("len", "넣는 기간", "년 동안", "끝까지")}</div>
+      <p class="muted sav-each-note">${sh ? `지금 가격 1주 ${savWon(q.won)}으로 쳐서 금액으로 바꿔요. ` : ""}비운 칸은 위 기본값을 따라가요. 넣는 기간이 끝나도 넣은 돈은 끝까지 그대로 굴려요.</p>
+      <button type="button" class="sav-clear" data-sav-reset${SAV.each[k] ? "" : " hidden"}>이 종목 기본값으로</button></div></details>`;
+}
+function savEachList() {
+  return SAV.picks.map((k, i) => savEachRow(k, i)).join("");
 }
 let savQuery = "";
 // 고른 종목 (× 로 빼요)
@@ -3016,6 +3090,8 @@ function savingsCard() {
       placeholder="종목·ETF 검색 (예: 슈드, 코덱스 200, 삼성전자, TQQQ)" aria-label="계산기에 넣을 종목 검색" value="${esc(savQuery)}">
     <div id="sav-res">${savResults()}</div>
     <div class="sav-quick"><span class="muted">자주 찾는</span><div class="chips" id="sav-quick">${savQuick()}</div></div>
+    <h3 class="sav-h"><span style="white-space:nowrap">종목마다 정하기</span> <small class="muted">금액·주 수·기간 따로, 누르면 펼쳐져요</small></h3>
+    <div class="sav-eachs" id="sav-each">${savEachList()}</div>
     <details class="sav-mine" ${SAV.picks.includes("mine") ? "open" : ""}><summary>직접 입력 값 바꾸기</summary>
       <div class="sav-grid sav-grid3" style="margin-top:8px">${inp("price", "주가 상승", "%/년")}${inp("div", "배당·이자", "%/년")}${inp("mdd", "최대 낙폭", "%")}</div></details>
     <div class="sav-togs">${tog("reinvest", "배당 재투자", "받은 배당·이자로 다시 사요")}${tog("taxOn", "세금 반영", "배당·이자·차익 세금을 떼요")}</div>
@@ -3030,21 +3106,22 @@ function savingsCard() {
       과거 10년이 앞으로도 그대로 이어진다는 보장이 없어요. 특히 많이 오른 종목일수록 숫자가 부풀어 보일 수 있어요.</p></section>`;
 }
 function savOut() {
-  const { o, all, list } = savRun();
+  const { all, list, plan, years } = savRun();
   const missing = all.filter((x) => x.p.missing).map((x) => `<p class="muted" style="margin:8px 0 0">${esc(x.p.name)}: ${esc(x.p.note)}</p>`).join("");
   if (!list.length) return missing || `<p class="muted" style="margin:12px 0 0">위에서 종목을 하나 이상 넣어 주세요.</p>`;
   const paid = list[0].r.paid;
   const warn = [];
   const has = (k) => SAV.taxOn && SAV.accts.includes(k);
-  if (has("isa") && SAV.years < 3) warn.push("ISA는 3년 전에 깨면 비과세 혜택이 없어요.");
+  if (has("isa") && years < 3) warn.push("ISA는 3년 전에 깨면 비과세 혜택이 없어요.");
   if (has("pension") || has("irp")) warn.push(`${[has("pension") && term("연금저축"), has("irp") && term("IRP")].filter(Boolean).join("·")}는 55세 이후 연금으로 받는다고 치고 번 돈에 5.5%를 뗐어요. 그전에 빼면 16.5%예요. 소득이 있을 때 받는 세액공제(최대 16.5%)는 빠져 있어요.`);
   if (has("irp")) warn.push("IRP는 소득이 있어야 만들 수 있어요(전역 후 취업하고 나서).");
   if (has("pension") && has("irp")) warn.push("연금저축과 IRP는 합쳐서 한 해 1,800만 원까지라 연금저축을 먼저 채우고 남는 한도를 IRP에 넣어요.");
+  if (plan && list.some((x) => x.plan.from >= years)) warn.push(`보는 기간(${years}년)보다 늦게 시작하는 종목은 넣은 돈이 없어요. 기간 버튼을 늘려 보세요.`);
   if (SAV.taxOn && SAV.accts.length && list.some((x) => x.p.tax === "us")) warn.push("미국 상장 종목은 ISA·연금 계좌로 못 사서 일반 계좌 세금으로 계산했어요. 절세 계좌에선 같은 지수를 따르는 국내 상장 ETF를 사요.");
   if (list.some((x) => x.p.lever)) warn.push(`${term("레버리지")}·인버스 ETF는 폭락 때 회복이 아주 느리고, 낙폭 최소화 원칙과 맞지 않아요. 비교용으로만 보세요.`);
   if (list.some((x) => x.p.price >= 20)) warn.push("최근 10년 주가가 연 20% 넘게 오른 종목이 있어요. 그만큼 계속 오르기는 어려워서 결과가 부풀어 보일 수 있어요.");
   const max = Math.max(...list.map(({ r }) => r.paid + Math.max(0, r.bal - r.paid - (r.divs - r.divTax)) + r.divs - r.divTax));
-  const rows = list.map(({ p, color, r }) => {
+  const rows = list.map(({ k, p, color, r, plan: pl }) => {
     const profit = r.after - r.paid;
     const divNet = r.divs - r.divTax;
     const priceGain = r.bal - r.paid - divNet;  // 재투자로 불어난 몫은 '주가 상승'에 같이 들어가요
@@ -3059,14 +3136,20 @@ function savOut() {
       ${bar}
       <div class="meta">${[r.divs > 0 ? `배당·이자 ${savWon(r.divs)}` : "배당 없음", cash.slice(3), r.tax > 0 ? `세금 ${savWon(r.tax)}` : "",
         p.fee ? `${term("총보수")} 연 ${p.fee}%` : ""].filter(Boolean).join(" · ")}</div>
-      ${savShares(p, o, r)}<div class="meta">${esc(p.note)}</div>${worst}</li>`;
+      ${plan ? `<div class="meta">📅 ${esc(savEachSum(k))}</div>` : ""}${savShares(p, pl, r, years)}<div class="meta">${esc(p.note)}</div>${worst}</li>`;
   }).join("");
-  return `<div class="sav-hero"><div><small>넣은 돈 (${SAV.years}년)</small><b>${savWon(paid)}</b></div>
-      <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 최고</small><b class="${sign(Math.max(...list.map((x) => x.r.after)) - paid)}">${savWon(Math.max(...list.map((x) => x.r.after)))}</b></div></div>
-    ${savSplitLine(list)}${warn.map((w) => `<p class="caution" style="margin:8px 0 0">⚠️ ${w}</p>`).join("")}${missing}
+  const tPaid = list.reduce((a, x) => a + x.r.paid, 0), tAfter = list.reduce((a, x) => a + x.r.after, 0);
+  const hero = plan
+    ? `<div class="sav-hero"><div><small>넣은 돈 합계 (${years}년)</small><b>${savWon(tPaid)}</b></div>
+      <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 합계</small><b class="${sign(tAfter - tPaid)}">${savWon(tAfter)}</b></div></div>
+      <p class="muted" style="margin:8px 0 0">종목마다 정한 대로 ${list.length}개를 모두 합친 금액이에요 (${tPaid ? `${tAfter >= tPaid ? "+" : ""}${Math.round(((tAfter - tPaid) / tPaid) * 100)}%` : "-"})${SAV.taxOn && SAV.accts.length ? ". 절세 계좌 한도는 위 종목부터 나눠 써요" : ""}.</p>`
+    : `<div class="sav-hero"><div><small>넣은 돈 (${years}년)</small><b>${savWon(paid)}</b></div>
+      <div><small>${SAV.taxOn ? "세금 뗀 뒤" : "세전"} 최고</small><b class="${sign(Math.max(...list.map((x) => x.r.after)) - paid)}">${savWon(Math.max(...list.map((x) => x.r.after)))}</b></div></div>`;
+  return `${hero}
+    ${savSplitLine(list, plan)}${warn.map((w) => `<p class="caution" style="margin:8px 0 0">⚠️ ${w}</p>`).join("")}${missing}
     <p class="muted sav-cap">${SAV.taxOn ? "그래프는 그때 다 팔고 세금을 낸 뒤 손에 쥐는 금액이에요" : "그래프는 세금을 떼기 전 금액이에요"}</p>
     <div class="chart sav-chart" id="sav-chart"></div>
-    <div class="legend sav-legend"><span class="key"><i class="sw b-paid"></i>넣은 돈</span><span class="key"><i class="sw b-gain"></i>주가 상승</span><span class="key"><i class="sw b-div"></i>배당·이자</span><span class="key"><i class="sw b-loss"></i>주가 하락</span></div>
+    <div class="legend sav-legend"><span class="key"><i class="sw b-paid"></i>넣은 돈</span><span class="key"><i class="sw b-gain"></i>주가 상승</span><span class="key"><i class="sw b-div"></i>배당·이자</span><span class="key"><i class="sw b-loss"></i>주가 하락</span>${plan && list.length > 1 ? `<span class="key"><i class="sw sav-tot-key"></i>합계(점선)</span>` : ""}</div>
     <ul class="list sav-list">${rows}</ul>`;
 }
 // 부드러운 곡선(단조 3차): 값이 튀지 않게 이어요
@@ -3088,8 +3171,12 @@ function smoothPath(pts) {
 function drawSavings() {
   const el = $("#sav-chart");
   if (!el) return;
-  const { list } = savRun();
-  if (!list.length) return;
+  const run = savRun();
+  if (!run.list.length) return;
+  // 내 계획이면 모두 합친 선도 그려요
+  const sumOf = (f) => run.list[0].r[f].map((_, i) => run.list.reduce((a, x) => a + x.r[f][i], 0));
+  const paidS = run.plan ? sumOf("paidSeries") : run.list[0].r.paidSeries;
+  const list = run.plan && run.list.length > 1 ? [...run.list, { p: { name: "합계" }, color: "var(--text-primary)", total: true, r: { series: sumOf("series") } }] : run.list;
   const draw = () => {
     const W = Math.max(el.clientWidth, 260), H = 230;
     const pad = { l: 8, r: 82, t: 14, b: 24 };
@@ -3097,7 +3184,7 @@ function drawSavings() {
     const n = list[0].r.series.length, months = n - 1;
     const step = Math.max(1, Math.ceil(months / 120));  // 점이 너무 많으면 솎아요 (끝점은 꼭)
     const idx = [...Array(n).keys()].filter((i) => i % step === 0 || i === n - 1);
-    const hi = Math.max(...list.flatMap((x) => x.r.series), list[0].r.paidSeries[n - 1]) * 1.06 || 1;
+    const hi = Math.max(...list.flatMap((x) => x.r.series), paidS[n - 1]) * 1.06 || 1;
     const x = (i) => pad.l + (months ? (i / months) * iw : iw / 2);
     const y = (v) => pad.t + (1 - v / hi) * ih;
     const nice = (v) => { const e = Math.pow(10, Math.floor(Math.log10(v))); return [1, 2, 2.5, 5, 10].map((k) => k * e).find((k) => k >= v); };
@@ -3105,17 +3192,17 @@ function drawSavings() {
     const ticks = []; for (let v = tick; v < hi; v += tick) ticks.push(v);
     const grid = ticks.map((v) => `<line class="gridline" x1="${pad.l}" x2="${pad.l + iw}" y1="${y(v)}" y2="${y(v)}"/>
       <text x="${pad.l + 2}" y="${y(v) - 4}">${esc(bigNum(v))}</text>`).join("");
-    const yrs = SAV.years, yStep = yrs <= 5 ? 1 : yrs <= 10 ? 2 : yrs <= 20 ? 5 : 10;
+    const yrs = run.years, yStep = yrs <= 5 ? 1 : yrs <= 10 ? 2 : yrs <= 20 ? 5 : 10;
     const xl = [...Array(Math.floor(yrs / yStep) + 1).keys()].map((k) => k * yStep).map((yv) =>
       `<text x="${x(yv * 12)}" y="${H - 6}" text-anchor="${yv === 0 ? "start" : yv === yrs ? "end" : "middle"}">${yv === 0 ? "지금" : `${yv}년`}</text>`).join("");
     const pts = (arr) => idx.map((i) => [x(i), y(arr[i])]);
     const uid = Math.random().toString(36).slice(2, 8);
-    const grads = list.map((s, k) => `<linearGradient id="sg${uid}${k}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${s.color}" stop-opacity="${k ? (list.length > 3 ? 0 : 0.10) : 0.28}"/><stop offset="1" stop-color="${s.color}" stop-opacity="0"/></linearGradient>`).join("");
+    const grads = list.map((s, k) => `<linearGradient id="sg${uid}${k}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${s.color}" stop-opacity="${s.total ? 0 : k ? (list.length > 3 ? 0 : 0.10) : 0.28}"/><stop offset="1" stop-color="${s.color}" stop-opacity="0"/></linearGradient>`).join("");
     const base = y(0);
     const areas = list.map((s, k) => { const p = pts(s.r.series), line = smoothPath(p);
       return `<path class="sav-area" d="${line}L${p[p.length - 1][0].toFixed(1)},${base}L${p[0][0].toFixed(1)},${base}Z" fill="url(#sg${uid}${k})"/>`; }).reverse().join("");
-    const lines = list.map((s) => `<path class="sav-line" d="${smoothPath(pts(s.r.series))}" stroke="${s.color}"/>`).reverse().join("");
-    const paidLine = `<path class="sav-paid" d="${pts(list[0].r.paidSeries).map(([a, b], i) => `${i ? "L" : "M"}${a.toFixed(1)},${b.toFixed(1)}`).join("")}"/>`;
+    const lines = list.map((s) => `<path class="sav-line${s.total ? " sav-total" : ""}" d="${smoothPath(pts(s.r.series))}" stroke="${s.color}"/>`).reverse().join("");
+    const paidLine = `<path class="sav-paid" d="${pts(paidS).map(([a, b], i) => `${i ? "L" : "M"}${a.toFixed(1)},${b.toFixed(1)}`).join("")}"/>`;
     // 끝 점 + 값 알약 (겹치면 벌려요)
     // 종목이 많으면 금액 알약은 큰 순서로 6개까지만 (점은 다 찍어요). 아래로 넘치면 위로 밀어 올려요
     const dots = list.map((s) => `<circle cx="${x(n - 1)}" cy="${y(s.r.series[n - 1])}" r="3.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="1.5"/>`).join("");
@@ -3125,7 +3212,7 @@ function drawSavings() {
     const short = (v) => savWon(v).replace(/원$/, "");
     const pills = ends.map((e) => { const t = short(e.v), w = Math.min(pad.r - 8, t.length * 7 + 12), px = pad.l + iw + 6;
       return `<g transform="translate(${px},${e.y.toFixed(1)})"><rect width="${w}" height="18" rx="9" fill="${e.s.color}"/>
-        <text x="${w / 2}" y="13" text-anchor="middle" class="sav-pill">${esc(t)}</text></g>`; }).join("") + dots;
+        <text x="${w / 2}" y="13" text-anchor="middle" class="sav-pill"${e.s.total ? ' style="fill:var(--surface-1)"' : ""}>${esc(t)}</text></g>`; }).join("") + dots;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.p.name).join(", "))} 적립 잔고 차트">
       <defs>${grads}</defs>${grid}<line class="sav-base" x1="${pad.l}" x2="${pad.l + iw}" y1="${base}" y2="${base}"/>
       ${areas}${paidLine}${lines}${pills}${xl}
@@ -3142,7 +3229,7 @@ function drawSavings() {
       $("line", g).setAttribute("x1", cx); $("line", g).setAttribute("x2", cx);
       g.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", cx); c.setAttribute("cy", y(list[k].r.series[i])); });
       const when = i === 0 ? "지금" : `${Math.floor(i / 12) ? `${Math.floor(i / 12)}년` : ""}${i % 12 ? ` ${i % 12}개월` : ""} 뒤`.trim();
-      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(list[0].r.paidSeries[i]))}${SAV.taxOn ? " · 세금 뗀 뒤" : ""}</div>` + [...list].sort((a, b) => b.r.series[i] - a.r.series[i]).map((s) =>
+      tip.innerHTML = `<div class="muted">${esc(when)} · 넣은 돈 ${esc(savWon(paidS[i]))}${SAV.taxOn ? " · 세금 뗀 뒤" : ""}</div>` + [...list].sort((a, b) => b.r.series[i] - a.r.series[i]).map((s) =>
         `<div class="row"><i class="sw" style="background:${s.color}"></i>${esc(s.p.name)} <b>${esc(savWon(s.r.series[i]))}</b></div>`).join("");
       tip.style.display = "";
       const tw = tip.offsetWidth, left = (cx / W) * r.width;
@@ -3165,13 +3252,22 @@ function bindSavings() {
   const card = $("#sav-card");
   if (!card) return;
   const save = () => { try { localStorage.setItem("savings", JSON.stringify(SAV)); } catch (e) { /* 이번만 */ } };
-  const refresh = () => { save(); const out = $("#sav-out"); if (out) { out.innerHTML = savOut(); drawSavings(); } };
+  // 종목마다 정하기 칸은 입력 중에 다시 그리지 않고 요약·기본값 안내만 바꿔요 (키보드가 안 닫혀요)
+  const updEach = () => card.querySelectorAll(".sav-each").forEach((d) => {
+    const k = d.dataset.savK, sum = $(".sum", d), rs = $("[data-sav-reset]", d);
+    if (sum) sum.textContent = savEachSum(k);
+    if (rs) rs.hidden = !SAV.each[k];
+    const a = $('[data-sav-e="amt"]', d), b = $('[data-sav-e="start"]', d);
+    if (a) a.placeholder = SAV.monthly; if (b) b.placeholder = SAV.start;
+  });
+  const refresh = () => { save(); updEach(); const out = $("#sav-out"); if (out) { out.innerHTML = savOut(); drawSavings(); } };
   // 고른 종목·검색 결과·자주 찾는 버튼만 다시 그려요 (검색창은 그대로 둬서 키보드가 안 닫혀요)
   const redrawPicks = () => {
     const a = $("#sav-picked"), b = $("#sav-res"), c = $("#sav-quick");
     if (a) a.innerHTML = savPicked();
     if (b) b.innerHTML = savResults();
     if (c) c.innerHTML = savQuick();
+    const e = $("#sav-each"); if (e) e.innerHTML = savEachList();
     const d = $(".sav-mine"); if (d && SAV.picks.includes("mine")) d.open = true;
   };
   card.querySelectorAll("[data-sav]").forEach((i) => i.addEventListener("input", () => {
@@ -3196,6 +3292,25 @@ function bindSavings() {
   // 종목 넣기·빼기: 검색 결과·자주 찾는 버튼은 눌러서 넣고 다시 누르면 빼요
   card.addEventListener("click", (e) => {
     const x = e.target.closest("[data-sav-x]"), p = e.target.closest("[data-sav-p]");
+    const mb = e.target.closest("[data-sav-m]"), rs = e.target.closest("[data-sav-reset]");
+    if (mb || rs) {  // 금액으로·주 수로 바꾸기, 기본값으로: 그 종목 칸만 다시 그려요 (누른 버튼은 제자리)
+      const d = e.target.closest(".sav-each"), k = d.dataset.savK, i = SAV.picks.indexOf(k);
+      if (rs) delete SAV.each[k];
+      else {
+        const p = savProduct(k), q = savPx(p), pl = savPlan(k, p), ed = SAV.each[k] || (SAV.each[k] = {});
+        if (mb.dataset.savM === "sh") {
+          // 처음 주 수로 바꿀 때는 지금 금액이 몇 주인지로 채워요
+          if (q && ed.sh == null) ed.sh = Math.max(1, Math.round(pl.monthly / q.won));
+          if (q && ed.ssh == null && pl.start) ed.ssh = Math.round(pl.start / q.won);
+          ed.mode = "sh";
+        } else delete ed.mode;
+        if (!Object.keys(ed).length) delete SAV.each[k];
+      }
+      SAV_OPEN.add(k);
+      d.outerHTML = savEachRow(k, i);
+      refresh();
+      return;
+    }
     if (e.target.closest("[data-sav-clear]")) {
       SAV.picks = [];
     } else if (x) {
@@ -3209,6 +3324,23 @@ function bindSavings() {
     redrawPicks(); refresh();
     if (q) window.scrollBy(0, q.getBoundingClientRect().top - top);
   });
+  card.addEventListener("input", (ev) => {
+    const i = ev.target.closest("[data-sav-e]");
+    if (!i) return;
+    const k = i.closest(".sav-each").dataset.savK, f = i.dataset.savE;
+    const raw = i.value.replace(/[,\s]/g, ""), v = parseFloat(raw);
+    const ed = SAV.each[k] || (SAV.each[k] = {});
+    if (raw === "" || !Number.isFinite(v) || v < 0) delete ed[f];
+    else ed[f] = Math.min(v, f === "from" || f === "len" ? 50 : 1e6);
+    if (!Object.keys(ed).length) delete SAV.each[k];
+    refresh();
+  });
+  // 펼친 종목은 다시 그려도 펼친 채로
+  card.addEventListener("toggle", (ev) => {
+    const d = ev.target;
+    if (!d.classList || !d.classList.contains("sav-each")) return;
+    if (d.open) SAV_OPEN.add(d.dataset.savK); else SAV_OPEN.delete(d.dataset.savK);
+  }, true);
   const q = $("#sav-q");
   if (q) q.addEventListener("input", () => { savQuery = q.value; const b = $("#sav-res"); if (b) b.innerHTML = savResults(); });
   card.querySelectorAll("[data-sav-c]").forEach((c) => c.addEventListener("change", () => {
@@ -3220,7 +3352,7 @@ function bindSavings() {
   // 종목 목록·수익률 파일은 처음 열 때 받아요
   if (!RET.kr || !SYM.kr || !SYM.us) Promise.all([loadSymbols(), loadReturns()]).then(() => { if (card.isConnected) { redrawPicks(); refresh(); } });
   // 몇 주인지 보려면 지금 가격이 필요해요 (전 종목 종가 _quotes.json)
-  if (!QUOTES.kr || !QUOTES.us) Promise.all([loadQuotes("kr"), loadQuotes("us")]).then(() => { if (card.isConnected) refresh(); });
+  if (!QUOTES.kr || !QUOTES.us) Promise.all([loadQuotes("kr"), loadQuotes("us")]).then(() => { if (card.isConnected) { redrawPicks(); refresh(); } });
 }
 
 // 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).

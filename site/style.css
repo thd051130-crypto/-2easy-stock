@@ -802,3 +802,19 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .ec-cell.past { opacity: .4; }
 .list.cal li.past { opacity: .45; }
 .goal-name { margin: 0 0 8px; }
+/* 적립식 계산기: 종목마다 정하기 */
+.sav-eachs { display: grid; gap: 6px; margin-top: 8px; }
+.sav-each { border: 1px solid var(--border); border-radius: 12px; }
+.sav-each > summary { display: flex; align-items: center; gap: 8px; padding: 9px 12px; min-height: 40px; cursor: pointer; list-style: none; min-width: 0; }
+.sav-each > summary::-webkit-details-marker { display: none; }
+.sav-each > summary::after { content: "▾"; color: var(--text-muted); flex: none; transition: transform .2s; }
+.sav-each[open] > summary::after { transform: rotate(180deg); }
+.sav-each .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.sav-each .nm { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 0 1 auto; }
+.sav-each .sum { margin-left: auto; font-size: 12px; color: var(--text-muted); text-align: right; min-width: 0; flex: 1 1 auto; }
+.sav-each-b { padding: 0 12px 10px; }
+.sav-each-b .chips button { font-size: 12px; min-height: 30px; padding: 4px 12px; }
+.sav-each-note { font-size: 11px; margin: 8px 0 0; line-height: 1.4; }
+.sav-chart .sav-total { stroke-dasharray: 5 3; }
+@media (prefers-reduced-motion: reduce) { .sav-each > summary::after { transition: none; } }
+.sav-legend .sav-tot-key { background: none; border-top: 2px dashed var(--text-primary); height: 0; border-radius: 0; width: 14px; }
