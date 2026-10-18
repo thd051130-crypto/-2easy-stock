@@ -456,6 +456,7 @@ function render() {
     openHomeMore("sectors");
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
     jumpSectors = true;  // 홈이 다시 그려지면 업종 칸으로 내려가요 (뒤로 가기로 돌아가는 경우가 있어서 render에서)
+    lastTap = null;  // '화면 그대로' 규칙의 예외: 정책의 호재·악재는 누르면 업종 칸으로 이동해요 (사용자 2026-10-18)
     if (screen === "home") render(); else go("home");  // 홈 정부 정책 칸에서 누르면 바로 다시 그려요
   }));
   app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
@@ -485,6 +486,7 @@ function render() {
     POL_OPEN.add(polJump);
     openHomeMore("policy");
     polR = "";
+    lastTap = null;  // 이것도 이동하는 버튼이라 '화면 그대로'에서 빼요
     if (screen === "home") render(); else go("home");
   }));
   if (screen === "home" && polJump) {
