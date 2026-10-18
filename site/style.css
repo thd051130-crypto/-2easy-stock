@@ -792,8 +792,14 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .list li.world-graph .more { margin-top: 6px; }
 
 /* 다가오는 일정 달력: 칸엔 일정 표시만, 지난 날·지난 일정은 연하게 */
-.ec-months { grid-template-columns: repeat(7, 1fr); margin-top: 4px; }
+.ec-months { display: flex; gap: 4px; margin-top: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 3px 3px 2px; }
+.ec-months::-webkit-scrollbar { display: none; }
+.ec-months .cal-m { flex: none; width: 46px; }
+.cal-m span i { font-style: normal; font-size: 9px; margin-right: 1px; }
 .cal-m.past { opacity: .55; }
+.cal-m.near { background: var(--accent-bg); border-color: var(--accent); }
+.cal-m.near span, .cal-m.near b { color: var(--accent-fg); }
+.cal-m.now b { font-weight: 800; }
 .ec-cell { min-height: 50px; }
 .ec-cell .em { font-size: 13px; line-height: 1.2; min-height: 16px; letter-spacing: -2px; }
 .ec-cell.big { border-color: var(--wait-fg); }

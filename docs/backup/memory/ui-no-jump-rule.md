@@ -8,6 +8,7 @@ metadata:
 2026-10-17 사용자: "성과 슬라이드바도 화면 고정 안 되게", "앞으로 화면 변함 없게 알아서 해, 토큰 낭비한다".
 - 버튼·칩·탭·접기를 눌러도 보던 화면 위치가 그대로여야 함. 선택 바·칩 줄은 기본으로 따라 내려오지(sticky) 않게.
 - 앱 구조(PR #73, site/app.js): render()가 같은 화면(screen|market|stockCode)을 다시 그리면 scrollY를 지키고, keepTap()이 방금 누른 요소(data-* 속성 + 같은 표시 중 몇 번째)를 찾아 화면의 같은 높이로 맞춤(바로·다음 프레임·250ms). 칸만 outerHTML로 다시 그리는 곳도 keepTap() 호출. 다시 그리는 동안 #app min-height를 1.5초 붙잡음. overflow-anchor:none은 오히려 details 열 때 튀어서 쓰지 않음.
+- main은 grid라 min-height를 붙잡으면 칸이 늘어남 → align-content:start 필수(PR #74에서 선택 바가 880px로 커진 오류).
 - 같은 내용이 두 곳에 나오는 줄(예: 세계 지수 위 4개 + 전체 목록)은 키를 나눠서(main:/all:) 누른 쪽만 펼치기.
 
 **Why:** 사용자는 폰으로만 보고, 누를 때마다 다시 스크롤하는 걸 싫어하며 같은 지적을 반복하기 싫어함.

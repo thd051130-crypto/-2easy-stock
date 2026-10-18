@@ -51,8 +51,8 @@ FRED_RELEASES = {
 }
 CENTRAL = ZoneInfo("America/Chicago")
 MONTHS = {m: i for i, m in enumerate(calendar.month_name) if m}
-AHEAD = 186   # 앞으로 며칠 치를 저장할지 (앱 달력이 6개월 치를 보여 줘요)
-BEHIND = 40   # 지난 일정도 남겨요 (앱 달력에서 이번 달·지난달 지난 일정을 연하게)
+YEARS_BACK = 1   # 작년 1월부터 (앱 달력에서 지난 일정도 연하게 볼 수 있어요)
+YEARS_AHEAD = 1  # 내년 12월까지 (미국 발표·FOMC는 올라온 해까지만 있어요)
 WEEK = 7      # 텔레그램 주간 일정 범위
 EARN_MAX = 12  # 텔레그램 주간 일정에 넣을 실적 발표 종목 수
 
@@ -119,14 +119,23 @@ def parse_fred(html, rid):
 
 
 def fetch_fred(today):
-    """올해·내년 큰 발표 날짜. FRED는 브라우저 흉내(User-Agent)를 보내면 막혀서 그냥 요청해요."""
+    """작년·올해·내년 큰 발표 날짜. FRED는 브라우저 흉내(User-Agent)를 보내면 막혀서 그냥 요청해요."""
     out = []
     for rid in FRED_RELEASES:
-        for year in (today.year, today.year + 1):
+        for year in range(today.year - YEARS_BACK, today.year + YEARS_AHEAD + 1):
             r = requests.get(FRED_CAL.format(rid=rid, year=year), timeout=20)
             r.raise_for_status()
             out += parse_fred(r.text, rid)
     return sorted(out, key=lambda x: x["at"])
+
+
+def keep_past(new, old, today):
+    """새로 받은 FOMC 날짜 + 지난번에만 있던 지난 날짜 (홈페이지에서 빠진 지난 회의도 달력에 남게).
+    앞으로의 날짜는 새로 받은 것만 믿어요 (일정이 바뀌었을 수 있어서). 새것이 비면 지난번 그대로."""
+    if not new:
+        return old
+    seen = {x["date"] for x in new}
+    return sorted(new + [x for x in old if x["date"] < f"{today:%Y-%m-%d}" and x["date"] not in seen], key=lambda x: x["date"])
 
 
 def release_events(releases, start, end, taken=()):
@@ -220,7 +229,7 @@ def stock_events(paper, start, end):
 
 
 def build(today, fomc, bok, paper, releases=()):
-    start, end = today - dt.timedelta(days=BEHIND), today + dt.timedelta(days=AHEAD)
+    start, end = dt.date(today.year - YEARS_BACK, 1, 1), dt.date(today.year + YEARS_AHEAD, 12, 31)
     ev = []
     for x in fomc:
         if f"{start:%Y-%m-%d}" <= x["date"] <= f"{end:%Y-%m-%d}":
@@ -274,7 +283,7 @@ def main():
     old = json.loads(args.save.read_text()) if args.save.exists() else {}
     fomc, bok = old.get("fomc") or [], old.get("bok") or []
     try:
-        fomc = parse_fomc(fetch(FOMC_URL)) or fomc
+        fomc = keep_past(parse_fomc(fetch(FOMC_URL)), fomc, today)
     except Exception as e:  # 못 받으면 지난번 날짜
         print(f"FOMC 일정을 못 받았어요 (지난번 날짜를 써요): {e!r}")
     try:
