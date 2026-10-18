@@ -1975,6 +1975,9 @@ function homeMoreRows(d) {
   const secs = (s.sectors || []).filter((x) => x.r5 != null);
   const sb = secs.length ? [...secs].sort((a, b) => b.r5 - a.r5) : [];
   add("sectors", "🏭", "업종별 호재·악재", sb.length ? `${esc(sb[0].name)} ${upDown(sb[0].r5)} · ${esc(sb[sb.length - 1].name)} ${upDown(sb[sb.length - 1].r5)}` : "", sectorsCard(d));
+  // 정부 정책은 업종 호재·악재 바로 아래 (둘이 서로 연결돼서, 사용자 2026-10-18)
+  const P = DATA && DATA.policies;
+  add("policy", "🏛️", "정부 정책", P && P.items ? `${P.items.length}개 정리${P.stale ? " · ⚠️ 오래됨" : ""}` : "", policyCard());
   const f = market === "kr" && d.flows;
   add("flows", "🏦", "외국인·기관 수급", f ? ((f.warn || []).length ? `⚠️ 같이 파는 종목 ${f.warn.length}개` : "같이 파는 종목 없음") : "", flowsCard(d));
   if (market === "kr" && d.disclosures) {
@@ -1984,8 +1987,6 @@ function homeMoreRows(d) {
   }
   const q = s.quiet_volume;
   add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", quietVolumeCard(d));
-  const P = DATA && DATA.policies;
-  add("policy", "🏛️", "정부 정책", P && P.items ? `${P.items.length}개 정리${P.stale ? " · ⚠️ 오래됨" : ""}` : "", policyCard());
   const m = DATA && DATA.macro;
   add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", macroCard());
   const close = s.series ? s.series.close.filter((v) => v != null) : [];
