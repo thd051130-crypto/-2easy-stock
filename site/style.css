@@ -824,3 +824,4 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .sav-chart .sav-total { stroke-dasharray: 5 3; }
 @media (prefers-reduced-motion: reduce) { .sav-each > summary::after { transition: none; } }
 .sav-legend .sav-tot-key { background: none; border-top: 2px dashed var(--text-primary); height: 0; border-radius: 0; width: 14px; }
+.sav-each-b .sav-freq { margin-top: 6px; }
