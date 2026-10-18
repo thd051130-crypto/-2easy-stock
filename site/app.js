@@ -2474,7 +2474,10 @@ const cmpPct = (r) => (r != null && r >= 9 ? `${num(r + 1)}배` : pct(r));
 function compareChart(el, f, list, show, reset, onRange) {
   const n = f.keys.length, key = el.id;
   if (reset || !VIEW[key] || VIEW[key].n !== n || VIEW[key].frame !== f.frame) {
-    VIEW[key] = { count: Math.min(show, n), end: n - 1, n, frame: f.frame, pick: null };
+    // 처음엔 넣은 것이 다 같이 있는 첫 칸부터 (오래된 지수 하나 때문에 비교 구간이 오른쪽 끝에 몰리지 않게). 그 전은 밀어서 봐요
+    const firsts = list.map((x) => x.c.findIndex((c) => c != null)).filter((i) => i >= 0);
+    const common = firsts.length ? Math.max(...firsts) : 0;
+    VIEW[key] = { count: Math.min(show, n, Math.max(Math.min(5, n), n - common)), end: n - 1, n, frame: f.frame, pick: null };
   }
   const v = VIEW[key];
   let W = 0, pad, iw, ih, cw, start, base = [], Yp, from = 0;
@@ -2518,7 +2521,7 @@ function compareChart(el, f, list, show, reset, onRange) {
       [0.25, 0.5, 0.75].forEach((r) => cand.push(r));
       ticks = cand.filter((r) => r > lo && r < hi).sort((a, b) => a - b);
     } else {
-      const raw = (hi - lo) / 4, e = Math.pow(10, Math.floor(Math.log10(raw)));
+      const raw = (hi - lo) / 6, e = Math.pow(10, Math.floor(Math.log10(raw)));
       const step = [1, 2, 2.5, 5, 10].map((k) => k * e).find((k) => k >= raw);
       ticks = [];  // 비율이라 1이 0%: 1 + step의 배수
       for (let k = Math.ceil((lo - 1) / step); 1 + k * step < hi; k++) ticks.push(1 + k * step);
