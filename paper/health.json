@@ -1,5 +1,5 @@
 {
- "checked": "2026-10-16T22:08+09:00",
+ "checked": "2026-10-18T10:28+09:00",
  "ok": true,
  "workflows": [
   {
@@ -15,7 +15,7 @@
   {
    "workflow": "telegram-bot",
    "label": "텔레그램 봇",
-   "success": 456,
+   "success": 395,
    "failure": 0,
    "expected": null,
    "github_skipped": 0,
@@ -35,7 +35,7 @@
   {
    "workflow": "pages",
    "label": "대시보드 배포",
-   "success": 54,
+   "success": 55,
    "failure": 0,
    "expected": null,
    "github_skipped": 0,
@@ -45,7 +45,7 @@
   {
    "workflow": "fundamentals",
    "label": "재무·종목 목록",
-   "success": 2,
+   "success": 1,
    "failure": 0,
    "expected": 1,
    "github_skipped": 0,
@@ -75,7 +75,7 @@
   {
    "workflow": "all-stocks",
    "label": "전 종목 차트",
-   "success": 12,
+   "success": 10,
    "failure": 0,
    "expected": 10,
    "github_skipped": 0,
