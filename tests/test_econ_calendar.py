@@ -90,3 +90,17 @@ def test_release_events_merges_same_time_and_skips_this_week():
     ev = ec.release_events(rel, start, end, taken={("2026-11-06", "한국시간 22:30 발표")})
     assert ev == [dict(date="2026-11-10", market="us", kind="big", title="미국 소비자물가(CPI) · 미국 소매판매", big=True,
                        note="한국시간 22:30 발표")]
+
+
+def test_keep_past_keeps_old_past_meetings_only():
+    today = dt.date(2026, 10, 18)
+    old = [dict(date="2024-12-18", sep=True), dict(date="2026-12-09", sep=True)]
+    new = [dict(date="2026-12-10", sep=True)]
+    assert [x["date"] for x in ec.keep_past(new, old, today)] == ["2024-12-18", "2026-12-10"]
+    assert ec.keep_past([], old, today) == old
+
+
+def test_build_covers_last_year_to_next_year(tmp_path):
+    ev = ec.build(dt.date(2026, 10, 18), [], [], tmp_path)
+    dates = [e["date"] for e in ev]
+    assert min(dates) < "2025-02-01" and max(dates) > "2027-11-30"
