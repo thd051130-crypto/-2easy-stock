@@ -2,11 +2,11 @@
   "version": 2,
   "market": "us",
   "capital": 7470,
-  "cash": 5402.592950474177,
-  "equity": 7538.826938599934,
+  "cash": 4951.747419291794,
+  "equity": 7511.9604788845845,
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
-  "last_day": "2026-10-16",
+  "last_day": "2026-10-19",
   "positions": [
     {
       "code": "DIS",
@@ -18,10 +18,10 @@
       "slot": 1494.0,
       "tranches": 3,
       "tp": 2,
-      "days": 5,
+      "days": 6,
       "buy_date": "2026-10-09",
       "last_buy": 109.5199966430664,
-      "last_price": 110.58999633789062
+      "last_price": 109.58999633789062
     },
     {
       "code": "TXN",
@@ -33,25 +33,25 @@
       "slot": 1502.8184372746082,
       "tranches": 1,
       "tp": 1,
-      "days": 1,
+      "days": 2,
       "buy_date": "2026-10-15",
       "last_buy": 275.3900146484375,
-      "last_price": 276.4800109863281
+      "last_price": 276.1499938964844
     },
     {
       "code": "JPM",
       "name": "JP모건",
-      "qty": 1.3328303634164445,
-      "cost": 450.84553118238244,
-      "buy_price": 337.25,
-      "raw": 449.4970400621959,
+      "qty": 2.6579203889003615,
+      "cost": 901.6910623647649,
+      "buy_price": 338.23213211300316,
+      "raw": 898.9940801243918,
       "slot": 1502.8184372746082,
-      "tranches": 1,
+      "tranches": 2,
       "tp": 0,
-      "days": 1,
+      "days": 2,
       "buy_date": "2026-10-15",
-      "last_buy": 337.25,
-      "last_price": 339.7200012207031
+      "last_buy": 339.2200012207031,
+      "last_price": 333.5299987792969
     },
     {
       "code": "GOOGL",
@@ -63,10 +63,10 @@
       "slot": 1502.8184372746082,
       "tranches": 1,
       "tp": 1,
-      "days": 1,
+      "days": 2,
       "buy_date": "2026-10-15",
       "last_buy": 344.69500732421875,
-      "last_price": 340.5899963378906
+      "last_price": 344.17999267578125
     },
     {
       "code": "MRK",
@@ -78,26 +78,33 @@
       "slot": 1509.645093380856,
       "tranches": 1,
       "tp": 0,
-      "days": 0,
+      "days": 1,
       "buy_date": "2026-10-16",
       "last_buy": 146.9600067138672,
-      "last_price": 145.9499969482422
+      "last_price": 143.6300048828125
     }
   ],
   "orders": [
     {
+      "side": "sell",
+      "code": "MRK",
+      "frac": 1.0,
+      "reason": "손절 (평균가 -2% 아래)",
+      "tp": 0
+    },
+    {
       "side": "buy",
-      "code": "JPM",
-      "name": "JP모건",
-      "kind": "add"
+      "code": "AMZN",
+      "name": "아마존",
+      "kind": "new"
     }
   ],
   "halt_next": false,
   "halt_week": null,
   "halt_month": null,
   "week": {
-    "key": "2026-W42",
-    "base": 7499.2075957299485
+    "key": "2026-W43",
+    "base": 7538.826938599934
   },
   "month": {
     "key": "2026-10",
@@ -105,9 +112,14 @@
   },
   "pending_buys": [
     {
-      "code": "JPM",
-      "name": "JP모건"
+      "code": "AMZN",
+      "name": "아마존"
     }
   ],
-  "pending_sells": []
+  "pending_sells": [
+    {
+      "code": "MRK",
+      "reason": "손절 (평균가 -2% 아래)"
+    }
+  ]
 }
