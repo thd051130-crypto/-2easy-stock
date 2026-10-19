@@ -1,5 +1,5 @@
 {
- "day": "2026-10-19",
+ "day": "2026-10-20",
  "items": {
   "us-fed": [
    {
@@ -9,24 +9,24 @@
     "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE5DWVppbEltYVg4V3BCMW9HSU1RMF84OUYxcjFlallnd1VoMU9sb0QyYnJhdUcxbEpVcDBWRExhUE9sY0ZIVC1BeUQwTHpjbzBsQUV2MzM4TndDd0lYRTR0eGpoMXJITGs?oc=5"
    },
    {
-    "title": "Fed rate hike call seen tight as inflation heats up",
+    "title": "EXCLUSIVE: Fed's Daly says rate hikes likely needed, but not urgently",
     "source": "Reuters",
     "date": "2026-10-14",
-    "link": "https://news.google.com/rss/articles/CBMinwFBVV95cUxPMjl1ZWZGd2lIRXg1US1hUjNacTVDN2o5S2lIcXpCdnZ1VHBXcEpqOHV5SzJJZHJrT3RxYjdrRjRrRU03eHNGTTFRMnVCVEdZa0VfLU9BeFdSeTE1aFRrc3ZRampyOFVTczZRbWk0azFBakVndUJ1X0NjVmJmV1JmeXNXSlFkNzF0NUZKTUUyUnlHWi1sOXFpVHV5NnVvcDA?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxOMndHODQzSE53STRuTnVib1hVbS02ZEtKUEFmQnlqNDRFTXVHSVRxMFh1YU9IN0lLRTlPbEZsOXhHQllMczhyQ0llSHFoX3RuQTdHNUMtQUszZlZEcWJYMDRjMDAxNG5hUGNxMXZHejlZbFg5STlZekM0Vy1VeldsVGdvRXU5SVZmZTAyVTRkT0NZOHptamRHMFVqdzdBUmNONTV2eWJzaXc?oc=5"
    }
   ],
   "kr-rate": [
-   {
-    "title": "한은, ‘금리 추가 인상’ 가능성 거듭 시사…시장선 “연내” 전망",
-    "source": "한겨레",
-    "date": "2026-10-12",
-    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5JQ2xXb2xzM0VVZ0dLVkU5LVJxMzg4WnY3QWUwZkZJNF9KRWd3c3lZVlgzc01oTXpDLVEyZW1DSUg1TjM5enl2X2xFRkN5blNtdnk5b2RKOF9YMWZkd2x5WXRDRWZteHI0TmF3OHVzYzRBQQ?oc=5"
-   },
    {
     "title": "한은, 이번 주 기준금리 결정...시장은 동결 전망",
     "source": "YTN",
     "date": "2026-10-18",
     "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9FYUpMVGRZWThuTFNlR2ZnR0loRFRMUTNWbmF2OFFFbHZvQVpRbC1kSzZxdVc0YUhNc292SG9qQ2pYNHBOdDlpWk5PTGkzUU9KQ3g4T2xlUWExWnNPLUE?oc=5"
+   },
+   {
+    "title": "한은, 22일 기준금리 결정…숨고르기 전망",
+    "source": "연합뉴스TV",
+    "date": "2026-10-18",
+    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE1VTmQwZXd1d00wZlJNR0N0WXNuM3pack11amJlaXAzSU1zQ0xNVXp4clFoenNEZmEyamFyaEVESXpuUXJUckdVUlA1QXoxbDVzVGVIWUZ5Qm1MN3lwMmVoWmhLeVREUVk?oc=5"
    }
   ],
   "kr-us-deal": [
@@ -45,16 +45,16 @@
   ],
   "world-oil": [
    {
-    "title": "국제유가 100달러 시대 지속되나…호르무즈·美재고 시험대",
-    "source": "톱스타뉴스",
-    "date": "2026-10-11",
-    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE4zaXFlYmhsY1VjMC10Q0x0WThRM2VvcXpYY3FmcDdGTWFWM0hMT0ZOSmFpN0JRdEJEZ24ydnYzV1ZwZ1o0blpHOXNUUzRtVUh4MzdFb0VzNmhsZFBVWng2QkFvdTg0cERVaVk4SlgxOHc5Zw?oc=5"
+    "title": "다시 100달러 넘은 유가…이번엔 '기름길'이 관건[클릭e시장]",
+    "source": "아시아경제",
+    "date": "2026-10-19",
+    "link": "https://news.google.com/rss/articles/CBMiYkFVX3lxTE1UUW5uLW85cnlVbzFNNXVoV19MTHVKNWZBQ1NNT1ZqY01HcnhXQ18xYzNLUjdQNXB2SHZzeUZ3eEpTM045aGU5aGpMd1BMQkphT3lxa2Rvcm43Q0cwNFJrYk1R?oc=5"
    },
    {
-    "title": "Oil Ends Mixed as Traders Weigh Middle East Risks, Russian Diesel Supplies",
+    "title": "OPEC Cuts Demand Growth Forecast Again as Gulf Supply Risks Mount",
     "source": "WSJ",
     "date": "2026-10-13",
-    "link": "https://news.google.com/rss/articles/CBMivgFBVV95cUxNQXU5eVdMZ3p6cGlOck9UV0IyTTdaME1ma29vcEFFZGdvZUliNFdxOHg3XzZ5emJ6bzN3LUd1clVfZFp1Q1J3Zl9GSGdEdzZHTU45QzlIV24zX1BqMXhlLXZLeDZwRkg1Wm5xOHpoQ3VmMkJkY1czLU9aQUNsYzdJOUhtbnptLTdMV0Q2TU43eUp5V0lKSzhaMVZwdlRNSGlKdGFtRTNGdE9DSWx3QnNVb3VfOG91N1k4Sk9uclhR?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPUEt1NmxaOWtwZ2RBbVh1Q01nZjU2TlZCR1gtRm5sOElDQXFOaVJuTWRQVkhKcGxwNG5KYkhITnJsamhoV1JxVDlxc3p6RlJNR0FCUEtoWm1NQlpNcHN5TXh0RFZJYkhqUFlVdnBXQm5IUFMzdzBqNHRNSk9BelFWbEkwOEJ3bVJLLTZLUjU3Slo3UXVUZjk2YkpySnN5Sl83LWN6Mzdka0MyZzBfTUEtVldmU0Q?oc=5"
    }
   ],
   "world-us-china": [
@@ -79,10 +79,10 @@
     "link": "https://news.google.com/rss/articles/CBMi4wFBVV95cUxPRm5WTm56MXpGZXV5UTM4djJnLUhNd1puWEdNN1loSjFSaGc5V3daUXJMUS1FSWVGdFZpdTcwaTNHYXB4TlVkYjFEWlNfWEFUOVFjS2pjaWxRVWQ2NEtKUm9yOGJsLXJYWGp3eVBscV81R01GZXpLRFBpU0NsZjdRZGIyNmxyMUZXZ0swMHdvdU0tbmFTeEdkRlpuSl9NOEFKaXhyWjBBbW41UXFNS2M1NE1iamxjQTM3OUFaSmJ3dmk2TjRrT3Jta3FoMUxIdmFWZEdnZXFBcWpsZlR1ckFlZUh2MA?oc=5"
    },
    {
-    "title": "이전 결과가 다음 결과를 보장하나요? 1인용 배드민턴게임",
+    "title": "인스타그램 토토 사이트|토토 유 튜버",
     "source": "Calgary Roughnecks",
-    "date": "2026-10-14",
-    "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTE1zdVhnbzZfY19yZ1M2UXhDMU1nbEVVV21GaC1JNFQ3YmY4ZDE3RzYtWWVzSTZKeWd0Z2RzbFFYTm5VTHF0N3NDYVJ3VWZZdlk1U2k0UmxheTRNWUNjVnZlaW9HQkpZZw?oc=5"
+    "date": "2026-10-18",
+    "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQREJxZEkwRkRiYmotc05LaDRjRXJIZDUzT1p2ZDBXcDJhZlpMbkFhLVJYdlFueVFjWFRyc0tWd2c2NHRrQ1JTSjBmREdBSVJlTkdlMWM3THFWdTl6MmJ1UE9jQlZVSFN2dVB2M1hnZGFwdXBOX1o2YlNXamxka2FsTVhwOC14MmZGZjJodnlZbEFLX1lNVGlvdnRnSWhRcllqSWFrX280RkxaVmI5X0hYeEJhXzU?oc=5"
    }
   ],
   "kr-buyback": [
@@ -101,16 +101,16 @@
   ],
   "us-chip-tariff": [
    {
-    "title": "트럼프 관세폭탄 8년…삼성 세탁기, 부품 거래처 70% 미국에",
-    "source": "https://spt.co.kr/",
-    "date": "2026-10-12",
-    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE1kVTRjbzlrdEstUVRITWNUa3VXcGc4a2tJNWRlOFNQNXo3SWpjQlBObGpnWGpiV1JtWnNpa2FxeS02MXFnVDJWYWhWWUpxdjNNOXhpNmJlWmE2X2lW?oc=5"
+    "title": "[월 수출 1000억달러⑤]美관세 기민한 대응·수출성장 낙수효과 ‘숙제’",
+    "source": "한스경제",
+    "date": "2026-10-18",
+    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBYblM3VTlFV3FCVk1CSFNHcFBEVG45c1JqeXdCT2tKS253WEJGSGh2NHBLYS1KSnItUnJnM2RyMUYzNVVUTVZ5OUVoWGxDYVFrTi1weHpvS0drTDhxVUQtamNDQWZRR25kNnpj0gFvQVVfeXFMTzJXRDh3V0FwbXdjWjBSUXNmWmVVb1pYNHBpUmNEanlMQkxsd2tSQW8zWElxc3l3TzZYWFZsWDc4SWlIbUF1RzMzM1Uzb09PVXFZSTJyVTJTRlVMd1kxd2x3NUkzNFZnYU5jT05FamJz?oc=5"
    },
    {
-    "title": "Mr. President, declare a trade war ceasefire to protect Great Lakes jobs (Guest Opinion by Tom Drumm)",
-    "source": "Syracuse.com",
+    "title": "With Section 232 Tariffs Reshaping Biotech, Valion Bio's Velocity Bioworks Capitalizes on Domestic CDMO Surge",
+    "source": "Yahoo Finance",
     "date": "2026-10-14",
-    "link": "https://news.google.com/rss/articles/CBMi2wFBVV95cUxQVWRCUWVyemlQRkhaamlBTnpjVmF2Z0J1UnRVYlB1dS10dnZkWnFwc3NNUHM5UXFYaWVLLXM5UHFzOHFib1EzZGg1TWJIMXZEWHBVdkdRNlNyS1BYN0JZbWxXTFVCWU9xdmFDZk5fRnNxdnRUdThKRE5VSlhtaWFYNFBBVWJHdy1hQnczend6b2xxRDhkM283Ti12V0JaQ21hVlNMWlQyM0RwY0QzNEh3dVZuazkwd2o4RlNGWVhmb19ZU0M3NHY2VXJRZTRJWE81Z09lUm0xT21vYU0?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMinwFBVV95cUxObTBDVkF6ZnBXUG1GM2V0Q25Cb1NPWmotQng0NGdaU0c5aS1lbG5uSlNXR3UxUVlhdTVLTHZxSVhiQWZNQkxEc0c2T3ZOMGFIUnA1d3hrczlyckg1UDlFMGhXdFdHbTZzSTN2dW1qRkFydjFtd09HTjdyalgxVGhVZHJ2T2lRdHBFR0tXZ0hGVnc5UC1BR0hkUVpDaUw4MGs?oc=5"
    }
   ],
   "us-301": [
@@ -121,18 +121,18 @@
     "link": "https://news.google.com/rss/articles/CBMif0FVX3lxTE56M19faS1ITWU5WjQwS2JvRGwwOWJCY1ExUVBJclY0dExucVRCazdaS0duR2tWeWFFNVE3Q0VJZHJOS01TekoteFZXaTVyY25VOWlPWjUtWHFTLUMwZGFWNE41MWlBaWtwSlRHeFVpTGt3YWdtOHVxbUJPMEEwMkk?oc=5"
    },
    {
-    "title": "Section 301 exclusions expire November 2026",
-    "source": "Thomson Reuters tax",
-    "date": "2026-10-12",
-    "link": "https://news.google.com/rss/articles/CBMiekFVX3lxTE55TFlsa1pMQVRsZHlrU0FrUEFwdnNrdGNrU19yZFZ3TXA5NVQ4UzUyR0hJTkNQTVg4eWJTY0s5X1REakk2d19zbF83dXl2MGVSX0NOYkh1UGo2NGNrR05RbHliYy05TkZVMGRITlVFMmowVGo0YWl0M2t3?oc=5"
+    "title": "Effective Tariff Rates and Revenues (Updated October 14, 2026)",
+    "source": "Penn Wharton Budget Model",
+    "date": "2026-10-14",
+    "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPck44NjFjdkJqa3h1a1JPOHdkTGMzQTJISHFsQjYyd2xSYkU0RkhSZGVQOEduVXhvODg0ZVhYOFd6N0owRHhPUjB1WFY3U1Z6RlJRVjM1cVR0NDloMWVialNWM3J3WUNfN2lfdXZLNHcwTUU3MV9ZUkxxQlo3VVJyRXh2bmhqYWRyRHltQlpsckJ3X0dseW5FQmlRMlU1d3NraXdkSG9LdXZ2M3dWZWlwWA?oc=5"
    }
   ],
   "us-pharma": [
    {
-    "title": "[현장] 美 관세 피했더니 약가 복병…제약사도 환자도 '부담'",
-    "source": "데일리안",
-    "date": "2026-10-14",
-    "link": "https://news.google.com/rss/articles/CBMimAJBVV95cUxQVlB5b1hVUjBnV2l2VGhPOWJfYlM2N2JoOU51UDR6VmNpZ01IREFqZzlmM1ptRkpOZ2g2TzR0OTdHT1NuenU5Yzlzd0cyclY5cmlybWdQaHRieUhNN0JHbUw0ejJBUGJ5LWVTNjhRMU5GdFlvNjhZWl85TFJ5Z3NNMGJIeGNuaUp3Vkl6QzlmLWRuNThCVHI5RGJqcEpQbzdaUmRwUG1pZkNWX3h5NWg3LWlCeEhOaWticVNleF9XTXl6M0tuM0ZCUmowNHJXZl9qQUh2VzM2RWczX09ITW1vVnVpenRHa0xTMXVfaWxub0Q5RHA4UWFtNUF6M1g2MU9DYzg2QWFFLU1xOE9oNXBTWmtUQW03SDln?oc=5"
+    "title": "미국 의약품 관세 시행…한국산 특허약 15%·일부 특수약 0%",
+    "source": "쿠키뉴스",
+    "date": "2026-10-18",
+    "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1maUZ4UVQ4RThSYVZ1RE11NmNIWnlfRjdURlhhQXllRW5BcGl3Y19PX0Fnb1ZtQU5SNl9fcHVWZFZkMnZ1THUzVHJ1NWRDRmVsS3ZtY3BJZXRmSUdZWVZEMzNVNA?oc=5"
    },
    {
     "title": "Section 232 Pharmaceutical Tariffs Are Now in Effect Its Not Too Late to Consider Duty Mitigation Strategies",
@@ -149,19 +149,19 @@
     "link": "https://news.google.com/rss/articles/CBMiYkFVX3lxTFBSUDNYaFF4blZWcEl3S1VtQW9fU21xVU5pNEFhTTZLOGFGT0lnOWxwZ0dJSjRUY2p5M2NTY1gwTk1NNVVlWEFUYVhwMXcteGRjaHhydmZkRXFIcGRVVlg3UXBn?oc=5"
    },
    {
-    "title": "'배당의 계절' 분리과세 고배당주 주목…옥석 가를 건 '현금 흐름'",
-    "source": "뉴스1",
-    "date": "2026-10-12",
-    "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE5ZMmZUUUNLVFV3R0tqNGdCRWNFSzFWYW1zRnVsXzNMQ0xOdndvY3BqSWNfczdrMmt1V2hPSkhXbmlZSTNmMTdmZWRuUldidC15Vl9PTUJxSUJqSFpqX1lF?oc=5"
+    "title": "주주환원 늘었는데 세금은 제각각…입법조사처 \"배당세제 정합성 손봐야\"",
+    "source": "KB Think",
+    "date": "2026-10-13",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5qRkZMOEt0Z1NQaHd0c0hqVk5URU9OMGZ4UEpFblFHVlZHVVlIdlItNnFwZ2hmdjFjN3liYmpfblZDV0Rqd3hQeXZNNXFNZDFpQjBYeEZvaFlkWEY4LThUT1NfN0N3MTgwWmtCVDM5ZS1XQQ?oc=5"
    }
   ],
   "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "일본은행 총재 “더 이상의 물가 상승 용납 못해”…금리 인상 지속 방침",
-    "source": "경향신문",
-    "date": "2026-10-17",
-    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE1aYXlrdkZpZW9EMW5uSHdmYnJhMTBqaFIwcmktX2R3R2N0TzVtR2ROZ1NqMHNTNkpMU2EzV2JMUjBxNHB2al9IbUhpUjBZS1VoeVB4UnZhQmdzZ9IBX0FVX3lxTE9Jc1lfR1p4TVk3NlhxamVWRTRsV05qLVBuREVTbXYyRGRwNVFYeGw5RTlYRlhFaFhKWXJlNHY4QnJfQXZNUi1jMEVIN1RZLUlxMHI2SHRLYmhXSjNUOVhj?oc=5"
+    "title": "일본은행 심의위원 \"금리 인상에 과도하게 신중할 필요 없어\"",
+    "source": "연합뉴스",
+    "date": "2026-10-16",
+    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE5zdFlfVFRJd21PUzkzVkxhbGdBZ1lqLVFLUjhpMUZqaF9MNmwxMTF5WUZJOVdObWFEVVVtRkZvSU1mUVdBOUtkWkZxSEoxUjZZZUJKU2NOUG9CclHSAWBBVV95cUxOTEhRcHk0SElXbmU5a2dGWThsaGQtaTZCTUJucUpwZmxMLWpMSENkMlRxRnQ2aTJnb09EckJzamh0Q1FQVGM0VGdoVzdZdDJZRHhVM0llRFIyMVVVNjNYS2Q?oc=5"
    },
    {
     "title": "IMF expects gradual BOJ rate hike towards neutral setting",
