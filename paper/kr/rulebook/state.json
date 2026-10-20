@@ -3,10 +3,10 @@
   "market": "kr",
   "capital": 10000000,
   "cash": 9211200.696292685,
-  "equity": 9796043.343634209,
+  "equity": 9791789.942562632,
   "start": "2026-10-08",
   "index_start": 6625.93017578125,
-  "last_day": "2026-10-19",
+  "last_day": "2026-10-20",
   "positions": [
     {
       "code": "051900",
@@ -18,13 +18,20 @@
       "slot": 1964929.8694818858,
       "tranches": 1,
       "tp": 0,
-      "days": 0,
+      "days": 1,
       "buy_date": "2026-10-19",
       "last_buy": 277000.0,
-      "last_price": 275000.0
+      "last_price": 273000.0
     }
   ],
-  "orders": [],
+  "orders": [
+    {
+      "side": "buy",
+      "code": "006400",
+      "name": "삼성SDI",
+      "kind": "new"
+    }
+  ],
   "halt_next": false,
   "halt_week": null,
   "halt_month": null,
@@ -36,6 +43,11 @@
     "key": "2026-10",
     "base": 10000000
   },
-  "pending_buys": [],
+  "pending_buys": [
+    {
+      "code": "006400",
+      "name": "삼성SDI"
+    }
+  ],
   "pending_sells": []
 }
