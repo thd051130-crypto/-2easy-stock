@@ -5,8 +5,8 @@
   "start": "2026-10-08",
   "index_start": 7765.35986328125,
   "cash": 3735.0,
-  "equity": 7412.007166518043,
-  "last_day": "2026-10-19",
+  "equity": 7424.3361713061095,
+  "last_day": "2026-10-20",
   "positions": [
     {
       "code": "SPY",
@@ -15,7 +15,7 @@
       "buy_date": "2026-10-09",
       "buy_price": 776.239990234375,
       "cost": 3735.0,
-      "last_price": 766.48
+      "last_price": 769.05
     }
   ],
   "pending_buys": [],
