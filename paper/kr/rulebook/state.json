@@ -2,11 +2,11 @@
   "version": 2,
   "market": "kr",
   "capital": 10000000,
-  "cash": 9211200.696292685,
-  "equity": 9791789.942562632,
+  "cash": 8623693.299738927,
+  "equity": 9774756.822723491,
   "start": "2026-10-08",
   "index_start": 6625.93017578125,
-  "last_day": "2026-10-20",
+  "last_day": "2026-10-21",
   "positions": [
     {
       "code": "051900",
@@ -18,17 +18,39 @@
       "slot": 1964929.8694818858,
       "tranches": 1,
       "tp": 0,
-      "days": 1,
+      "days": 2,
       "buy_date": "2026-10-19",
       "last_buy": 277000.0,
-      "last_price": 273000.0
+      "last_price": 271500.0
+    },
+    {
+      "code": "006400",
+      "name": "삼성SDI",
+      "qty": 1.0354951760258089,
+      "cost": 587507.396553758,
+      "buy_price": 567000.0,
+      "raw": 587125.7648066336,
+      "slot": 1958357.9885125265,
+      "tranches": 1,
+      "tp": 0,
+      "days": 0,
+      "buy_date": "2026-10-21",
+      "last_buy": 567000.0,
+      "last_price": 554000.0
     }
   ],
   "orders": [
     {
-      "side": "buy",
+      "side": "sell",
       "code": "006400",
-      "name": "삼성SDI",
+      "frac": 1.0,
+      "reason": "손절 (평균가 -2% 아래)",
+      "tp": 0
+    },
+    {
+      "side": "buy",
+      "code": "096770",
+      "name": "SK이노베이션",
       "kind": "new"
     }
   ],
@@ -45,9 +67,14 @@
   },
   "pending_buys": [
     {
-      "code": "006400",
-      "name": "삼성SDI"
+      "code": "096770",
+      "name": "SK이노베이션"
     }
   ],
-  "pending_sells": []
+  "pending_sells": [
+    {
+      "code": "006400",
+      "reason": "손절 (평균가 -2% 아래)"
+    }
+  ]
 }
