@@ -878,4 +878,4 @@ details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; 
 .mkt-row small { margin-left: auto; }
 .mkt-status.stale { box-shadow: inset 4px 0 0 var(--wait-fg); }
 .mkt-warn { margin: 8px 0 0; font-size: 13px; color: var(--wait-fg); }
-.mkt-open { color: var(--accent); font-weight: 600; }
+.mkt-open { color: var(--accent-fg); font-weight: 600; }
