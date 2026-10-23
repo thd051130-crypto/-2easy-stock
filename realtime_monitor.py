@@ -21,11 +21,14 @@ import argparse
 import asyncio
 import json
 import os
+import pathlib
+import sys
 
 import requests
 import websockets
 from dotenv import load_dotenv
 
+import inbox
 import tgfmt
 
 load_dotenv()
@@ -126,8 +129,10 @@ def send_html(message):
 
 def send_telegram(text, collapse=False):
     """보통 글을 보기 좋게(tgfmt.py: 굵은 제목·이모지, collapse=True면 둘째 구획부터 접기) 바꿔서 보내요.
-    길면 여러 메시지로 나눠요."""
-    return all([send_html(part) for part in tgfmt.render(text, collapse)])
+    길면 여러 메시지로 나눠요. 앱 메시지함에도 한 통으로 남겨요 (inbox.py)."""
+    ok = all([send_html(part) for part in tgfmt.render(text, collapse)])
+    inbox.add_text(text, pathlib.Path(sys.argv[0]).stem, collapse)
+    return ok
 
 
 def send_photo(png, caption=None):

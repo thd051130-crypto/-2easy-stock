@@ -600,7 +600,11 @@ def send_signal(summary, detail, chart):
 
     photo_ok = bool(chart) and len(tgfmt.plain(summary)) <= tgfmt.CAPTION_LIMIT and send_photo(chart, summary)
     parts = tgfmt.compose("" if photo_ok else summary, detail)
-    if not all([send_html(part) for part in parts]):
+    ok = all([send_html(part) for part in parts])
+    import inbox  # 앱 메시지함: 요약 + 접힌 자세한 내용 한 통 (사진은 빼고)
+
+    inbox.add("\n\n".join(tgfmt.compose(summary, detail, limit=10**9)), "signal", photo=photo_ok)
+    if not ok:
         raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
 
 

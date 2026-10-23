@@ -54,11 +54,11 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock", "search", "map"];
+const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock", "search", "map", "inbox"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search", "map"];
+const LAYERS = ["stock", "search", "map", "inbox"];  // 메시지함(#kr/inbox)도 한 겹 위
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
@@ -221,7 +221,7 @@ async function load() {
     return;
   }
   siteVersion = siteVersion || data.site_version || null;
-  if (DATA && DATA.built !== data.built) { STOCK_DATA.clear(); STOCK_READY.clear(); }  // 새로 배포됐으면 종목 자료도 새로
+  if (DATA && DATA.built !== data.built) { STOCK_DATA.clear(); STOCK_READY.clear(); INBOX = null; inboxLoading = null; }  // 새로 배포됐으면 종목 자료도 새로
   DATA = data;
   adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
@@ -360,6 +360,7 @@ const VIEWS = {
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
+  inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
 };
 
 let lastView = "", holdH = 0;
@@ -395,6 +396,7 @@ function render() {
   if (sb) { if (screen === "search") sb.setAttribute("aria-current", "page"); else sb.removeAttribute("aria-current"); }
   const mb = $(".map-btn");
   if (mb) { if (screen === "map") mb.setAttribute("aria-current", "page"); else mb.removeAttribute("aria-current"); }
+  inboxDot();
   const lit = LAYERS.includes(screen) ? stockFrom : screen;
   document.querySelectorAll(".nav button").forEach((b) => {
     if (b.dataset.screen === lit) b.setAttribute("aria-current", "page");
@@ -564,6 +566,7 @@ function render() {
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
   if (screen === "map") bindMap();
+  if (screen === "inbox") bindInbox();
   if (screen !== "search") app.querySelectorAll("[data-map]").forEach((b) => b.addEventListener("click", () => openMap(b.dataset.map)));
   bindRows(app, d);
   if (screen === "chart") {
@@ -1079,6 +1082,145 @@ function tgLink(cmd) {
 const kindName = (m, row) => (m === "kr" ? (row[3] === "e" ? "국내 ETF" : row[2] === "KQ" ? "코스닥" : "코스피")
   : (row[3] === "e" ? "미국 ETF" : "미국 주식"));
 const MK_NAME = { kr: "국장", us: "미장" };
+
+// ---------------------------------------------------------------- 메시지함
+// 텔레그램으로 보낸 알림(신호·가상매매·경기·학습팀·큰 발표·가격 알림·주간 점검)을 앱에서도 봐요.
+// inbox.json은 열 때만 받아요 (dashboard.py가 paper/inbox/ 최근 60일로 만들어요). 명령에 대한 봇 답장은 빼요.
+// 안 읽은 알림: data.json의 inbox_last가 이 폰에서 마지막으로 본 시각보다 새로우면 버튼에 빨간 점.
+let INBOX = null, inboxLoading = null, inboxOpen = null;
+let inboxSeen = "";
+try { inboxSeen = localStorage.getItem("inbox_seen") || ""; } catch (e) { /* 저장소를 못 쓰면 매번 새것 */ }
+function loadInbox() {
+  if (!inboxLoading) {
+    inboxLoading = fetch(`inbox.json?t=${DATA ? DATA.built : Date.now()}`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => { INBOX = (x && x.items) || []; });
+  }
+  return inboxLoading;
+}
+function inboxDot() {
+  const b = $(".inbox-btn");
+  if (!b) return;
+  if (screen === "inbox") b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  const last = DATA && DATA.inbox_last;
+  b.querySelector(".unread").hidden = !(last && last > inboxSeen && screen !== "inbox");
+}
+// 텔레그램 HTML(굵게·기울임·링크·눌러서 펼치기)만 살리고 나머지 태그는 글자로. 펼치기는 <details>로 바꿔요
+function tgHtml(html) {
+  return String(html || "").split(/(<[^>]*>)/).map((part) => {
+    if (!part.startsWith("<")) return part;  // 글자는 보낼 때 이미 이스케이프돼 있어요
+    const t = part.toLowerCase();
+    if (/^<\/?(b|i)>$/.test(t)) return t;
+    if (t === "<blockquote expandable>" || t === "<blockquote>") return `<details><summary>자세히</summary><div>`;
+    if (t === "</blockquote>") return "</div></details>";
+    const a = part.match(/^<a href="(https?:[^"]*)">$/i);
+    if (a) return `<a href="${a[1]}" target="_blank" rel="noopener">`;
+    if (t === "</a>") return "</a>";
+    return esc(part);
+  }).join("").replace(/\n*<details>/g, "<details>").replace(/<\/details>\n+/g, "</details>");  // 접기 앞뒤 빈 줄은 빼요
+}
+const msgTime = (t) => t.slice(11, 16);
+function msgDay(t) {
+  const wd = new Date(`${t.slice(0, 10)}T12:00:00Z`).getUTCDay();
+  return `${Number(t.slice(5, 7))}.${Number(t.slice(8, 10))}(${"일월화수목금토"[wd]})`;
+}
+// 오늘의 리포트: 증권사 모닝 브리프처럼 한 장으로 (한 줄 요약 → 지수·환율 → 신호 → 많이 움직인 종목 → 수급 → 업종 → 일정 → 계좌).
+// 따로 받는 자료 없이 앱이 이미 가진 data.json으로 만들어요. 참고용이고 매매 규칙은 그대로예요.
+function briefCard() {
+  const kr = DATA.markets.kr || {}, us = DATA.markets.us || {}, ks = kr.signal || {}, uss = us.signal || {};
+  const today = (DATA.built || "").slice(0, 10);
+  const tomorrow = new Date(Date.parse(`${today}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
+  const chg = (x) => `<span class="${sign(x)}">${pct(x, 2)}</span>`;
+  const sec = (icon, title, rows) => (rows.length ? `<p class="brief-h">${icon} ${title}</p><ul class="brief">${rows.map((r) => `<li>${r}</li>`).join("")}</ul>` : "");
+  // 1. 한 줄 요약
+  const world = {};
+  for (const g of (DATA.world || {}).groups || []) for (const it of g.items || []) world[it.name] = it;
+  const kospi = world["코스피"], spx = world["S&P500"], fx = world["원/달러"];
+  const mac = DATA.macro;
+  const krSig = ks.ok ? (ks.picks || []).length ? `국장 새 매수 신호 ${ks.picks.length}개` : "국장 조건 통과 종목 없음" : "국장은 규칙상 새로 사지 않는 날";
+  const usSig = { buy: "미장 매수 신호", sell: "미장 매도 신호", hold: "미장 그대로 보유" }[uss.action] || (uss.ok ? "미장 보유 조건" : "미장 쉬기");
+  const top = [
+    kospi && `코스피 ${chg(kospi.d1)}, S&P500 ${spx ? chg(spx.d1) : "-"}${fx ? `, 원/달러 ${num(fx.last)}원` : ""}`,
+    `${krSig} · ${usSig}`,
+    mac && `경기 ${esc(mac.regime)} (경고 ${mac.score}/${mac.total}): ${esc(mac.action)}`,
+  ].filter(Boolean);
+  // 2. 지수·환율 (한국·미국 앞 두 개 + 환율 첫째)
+  const groups = (DATA.world || {}).groups || [];
+  const pick = (name, n) => ((groups.find((g) => g.name === name) || {}).items || []).slice(0, n);
+  const idx = [...pick("한국", 2), ...pick("미국", 3), ...pick("환율", 1)]
+    .map((it) => `<b>${esc(it.name)}</b> ${it.kind === "krw" ? `${num(it.last)}원` : it.last.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} ${chg(it.d1)} <small class="muted">(1주 ${pct(it.w1)})</small>`);
+  // 3. 신호
+  const sig = [
+    ks.ok ? (ks.picks || []).length ? `🇰🇷 ${ks.picks.map((x) => `<b>${esc(x.name)}</b>`).join(", ")} 새 매수` : "🇰🇷 조건은 맞지만 통과 종목 없음" : `🇰🇷 ${esc(ks.pause || "쉬기")}`,
+    uss.etf ? `🇺🇸 ${esc(uss.etf)} ${usSig.replace("미장 ", "")}` : "",
+  ].filter(Boolean);
+  // 4. 많이 움직인 종목 (5일, 이유 한 줄)
+  const mv = (sg, flag) => {
+    const m = sg.movers || {};
+    return [...(m.up || []).slice(0, 2), ...(m.down || []).slice(0, 1)]
+      .map((x) => `${flag} <b>${esc(x.name)}</b> ${chg(x.r5)} <small class="muted">${esc(x.main || (x.reasons || [])[0] || "")}</small>`);
+  };
+  const movers = [...mv(ks, "🇰🇷"), ...mv(uss, "🇺🇸")];
+  // 5. 수급 (국장 외국인·기관)
+  const fl = kr.flows || {};
+  const flows = [
+    (fl.buy || []).length ? `많이 산 종목: ${fl.buy.slice(0, 3).map((x) => esc(x.name)).join(", ")}` : "",
+    (fl.warn || []).length ? `외국인 연속 매도: ${fl.warn.slice(0, 3).map((x) => `${esc(x.name)}(${x.frg_streak}일)`).join(", ")}` : "",
+  ].filter(Boolean);
+  // 6. 업종 (5일, 지수보다 강한·약한 업종)
+  const sectorsOf = (sg, flag) => {
+    const list = (sg.sectors || []).filter((x) => x.r5 != null).sort((a, b) => b.r5 - a.r5);
+    if (list.length < 2) return [];
+    const [hi, lo] = [list[0], list[list.length - 1]];
+    return [`${flag} 강함 <b>${esc(hi.name)}</b> ${chg(hi.r5)} · 약함 <b>${esc(lo.name)}</b> ${chg(lo.r5)}`];
+  };
+  const sectors = [...sectorsOf(ks, "🇰🇷"), ...sectorsOf(uss, "🇺🇸")];
+  // 7. 오늘·내일 일정 (큰 발표 먼저, 내 종목 실적, 그 밖의 일정)
+  const evs = ((DATA.events || {}).events || []).filter((e) => e.tier1 && (e.date === today || e.date === tomorrow))
+    .map((e) => `${e.date === today ? "오늘" : "내일"} ${e.at.slice(11, 16)} ${e.flag || ""} <b>${esc(e.ko || e.title)}</b>${e.forecast ? ` <small class="muted">예상 ${esc(e.forecast)}</small>` : ""}`);
+  const cal = (DATA.calendar || []).filter((c) => (c.date === today || c.date === tomorrow) && (c.kind !== "earn" || c.mine || c.cap > 3e11))
+    .slice(0, 6).map((c) => `${c.date === today ? "오늘" : "내일"} ${c.market === "us" ? "🇺🇸" : "🇰🇷"} ${esc(c.title)}${c.mine ? " ⭐" : ""}`);
+  // 8. 가상계좌
+  const t = DATA.total;
+  const acct = t ? [`합계 ${wonShort(t.equity)} (${chg(t.gain)}), 현금 ${Math.round(t.cash_share * 100)}%`,
+    ...(t.parts || []).map((p) => `${esc(p.label)} ${wonShort(p.equity)} <small class="muted">(${pct(p.equity / p.capital - 1)})</small>`)] : [];
+  return `<section class="card brief-card"><h2>📰 오늘의 리포트 <small>${md(today)} ${esc((DATA.built || "").slice(11, 16))} 기준</small></h2>
+    <ul class="brief brief-top">${top.map((r) => `<li>${r}</li>`).join("")}</ul>
+    <details class="brief-more"><summary>자세히 보기</summary>
+      ${sec("🌏", "지수·환율 (전날 대비)", idx)}${sec("🔔", "오늘 신호", sig)}${sec("🔥", "많이 움직인 종목 (5일)", movers)}
+      ${sec("💰", "국장 수급 (외국인·기관)", flows)}${sec("🏭", "업종 흐름 (5일)", sectors)}
+      ${sec("🗓", "오늘·내일 일정", [...evs, ...cal])}${sec("💼", "가상계좌", acct)}
+      <p class="muted" style="margin:8px 0 0">앱 자료로 만든 참고용 요약이에요. 주문은 직접 판단해서 하세요.</p>
+    </details></section>`;
+}
+function inboxHeadCard() {
+  return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button><h2 class="stock-name">메시지함</h2>
+    <p class="muted" style="margin:0">오늘의 리포트 한 장과, 텔레그램으로 보낸 알림 최근 60일이에요.</p></section>`;
+}
+function inboxCard() {
+  const head = `<h2>받은 알림 <small>${INBOX ? `${INBOX.length}통` : ""}</small></h2>`;
+  if (!INBOX) return `<section class="card">${head}<p class="muted">불러오는 중이에요…</p></section>`;
+  if (!INBOX.length) return `<section class="card">${head}<p class="empty">아직 모인 알림이 없어요. 다음 알림부터 여기에 쌓여요.</p></section>`;
+  if (inboxOpen === null) inboxOpen = INBOX[0].t;  // 처음엔 가장 최근 것만 펼쳐요
+  let day = "";
+  const rows = INBOX.map((m) => {
+    const dd = m.t.slice(0, 10), sep = dd !== day ? `<p class="inbox-day">${msgDay(m.t)}</p>` : "";
+    day = dd;
+    const fresh = m.t > inboxSeen ? `<span class="badge new">새</span>` : "";
+    return `${sep}<details class="msg" data-t="${esc(m.t)}"${m.t === inboxOpen ? " open" : ""}><summary>${esc(m.title)}${fresh}<time>${msgTime(m.t)}</time></summary>
+      <div class="msg-body">${m.photo ? `<p class="muted" style="margin:0 0 4px">📈 차트 사진은 텔레그램에서 볼 수 있어요</p>` : ""}${tgHtml(m.html)}</div></details>`;
+  }).join("");
+  return `<section class="card">${head}${rows}</section>`;
+}
+function bindInbox() {
+  if (!INBOX) { loadInbox().then(() => { if (screen === "inbox") render(); }); return; }
+  $("#app").querySelectorAll("details.msg").forEach((el) => el.addEventListener("toggle", () => { if (el.open) inboxOpen = el.dataset.t; }));
+  const last = INBOX.length ? INBOX[0].t : "";
+  if (last > inboxSeen) {  // 열어 봤으면 읽은 걸로 (지금 보이는 '새' 표시는 다음에 열 때 사라져요)
+    try { localStorage.setItem("inbox_seen", last); } catch (e) { /* 이번만 */ }
+    setTimeout(() => { inboxSeen = last; inboxDot(); }, 0);
+  }
+}
 
 function searchCard() {
   return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button>
@@ -4825,6 +4967,7 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 $(".search-btn").addEventListener("click", () => go("search"));
+$(".inbox-btn").addEventListener("click", () => (screen === "inbox" ? back() : go("inbox")));  // 한 번 더 누르면 닫혀요
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {

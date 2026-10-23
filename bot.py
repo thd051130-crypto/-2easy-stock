@@ -28,6 +28,7 @@ import os
 import re
 
 import commands
+import inbox
 import symbols
 import tgfmt
 import watchlist
@@ -122,6 +123,7 @@ class Bot:
         self.memos = commands.load_memos(paper)  # 내 판단 기록장 (commands.py)
         self.memo_prices = commands.refresh_prices
         self.added = []  # 이번에 넣은 종목 (재무를 바로 받으려고)
+        self.logged = 0  # 이번에 앱 메시지함에 남긴 알림 수
         self.saved = self.snapshot()
 
     # ------------------------------------------------------------ 기록
@@ -415,11 +417,15 @@ def run(tg, chat_id, bot):
             print(f"명령 처리 실패: {e!r}")
             reply = "처리하다 문제가 생겼어요. 잠시 뒤 다시 보내 주세요."
         tg.send(chat_id, reply)
+    # 명령에 대한 답은 대화라 텔레그램에만, 봇이 먼저 보내는 알림은 앱 메시지함에도 남겨요 (inbox.py)
     for text in bot.check_alerts():
         tg.send(chat_id, text)
+        bot.logged += bool(inbox.add_text(text, "bot"))
     week = commands.report_week(bot.memos, bot.now())
     if week:  # 금요일 저녁: 내 판단 주간 결산
-        tg.send(chat_id, commands.memo_report(bot.memos, refresh=bot.memo_prices))
+        text = commands.memo_report(bot.memos, refresh=bot.memo_prices)
+        tg.send(chat_id, text)
+        bot.logged += bool(inbox.add_text(text, "bot"))
         bot.memos["last_report"] = week
     bot.save()
     return offset
@@ -457,9 +463,14 @@ def main():
     try:  # 큰 발표 예고·결과, 지수 급변 (big_events.py). 실패해도 봇 명령 처리는 그대로
         import big_events
 
-        changed = big_events.run(bot.paper, send=lambda text, silent: tg.send(chat_id, text, silent)) or changed
+        def send(text, silent):
+            tg.send(chat_id, text, silent)
+            bot.logged += bool(inbox.add_text(text, "bot"))
+
+        changed = big_events.run(bot.paper, send=send) or changed
     except Exception as e:
         print(f"큰 발표 알림 실패: {e!r}")
+    changed = changed or bot.logged > 0  # 메시지함에 새 알림 → 저장하고 앱 다시 올리기
     output(offset=offset or "", changed=str(changed).lower())
 
 

@@ -15,6 +15,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/kr/disclosures.json : 국장 종목 공시 (disclosures.py, 오픈DART 키가 있을 때만)
   - paper/kr/flows.json : 국장 외국인·기관 수급 (flows.py) → 홈 경고·요약만 (종목별 막대는 stock_pages.py)
   - paper/symbols/ : 검색용 전체 종목 목록 (symbols.py) → <out>/symbols/ 로 복사
+  - paper/inbox/ : 텔레그램으로 보낸 알림 (inbox.py) → <out>/inbox.json (앱 메시지함, 열 때만 받아요)
   - themes.py : 문장 검색용 테마 사전 → <out>/themes.json
   - industry_map.py : 산업 지도 점·선 → <out>/industry.json (시세·주가 동행은 pages 워크플로가 이어서 채워요)
 
@@ -33,6 +34,7 @@ import shutil
 
 import commands
 import flows
+import inbox
 import industry_map
 import policies
 import readiness
@@ -256,7 +258,11 @@ def main():
                                                      ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     # 산업 지도 점·선 (시세 없이). pages 워크플로가 industry_map.py로 흐름·주가 동행을 채워 덮어써요
     industry_map.write(args.out, industry_map.static_map())
-    data = dict(build(args.paper), site_version=site_version(args.site))
+    # 앱 메시지함: 텔레그램으로 보낸 알림 최근 60일. data.json에는 마지막 시각만 (안 읽은 표시용)
+    mail = inbox.load(args.paper / "inbox")
+    (args.out / "inbox.json").write_text(json.dumps({"items": mail}, ensure_ascii=False, separators=(",", ":")),
+                                         encoding="utf-8")
+    data = dict(build(args.paper), site_version=site_version(args.site), inbox_last=mail[0]["t"] if mail else None)
     (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     for key, m in data["markets"].items():
         acc = m["account"]
