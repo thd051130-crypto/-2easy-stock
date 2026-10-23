@@ -1999,7 +1999,7 @@ function trackCard(d) {
   } else {
     const stats = s.horizons.map((h) => `<div class="stat"><span>${h.days}거래일 뒤</span>
         <b class="${sign(h.avg)}">${h.n ? cnt(h.avg, "pct", pct(h.avg)) : "-"}</b>
-        <small>${h.n ? `지수 ${pct(h.index)}<br>오른 종목 ${Math.round(h.win * 100)}%` : "아직 없음"}</small></div>`).join("");
+        <small>${h.n ? `${h.n}개 중 오른 종목 ${Math.round(h.win * 100)}%<br>지수 ${pct(h.index)}${h.worst != null ? `<br>가장 나쁨 <span class="${sign(h.worst)}">${pct(h.worst)}</span>` : ""}` : "아직 없음"}</small></div>`).join("");
     const live = t.live_from;
     let divider = false;
     const rows = s.recent.map((p) => {
@@ -5308,6 +5308,11 @@ function dailyReturns(d, src) {
   a.curve.forEach((p) => { out[p.date] = (1 + p.account) / (1 + prev) - 1; prev = p.account; });
   return out;
 }
+// 가상계좌가 종목 없이 현금만 들고 있던 날 (그날 0.0%는 고장이 아니라 쉰 거예요)
+function cashDays(d, src) {
+  const a = src === "idx" ? null : src === "etf" ? d.etf.account : src === "rule" ? d.rulebook.account : d.account;
+  return new Set(a ? a.curve.filter((p) => p.cash_only).map((p) => p.date) : []);
+}
 function exdivDays(d) {
   const out = {};
   const funds = d.funds || {};
@@ -5327,7 +5332,7 @@ function retCalendarCard(d) {
   const srcs = calSources(d);
   if (!srcs.length) return "";
   if (!srcs.some((s) => s[0] === calSrc)) calSrc = srcs[0][0];
-  const daily = dailyReturns(d, calSrc);
+  const daily = dailyReturns(d, calSrc), idle = cashDays(d, calSrc);
   const days = Object.keys(daily).sort();
   const last = days[days.length - 1] || TODAY();
   if (!calMonth || (days.length && (calMonth < days[0].slice(0, 7) || calMonth > last.slice(0, 7)))) calMonth = last.slice(0, 7);
@@ -5335,6 +5340,7 @@ function retCalendarCard(d) {
   const exd = exdivDays(d);
   const inMonth = days.filter((x) => x.startsWith(calMonth));
   const mret = inMonth.length ? compound(inMonth.map((x) => daily[x])) : null;
+  const allIdle = inMonth.length > 0 && inMonth.every((x) => idle.has(x));
   const upN = inMonth.filter((x) => daily[x] > 0).length, downN = inMonth.filter((x) => daily[x] < 0).length;
   // 월~금 다섯 칸 (주말은 장이 없어서 빼요)
   const first = new Date(Date.UTC(y, m - 1, 1)), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -5346,10 +5352,10 @@ function retCalendarCard(d) {
     if (wd === 0 || wd === 6) continue;
     const key = `${calMonth}-${String(dd).padStart(2, "0")}`;
     const r = daily[key];
-    const ex = exd[key];
-    cells += `<button type="button" class="cal-cell${r == null ? " off" : ""}${calPick === key ? " picked" : ""}" data-calday="${key}" style="${calColor(r)}"
-      aria-label="${m}월 ${dd}일 ${r == null ? "기록 없음" : pct(r, 2)}${ex ? `, 배당락 ${ex.join(", ")}` : ""}">
-      <span class="cd">${dd}${ex ? "<i>💰</i>" : ""}</span><span class="cr">${r == null ? "" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1)}`}</span></button>`;
+    const ex = exd[key], rest = idle.has(key);
+    cells += `<button type="button" class="cal-cell${r == null ? " off" : ""}${rest ? " idle" : ""}${calPick === key ? " picked" : ""}" data-calday="${key}" style="${rest ? "" : calColor(r)}"
+      aria-label="${m}월 ${dd}일 ${r == null ? "기록 없음" : rest ? "현금만" : pct(r, 2)}${ex ? `, 배당락 ${ex.join(", ")}` : ""}">
+      <span class="cd">${dd}${ex ? "<i>💰</i>" : ""}</span><span class="cr">${r == null ? "" : rest ? "현금" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1)}`}</span></button>`;
   }
   const months = [];
   for (let k = 1; k <= 12; k++) {
@@ -5362,18 +5368,18 @@ function retCalendarCard(d) {
   const yearDays = days.filter((x) => x.startsWith(`${y}-`));
   const yret = yearDays.length ? compound(yearDays.map((x) => daily[x])) : null;
   const pick = calPick && calPick.startsWith(calMonth) ? calPick : null;
-  const pickLine = pick ? `<p class="cal-pick">${pick.slice(5, 7)}.${pick.slice(8)} ${daily[pick] == null ? "장이 없었거나 기록 전이에요" : `<b class="${sign(daily[pick])}">${pct(daily[pick], 2)}</b>`}${exd[pick] ? ` · 💰 배당락: ${exd[pick].map(esc).join(", ")}` : ""}</p>` : "";
+  const pickLine = pick ? `<p class="cal-pick">${pick.slice(5, 7)}.${pick.slice(8)} ${daily[pick] == null ? "장이 없었거나 기록 전이에요" : idle.has(pick) ? "종목 없이 현금만 들고 있던 날이라 0%예요" : `<b class="${sign(daily[pick])}">${pct(daily[pick], 2)}</b>`}${exd[pick] ? ` · 💰 배당락: ${exd[pick].map(esc).join(", ")}` : ""}</p>` : "";
   const firstM = days.length ? days[0].slice(0, 7) : calMonth;
   return `<section class="card" id="retcal-card"><h2>수익률 달력 <small>날마다 몇 %</small></h2>
     <div class="chips" role="group" aria-label="무엇의 수익률" style="margin-top:0">${srcs.map(([k, l]) => `<button type="button" data-calsrc="${k}" aria-pressed="${calSrc === k}">${esc(l)}</button>`).join("")}</div>
     <div class="cal-head"><button type="button" class="cal-nav" data-calstep="-1" aria-label="이전 달" ${calMonth <= firstM ? "disabled" : ""}>‹</button>
-      <div><b>${y}년 ${m}월</b><small>${mret == null ? "기록 없음" : `<span class="${sign(mret)}">${pct(mret)}</span> · 오른 날 ${upN} · 내린 날 ${downN}`}</small></div>
+      <div><b>${y}년 ${m}월</b><small>${mret == null ? "기록 없음" : allIdle ? "살 신호가 없어 현금만 들고 있었어요" : `<span class="${sign(mret)}">${pct(mret)}</span> · 오른 날 ${upN} · 내린 날 ${downN}`}</small></div>
       <button type="button" class="cal-nav" data-calstep="1" aria-label="다음 달" ${calMonth >= last.slice(0, 7) ? "disabled" : ""}>›</button></div>
     <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
     ${pickLine}
     <h3 class="sav-h">${y}년 달별 <small class="muted">${yret == null ? "" : `한 해 ${pct(yret)}`}</small></h3>
     <div class="cal-months">${months.join("")}</div>
-    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 많이 움직인 날이에요(±2%면 가장 진해요). 가상계좌는 그날 평가금액이 전날보다 몇 % 바뀌었는지, 지수는 종가 기준이에요.
+    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 많이 움직인 날이에요(±2%면 가장 진해요). 가상계좌는 그날 평가금액이 전날보다 몇 % 바뀌었는지, 지수는 종가 기준이에요. '현금'은 종목 없이 쉬던 날이에요(보수적 규칙이라 신호가 없으면 안 사요).
       💰는 관심종목·보유 종목의 다음 배당락일이에요(야후 무료 자료라 바뀔 수 있어요).</p></section>`;
 }
 function bindRetCal(d) {
