@@ -20,6 +20,7 @@ import pathlib
 import urllib.parse
 import urllib.request
 
+import inbox
 import tgfmt
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -111,6 +112,7 @@ def send_telegram(text):
     ok = True
     for part in tgfmt.render(text):
         ok = (post(text=part, parse_mode="HTML") or post(text=tgfmt.plain(part))) and ok
+    inbox.add_text(text, "health")  # 앱 메시지함 (고장 알림은 실패한 실행이라 저장이 안 돼요)
     return ok
 
 
@@ -247,6 +249,7 @@ def main():
     print(text)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, ensure_ascii=False, indent=1) + "\n")
+    print(f"메시지함 오래된 알림 {inbox.prune()}통 지움")
     if not args.dry_run and not send_telegram(text):
         raise SystemExit("텔레그램 전송 실패")
 

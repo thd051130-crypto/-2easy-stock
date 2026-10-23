@@ -114,6 +114,16 @@ def test_shock_once_per_direction():
     assert out == []  # 마지막 봉이 오래됐으면(장 닫힘) 안 봐요
 
 
+def test_shock_news_matches_market():
+    heads = {"코스피 급락": ["코스피 2% 급락, 외국인 매도", "대만 태풍 상륙", "SEC 규제 강화"],
+             "stocks fall S&P 500 Nasdaq": ["SEC weighs new rule", "Nasdaq futures slide on chip selloff"]}
+    fetch = lambda q, lang, days, n: [dict(title=t, source="W") for t in heads.get(q, [])][:n]  # noqa: E731
+    kr = be.shock_news([dict(symbol="^KS11", way="down")], fetch)
+    assert [h["title"] for h in kr] == ["코스피 2% 급락, 외국인 매도"]
+    us = be.shock_news([dict(symbol="NQ=F", way="down"), dict(symbol="ES=F", way="down")], fetch)
+    assert [h["title"] for h in us] == ["Nasdaq futures slide on chip selloff"]
+
+
 def test_merge_keeps_sent_marks_and_drops_moved_future():
     now = dt.datetime(2026, 10, 13, 12, 0, tzinfo=KST)
     first = be.merge([], be.parse_ff(FF[:1]), now)
