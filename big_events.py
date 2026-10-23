@@ -422,6 +422,26 @@ def news_for(e, fetch):
     return fetch(q, lang="en", days=1, n=2)
 
 
+# 지수 급변 뉴스: 움직인 시장 이름으로 찾고, 제목에 시장 말이 있는 것만 (예전엔 "stock market"이라 SEC·태풍 기사가 섞였어요)
+SHOCK_NEWS = {
+    "kr": (("코스피 급락", "코스피 급등"), "ko", ("코스피", "코스닥", "증시", "주가", "외국인")),
+    "us": (("stocks fall S&P 500 Nasdaq", "stocks rally S&P 500 Nasdaq"), "en",
+           ("stock", "s&p", "nasdaq", "dow", "futures", "wall street", "equities", "shares")),
+}
+
+
+def shock_news(items, fetch, n=3):
+    picked, seen = [], set()
+    for mkt in dict.fromkeys("kr" if s["symbol"] == "^KS11" else "us" for s in items):
+        way = next(s["way"] for s in items if ("kr" if s["symbol"] == "^KS11" else "us") == mkt)
+        (down, up), lang, words = SHOCK_NEWS[mkt]
+        for h in fetch(down if way == "down" else up, lang=lang, days=1, n=8):
+            if h["title"] not in seen and any(w in h["title"].lower() for w in words):
+                seen.add(h["title"])
+                picked.append(h)
+    return picked[:n]
+
+
 def step(data, now, ff=None, get=fred, bars_of=intraday, news=None):
     """한 번 돌기 → (보낼 글 목록 [(글, 소리 없이?)], 바뀐 data). 텔레그램 없이도 시험할 수 있게 나눴어요."""
     if news is None:
@@ -477,7 +497,7 @@ def step(data, now, ff=None, get=fred, bars_of=intraday, news=None):
     old_shocks = [s for s in data.get("shocks") or [] if now - dt.datetime.fromisoformat(s["at"]) < dt.timedelta(days=SHOCK_KEEP_DAYS)]
     new_shocks = shocks(bars, now, old_shocks)
     if new_shocks:
-        heads = news("stock market", lang="en", days=1, n=2) + news("증시 급락" if new_shocks[0]["way"] == "down" else "증시 급등", lang="ko", days=1, n=1)
+        heads = shock_news(new_shocks, news)
         for s in new_shocks:
             s["news"] = heads
         out.append((shock_text(new_shocks, heads), False))
