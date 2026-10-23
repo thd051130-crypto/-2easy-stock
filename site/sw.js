@@ -1,6 +1,6 @@
 // 홈 화면 앱용 서비스워커: 열 때마다 서버에 새 버전이 있는지 확인해서 띄우고, 오프라인이면 마지막으로 받은 화면·데이터를 보여줘요.
 const CACHE = "easystock-v4";
-const SHELL = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
+const SHELL = ["./", "index.html", "style.css", "fonts/pretendard.css", "app.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 // 쿼리(?t=…)는 빼고 저장해요. 안 그러면 data.json을 열 때마다 캐시가 하나씩 쌓여요.
 const keyOf = (url) => url.split("?")[0];

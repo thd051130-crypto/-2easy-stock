@@ -5175,6 +5175,7 @@ function exdivDays(d) {
 }
 const calColor = (r) => {
   if (r == null) return "";
+  if (Math.abs(r) < 0.00005) return "background:var(--surface-0)";  // 0.0%는 빨강·파랑 없이
   const a = Math.min(1, Math.abs(r) / 0.02) * 0.85 + 0.12;
   return `background:color-mix(in srgb, var(${r >= 0 ? "--up" : "--down"}) ${Math.round(a * 100)}%, transparent)`;
 };
