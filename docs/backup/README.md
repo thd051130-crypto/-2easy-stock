@@ -12,9 +12,12 @@ Claude 프로젝트 쪽에만 있던 메모와 문서를 복사해 둔 곳이에
 | 폴더 | 내용 |
 |---|---|
 | [memory/MEMORY.md](memory/MEMORY.md) | **전체 요약.** PR별로 무엇을 만들었는지, 사용자가 정한 것 |
-| [memory/](memory/) | 기능별 자세한 메모 42개 (파일 이름 끝 숫자 = PR 번호) |
+| [memory/](memory/) | 기능별 자세한 메모 43개 (파일 이름 끝 숫자 = PR 번호) |
 | [files/proposals/](files/proposals/) | 기능 제안서 2개 (2026-10-05 시스템 성장, 2026-10-09 새 기능) |
 | [files/audits/](files/audits/) | Claude 설정 점검 기록 (2026-10-09) |
+| [files/reviews/](files/reviews/) | 두 AI 평가 검토 (2026-10-23) |
+| [files/report-team/](files/report-team/) | 리포트팀 무료 전문 리포트 조사 지침 (2026-10-23) |
+| [files/prompts/](files/prompts/) | 규칙팀 역할 프롬프트 (2026-10-23) |
 
 ## 지금까지 정한 것 (핵심)
 
