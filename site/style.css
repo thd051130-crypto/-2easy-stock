@@ -124,10 +124,10 @@ h1 { font-size: 19px; font-weight: 800; margin: 0; letter-spacing: -0.03em; }
   position: fixed; z-index: 7; width: 48px; height: 48px; border-radius: 999px; border: 0; padding: 0;
   right: max(16px, calc((100% - 640px) / 2 + 16px)); bottom: calc(60px + env(safe-area-inset-bottom) + 12px);
   background: var(--accent); color: #fff; display: grid; place-items: center; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .22); -webkit-tap-highlight-color: transparent;
+  box-shadow: var(--pop-shadow); -webkit-tap-highlight-color: transparent;
 }
 .inbox-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.inbox-btn[aria-current="page"] { box-shadow: 0 0 0 3px var(--accent-bg), 0 4px 14px rgba(0, 0, 0, .22); }
+.inbox-btn[aria-current="page"] { box-shadow: 0 0 0 3px var(--accent-bg), var(--pop-shadow); }
 .inbox-btn .unread[hidden] { display: none; }
 .inbox-btn .unread { position: absolute; top: 2px; right: 2px; width: 11px; height: 11px; border-radius: 999px; background: #e5484d; border: 2px solid var(--surface-1); }
 .brief { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
@@ -145,7 +145,7 @@ details.msg > summary .new { flex: none; }
 .msg-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.55; color: var(--text-secondary); padding: 2px 0 10px; }
 .msg-body b { color: var(--text-primary); }
 .msg-body a { color: var(--accent-fg, var(--accent)); }
-.msg-body details { white-space: normal; margin: 2px 0 10px; padding: 6px 10px; border-left: 3px solid var(--border); background: var(--surface-0); border-radius: 6px; }
+.msg-body details { white-space: normal; margin: 2px 0 10px; padding: 6px 10px; border-left: 3px solid var(--border); background: var(--surface-0); border-radius: 8px; }
 .msg-body details > div { white-space: pre-wrap; padding-top: 4px; }
 @media (max-width: 350px) { .brand h1 { display: none; } }
 
