@@ -695,6 +695,7 @@ details.fold > summary + * { margin-top: 2px !important; }
 .cal-cell .cd { font-size: 11px; line-height: 1; }
 .cal-cell .cd i { font-style: normal; font-size: 9px; margin-left: 1px; }
 .cal-cell .cr { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.cal-cell.idle .cr { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .cal-pick { font-size: 13px; margin: 8px 0 0; color: var(--text-secondary); }
 .cal-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .cal-m { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-1);

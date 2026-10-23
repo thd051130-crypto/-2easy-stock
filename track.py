@@ -142,7 +142,8 @@ def summary(rows, closes, index_close):
         for h in HORIZONS:
             vals = [p["path"][h] for p in picks if len(p["path"]) > h and pd.notna(p["path"][h])]
             horizons.append(dict(days=h, n=len(vals), avg=avg[h], index=idx[h],
-                                 win=_num(sum(v > 0 for v in vals) / len(vals)) if vals else None))
+                                 win=_num(sum(v > 0 for v in vals) / len(vals)) if vals else None,
+                                 worst=_num(min(vals)) if vals else None, best=_num(max(vals)) if vals else None))
         recent = [dict(date=p["date"], code=p["code"], name=p["name"], close=p["close"], last=_num(p["last"], 2),
                        ret=_num(p["now"]), days=last - p["i"], replay=p["replay"],
                        path=[_num(v) for v in p["path"]]) for p in picks[::-1][:RECENT]]

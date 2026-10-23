@@ -97,7 +97,8 @@ def account(folder, market, kind=None):
         peak = max(peak, r["equity"])
         mdd = min(mdd, r["equity"] / peak - 1)
         curve.append(dict(date=r["date"], account=round(r["equity"] / capital - 1, 5),
-                          index=round(r["index"] / index_start - 1, 5)))
+                          index=round(r["index"] / index_start - 1, 5),
+                          **({"cash_only": True} if r["cash"] is not None and r["cash"] >= r["equity"] - 0.5 else {})))
     last = equity[-1]
     names = {p["code"]: p["name"] for p in state["positions"]}
     positions = []
