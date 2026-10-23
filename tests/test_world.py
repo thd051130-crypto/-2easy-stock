@@ -20,7 +20,7 @@ def closes(n=300):
 
 def test_snapshot_groups_and_changes():
     snap = world.snapshot(closes(), now=dt.datetime(2026, 10, 8, 7, 5, tzinfo=world.KST))
-    assert [g["name"] for g in snap["groups"]] == ["한국", "미국", "아시아", "유럽", "환율"]
+    assert [g["name"] for g in snap["groups"]] == ["한국", "미국", "아시아", "유럽", "환율", "금리·원자재·공포"]
     rows = {r["sym"]: r for g in snap["groups"] for r in g["items"]}
     ks = rows["^KS11"]
     assert ks["d1"] > 0 and ks["w1"] > ks["d1"] and ks["y1"] > ks["m1"] > 0
@@ -29,6 +29,9 @@ def test_snapshot_groups_and_changes():
     assert rows["CNYKRW"]["last"] == 200.0  # 1400원 ÷ 7위안
     assert rows["JPYKRW=X"]["last"] == 900.0  # 100엔 기준
     assert snap["updated"] == "2026-10-08T07:05+09:00"
+    tnx = rows["^TNX"]  # 금리는 %p 차이
+    step = tnx["closes"][-1] - tnx["closes"][-2]
+    assert tnx["kind"] == "rate" and abs(tnx["d1"] - step) < 2e-3 and tnx["y1"] > 1  # 1년 새 몇 %p (비율 아님)
 
 
 def test_missing_symbol_is_skipped():

@@ -19,7 +19,8 @@ import pandas as pd
 
 KST = dt.timezone(dt.timedelta(hours=9))
 
-# (묶음, [(야후 기호, 이름, 표시 방식)]). 표시 방식: idx 지수, krw 원화 환율, num 그냥 숫자
+# (묶음, [(야후 기호, 이름, 표시 방식)]). 표시 방식: idx 지수, krw 원화 환율, num 그냥 숫자, usd 달러 값,
+# rate 금리(%) — 금리는 등락률 대신 몇 %p 바뀌었는지로 남겨요
 GROUPS = [
     ("한국", [("^KS11", "코스피", "idx"), ("^KQ11", "코스닥", "idx")]),
     ("미국", [("^GSPC", "S&P500", "idx"), ("^IXIC", "나스닥", "idx"), ("^DJI", "다우", "idx"),
@@ -29,6 +30,8 @@ GROUPS = [
     ("유럽", [("^STOXX50E", "유로스톡스50", "idx"), ("^GDAXI", "독일 DAX", "idx"), ("^FTSE", "영국 FTSE100", "idx")]),
     ("환율", [("KRW=X", "원/달러", "krw"), ("JPYKRW=X", "원/엔 (100엔)", "krw"), ("EURKRW=X", "원/유로", "krw"),
               ("CNYKRW", "원/위안", "krw"), ("DX-Y.NYB", "달러인덱스", "num")]),
+    ("금리·원자재·공포", [("^TNX", "미국 10년 국채 금리", "rate"), ("^VIX", "VIX 공포 지수", "num"),
+                       ("CL=F", "WTI 유가", "usd"), ("GC=F", "금 (온스)", "usd")]),
 ]
 # 야후에 기록이 짧은 환율은 다른 환율로 계산해요: 원/위안 = 원/달러 ÷ 위안/달러
 DERIVED = {"CNYKRW": ("KRW=X", "CNY=X")}
@@ -83,19 +86,22 @@ def series_of(sym, closes):
     return None if s is None else s * SCALE.get(sym, 1)
 
 
-def change(s, days):
-    """마지막 종가가 days일(달력) 전 그날까지의 마지막 종가보다 얼마나 변했나."""
+def change(s, days, rate=False):
+    """마지막 종가가 days일(달력) 전 그날까지의 마지막 종가보다 얼마나 변했나 (금리는 %p 차이)."""
     past = s[s.index <= s.index[-1] - pd.Timedelta(days=days)]
-    return None if past.empty else round(float(s.iloc[-1] / past.iloc[-1] - 1), 5)
+    if past.empty:
+        return None
+    return round(float(s.iloc[-1] - past.iloc[-1]), 4) if rate else round(float(s.iloc[-1] / past.iloc[-1] - 1), 5)
 
 
 def item(sym, name, kind, s):
     s = s.dropna()
     if len(s) < 2:
         return None
-    keep = s.iloc[-KEEP:]
+    keep, rate = s.iloc[-KEEP:], kind == "rate"
+    d1 = s.iloc[-1] - s.iloc[-2] if rate else s.iloc[-1] / s.iloc[-2] - 1
     return dict(sym=sym, name=name, kind=kind, day=s.index[-1].date().isoformat(), last=round(float(s.iloc[-1]), 4),
-                d1=round(float(s.iloc[-1] / s.iloc[-2] - 1), 5), w1=change(s, 7), m1=change(s, 30), y1=change(s, 365),
+                d1=round(float(d1), 5), w1=change(s, 7, rate), m1=change(s, 30, rate), y1=change(s, 365, rate),
                 closes=[float(f"{x:.6g}") for x in keep], dates=[x.date().isoformat() for x in keep.index])
 
 
@@ -119,6 +125,10 @@ def format_text(snap):
     for g in snap["groups"]:
         lines.append(f"· {g['name']}")
         for r in g["items"]:
+            if r["kind"] == "rate":
+                m1 = "-" if r["m1"] is None else f"{r['m1']:+.2f}%p"
+                lines.append(f"  {r['name']} {r['last']:.2f}% ({r['d1']:+.2f}%p, 1개월 {m1})")
+                continue
             m1 = "-" if r["m1"] is None else f"{r['m1']:+.1%}"
             lines.append(f"  {r['name']} {r['last']:,.2f} ({r['d1']:+.2%}, 1개월 {m1})")
     return "\n".join(lines)

@@ -349,7 +349,7 @@ function sigLook(s) {
 const VIEWS = {
   // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 사용자가 고른 순서로 세계 지수 → 더 보기 → 신호 → 성과.
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
-  home: (d) => [bigEventsCard(), worldCard(), homeMoreCard(d), homeSignalCard(d), homePerfCard(d)],
+  home: (d) => [bigEventsCard(), marketStatusCard(), worldCard(), homeMoreCard(d), homeSignalCard(d), homePerfCard(d)],
   signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
   // 성과: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
@@ -3615,8 +3615,11 @@ function etfAccountCard(d) {
 const WORLD_MAIN = ["^KS11", "^GSPC", "^IXIC", "KRW=X"];  // 펼치지 않아도 늘 보이는 것
 function worldValue(r) {
   const v = r.last.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return r.kind === "krw" ? `${v}원` : v;
+  return r.kind === "krw" ? `${v}원` : r.kind === "rate" ? `${v}%` : r.kind === "usd" ? `${v}달러` : v;
 }
+// 등락: 금리는 % 대신 몇 %p 바뀌었는지 (4%→4.5%는 +0.50%p)
+const worldChg = (r, v) => (r.kind === "rate" ? (v == null ? "-" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%p`) : pct(v, 2));
+const worldMove = (r, c) => (r.kind === "rate" ? c[c.length - 1] - c[0] : c[c.length - 1] / c[0] - 1);
 // 줄을 누르면 바로 아래에 그 지수·환율 그래프가 펼쳐져요 (다시 누르면 접혀요). 지수는 차트 화면 캔들로도 갈 수 있어요
 let worldPick = null;
 const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월", 130], ["y1", "1년", 0]];
@@ -3628,19 +3631,19 @@ function worldRow(r, where = "main") {
   const closes = n ? r.closes.slice(-n) : r.closes;
   const open = worldPick === `${where}:${r.sym}`;  // 위 4개 목록과 '전체 보기' 목록에 같은 줄이 있어서 누른 쪽만 펼쳐요
   return `<li class="stock spark-row no-star world-row${open ? " open" : ""}" data-world="${where}:${esc(r.sym)}" role="button" aria-expanded="${open}"><div class="name">${esc(r.name)}</div>
-    <div class="meta">${md(r.day)} 종가${n && closes.length > 1 ? ` · ${line} ${pct(closes[closes.length - 1] / closes[0] - 1)}` : ""}</div>
+    <div class="meta">${md(r.day)} 종가${n && closes.length > 1 ? ` · ${line} ${worldChg(r, worldMove(r, closes))}` : ""}</div>
     <div class="mini">${spark(closes, `${r.name} 최근 ${line}`)}</div>
-    <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${pct(r[key], 2)}</div></li>${open ? worldGraph(r) : ""}`;
+    <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${worldChg(r, r[key])}</div></li>${open ? worldGraph(r) : ""}`;
 }
 function worldGraph(r) {
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
   const c = n ? r.closes.slice(-n) : r.closes;
-  const ch = c.length > 1 ? c[c.length - 1] / c[0] - 1 : null;
+  const ch = c.length > 1 ? worldMove(r, c) : null;
   const hi = Math.max(...c), lo = Math.min(...c);
   const chips = WORLD_G.map(([k, l]) => `<button type="button" data-world-g="${k}" aria-pressed="${k === worldG}">${l}</button>`).join("");
   const toChart = r.kind === "idx" ? `<button type="button" class="more" data-world-chart="${esc(r.sym)}">${esc(r.name)} 캔들 차트로 크게 보기<span aria-hidden="true">›</span></button>` : "";
   return `<li class="world-graph"><div class="period" role="group" aria-label="그래프 기간">${chips}</div>
-    <p class="muted" style="margin:8px 0 4px">${ch == null ? "" : `이 기간 <b class="${sign(ch)}">${pct(ch, 2)}</b> · `}최고 ${worldValue({ ...r, last: hi })} · 최저 ${worldValue({ ...r, last: lo })}</p>
+    <p class="muted" style="margin:8px 0 4px">${ch == null ? "" : `이 기간 <b class="${sign(ch)}">${worldChg(r, ch)}</b> · `}최고 ${worldValue({ ...r, last: hi })} · 최저 ${worldValue({ ...r, last: lo })}</p>
     <div class="chart" id="world-chart"></div>${toChart}</li>`;
 }
 function drawWorldGraph() {
@@ -3674,7 +3677,7 @@ function worldCard() {
   return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
     <ul class="list">${main.map((r) => worldRow(r)).join("")}</ul>
     <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
-    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 금리는 몇 %p 바뀌었는지, VIX는 20을 넘으면 불안이 커진 거예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
@@ -3818,6 +3821,43 @@ function discloseHomeCard(d) {
 // 큰 발표 (big_events.py): CPI·고용·FOMC처럼 지수를 크게 흔드는 발표를 홈 맨 위에 눈에 띄게.
 // 앞으로 48시간 일정(예상치·이전 값), 지난 24시간 결과(실제 값·예상과 비교·선물 반응), 24시간 안의 지수 급변.
 // 아무것도 없으면 칸을 안 보여 줘요. 텔레그램으로도 전날·1시간 전·발표 뒤에 와요.
+// 장 상황 한 줄: 지금 열렸는지(시계로 계산), 마지막 자료가 언제 건지. 자료가 평일 2일 넘게 밀리면 경고.
+// 휴장일 표는 없어서, 평일인데 오늘 자료가 없으면 "휴장이었거나 늦어요"라고만 해요.
+const MKT_HOURS = { kr: ["Asia/Seoul", 9 * 60, 15 * 60 + 30, "국장", "15:30"], us: ["America/New_York", 9 * 60 + 30, 16 * 60, "미장", "한국 새벽"] };
+function zoneNow(tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return { day: `${p.year}-${p.month}-${p.day}`, min: Number(p.hour) * 60 + Number(p.minute), weekend: p.weekday === "Sat" || p.weekday === "Sun" };
+}
+function weekdaysBetween(a, b) {  // a 다음 날부터 b까지 평일 수
+  let n = 0;
+  for (let t = Date.parse(`${a}T00:00Z`) + 864e5; t <= Date.parse(`${b}T00:00Z`); t += 864e5) { const w = new Date(t).getUTCDay(); if (w && w !== 6) n++; }
+  return n;
+}
+function marketStatus(m) {
+  const [tz, open, close, name, closeAt] = MKT_HOURS[m];
+  const now = zoneNow(tz);
+  const md0 = DATA.markets && DATA.markets[m];
+  const last = md0 && md0.signal && md0.signal.day;
+  let state, cls = "";
+  if (now.weekend) state = "주말이라 쉬어요";
+  else if (now.min < open) state = "열기 전";
+  else if (now.min < close) { state = `장 열림 (${closeAt} 마감)`; cls = "mkt-open"; }
+  else state = last === now.day ? "오늘 장 마감" : "오늘 장 마감 · 자료는 아직이거나 휴장";
+  // 마감된 마지막 평일보다 평일로 2일 넘게 밀렸으면 자동 실행이 멈췄을 수 있어요
+  const doneDay = !now.weekend && now.min >= close ? now.day : null;
+  const behind = last ? weekdaysBetween(last, doneDay || now.day) - (doneDay ? 0 : 1) : null;
+  const stale = behind != null && behind >= 2;
+  return { name, state, cls, last, stale };
+}
+function marketStatusCard() {
+  if (!DATA || !DATA.markets) return "";
+  const rows = ["kr", "us"].filter((m) => DATA.markets[m]).map(marketStatus);
+  const warn = rows.filter((r) => r.stale);
+  return `<section class="card mkt-status${warn.length ? " stale" : ""}" id="mkt-status">
+    ${rows.map((r) => `<div class="mkt-row"><b>${r.name}</b><span class="${r.cls}">${r.state}</span><small class="muted">${r.last ? `${md(r.last)} 종가 기준` : "자료 없음"}</small></div>`).join("")}
+    ${warn.length ? `<p class="mkt-warn">⚠️ ${warn.map((r) => `${r.name} 자료가 ${md(r.last)} 거예요`).join(", ")}. 연휴가 아니면 자동 실행이 멈춘 거라, 숫자를 오늘 값으로 보지 마세요.</p>` : ""}</section>`;
+}
 function bigEventsCard() {
   const data = (DATA && DATA.events) || {};
   const now = Date.now(), H = 3600e3;
