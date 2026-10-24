@@ -16,3 +16,5 @@ PR #17 (branch claude/project-thread-emiefh, merged 2026-10-05) adds learner.py 
 
 **Why:** user asked for a "teammate that keeps learning 24h"; no paid APIs, drawdown-first.
 **How to apply:** never auto-apply proposals. Related: [[departments-pr12]], [[phone-dashboard]]
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].

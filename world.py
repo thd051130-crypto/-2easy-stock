@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""세계 지수·환율: 나라별 대표 지수와 원화 환율을 야후 무료 일봉으로 모아 paper/world.json에 남겨요.
+"""세계 지수·환율·금리·원자재: 야후 무료 일봉(미국 2년 금리·장단기 차는 FRED, 한국 국고채 금리는 네이버 금융)으로 모아 paper/world.json에 남겨요.
 
 앱 홈 "세계 지수·환율" 칸이 이걸 읽어서 오늘·1주·1개월·1년 등락률과 작은 추세선을 보여 줘요.
 매매 규칙엔 안 쓰고 보기용이에요. 전부 무료 (유료 API 안 씀).
@@ -13,6 +13,7 @@ import argparse
 import datetime as dt
 import json
 import pathlib
+import re
 import time
 
 import pandas as pd
@@ -30,11 +31,21 @@ GROUPS = [
     ("유럽", [("^STOXX50E", "유로스톡스50", "idx"), ("^GDAXI", "독일 DAX", "idx"), ("^FTSE", "영국 FTSE100", "idx")]),
     ("환율", [("KRW=X", "원/달러", "krw"), ("JPYKRW=X", "원/엔 (100엔)", "krw"), ("EURKRW=X", "원/유로", "krw"),
               ("CNYKRW", "원/위안", "krw"), ("DX-Y.NYB", "달러인덱스", "num")]),
-    ("금리·원자재·공포", [("^TNX", "미국 10년 국채 금리", "rate"), ("^VIX", "VIX 공포 지수", "num"),
-                       ("CL=F", "WTI 유가", "usd"), ("GC=F", "금 (온스)", "usd")]),
+    ("채권 금리", [("US2Y", "미국 2년 국채 금리", "rate"), ("^TNX", "미국 10년 국채 금리", "rate"),
+                ("US10Y2Y", "미국 장단기 금리 차 (10년-2년)", "rate"),
+                ("KR3Y", "한국 국고채 3년 금리", "rate"), ("KR10Y", "한국 국고채 10년 금리", "rate"),
+                ("TLT", "미국 장기 국채 ETF (TLT)", "usd")]),
+    ("원자재", [("CL=F", "WTI 유가", "usd"), ("GC=F", "금 (온스)", "usd"), ("HG=F", "구리 (파운드)", "usd")]),
+    ("리츠·부동산", [("VNQ", "미국 리츠 ETF (VNQ)", "usd"), ("329200.KS", "국내 리츠 ETF (TIGER 리츠부동산인프라)", "krw")]),
+    ("공포·코인", [("^VIX", "VIX 공포 지수", "num"), ("BTC-USD", "비트코인", "usd")]),
 ]
 # 야후에 기록이 짧은 환율은 다른 환율로 계산해요: 원/위안 = 원/달러 ÷ 위안/달러
 DERIVED = {"CNYKRW": ("KRW=X", "CNY=X")}
+# 야후에 없거나(2년 금리 선물 2YY=F는 값이 멈춰 있어요) 믿기 어려운 금리는 다른 무료 자료에서 받아요. 못 받으면 그 줄만 빠져요
+#  - 미국 2년 금리, 장단기 금리 차(10년-2년, 마이너스면 역전): FRED (미국 연준 무료 CSV, 하루 늦게 나와요)
+#  - 한국 국고채 금리: 네이버 금융 '시장지표' 일별 시세
+FRED_RATE = {"US2Y": "DGS2", "US10Y2Y": "T10Y2Y"}
+NAVER_RATE = {"KR3Y": "IRR_GOVT03Y", "KR10Y": "IRR_GOVT10Y"}
 SCALE = {"JPYKRW=X": 100}  # 원/엔은 100엔 기준으로 보여 줘요
 KEEP = 260  # 앱에 보낼 종가 수 (약 1년)
 
@@ -43,7 +54,8 @@ def symbols():
     out = []
     for _, items in GROUPS:
         for sym, _, _ in items:
-            out.extend(DERIVED.get(sym, (sym,)))
+            if sym not in NAVER_RATE and sym not in FRED_RATE:
+                out.extend(DERIVED.get(sym, (sym,)))
     return list(dict.fromkeys(out))
 
 
@@ -72,7 +84,52 @@ def fetch(days=400, pause=1.0, retries=3):
         out[sym] = s[~s.index.duplicated(keep="last")]
     if not out:
         raise SystemExit("야후에서 세계 지수·환율을 하나도 못 받았어요.")
+    import big_events
+
+    for sym, code in FRED_RATE.items():
+        rate = big_events.fred(code)
+        if rate is not None and len(rate):
+            out[sym] = rate[rate.index >= pd.Timestamp(start)]
+    for sym, code in NAVER_RATE.items():
+        try:
+            rate = naver_rate(code, start)
+        except Exception as e:  # 네이버가 막히거나 화면이 바뀌면 그 줄만 빠져요
+            print(f"경고: {sym} 네이버 금리 못 받음: {e!r}")
+            continue
+        if rate is not None:
+            out[sym] = rate
     return out
+
+
+DAY_ROW = re.compile(r'class="date">\s*(\d{4})\.(\d{2})\.(\d{2})\s*</td>\s*<td[^>]*>\s*([\d.,]+)', re.S)
+
+
+def parse_naver_rate(html):
+    """네이버 금융 금리 일별 시세 한 쪽 → [(날짜, 금리 %)]."""
+    return [(pd.Timestamp(f"{y}-{m}-{d}"), float(v.replace(",", ""))) for y, m, d, v in DAY_ROW.findall(html)]
+
+
+def naver_rate(code, start, max_pages=60, pause=0.3):
+    """한 쪽에 며칠씩이라 start 날짜까지 쪽을 넘겨요. 날짜→금리 Series, 하나도 없으면 None."""
+    import requests
+
+    rows, seen = [], set()
+    for page in range(1, max_pages + 1):
+        r = requests.get("https://finance.naver.com/marketindex/interestDailyQuote.naver",
+                         params=dict(marketindexCd=code, page=page), timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        part = [x for x in parse_naver_rate(r.content.decode("euc-kr", "replace")) if x[0] not in seen]
+        if not part:  # 마지막 쪽을 지나면 같은 쪽이 또 나와요
+            break
+        rows += part
+        seen.update(x[0] for x in part)
+        if min(x[0] for x in part) < pd.Timestamp(start):
+            break
+        time.sleep(pause)
+    if not rows:
+        return None
+    s = pd.Series(dict(rows)).sort_index()
+    return s[s.index >= pd.Timestamp(start)]
 
 
 def series_of(sym, closes):

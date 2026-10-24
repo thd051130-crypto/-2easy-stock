@@ -12,7 +12,7 @@
   알림 목록 / 알림 삭제 2
   도움말
 웹앱의 '추가'·'텔레그램으로 알림 받기' 버튼은 같은 명령을 시작 링크(t.me/봇?start=c_…)에 담아 보내요.
-기록: paper/watch.json, paper/alerts.json, paper/bot.json (watchlist.py). 매매 신호·가상매매와는 따로예요.
+기록: paper/watch.json, paper/alerts.json, paper/bot.json (watchlist.py).
 같이 도는 큰 발표 알림(CPI·고용·FOMC 예고와 결과, 지수 급변)은 big_events.py, 기록은 paper/events.json.
 
 사용법:
@@ -190,7 +190,7 @@ class Bot:
         if kind == "help":
             return HELP
         if kind == "unknown":
-            reply = commands.handle(self, decode_start(text))  # 오늘·계좌·종목·메모
+            reply = commands.handle(self, decode_start(text))  # 오늘·종목·메모
             if reply:
                 return reply
             return "그 말은 몰라서, 아래 명령만 알아들어요.\n\n" + HELP

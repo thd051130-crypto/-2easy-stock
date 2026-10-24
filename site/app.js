@@ -2,17 +2,7 @@
 "use strict";
 
 const NEXT_RUN = { kr: "평일 한국시간 17:30쯤", us: "화~토 한국시간 07:30쯤" };
-const US_ACTION = {
-  buy: ["매수 신호", "다음 거래일 시가에 계좌의 50%를 S&P500 ETF로 사요."],
-  hold: ["보유 유지", "계좌의 50%는 S&P500 ETF, 나머지는 현금으로 둬요."],
-  sell: ["매도 신호", "추세가 꺾여서 다음 거래일 시가에 ETF를 전부 팔아요."],
-  cash: ["현금 유지", "S&P500 추세가 약하거나 변동성이 커서 사지 않아요."],
-};
 
-const TREND_RULE = {
-  kr: "코스피가 50일선과 200일선 둘 다 위일 때만 새로 사요.",
-  us: "S&P500이 200일선 위이고 50일선도 200일선 위일 때만 사요.",
-};
 
 // 캔들 하나의 기간과 처음 보이는 캔들 수: 일봉 1개월, 주봉 6개월, 월봉 3년, 년봉 전체
 const FRAMES = [["d", "일봉", 21], ["w", "주봉", 26], ["m", "월봉", 36], ["y", "년봉", 60]];
@@ -54,7 +44,7 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "signal", "watch", "perf", "chart", "stock", "search", "map", "inbox"];
+const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
@@ -130,7 +120,6 @@ function pickSector(name) {
 }
 let watchSort = "change";
 try { watchSort = localStorage.getItem("watchSort") || "change"; } catch (e) { /* 기본값 */ }
-const trackSrc = {};  // 추천 성과에서 고른 출처 (시장별)
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -144,7 +133,7 @@ const TERMS = {
   "ROE": "순이익 ÷ 자기자본. 주주 돈 100원으로 1년에 몇 원을 버나예요. 10% 넘으면 잘 버는 편이에요.",
   "부채비율": "부채 ÷ 자기자본. 100%면 빚이 자기 돈만큼이에요. 높을수록 금리가 오르거나 경기가 나쁠 때 위험해요. 은행·보험은 원래 높아서 따로 봐요.",
   "최대 낙폭": "가장 높았던 때에서 가장 많이 떨어졌을 때까지의 비율(MDD). -30%면 1,000만 원이 잠깐 700만 원까지 줄었다는 뜻이에요. 우리 앱은 이걸 작게 하는 게 첫째 목표예요.",
-  "200일선": "최근 200거래일(약 10개월) 종가 평균. 주가가 이 위면 긴 흐름이 오르는 중, 아래면 내리는 중으로 봐요. 우리 규칙은 200일선 아래 종목은 안 사요.",
+  "200일선": "최근 200거래일(약 10개월) 종가 평균. 주가가 이 위면 긴 흐름이 오르는 중, 아래면 내리는 중으로 봐요.",
   "RSI": "최근 14일 오른 힘과 내린 힘을 0~100으로. 70 위면 많이 올라 과열, 30 아래면 많이 빠진 상태예요. 30 아래라고 바로 오르는 건 아니에요.",
   "52주 고점": "최근 1년 중 가장 높았던 종가. 고점 대비 -20%면 1년 중 꼭대기에서 20% 내려와 있다는 뜻이에요.",
   "목표주가": "증권사 애널리스트들이 1년 안에 갈 거라고 본 값의 평균. 대체로 낙관적이고 주가를 늦게 따라 바뀌어서 참고만 해요.",
@@ -158,13 +147,13 @@ const TERMS = {
   "FOMC": "미국 중앙은행(연준)의 금리 결정 회의. 1년에 8번. 금리를 올리면 보통 주가에 부담, 내리면 도움이 돼요. 한국시간 새벽에 발표돼요.",
   "금통위": "한국은행 금융통화위원회. 한국 기준금리를 정해요. 1년에 8번, 보통 목요일 오전에 발표해요.",
   "옵션 만기": "선물·옵션 계약이 끝나는 날(국장 매달 둘째 목요일, 미장 셋째 금요일). 큰손들이 계약을 정리하느라 장 막판에 주가가 출렁일 수 있어요.",
-  "실적 시즌": "회사들이 분기 실적을 몰아서 발표하는 때. 예상보다 나쁘면 하루에 -10%도 나와서 우리 국장 규칙은 이때 새로 안 사요.",
+  "실적 시즌": "회사들이 분기 실적을 몰아서 발표하는 때. 예상보다 나쁘면 하루에 -10%도 나와요.",
   "유상증자": "회사가 새 주식을 찍어 돈을 받는 것. 주식 수가 늘어 내 몫이 줄어서(희석) 주가가 내릴 때가 많아요.",
   "전환사채": "나중에 주식으로 바꿀 수 있는 회사 빚(CB). 주식으로 바뀌면 주식 수가 늘어 주가에 부담이 돼요.",
   "자사주 매입": "회사가 자기 주식을 사는 것. 시장에 도는 주식이 줄어서 보통 주가에 좋은 소식이에요. 소각까지 하면 더 좋아요.",
   "공시": "회사가 투자자에게 꼭 알려야 하는 일을 금감원 전자공시(DART)에 올린 글. 실적·증자·지분 변동 등이 있어요.",
   "백테스트": "규칙을 과거 주가에 그대로 적용해 봤다면 어땠을지 계산한 것. 과거에 잘 됐다고 앞으로도 그렇다는 보장은 없어요.",
-  "가상계좌": "진짜 돈 없이 규칙대로 사고팔았다고 치고 기록하는 연습 계좌. 실제 체결 차이·수수료는 비슷하게 넣었어요.",
+  "리포트 부서": "시장팀→일정·정책팀→업종팀→종목팀→편집팀이 앞 팀 자료를 넘겨받아 오늘의 리포트 한 장을 만들어요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.",
   "복리": "번 돈을 다시 넣어 그 돈도 같이 불어나는 것. 기간이 길수록 차이가 커져요.",
   "총보수": "ETF 회사가 해마다 떼 가는 운용 비용. 0.07%면 1,000만 원에 1년 7,000원. 잔고에서 조금씩 빠져요.",
   "커버드콜": "주식을 들고 '오르면 넘겨줄 권리'를 팔아 그 값을 분배금으로 나눠 주는 상품. 매달 돈이 많이 나오는 대신 크게 오를 땐 덜 오르고, 내릴 땐 거의 같이 내려요.",
@@ -194,14 +183,6 @@ const px = (m, x) => (x == null ? "-" : m === "kr" ? num(x)
   : x.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
 const shares = (q) => (Number.isInteger(q) ? `${q}주` : `${q.toFixed(3)}주`);
-// 가상매매 금액 옆에 작게: 그 돈이면 몇 주인지. 가상계좌는 소수점 주식으로 사서 소수 첫째 자리까지 보여 줘요.
-const wonShort = (x) => (x >= 1e4 ? `${Math.round(x / 1e4).toLocaleString("ko-KR")}만 원` : `${Math.round(x).toLocaleString("ko-KR")}원`);
-function canBuy(m, amount, unit) {
-  if (!amount || !unit) return "";
-  const q = amount / unit;
-  return `${m === "kr" ? wonShort(amount) : money(m, amount)} ≈ ${q < 0.1 ? "0.1주 미만" : `${q.toFixed(1)}주`}`;
-}
-
 let siteVersion = null;  // 이 화면을 연 뒤 처음 받은 data.json의 화면 버전
 
 async function load() {
@@ -325,35 +306,14 @@ function countUp(root) {
   setTimeout(finish, dur + 400);  // 화면이 가려져 그리기가 멈춰도 최종 숫자는 꼭 보여요
 }
 
-// 새 신호 강조: 시장마다 마지막으로 본 신호 날짜를 기억해요. 그 뒤 새로 나온 신호면 '새 신호' 표시를 붙이고
-// 카드를 한 번 반짝여요. 할 일이 있는 날(국장 매수 후보, 미장 매수·매도 신호)은 카드에 색을 넣어요.
-const SIG_SEEN = {};
-for (const m of ["kr", "us"]) {
-  try { SIG_SEEN[m] = localStorage.getItem(`seen_signal_${m}`) || ""; } catch (e) { SIG_SEEN[m] = ""; }
-}
-const SIG_NOW = {};  // 이번에 앱을 연 뒤 본 신호 {day, fresh, pulsed} (화면을 다시 그려도 '새 신호' 표시는 그대로)
-function sigLook(s) {
-  let st = SIG_NOW[market];
-  if (!st || st.day !== s.day) {
-    st = SIG_NOW[market] = { day: s.day, fresh: SIG_SEEN[market] !== s.day, pulsed: false };
-    SIG_SEEN[market] = s.day;
-    try { localStorage.setItem(`seen_signal_${market}`, s.day); } catch (e) { /* 이번만 기억 */ }
-  }
-  const hot = market === "us" ? s.action === "buy" || s.action === "sell" : !!(s.ok && s.picks.length);
-  const cls = ["card", "sig"];
-  if (hot) cls.push("sig-hot", market === "us" ? s.action : "buy");
-  if (st.fresh && !st.pulsed && !calm()) { cls.push("sig-pulse"); st.pulsed = true; }  // 반짝임은 한 번만
-  return { cls: cls.join(" "), badge: st.fresh ? `<span class="badge new">새 신호</span>` : "" };
-}
-
 const VIEWS = {
-  // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 사용자가 고른 순서로 세계 지수 → 더 보기 → 신호 → 성과.
-  // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요.
-  home: (d) => [bigEventsCard(), marketStatusCard(), worldCard(), homeMoreCard(d), homeSignalCard(d), homePerfCard(d)],
-  signal: (d) => [signalCard(d), desksCard(d), widePicksCard(d), rulebookPicksCard(d), rulesCard(d)],
+  // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 세계 지수 → 더 보기 → 오늘의 리포트 요약.
+  // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
+  home: (d) => [bigEventsCard(), marketStatusCard(), worldCard(), homeMoreCard(d), homeReportCard()],
+  report: (d) => reportCards(d),
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
-  // 성과: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
-  perf: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
+  // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
+  tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
   stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
@@ -417,36 +377,17 @@ function render() {
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
-  if (screen === "perf") {
+  if (screen === "tools") {
     const bar = $(".perf-tabs", app);
     const on = bar && bar.querySelector('[aria-pressed="true"]');
     if (on) bar.scrollLeft = Math.max(0, on.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2);  // 고른 버튼이 가운데 보이게
     app.querySelectorAll("[data-perf-tab]").forEach((b) => b.addEventListener("click", () => {
       perfTabKey = b.dataset.perfTab;
-      try { localStorage.setItem("perf_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
+      try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
       render();
     }));
-    // 접힌 그래프는 펼칠 때 그려요 (접힌 채로 그리면 폭이 0이라서). 펼친 건 이 폰에 기억해요.
-    [["equity-fold", () => drawEquity(d)], ["track-fold", () => drawTrack(d, true)]].forEach(([id, draw]) => {
-      const f = $(`#${id}`);
-      if (!f) return;
-      if (PERF_OPEN.has(id)) { f.open = true; draw(); }
-      f.addEventListener("toggle", () => {
-        if (f.open) { PERF_OPEN.add(id); draw(); } else PERF_OPEN.delete(id);
-        try { localStorage.setItem("perf_open", JSON.stringify([...PERF_OPEN])); } catch (e) { /* 이번만 기억 */ }
-      });
-    });
-    drawTrack(d, false); bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
-    if (!RET[market]) loadReturns().then(() => { if (screen === "perf") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
-    const fc = $("#first-card details");
-    if (fc) fc.addEventListener("toggle", () => { FIRST_OPEN = fc.open; });
-    app.querySelectorAll("[data-first]").forEach((b) => b.addEventListener("click", () => {
-      FIRST_DONE[b.dataset.first] = !FIRST_DONE[b.dataset.first];
-      try { localStorage.setItem("first_steps", JSON.stringify(FIRST_DONE)); } catch (e) { /* 이번만 */ }
-      const y = window.scrollY;
-      render();
-      window.scrollTo(0, y);
-    }));
+    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
+    if (!RET[market]) loadReturns().then(() => { if (screen === "tools") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
   }
   app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {
     e.preventDefault();
@@ -477,9 +418,6 @@ function render() {
   }));
   const pm = $("#pol-more");
   if (pm) pm.addEventListener("toggle", () => { polMore = pm.open; });
-  app.querySelectorAll("details[data-desk]").forEach((x) => x.addEventListener("toggle", () => {
-    if (x.open) DESK_OPEN.add(x.dataset.desk); else DESK_OPEN.delete(x.dataset.desk);
-  }));
   app.querySelectorAll("details[data-pol]").forEach((x) => x.addEventListener("toggle", () => {
     if (x.open) POL_OPEN.add(x.dataset.pol); else POL_OPEN.delete(x.dataset.pol);
   }));
@@ -598,21 +536,6 @@ function render() {
   playMotion(app);
 }
 
-function drawEquity(d) {
-  const acc = d.account;
-  if (!acc || !acc.curve.length) return;
-  lineChart($("#equity-chart"), {
-    dates: acc.curve.map((r) => r.date),
-    series: [
-      { name: "가상계좌", color: "var(--series-1)", values: acc.curve.map((r) => r.account) },
-      { name: d.index_name, color: "var(--series-2)", values: acc.curve.map((r) => r.index) },
-    ],
-    fmt: (v) => pct(v),
-    zero: true,
-    tall: true,
-  });
-}
-
 // 작은 추세선 (축 없이 모양만). 기간 처음보다 오르면 빨강, 내리면 파랑.
 // zero: 추천일(0)부터의 수익률이면 0 기준선을 점선으로 그려요. 값은 세로 눈금의 최소 폭(±zero)이라
 // 1%도 안 움직인 종목은 거의 평평하게, 그보다 크게 움직이면 그래프 높이를 다 써서 모양이 보여요.
@@ -631,42 +554,9 @@ function spark(values, label, zero) {
 
 const more = (to, label) => `<button type="button" class="more" data-go="${to}">${label}<span aria-hidden="true">›</span></button>`;
 
-// 홈: 오늘 할 일만 짧게. 자세한 이유·부서 보고는 신호 화면에 있어요.
-function homeSignalCard(d) {
-  const s = d.signal;
-  if (!s) return signalCard(d);
-  const chip = s.ok
-    ? `<span class="chip good">● 매수 조건 충족</span>`
-    : `<span class="chip wait">■ 매수 조건 미달</span>`;
-  let head, sub, extra = "";
-  if (market === "us") {
-    [head, sub] = US_ACTION[s.action] || ["-", ""];
-    const risk = (s.opinion || []).find((l) => l.startsWith("위험:"));
-    if (risk) extra = `<p class="caution">${esc(risk)}</p>`;
-  } else if (!s.ok) {
-    head = "신규 매수 쉬는 날";
-    sub = s.pause || "코스피가 50일선이나 200일선 아래라 새로 사지 않아요.";
-  } else if (!s.picks.length) {
-    head = "오늘은 매수 신호 없음";
-    sub = "조건에 맞게 눌린 종목이 없어요. 기다리는 것도 규칙이에요.";
-  } else {
-    head = `매수 후보 ${s.picks.length}개`;
-    sub = `다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.`;
-    extra = `<ul class="list" style="margin-top:12px">${s.picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
-        <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
-        <div class="meta">손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("")}</ul>`;
-  }
-  const rb = s.rulebook || [];
-  const rbLine = rb.length ? `<p class="muted" style="margin:10px 0 0">내 규칙표 후보 ${rb.length}개: ${rb.slice(0, RB_FIRST).map((p) => esc(p.name)).join(" · ")}${rb.length > RB_FIRST ? ` 외 ${rb.length - RB_FIRST}개` : ""}</p>` : "";
-  const look = sigLook(s);
-  return `<section class="${look.cls}"><h2><span>오늘의 신호${look.badge}</span><small>${md(s.day)} 종가 기준</small></h2>${chip}
-    <p class="headline">${esc(head)}</p><p class="sub">${esc(sub)}</p>${extra}${rbLine}
-    ${more("signal", "신호 자세히 보기")}</section>`;
-}
-
-// 급락 점검: 기준 지수가 한 주(5거래일)에 5% 넘게 빠졌거나 1년 고점에서 10% 넘게 내려와 있을 때만 홈 신호 아래에 떠요.
+// 급락 점검: 기준 지수가 한 주(5거래일)에 5% 넘게 빠졌거나 1년 고점에서 10% 넘게 내려와 있을 때만 홈 '더 보기'에 떠요.
 // 지수 전체 기록(indexes/<지수>.json, 차트와 같은 파일)에서 비슷하게 빠졌던 때를 찾아 그 뒤 1개월~1년이 어땠는지 보여 줘요.
-// 한 번 찾으면 3개월(63거래일)은 건너뛰어서 같은 하락을 여러 번 세지 않아요. 참고용이고 매매 규칙은 그대로예요.
+// 한 번 찾으면 3개월(63거래일)은 건너뛰어서 같은 하락을 여러 번 세지 않아요. 참고용이에요.
 const DROP_AFTER = [[21, "1개월"], [63, "3개월"], [126, "6개월"], [252, "1년"]];
 const DROP_GAP = 63;
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b), k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
@@ -720,14 +610,9 @@ function dropCard(d) {
         '보통'은 가운데 값이에요.</p>`
         : `<p class="muted" style="margin:10px 0 0">${s.from.slice(0, 4)}년 이후 이만큼 빠진 적이 없어서 비교할 때가 없어요.</p>`}`;
   }
-  const a = d.account, sig = d.signal || {};
-  const stock = a && a.equity ? 1 - a.cash / a.equity : null;
-  const rule = a ? `<p class="${a.gain >= a.index_gain ? "good-line" : "caution"}" style="margin-top:12px">우리 가상계좌는 ${md(a.start)} 시작 뒤 <b>${pct(a.gain)}</b>
-      (${esc(d.index_name)} ${pct(a.index_gain)}) · 지금 주식 ${Math.round((stock || 0) * 100)}%, 현금 ${Math.round((1 - (stock || 0)) * 100)}%.
-      ${market === "kr" && sig.ok === false ? "규칙상 지수가 50일선·200일선 위로 올라올 때까지 새로 안 사요." : ""}</p>` : "";
-  return `<section class="card" id="drop-card"><h2>급락 점검 <small>${md(now.day)} 종가 · 참고</small></h2>${head}${body}${rule}
+  return `<section class="card" id="drop-card"><h2>급락 점검 <small>${md(now.day)} 종가 · 참고</small></h2>${head}${body}
     <p class="muted note" style="margin:10px 0 0">과거에 비슷하게 빠졌던 뒤 어땠는지 지수 기록으로 센 거예요. 과거가 앞으로를 보장하진 않아요.
-      바닥은 지나서야 알 수 있어서, 우리 규칙은 바닥을 맞히려 하지 않고 지수가 다시 오를 때 들어가요.</p></section>`;
+      바닥은 지나서야 알 수 있어요.</p></section>`;
 }
 function bindDrop(d) {
   const now = dropNow(d);
@@ -738,38 +623,11 @@ function bindDrop(d) {
   });
 }
 
-// 홈 성과 카드: 가상계좌 요약 + 추천 종목이 그 뒤 얼마나 올랐는지 한 줄
-function homePerfCard(d) {
-  const a = d.account;
-  const rb = d.rulebook && d.rulebook.account;
-  const acc = a
-    ? `<p class="hero">${cnt(a.equity, "money", money(market, a.equity))}</p>
-      <div class="stats">
-        <div class="stat"><span>가상계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
-        <div class="stat"><span>${esc(d.index_name)}</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
-        <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
-      </div>
-      ${rb ? `<p class="muted" style="margin:8px 0 0">내 규칙표 계좌 <b class="${sign(rb.gain)}">${pct(rb.gain)}</b></p>` : ""}
-      ${pendingLines(a)}`
-    : `<p class="empty">가상계좌는 아직 첫 기록 전이에요. ${NEXT_RUN[market]} 첫 자동 실행부터 날마다 기록해요.</p>`;
-  const t = d.signal && d.signal.tracked;
-  const src = t && pickSrc(t);
-  const s = src && t.srcs[src];
-  const h = s && (s.horizons.find((x) => x.days === 10 && x.n) || s.horizons.find((x) => x.n));
-  const line = h ? `<div class="track-line"><span>추천 종목 ${h.days}거래일 뒤 평균 <small>${esc(s.label)} · ${h.n}개</small></span>
-      <b class="${sign(h.avg)}">${cnt(h.avg, "pct", pct(h.avg))}</b><span class="muted">${esc(d.index_name)} ${pct(h.index)} · 오른 종목 ${Math.round(h.win * 100)}%</span></div>` : "";
-  return `<section class="card"><h2>성과 <small>${a ? `${md(a.last_day)} 종가` : `${money(market, d.capital)}${market === "kr" ? "으로" : "로"} 시작`}</small></h2>
-    ${acc}${line}${totalLine()}${goalLine()}${healthLine()}${more("perf", "성과 자세히 보기")}</section>`;
-}
-
 // ---------------------------------------------------------------- 관심종목
 
 // 종목 한 줄: 이름·코드·3개월 등락, 종가·전일 대비, ★. chart면 3개월 추세선도 (내 관심종목처럼 몇 개 안 될 때)
 function stockRow(s, d, { star = true, chart = false, meta: extraMeta = "" } = {}) {
-  const sig = d.signal || {};
   const badges = [];
-  if ((sig.picks || []).some((p) => p.code === s.code)) badges.push(`<span class="badge good">오늘 매수 후보</span>`);
-  if ((sig.rulebook || []).some((p) => p.code === s.code)) badges.push(`<span class="badge">규칙표 후보</span>`);
   if (s.extra) badges.push(`<span class="badge">추가한 종목</span>`);
   const on = WATCH[market].includes(s.code);
   // 작은 추세선과 같은 기간(최근 3개월) 등락률이라 선 색과 숫자가 맞아요
@@ -785,7 +643,7 @@ function stockRow(s, d, { star = true, chart = false, meta: extraMeta = "" } = {
 
 // 대시보드 종목: 알림이 보는 대형주 + 텔레그램으로 넣은 종목(extra)
 function stocksOf(d) {
-  const base = (d.signal && d.signal.stocks) || [];
+  const base = (d.daily && d.daily.stocks) || [];
   const have = new Set(base.map((s) => s.code));
   return base.concat((d.extras || []).filter((e) => !have.has(e.code)).map((e) => ({ ...e, extra: true })));
 }
@@ -927,14 +785,14 @@ function screenerCard(d) {
 
 // 관심 화면 업종 버튼: 대시보드 종목에 있는 업종만 (업종 지도 paper/sectors.json 기준)
 function secList(d) {
-  const of = (d.signal && d.signal.sector_of) || {};
+  const of = (d.daily && d.daily.sector_of) || {};
   const have = new Set(stocksOf(d).map((s) => of[s.code]).filter(Boolean));
-  const order = ((d.signal && d.signal.sectors) || []).map((s) => s.name);
+  const order = ((d.daily && d.daily.sectors) || []).map((s) => s.name);
   return order.filter((n) => have.has(n)).concat([...have].filter((n) => !order.includes(n)));
 }
 function allRows(d) {
   const q = watchQuery.trim().toLowerCase();
-  const of = (d.signal && d.signal.sector_of) || {};
+  const of = (d.daily && d.daily.sector_of) || {};
   const sec = secList(d).includes(SECTOR[market]) ? SECTOR[market] : "";
   const rows = stocksOf(d).filter((s) => (!q || s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q))
     && (!sec || of[s.code] === sec));
@@ -1084,7 +942,7 @@ const kindName = (m, row) => (m === "kr" ? (row[3] === "e" ? "국내 ETF" : row[
 const MK_NAME = { kr: "국장", us: "미장" };
 
 // ---------------------------------------------------------------- 메시지함
-// 텔레그램으로 보낸 알림(신호·가상매매·경기·학습팀·큰 발표·가격 알림·주간 점검)을 앱에서도 봐요.
+// 텔레그램으로 보낸 알림(오늘의 리포트·경기·큰 발표·가격 알림·주간 점검)을 앱에서도 봐요.
 // inbox.json은 열 때만 받아요 (dashboard.py가 paper/inbox/ 최근 60일로 만들어요). 명령에 대한 봇 답장은 빼요.
 // 안 읽은 알림: data.json의 inbox_last가 이 폰에서 마지막으로 본 시각보다 새로우면 버튼에 빨간 점.
 let INBOX = null, inboxLoading = null, inboxOpen = null;
@@ -1097,6 +955,57 @@ function loadInbox() {
       .then((x) => { INBOX = (x && x.items) || []; });
   }
   return inboxLoading;
+}
+// 메시지함 버튼: 평소엔 오른쪽 가장자리 얇은 손잡이라 글자를 안 가려요 (사용자 2026-10-24, 폰 엣지 패널처럼).
+// 손잡이를 누르거나 왼쪽으로 밀면 동그란 버튼이 나오고, 그걸 누르면 메시지함(열려 있으면 닫기). 오른쪽으로 밀거나 4초 지나면 다시 숨어요.
+// 위아래로 끌면 옮겨지고, 위치는 이 폰에 기억해요 (화면 높이 비율). 키보드로 누르면 바로 열어요.
+function inboxHandle(b) {
+  let out = false, timer = 0, y = NaN, drag = null;
+  try { y = parseFloat(localStorage.getItem("inbox_y")); } catch (e) { /* 기본 위치 */ }
+  const range = () => {
+    const top = ($(".top") || { offsetHeight: 60 }).offsetHeight + 12;
+    return [top, window.innerHeight - ($(".nav") || { offsetHeight: 60 }).offsetHeight - 60];
+  };
+  const clamp = (t) => { const [lo, hi] = range(); return Math.min(Math.max(t, lo), Math.max(lo, hi)); };
+  const place = () => { b.style.top = `${clamp(Number.isFinite(y) ? y * window.innerHeight : Infinity)}px`; };
+  const set = (o) => {
+    out = o;
+    b.classList.toggle("tucked", !o);
+    clearTimeout(timer);
+    if (o) timer = setTimeout(() => set(false), 4000);
+  };
+  const open = () => { set(false); if (screen === "inbox") back(); else go("inbox"); };
+  place();
+  window.addEventListener("resize", place);
+  b.addEventListener("pointerdown", (e) => {
+    drag = { x: e.clientX, y: e.clientY, top: b.offsetTop, moved: false, swiped: false };
+    try { b.setPointerCapture(e.pointerId); } catch (err) { /* 그냥 진행 */ }
+  });
+  b.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && !drag.swiped && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { drag.moved = true; b.classList.add("dragging"); clearTimeout(timer); }
+    if (drag.moved) { b.style.top = `${clamp(drag.top + dy)}px`; e.preventDefault(); return; }
+    if (!drag.swiped && dx < -14 && !out) { drag.swiped = true; set(true); }
+    else if (!drag.swiped && dx > 14 && out) { drag.swiped = true; set(false); }
+  });
+  const end = (e) => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    b.classList.remove("dragging");
+    if (d.moved) {
+      y = b.offsetTop / window.innerHeight;
+      try { localStorage.setItem("inbox_y", y.toFixed(4)); } catch (err) { /* 이번만 기억 */ }
+      if (out) set(true);  // 옮긴 뒤 4초 다시 세기
+      return;
+    }
+    if (d.swiped || e.type === "pointercancel") return;
+    if (!out && screen !== "inbox") set(true); else open();
+  };
+  b.addEventListener("pointerup", end);
+  b.addEventListener("pointercancel", end);
+  b.addEventListener("click", (e) => { if (e.detail === 0) open(); });  // 키보드(Enter·Space)로 누를 때
 }
 function inboxDot() {
   const b = $(".inbox-btn");
@@ -1124,74 +1033,63 @@ function msgDay(t) {
   const wd = new Date(`${t.slice(0, 10)}T12:00:00Z`).getUTCDay();
   return `${Number(t.slice(5, 7))}.${Number(t.slice(8, 10))}(${"일월화수목금토"[wd]})`;
 }
-// 오늘의 리포트: 증권사 모닝 브리프처럼 한 장으로 (한 줄 요약 → 지수·환율 → 신호 → 많이 움직인 종목 → 수급 → 업종 → 일정 → 계좌).
-// 따로 받는 자료 없이 앱이 이미 가진 data.json으로 만들어요. 참고용이고 매매 규칙은 그대로예요.
+// 오늘의 리포트 (report_desks.py, paper/report.json): 다섯 팀이 앞 팀 자료를 넘겨받아 만든 한 장.
+// 시장팀 → 일정·정책팀 → 업종팀 → 종목팀 → 편집팀. 사고팔기 판단은 안 해요 (사용자 2026-10-24).
+const REPORT_FLAG = { kr: "🇰🇷", us: "🇺🇸" };
+const rpChg = (x, d = 1) => (x == null ? "-" : `<span class="${sign(x)}">${pct(x, d)}</span>`);
+const rpTone = (t) => `<span class="badge${t === "강함" ? " good" : t === "약함" ? " bad" : ""}">${esc(t)}</span>`;
+function reportDay() {
+  const r = DATA.report;
+  return r ? `${md(r.day)} ${esc((r.generated || "").slice(11, 16))}` : "";
+}
+function homeReportCard() {
+  const r = DATA.report;
+  if (!r) return `<section class="card"><h2>📰 오늘의 리포트</h2><p class="empty">아직 리포트가 없어요. ${NEXT_RUN[market]} 장 마감 뒤 자동으로 만들어요.</p>
+    ${goalLine()}${healthLine()}</section>`;
+  return `<section class="card"><h2>📰 오늘의 리포트 <small>${reportDay()} 기준</small></h2>
+    <ul class="brief brief-top">${(r.headline || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+    ${goalLine()}${healthLine()}${more("report", "리포트 자세히 보기")}</section>`;
+}
+function rpSection(icon, title, sub, rows) {
+  return rows.length ? `<section class="card"><h2>${icon} ${title} <small>${sub}</small></h2><ul class="brief">${rows.map((x) => `<li>${x}</li>`).join("")}</ul></section>` : "";
+}
+function reportCards(d) {
+  const r = DATA.report;
+  if (!r) return [homeReportCard()];
+  const m = r.market || {}, p = r.policy || {}, sec = (r.sectors || {})[market], st = (r.stocks || {})[market];
+  const flag = REPORT_FLAG[market], tone = (m.markets || {})[market];
+  const head = `<section class="card"><h2>📰 오늘의 리포트 <small>${reportDay()} 기준</small></h2>
+    <ul class="brief brief-top">${(r.headline || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+    <details class="brief-more"><summary>자료가 팀 사이로 넘어간 흐름</summary>
+      <ol class="rp-chain">${(r.chain || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ol></details></section>`;
+  const facts = (m.facts || []).map((f) => `<b>${esc(f.name)}</b> ${f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}
+    ${rpChg(f.d1, 2)} <small class="muted">1달 ${pct(f.m1)}</small>`);
+  if (tone) facts.unshift(`${flag} ${market === "kr" ? "국장" : "미장"} 분위기 ${rpTone(tone.tone)} <small class="muted">${esc(tone.index)} 1주 ${pct(tone.w1)} · 1달 ${pct(tone.m1)}</small>`);
+  if (m.regime) facts.push(`경기 판정 <b>${esc(m.regime)}</b> <small class="muted">경고 ${esc(m.macro_score)}</small>`);
+  (m.warns || []).forEach((w) => facts.push(`⚠️ <b>${esc(w.name)}</b> <small class="muted">${esc(w.now)} → 일정·정책팀에 넘김</small>`));
+  const plan = [
+    ...(p.big || []).slice(0, 6).map((e) => `${md(e.date)} ${esc(e.time)} ${e.flag || ""} <b>${esc(e.title)}</b>${e.forecast ? ` <small class="muted">예상 ${esc(e.forecast)}</small>` : ""}`),
+    ...(p.earn || []).filter((e) => e.market === market).slice(0, 5).map((e) => `${md(e.date)} ${esc(e.title)}${e.mine ? " ⭐" : ""}`),
+    ...(p.caution ? [`⚠️ ${esc(p.caution)}`] : []),
+    ...((p.sectors || {})[market] || []).filter((x) => x.score).slice(0, 6).map((x) => `<b>${esc(x.sector)}</b> <span class="${x.score > 0 ? "up" : "down"}">${x.score > 0 ? "+" : ""}${x.score}</span>
+      <small class="muted">${esc([...x.good, ...x.bad].slice(0, 2).join(" · "))}</small>`),
+  ];
+  const secRow = (label, x) => `${label} <b>${esc(x.name)}</b> ${rpChg(x.r5)} <small class="muted">20일 ${pct(x.r20)}${x.match ? ` · 정책·경기 ${x.tilt > 0 ? "+" : ""}${x.tilt} ${esc(x.match)}` : ""}</small>`;
+  const secs = sec ? [...sec.strong.map((x) => secRow("상위", x)), ...sec.gap.map((x) => secRow("정책·경기와 반대", x)),
+    ...sec.weak.map((x) => secRow("하위", x)), ...(sec.next.length ? [`<small class="muted">연결 산업: ${esc(sec.next.join(", "))}</small>`] : [])] : [];
+  const stocks = st ? [...st.picks.map((x) => `<span data-stock="${esc(x.code)}" role="button"><b>${esc(x.name)}</b></span> <small class="muted">${esc(x.sector)}</small>
+      ${rpChg(x.r5)}${x.notes.length ? `<br><small class="muted">${esc(x.notes.join(" · "))}</small>` : ""}`),
+    ...st.quiet.map((q) => `🔍 <b>${esc(q.name)}</b> <small class="muted">주가 그대로(${pct(q.r5)})인데 거래량 ${q.ratio.toFixed(1)}배</small>`)] : [];
+  return [head,
+    rpSection("🌏", "1. 시장팀", "지수·환율·경기 → 일정·정책팀", facts),
+    rpSection("🗓", "2. 일정·정책팀", "7일 일정·업종 점수 → 업종팀", plan),
+    rpSection("🏭", "3. 업종팀", `${flag} 5일 흐름과 정책 비교 → 종목팀`, secs),
+    rpSection("🔎", "4. 종목팀", `${flag} 볼 업종 안의 종목`, stocks),
+    `<section class="card"><p class="muted" style="margin:0">✍️ 5. 편집팀이 위 네 팀 자료를 묶어 맨 위 요약을 만들어요. 공개 자료로 만든 참고용 리포트예요.
+      사고팔기 판단은 안 해요. 위 국장·미장 탭으로 업종·종목을 바꿔 봐요.</p></section>`];
+}
 function briefCard() {
-  const kr = DATA.markets.kr || {}, us = DATA.markets.us || {}, ks = kr.signal || {}, uss = us.signal || {};
-  const today = (DATA.built || "").slice(0, 10);
-  const tomorrow = new Date(Date.parse(`${today}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
-  const chg = (x) => `<span class="${sign(x)}">${pct(x, 2)}</span>`;
-  const sec = (icon, title, rows) => (rows.length ? `<p class="brief-h">${icon} ${title}</p><ul class="brief">${rows.map((r) => `<li>${r}</li>`).join("")}</ul>` : "");
-  // 1. 한 줄 요약
-  const world = {};
-  for (const g of (DATA.world || {}).groups || []) for (const it of g.items || []) world[it.name] = it;
-  const kospi = world["코스피"], spx = world["S&P500"], fx = world["원/달러"];
-  const mac = DATA.macro;
-  const krSig = ks.ok ? (ks.picks || []).length ? `국장 새 매수 신호 ${ks.picks.length}개` : "국장 조건 통과 종목 없음" : "국장은 규칙상 새로 사지 않는 날";
-  const usSig = { buy: "미장 매수 신호", sell: "미장 매도 신호", hold: "미장 그대로 보유" }[uss.action] || (uss.ok ? "미장 보유 조건" : "미장 쉬기");
-  const top = [
-    kospi && `코스피 ${chg(kospi.d1)}, S&P500 ${spx ? chg(spx.d1) : "-"}${fx ? `, 원/달러 ${num(fx.last)}원` : ""}`,
-    `${krSig} · ${usSig}`,
-    mac && `경기 ${esc(mac.regime)} (경고 ${mac.score}/${mac.total}): ${esc(mac.action)}`,
-  ].filter(Boolean);
-  // 2. 지수·환율 (한국·미국 앞 두 개 + 환율 첫째)
-  const groups = (DATA.world || {}).groups || [];
-  const pick = (name, n) => ((groups.find((g) => g.name === name) || {}).items || []).slice(0, n);
-  const idx = [...pick("한국", 2), ...pick("미국", 3), ...pick("환율", 1)]
-    .map((it) => `<b>${esc(it.name)}</b> ${it.kind === "krw" ? `${num(it.last)}원` : it.last.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} ${chg(it.d1)} <small class="muted">(1주 ${pct(it.w1)})</small>`);
-  // 3. 신호
-  const sig = [
-    ks.ok ? (ks.picks || []).length ? `🇰🇷 ${ks.picks.map((x) => `<b>${esc(x.name)}</b>`).join(", ")} 새 매수` : "🇰🇷 조건은 맞지만 통과 종목 없음" : `🇰🇷 ${esc(ks.pause || "쉬기")}`,
-    uss.etf ? `🇺🇸 ${esc(uss.etf)} ${usSig.replace("미장 ", "")}` : "",
-  ].filter(Boolean);
-  // 4. 많이 움직인 종목 (5일, 이유 한 줄)
-  const mv = (sg, flag) => {
-    const m = sg.movers || {};
-    return [...(m.up || []).slice(0, 2), ...(m.down || []).slice(0, 1)]
-      .map((x) => `${flag} <b>${esc(x.name)}</b> ${chg(x.r5)} <small class="muted">${esc(x.main || (x.reasons || [])[0] || "")}</small>`);
-  };
-  const movers = [...mv(ks, "🇰🇷"), ...mv(uss, "🇺🇸")];
-  // 5. 수급 (국장 외국인·기관)
-  const fl = kr.flows || {};
-  const flows = [
-    (fl.buy || []).length ? `많이 산 종목: ${fl.buy.slice(0, 3).map((x) => esc(x.name)).join(", ")}` : "",
-    (fl.warn || []).length ? `외국인 연속 매도: ${fl.warn.slice(0, 3).map((x) => `${esc(x.name)}(${x.frg_streak}일)`).join(", ")}` : "",
-  ].filter(Boolean);
-  // 6. 업종 (5일, 지수보다 강한·약한 업종)
-  const sectorsOf = (sg, flag) => {
-    const list = (sg.sectors || []).filter((x) => x.r5 != null).sort((a, b) => b.r5 - a.r5);
-    if (list.length < 2) return [];
-    const [hi, lo] = [list[0], list[list.length - 1]];
-    return [`${flag} 강함 <b>${esc(hi.name)}</b> ${chg(hi.r5)} · 약함 <b>${esc(lo.name)}</b> ${chg(lo.r5)}`];
-  };
-  const sectors = [...sectorsOf(ks, "🇰🇷"), ...sectorsOf(uss, "🇺🇸")];
-  // 7. 오늘·내일 일정 (큰 발표 먼저, 내 종목 실적, 그 밖의 일정)
-  const evs = ((DATA.events || {}).events || []).filter((e) => e.tier1 && (e.date === today || e.date === tomorrow))
-    .map((e) => `${e.date === today ? "오늘" : "내일"} ${e.at.slice(11, 16)} ${e.flag || ""} <b>${esc(e.ko || e.title)}</b>${e.forecast ? ` <small class="muted">예상 ${esc(e.forecast)}</small>` : ""}`);
-  const cal = (DATA.calendar || []).filter((c) => (c.date === today || c.date === tomorrow) && (c.kind !== "earn" || c.mine || c.cap > 3e11))
-    .slice(0, 6).map((c) => `${c.date === today ? "오늘" : "내일"} ${c.market === "us" ? "🇺🇸" : "🇰🇷"} ${esc(c.title)}${c.mine ? " ⭐" : ""}`);
-  // 8. 가상계좌
-  const t = DATA.total;
-  const acct = t ? [`합계 ${wonShort(t.equity)} (${chg(t.gain)}), 현금 ${Math.round(t.cash_share * 100)}%`,
-    ...(t.parts || []).map((p) => `${esc(p.label)} ${wonShort(p.equity)} <small class="muted">(${pct(p.equity / p.capital - 1)})</small>`)] : [];
-  return `<section class="card brief-card"><h2>📰 오늘의 리포트 <small>${md(today)} ${esc((DATA.built || "").slice(11, 16))} 기준</small></h2>
-    <ul class="brief brief-top">${top.map((r) => `<li>${r}</li>`).join("")}</ul>
-    <details class="brief-more"><summary>자세히 보기</summary>
-      ${sec("🌏", "지수·환율 (전날 대비)", idx)}${sec("🔔", "오늘 신호", sig)}${sec("🔥", "많이 움직인 종목 (5일)", movers)}
-      ${sec("💰", "국장 수급 (외국인·기관)", flows)}${sec("🏭", "업종 흐름 (5일)", sectors)}
-      ${sec("🗓", "오늘·내일 일정", [...evs, ...cal])}${sec("💼", "가상계좌", acct)}
-      <p class="muted" style="margin:8px 0 0">앱 자료로 만든 참고용 요약이에요. 주문은 직접 판단해서 하세요.</p>
-    </details></section>`;
+  return homeReportCard();
 }
 function inboxHeadCard() {
   return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button><h2 class="stock-name">메시지함</h2>
@@ -1413,7 +1311,7 @@ function themeCard(t, only) {
       .map((e) => themeRow(m, e.row[0], "", mine)) : [];
     const more = m === "us" ? (t.more_us || []).map((c) => themeRow(m, c, "", mine)) : [];
     if (!rows.length && !etfs.length) return "";
-    const sec = t.sector && ((d.signal && d.signal.sectors) || []).find((x) => x.name === t.sector);
+    const sec = t.sector && ((d.daily && d.daily.sectors) || []).find((x) => x.name === t.sector);
     const secLine = sec ? `<li data-tsec="${m}/${esc(sec.name)}"><div class="l"><div class="name">${esc(sec.name)} 업종${toneBadge(sec)}</div>
         <div class="meta">${MK_NAME[m]} 업종 흐름 · 누르면 업종 뉴스</div></div>
         <div class="r ${sign(sec.r5)}">${pct(sec.r5)}<div class="meta">5일 중간값</div></div></li>` : "";
@@ -1978,124 +1876,41 @@ function bindMap() {
 
 // ---------------------------------------------------------------- 추천 종목 성과
 
-// 처음엔 추천이 더 많은 쪽을 보여 줘요 (국장 알림 규칙은 조건이 까다로워서 추천이 드물어요).
-function pickSrc(t) {
-  const keys = Object.keys(t.srcs);
-  if (keys.includes(trackSrc[market])) return trackSrc[market];
-  return keys.reduce((a, b) => (t.srcs[b].count > t.srcs[a].count ? b : a), keys[0]);
-}
-
-function trackCard(d) {
-  const t = d.signal && d.signal.tracked;
-  if (!t || !Object.keys(t.srcs).length) return "";
-  const src = pickSrc(t), s = t.srcs[src];
-  const buttons = Object.entries(t.srcs).map(([k, v]) =>
-    `<button type="button" data-src="${k}" aria-pressed="${k === src}">${esc(v.label)} ${v.count}</button>`).join("");
-  let body;
-  if (!s.count) {
-    body = `<p class="empty">${src === "signal" && market === "us"
-      ? "최근 6개월 동안 새 SPY 매수 신호가 없었어요 (계속 보유 중이거나 현금이었어요)."
-      : "최근 6개월 동안 이 규칙으로 추천한 종목이 없어요."}</p>`;
-  } else {
-    const stats = s.horizons.map((h) => `<div class="stat"><span>${h.days}거래일 뒤</span>
-        <b class="${sign(h.avg)}">${h.n ? cnt(h.avg, "pct", pct(h.avg)) : "-"}</b>
-        <small>${h.n ? `${h.n}개 중 오른 종목 ${Math.round(h.win * 100)}%<br>지수 ${pct(h.index)}${h.worst != null ? `<br>가장 나쁨 <span class="${sign(h.worst)}">${pct(h.worst)}</span>` : ""}` : "아직 없음"}</small></div>`).join("");
-    const live = t.live_from;
-    let divider = false;
-    const rows = s.recent.map((p) => {
-      let pre = "";
-      if (live && !divider && p.date < live) {
-        divider = true;
-        pre = `<li class="divider">↓ ${md(live)} 전은 지금 규칙을 과거 날짜에 적용해서 채운 기록이에요</li>`;
-      }
-      return `${pre}<li class="pick" data-stock="${esc(p.code)}"><div class="name">${esc(p.name)}</div><b class="ret ${sign(p.ret)}">${pct(p.ret)}</b>
-        <div class="meta">${md(p.date)} ${px(market, p.close)} → ${px(market, p.last)} · ${p.days ? `${p.days}거래일` : "오늘"}</div>
-        <div class="mini">${spark(p.path, `${p.name} 추천 뒤 수익률`, 0.01)}</div></li>`;
-    });
-    const TOP = 3;  // 처음엔 최근 3개만, 나머지는 접어 둬요
-    const shown = rows.slice(0, TOP).join(""), rest = rows.slice(TOP).join("");
-    body = `<p class="muted" style="margin:0 0 4px">추천 ${s.count}개 (${md(s.first)}부터) · 추천일 종가에서 그 뒤 종가까지, 배당 포함</p>
-      <div class="stats">${stats}</div>
-      <details class="fold-chart" id="track-fold"><summary>평균 수익률 그래프</summary><div class="legend">
-        <span class="key"><i class="sw" style="background:var(--series-1)"></i>추천 종목 평균</span>
-        <span class="key"><i class="sw" style="background:var(--series-2)"></i>${esc(d.index_name)} 같은 기간</span></div>
-        <div class="chart" id="track-chart"></div></details>
-      <p class="sub" style="margin:14px 0 6px">최근 추천 <small class="muted">작은 그래프 = 추천일부터 날마다 수익률</small></p>
-      <ul class="list">${shown}</ul>
-      ${rest ? `<details class="more-list"><summary>최근 추천 ${s.recent.length - TOP}개 더 보기</summary><ul class="list">${rest}</ul></details>` : ""}
-      <p class="muted note" style="margin:10px 0 0">같은 종목이 ${t.gap}거래일 안에 다시 후보에 오르면 처음 추천만 세요. 실제로는 다음 날 시가에 사서 조금 달라요.
-        ${live ? "" : "아직은 전부 지금 규칙을 과거 날짜에 적용해서 채운 기록이에요."}</p>`;
-  }
-  return `<section class="card"><h2>추천 종목 성과 <small>추천일 종가 기준</small></h2>
-    <div class="period" role="group" aria-label="추천 출처" style="margin-bottom:10px">${buttons}</div>${body}</section>`;
-}
-
-let PERF_OPEN = new Set();
-try { PERF_OPEN = new Set(JSON.parse(localStorage.getItem("perf_open") || "[]")); } catch (e) { /* 처음 */ }
-// 성과 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 수익률 달력, 고른 건 이 폰에 기억해요
+// 도구 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 적립식 계산기, 고른 건 이 폰에 기억해요
 const PERF_TABS = [
-  ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
-  ["acc", "가상계좌", (d) => [accountCard(d), positionsCard(d), tradesCard(d)]],
-  ["rule", "내 규칙표", (d) => [rulebookAccountCard(d)]],
-  ["track", "추천 종목", (d) => [trackCard(d)]],
   ["sav", "적립식 계산기", () => [savingsCard()]],
+  ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
   ["stress", "폭락 대비", (d) => [stressCard(d)]],
-  ["etf", "ETF 계좌", (d) => [etfAccountCard(d)]],
-  ["ready", "실전 준비", (d) => [readinessCard(d), goalCard(), firstAccountCard(d)]],
+  ["goal", "목표", () => [goalCard()]],
   ["memo", "메모·점검", () => [memoCard(), healthCard()]],
 ];
-let perfTabKey = "cal";
-try { perfTabKey = localStorage.getItem("perf_tab") || "cal"; } catch (e) { /* 처음 */ }
-const perfTabList = (d) => PERF_TABS.filter(([k, , cards]) => k === "cal" || cards(d).some(Boolean)).map(([k, label, cards]) => ({ k, label, cards }));
+let perfTabKey = "sav";
+try { perfTabKey = localStorage.getItem("tools_tab") || "sav"; } catch (e) { /* 처음 */ }
+const perfTabList = (d) => PERF_TABS.filter(([k, , cards]) => k === "sav" || cards(d).some(Boolean)).map(([k, label, cards]) => ({ k, label, cards }));
 function perfTab(d) {
   const list = perfTabList(d);
   return list.find((t) => t.k === perfTabKey) || list[0];
 }
 function perfTabsBar(d) {
   const cur = perfTab(d).k;
-  return `<nav class="chips idx-chips perf-tabs" aria-label="성과 화면 고르기">${perfTabList(d).map((t) =>
+  return `<nav class="chips idx-chips perf-tabs" aria-label="도구 고르기">${perfTabList(d).map((t) =>
     `<button type="button" data-perf-tab="${t.k}" aria-pressed="${t.k === cur}">${esc(t.label)}</button>`).join("")}</nav>`;
 }
 
-function drawTrack(d, chart) {
-  const t = d.signal && d.signal.tracked;
-  if (!chart) {
-    document.querySelectorAll("[data-src]").forEach((b) => b.addEventListener("click", () => {
-      const y = window.scrollY;
-      trackSrc[market] = b.dataset.src;
-      render();
-      window.scrollTo(0, y);
-    }));
-    return;
-  }
-  if (!t) return;
-  const s = t.srcs[pickSrc(t)];
-  if (!s || !s.count) return;
-  const last = s.n.reduce((k, v, i) => (v ? i : k), 0);  // 자료가 있는 마지막 날까지
-  lineChart($("#track-chart"), {
-    dates: s.avg.slice(0, last + 1).map((_, k) => (k === 0 ? "추천일" : `${k}거래일 뒤 (${s.n[k]}개)`)),
-    xfmt: (label) => label.replace(/ \(.*\)$/, ""),
-    series: [
-      { name: "추천 종목 평균", color: "var(--series-1)", values: s.avg.slice(0, last + 1) },
-      { name: `${d.index_name} 같은 기간`, color: "var(--series-2)", values: s.index.slice(0, last + 1) },
-    ],
-    fmt: (v) => pct(v),
-    zero: true,
-  });
-}
-
 function homeIndexCard(d) {
-  const s = d.signal;
+  const s = d.daily;
   const close = s && s.series ? s.series.close.filter((v) => v != null) : [];
   if (close.length < 2) return "";
-  const last = close[close.length - 1], ch = last / close[close.length - 2] - 1, gap = s.index / s.ma200 - 1;
+  const lastOf = (a) => (a || []).filter((v) => v != null).pop();
+  const last = close[close.length - 1], ch = last / close[close.length - 2] - 1;
+  const ma50 = lastOf(s.series.ma50), ma200 = lastOf(s.series.ma200), gap = ma200 ? last / ma200 - 1 : null;
   return `<section class="card"><h2>${esc(d.index_name)} <small>${md(s.day)} 종가</small></h2>
     <div class="tile"><div>
       <p class="big">${cnt(last, "num", num(last))}</p>
       <p class="sub nowrap"><b class="${sign(ch)}">${cnt(ch, "pct2", pct(ch, 2))}</b> 전일 대비</p>
     </div><div class="tile-spark">${spark(close.slice(-63), `${d.index_name} 최근 3개월`)}<span class="muted">최근 3개월</span></div></div>
-    ${s.ma200 && s.ma50 ? `<p class="muted" style="margin:8px 0 0">200일선보다 ${(Math.abs(gap) * 100).toFixed(1)}% ${gap >= 0 ? "위" : "아래"} ·
-      50일선보다 ${s.index >= s.ma50 ? "위" : "아래"}</p>` : ""}
+    ${ma200 && ma50 ? `<p class="muted" style="margin:8px 0 0">200일선보다 ${(Math.abs(gap) * 100).toFixed(1)}% ${gap >= 0 ? "위" : "아래"} ·
+      50일선보다 ${last >= ma50 ? "위" : "아래"}</p>` : ""}
     ${more("chart", "차트 크게 보기")}</section>`;
 }
 
@@ -2105,7 +1920,7 @@ try { HOME_OPEN = new Set(JSON.parse(localStorage.getItem("home_open") || "[]"))
 function saveHomeOpen() { try { localStorage.setItem("home_open", JSON.stringify([...HOME_OPEN])); } catch (e) { /* 이번만 기억 */ } }
 const upDown = (r) => (r == null ? "" : `<b class="${sign(r)}">${pct(r)}</b>`);
 function homeMoreRows(d) {
-  const s = d.signal || {};
+  const s = d.daily || {};
   const rows = [];
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
   const dn = dropNow(d);
@@ -2173,9 +1988,9 @@ function openHomeMore(key) { HOME_OPEN.add(key); saveHomeOpen(); }
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
 // 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프
 function drawTrend(d, reset) {
-  const r = d.signal ? chartIdx(d) : null;
+  const r = d.daily ? chartIdx(d) : null;
   if (r && r.sym !== OWN_IDX[market]) { drawOtherIndex(r, reset); return; }
-  const c = d.signal && d.signal.candles;
+  const c = d.daily && d.daily.candles;
   if (c && c.dates.length) {
     const f = frameCandles(c, frame);
     const show = (FRAMES.find((x) => x[0] === frame) || FRAMES[0])[2];
@@ -2282,7 +2097,7 @@ function bandsOf(cl, k = 20, m = 2) {
   }
   return { mid, up, lo };
 }
-// RSI: 신호 계산(kr_swing_backtest.rsi)과 같은 방식 (오른 폭·내린 폭의 지수평균, 1/n씩 반영)
+// RSI: 서버 계산(marketdata.rsi)과 같은 방식 (오른 폭·내린 폭의 지수평균, 1/n씩 반영)
 function rsiOf(cl, n = 14) {
   const out = new Array(cl.length).fill(null);
   let g = null, l = null;
@@ -2310,7 +2125,7 @@ function frameLabel(f, i, kind) {
 }
 
 function drawTrendLine(d) {
-  const s = d.signal && d.signal.series;
+  const s = d.daily && d.daily.series;
   if (!s || !s.dates.length) return;
   const days = 260;
   const cut = (arr) => arr.slice(-days - 1);  // 기간 시작 전날 종가부터 (변화율 기준점)
@@ -2328,117 +2143,6 @@ function drawTrendLine(d) {
   const first = close.find((v) => v != null), last = close[close.length - 1];
   $("#trend-change").innerHTML = first && last
     ? `최근 1년 <b class="${sign(last / first - 1)}">${pct(last / first - 1)}</b> (${num(first)} → ${num(last)})` : "";
-}
-
-function signalCard(d) {
-  const s = d.signal;
-  if (!s) {
-    return `<section class="card"><h2>오늘의 신호</h2>
-      <p class="empty">아직 계산된 신호가 없어요. ${NEXT_RUN[market]} 자동으로 계산되면 여기에 떠요.</p></section>`;
-  }
-  const chip = s.ok
-    ? `<span class="chip good">● 매수 조건 충족</span>`
-    : `<span class="chip wait">■ 매수 조건 미달</span>`;
-  const gap = s.index / s.ma200 - 1;
-  const idx = `<p class="sub">${esc(d.index_name)} ${num(s.index)} · 50일선 ${num(s.ma50)} · 200일선 ${num(s.ma200)} (${pct(gap)})</p>`;
-  let body;
-  if (market === "us") {
-    const [title, desc] = US_ACTION[s.action] || ["-", ""];
-    const etf = s.etf_close ? `<p class="muted">${esc(s.etf)} 종가 ${price("us", s.etf_close)} · ${money("us", d.capital)} 계좌면 ${canBuy("us", d.capital / 2, s.etf_close)}</p>` : "";
-    body = `<p class="headline">${title}</p><p class="sub">${desc}</p>${idx}${etf}${opinion(s.opinion)}`;
-  } else if (!s.ok) {
-    body = `<p class="headline">신규 매수 쉬는 날</p><p class="sub">${esc(s.pause || "코스피가 50일선이나 200일선 아래라 새로 사지 않아요.")}</p>${idx}`;
-  } else if (!s.picks.length) {
-    body = `<p class="headline">오늘은 매수 신호 없음</p><p class="sub">조건에 맞게 눌린 종목이 없어요. 기다리는 것도 규칙이에요.</p>${idx}`;
-  } else {
-    const slot = ((d.account && d.account.equity) || d.capital) * 0.1;  // 종목당 계좌의 10%
-    const items = s.picks.map((p, i) => `<li data-stock="${esc(p.code)}"><div class="l">
-        <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
-        <div class="meta">RSI2 ${p.rsi2.toFixed(1)} · 5일선 ${num(p.ma5)}원 위로 마감하면 매도 · 손절 참고 ${num(p.stop)}원</div>
-        ${opinion(p.opinion)}
-        ${i >= s.max_positions ? `<div class="meta">${s.max_positions}종목이 차면 건너뛰어요</div>` : ""}
-      </div><div class="r">${num(p.close)}원<div class="meta">${canBuy("kr", slot, p.close)}</div></div></li>`).join("");
-    body = `<p class="headline">매수 후보 ${s.picks.length}개</p>
-      <p class="sub note">다음 거래일 시가에 종목당 계좌의 10%씩, 최대 ${s.max_positions}종목까지 사요.</p>${idx}
-      <ul class="list" style="margin-top:12px">${items}</ul>`;
-  }
-  const look = sigLook(s);
-  return `<section class="${look.cls}"><h2><span>오늘의 신호${look.badge}</span><small>${md(s.day)} 종가 기준</small></h2>${chip}${body}</section>`;
-}
-
-// 부서별 보고 (스크리닝·기술적 분석·펀더멘탈·마켓·리스크관리·운용부). 예전 기록엔 없을 수 있어요.
-// 설명은 한 줄만 보이고, 부서를 누르면 전체가 펼쳐져요.
-const DESK_OPEN = new Set();
-function desksCard(d) {
-  const desks = d.signal && d.signal.desks;
-  if (!desks || !desks.length) return "";
-  const items = desks.map((x) => `<li><details class="desk" data-desk="${esc(x.dept)}"${DESK_OPEN.has(x.dept) ? " open" : ""}><summary>
-      <div class="name">${esc(x.dept)}</div><div class="meta desk-text">${esc(x.text)}</div></summary></details></li>`).join("");
-  return `<section class="card"><h2>부서별 보고 <small>누르면 자세히</small></h2><ul class="list">${items}</ul></section>`;
-}
-
-// 규칙으로 만든 매매 의견 (이유, 위험 등). 예전 기록엔 없을 수 있어요.
-function opinion(lines) {
-  if (!lines || !lines.length) return "";
-  return lines.map((l) => `<div class="opinion">${esc(l)}</div>`).join("");
-}
-
-function accountCard(d) {
-  const a = d.account;
-  if (!a) {
-    return `<section class="card"><h2>가상계좌 <small>${money(market, d.capital)}${market === "kr" ? "으로" : "로"} 시작</small></h2>
-      <p class="empty">아직 첫 기록 전이에요. ${NEXT_RUN[market]} 첫 자동 실행부터 신호대로 샀다고 치고 날마다 기록해요.</p></section>`;
-  }
-  return `<section class="card"><h2>가상계좌 <small>${md(a.start)} 시작 · ${md(a.last_day)} 종가</small></h2>
-    <p class="acc-line"><b class="acc-eq">${cnt(a.equity, "money", money(market, a.equity))}</b>
-      <span class="muted">시작 ${money(market, a.capital)} · 현금 ${money(market, a.cash)}</span></p>
-    <div class="stats">
-      <div class="stat"><span>가상계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
-      <div class="stat"><span>${esc(d.index_name)}</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
-      <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
-    </div>
-    <details class="fold-chart" id="equity-fold"><summary>수익률 그래프</summary><div class="legend">
-      <span class="key"><i class="sw" style="background:var(--series-1)"></i>가상계좌</span>
-      <span class="key"><i class="sw" style="background:var(--series-2)"></i>${esc(d.index_name)}</span>
-      <span class="muted">시작일 대비 수익률</span></div>
-      <div class="chart" id="equity-chart"></div></details>
-    ${pendingLines(a)}
-  </section>`;
-}
-
-// 다음 거래일 시가에 사고팔 예정인 종목
-function pendingLines(a) {
-  const out = [];
-  if (a.pending_buys.length) out.push(`다음 거래일 시가 매수 예정: ${a.pending_buys.map(esc).join(", ")}`);
-  if (a.pending_sells.length) out.push(`다음 거래일 시가 매도 예정: ${a.pending_sells.map(esc).join(", ")}`);
-  return out.map((p) => `<p class="muted" style="margin:8px 0 0">${p}</p>`).join("");
-}
-
-function positionsCard(d) {
-  const a = d.account;
-  if (!a) return "";
-  const items = a.positions.map((p) => `<li data-stock="${esc(p.code)}"><div class="l"><div class="name">${esc(p.name)}</div>
-      <div class="meta">${shares(p.qty)} · ${md(p.buy_date)} ${price(market, p.buy_price)}에 매수 → 지금 ${price(market, p.price)}</div></div>
-      <div class="r"><div class="${sign(p.ret)}">${pct(p.ret)}</div><div class="meta">${money(market, p.value)}</div></div></li>`).join("");
-  return `<section class="card"><h2>보유 종목 <small>${a.positions.length}개</small></h2>
-    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">지금은 보유 종목 없이 현금이에요.</p>`}</section>`;
-}
-
-function tradesCard(d) {
-  const a = d.account;
-  if (!a) return "";
-  const summary = a.trade_count
-    ? `<p class="muted" style="margin:0 0 8px">끝난 거래 ${a.trade_count}건 · 승률 ${Math.round(a.win_rate * 100)}% · 실현손익 <span class="${sign(a.realized)}">${a.realized > 0 ? "+" : ""}${money(market, a.realized)}</span></p>`
-    : "";
-  // 매매 복기: 산 이유 → 판 이유 → 같은 기간 지수와 비교한 한 줄 평가 (review.py)
-  const items = a.trades.map((t) => `<li class="review"><div class="l"><div class="name">${esc(t.name)}</div>
-      <div class="meta">${t.qty ? `${shares(t.qty)} · ` : ""}${md(t.buy_date)} → ${md(t.sell_date)} · ${t.days}일${t.index_ret != null ? ` · 같은 기간 ${esc(d.index_name)} ${pct(t.index_ret)}` : ""}</div>
-      ${t.buy_why ? `<div class="why"><span>산 이유</span>${esc(t.buy_why)}</div>` : ""}
-      <div class="why"><span>판 이유</span>${esc(t.reason)}</div>
-      ${t.verdict ? `<div class="why verdict"><span>평가</span>${esc(t.verdict)}</div>` : ""}</div>
-      <div class="r"><div class="${sign(t.ret)}">${pct(t.ret)}</div><div class="meta">${t.pnl > 0 ? "+" : ""}${money(market, t.pnl)}</div></div></li>`).join("");
-  return `<section class="card"><h2>매매 복기 <small>최근 ${a.trades.length}건</small></h2>${summary}
-    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">아직 끝난 거래가 없어요. 첫 거래가 끝나면 산 이유·판 이유·지수와 비교한 평가가 여기 쌓여요.</p>`}</section>`;
 }
 
 // 세계 지수·환율(world.json)에 있는 지수들. 매매 기준 지수가 맨 앞이에요.
@@ -2531,7 +2235,7 @@ function cmpResults(d) {
     <small>${esc(h.meta)}</small></span><span class="add">+</span></button></li>`).join("")}</ul>`;
 }
 function compareCard(d) {
-  if (!d.signal) return "";
+  if (!d.daily) return "";
   const items = cmpItems(d);
   const chips = items.map((k, i) => `<button type="button" class="cmp-chip" data-cmp-del="${esc(k)}" aria-label="${esc(cmpName(d, k))} 빼기">
     <i class="sw" style="background:${cmpColor(i)}"></i>${esc(cmpName(d, k))} <span aria-hidden="true">×</span></button>`).join("");
@@ -2834,14 +2538,14 @@ function otherIndexCard(d, r) {
     <div class="chart candle" id="trend-chart"><p class="empty">차트를 불러오는 중이에요…</p></div>
     <p class="muted" id="trend-all" style="margin:8px 0 0"></p>
     <p class="muted note" style="margin:8px 0 0">옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그날 값이 보여요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려요.
-      이 지수는 참고로만 봐요. 매수 규칙은 ${esc(chartIndexes(d)[0].name)}만 봐요.</p>${indHelp()}</section>`;
+      이 지수는 참고로만 봐요.</p>${indHelp()}</section>`;
 }
 
 function trendCard(d) {
-  if (!d.signal) return "";
+  if (!d.daily) return "";
   const r = chartIdx(d);
   if (r.sym !== OWN_IDX[market]) return otherIndexCard(d, r);
-  const cd = d.signal.candles;
+  const cd = d.daily.candles;
   const buttons = FRAMES.map(([key, label]) =>
     `<button type="button" data-frame="${key}" aria-pressed="${key === frame}">${label}</button>`).join("");
   return `<section class="card">${idxChips(d)}<h2>${esc(d.index_name)} 추세</h2>
@@ -2854,7 +2558,7 @@ function trendCard(d) {
     <div class="chart candle" id="trend-chart"></div>
     <p class="muted note" style="margin:8px 0 0">${cd
       ? "옆으로 밀면 과거로, 두 손가락으로 벌리거나 오므리면 확대·축소돼요. 캔들을 누르면 그 기간의 시가·고가·저가·종가가 보여요. 길게 누른 채 움직이거나 떠 있는 세로선을 잡고 밀면 세부정보가 손가락을 따라와요. 값이 8배 넘게 차이 나는 긴 구간은 '로그 눈금'으로 그려서 같은 비율로 오르면 같은 높이예요. "
-      : ""}${TREND_RULE[market]}</p>${cd ? indHelp() : ""}</section>`;
+      : ""}</p>${cd ? indHelp() : ""}</section>`;
 }
 
 function candleLegend() {
@@ -2933,55 +2637,7 @@ function indHelp() {
   return `<ul class="help">${items.join("")}<li>보조지표는 지금 보는 캔들로 계산해요. 주봉이면 20주 평균, 14주 RSI예요.</li></ul>`;
 }
 
-// 내 매매 규칙표: 알림과 따로 가상계좌로 검증 중 (예전 데이터엔 없을 수 있어요).
-// 오늘 후보와 규칙은 신호 화면, 계좌 성과는 성과 화면에 보여요.
-const RB_FIRST = 3;
-function rulebookPicksCard(d) {
-  const rb = d.rulebook;
-  if (!rb) return "";
-  const picks = (d.signal && d.signal.rulebook) || [];
-  const unit = market === "kr" ? "원" : "달러";
-  const first = ((rb.account && rb.account.equity) || d.capital) / 5 * 0.3;  // 종목당 계좌의 1/5, 첫 매수는 그중 30%
-  // 후보가 많으면 길어져서 앞의 RB_FIRST개만 한 줄씩(이름·가격), 나머지와 매매 의견은 접어 둬요 (사용자 요청 2026-10-17)
-  const row = (p, i, full) => `<li data-stock="${esc(p.code)}"><div class="l">
-      <div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>${full ? opinion(p.opinion) : ""}</div>
-      <div class="r">${num(p.close)}${unit}<div class="meta">1차 ${canBuy(market, first, p.close)}</div></div></li>`;
-  const top = picks.slice(0, RB_FIRST).map((p, i) => row(p, i, false)).join("");
-  const rest = picks.length > RB_FIRST ? ` · 나머지 ${picks.length - RB_FIRST}개` : "";
-  const fold = picks.length ? `<details class="more-list" style="margin-top:8px"><summary class="muted">후보 ${picks.length}개 매매 의견까지 보기${rest}</summary>
-      <ul class="list">${picks.map((p, i) => row(p, i, true)).join("")}</ul></details>` : "";
-  return `<section class="card"><h2>내 규칙표 후보 <small>${picks.length}개 · 검증용 가상계좌에 기록</small></h2>
-    ${top ? `<ul class="list">${top}</ul>${fold}` : `<p class="empty">오늘은 규칙표 조건에 맞는 종목이 없어요.</p>`}
-    <details style="margin-top:12px"><summary>규칙표 보기</summary><ol>${rb.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details>
-  </section>`;
-}
-
-function rulebookAccountCard(d) {
-  const rb = d.rulebook;
-  if (!rb) return "";
-  const a = rb.account;
-  const main = d.account;
-  const body = a
-    ? `<div class="stats">
-        <div class="stat"><span>규칙표 계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
-        <div class="stat"><span>알림 규칙 계좌</span><b class="${main ? sign(main.gain) : ""}">${main ? cnt(main.gain, "pct", pct(main.gain)) : "-"}</b></div>
-        <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
-      </div>
-      <p class="muted" style="margin:8px 0 0">${money(market, a.equity)} · 끝난 거래 ${a.trade_count}건${a.trade_count ? ` · 승률 ${Math.round(a.win_rate * 100)}%` : ""} · 보유 ${a.positions.length}종목</p>`
-    : `<p class="empty">${NEXT_RUN[market]} 첫 자동 실행부터 기록해요.</p>`;
-  return `<section class="card"><h2>내 규칙표 검증 <small>가상계좌</small></h2>${body}</section>`;
-}
-
 // ---------------------------------------------------------------- 내 자산 합계·실전 전환·ETF·메모·점검
-
-// 가상계좌 셋(국장·미장·ETF)을 원화로 합친 한 줄 (미장은 환율로 바꿔요)
-function totalLine() {
-  const t = DATA.total;
-  if (!t) return "";
-  return `<div class="track-line"><span>내 가상 자산 합계 <small>원화 · 환율 ${num(t.fx)}원</small></span>
-    <b class="${sign(t.gain)}">${num(t.equity)}원</b>
-    <span class="muted">시작 대비 ${pct(t.gain)} · 현금 ${Math.round(t.cash_share * 100)}% · 달러 ${Math.round(t.usd_share * 100)}%</span></div>`;
-}
 
 // 지난 주간 점검에서 문제가 있었으면 홈에 한 줄
 function healthLine() {
@@ -2997,7 +2653,6 @@ function healthLine() {
 // tax: dep(예금 이자) · kr(국내 주식·국내 주식형 ETF, 매매차익 비과세) · other(국내 상장 해외·채권 ETF 등, 차익도 15.4%) · us(미국 상장, ISA 안 됨)
 const SAV_FIXED = [
   { key: "dep", name: "예금", price: 0, div: 3, mdd: 0, fee: 0, tax: "dep", note: "이자 연 3% 가정" },
-  { key: "rule", name: "우리 ETF 규칙", price: 7.1, div: 0, mdd: -8.4, fee: 0.07, tax: "other", note: "S&P500 ETF 50%+현금, 2011~ 백테스트" },
   { key: "mine", name: "직접 입력", price: null, div: null, mdd: null, fee: 0, tax: "other", note: "아래에서 바꿔요" },
 ];
 // 검색 아래 '자주 찾는' 버튼
@@ -3137,8 +2792,8 @@ function savPx(p) {
   const dash = !q && DATA.markets[p.m] && stocksOf(DATA.markets[p.m]).find((x) => x.code === p.code);
   const px = (q && q[0]) || (dash && dash.close);
   if (!px) return null;
-  const day = q ? QUOTES[p.m].day : DATA.markets[p.m].signal && DATA.markets[p.m].signal.day;
-  const fx = p.m === "us" ? (DATA.total && DATA.total.fx) || (DATA.markets.us.signal && DATA.markets.us.signal.usdkrw) || 1350 : 1;
+  const day = q ? QUOTES[p.m].day : DATA.markets[p.m].daily && DATA.markets[p.m].daily.day;
+  const fx = p.m === "us" ? DATA.fx || 1350 : 1;
   return { px, fx, day, won: px * fx };
 }
 // 주 수로 살 때 얼마나 자주: 한 달에 몇 번인지 (매주는 52주/12달, 매일은 장 서는 날 252일/12달)
@@ -3552,65 +3207,6 @@ function bindSavings() {
 }
 
 // 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).
-const FIRST_STEPS = [
-  ["auto", "가상계좌 실전 전환 판정 통과", "위 '실전 전환 판정'이 전부 ✅가 되면 자동으로 체크돼요. 그전엔 진짜 돈을 넣지 않아요."],
-  ["cash", "비상금 따로 떼어 두기", "생활비 3~6개월치는 투자하지 않고 예금·파킹통장에. 급할 때 주식을 손해 보고 팔지 않게요."],
-  ["isa", "증권사 앱에서 중개형 ISA 계좌 만들기", "만 19세 이상이면 폰으로 비대면 개설돼요. '중개형'이어야 ETF를 직접 살 수 있어요. 수수료 이벤트를 비교해서 한 곳만."],
-  ["pension", "(선택) 연금저축 계좌", "노후용이라 55세 전에 빼면 세금을 돌려내야 해요. 세액공제는 소득이 생긴 뒤에 의미가 있어요."],
-  ["first", "첫 매수는 10만 원 이하, ETF 1~2주", "우리 ETF 규칙이 '보유' 신호일 때만 TIGER 미국S&P500을 사요. 현금 신호면 기다려요."],
-  ["log", "실제 체결가를 기록하기", "증권사 앱 체결 내역을 캡처해 두고, 같은 날 앱 'ETF(원화) 계좌'의 가격과 비교해요. 차이가 크면 규칙을 실전에 그대로 쓰기 어려워요."],
-  ["month", "한 달 뒤 점검하고 조금씩 늘리기", "실제 낙폭이 판정표 기준 안이고 규칙대로 사고팔았으면, 매달 같은 금액씩 늘려요 (아래 적립식 계산기 참고)."],
-  ["never", "안 하기로 약속하기", "레버리지·인버스, 신용·미수, 유료 리딩방, 한 종목 몰빵은 하지 않아요. 낙폭을 작게가 우리 원칙이에요."],
-];
-let FIRST_DONE = {};
-let FIRST_OPEN = false;  // 실전 전엔 쓸 데가 없어 맨 아래에 접어 둬요. 펼치면 앱을 닫기 전까지 펼친 채로.
-try { FIRST_DONE = JSON.parse(localStorage.getItem("first_steps") || "{}"); } catch (e) { /* 처음 */ }
-function firstAccountCard(d) {
-  if (market !== "kr" && market !== "us") return "";
-  const k = DATA.markets.kr, ready = !!((k.etf && k.etf.readiness && k.etf.readiness.ready) || (k.readiness && k.readiness.ready)
-    || (DATA.markets.us.readiness && DATA.markets.us.readiness.ready));
-  const done = (key) => (key === "auto" ? ready : !!FIRST_DONE[key]);
-  const n = FIRST_STEPS.filter(([key]) => done(key)).length;
-  const rows = FIRST_STEPS.map(([key, title, why], i) => `<li><button type="button" class="step${done(key) ? " on" : ""}" data-first="${key}"
-      aria-pressed="${done(key)}"${key === "auto" ? " disabled" : ""}><span class="box" aria-hidden="true">${done(key) ? "✓" : i + 1}</span>
-      <span class="l"><span class="name">${esc(title)}</span><span class="meta">${esc(why)}</span></span></button></li>`).join("");
-  return `<section class="card" id="first-card"><details${FIRST_OPEN ? " open" : ""}><summary>실전 첫 계좌 체크리스트 ${n}/${FIRST_STEPS.length} <small class="muted">(아직은 접어 둬요)</small></summary>
-    <div class="bar" style="margin-top:10px" aria-hidden="true"><i style="width:${Math.round((n / FIRST_STEPS.length) * 100)}%"></i></div>
-    <ul class="list steps">${rows}</ul>
-    <p class="muted note" style="margin:10px 0 0">체크는 이 폰 브라우저에만 저장돼요. 계좌 개설 조건·세금 혜택은 바뀔 수 있어서 만들 때 증권사 안내를 꼭 확인하세요.
-      복무 중이면 장병내일준비적금 같은 정부 매칭 적금이 예금 중에선 가장 유리할 수 있어요.</p></details></section>`;
-}
-
-function readinessCard(d) {
-  const r = d.readiness;
-  const e = market === "kr" && d.etf && d.etf.readiness;
-  if (!r && !e) {
-    return `<section class="card"><h2>실전 전환 판정</h2><p class="empty">가상계좌 기록이 쌓이면 진짜 돈을 넣어도 되는 단계인지 여기서 판정해요.</p></section>`;
-  }
-  const block = (x) => `<p class="name" style="margin:14px 0 6px;font-weight:700">${esc(x.name)} · ${x.ready ? "통과 ✅" : "아직"}</p>
-    <ul class="list">${x.checks.map((c) => `<li><div class="l"><div class="name">${c.ok ? "✅" : "⬜"} ${esc(c.label)}</div>
-      <div class="meta">${esc(c.detail)}</div></div></li>`).join("")}</ul><p class="muted" style="margin:8px 0 0">${esc(x.verdict)}</p>`;
-  return `<section class="card"><h2>실전 전환 판정 <small>전부 통과하면 소액으로</small></h2>
-    ${[r, e].filter(Boolean).map(block).join("")}</section>`;
-}
-
-function etfAccountCard(d) {
-  if (market !== "kr" || !d.etf) return "";
-  const a = d.etf.account;
-  const body = a
-    ? `<p class="hero">${cnt(a.equity, "money", money("kr", a.equity))}</p>
-      <div class="stats">
-        <div class="stat"><span>ETF 계좌</span><b class="${sign(a.gain)}">${cnt(a.gain, "pct", pct(a.gain))}</b></div>
-        <div class="stat"><span>코스피</span><b class="${sign(a.index_gain)}">${cnt(a.index_gain, "pct", pct(a.index_gain))}</b></div>
-        <div class="stat"><span>${term("최대 낙폭")}</span><b>${cnt(a.mdd, "pct", pct(a.mdd))}</b></div>
-      </div>
-      <p class="muted" style="margin:8px 0 0">${a.positions.length ? a.positions.map((p) => `${esc(p.name)} ${shares(p.qty)} ${pct(p.ret)}`).join(" · ") : "보유 없음 (현금)"}</p>
-      ${pendingLines(a)}`
-    : `<p class="empty">${NEXT_RUN.kr} 첫 자동 실행부터 기록해요.</p>`;
-  return `<section class="card"><h2>ETF(원화) 계좌 <small>ISA·연금저축용 · 1,000만 원</small></h2>${body}
-    <details style="margin-top:12px"><summary>규칙 보기</summary><ol>${d.etf.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
-}
-
 // 세계 지수·환율 (world.py, 국장·미장 같이). 보기용이고 매매 규칙엔 안 써요.
 const WORLD_MAIN = ["^KS11", "^GSPC", "^IXIC", "KRW=X"];  // 펼치지 않아도 늘 보이는 것
 function worldValue(r) {
@@ -3677,7 +3273,7 @@ function worldCard() {
   return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
     <ul class="list">${main.map((r) => worldRow(r)).join("")}</ul>
     <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
-    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 금리는 몇 %p 바뀌었는지, VIX는 20을 넘으면 불안이 커진 거예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 금리는 몇 %p 바뀌었는지예요. 장단기 금리 차가 마이너스면 '역전'으로, 경기 침체 앞에 자주 나왔어요. VIX는 20을 넘으면 불안이 커진 거예요. 미국 2년 금리·장단기 차는 FRED, 한국 국고채 금리는 네이버, 나머지는 야후 자료예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
@@ -3811,7 +3407,7 @@ function discloseStockCard(d) {
 function discloseHomeCard(d) {
   if (market !== "kr" || !d.disclosures) return "";
   const since = new Date(Date.parse(TODAY()) - 7 * 864e5).toISOString().slice(0, 10);
-  const mine = new Set([...WATCH.kr, ...(d.extras || []).map((e) => e.code), ...((d.account && d.account.positions) || []).map((p) => p.code)]);
+  const mine = new Set([...WATCH.kr, ...(d.extras || []).map((e) => e.code)]);
   const rows = d.disclosures.filter((x) => x.day >= since && (x.tone === "warn" || x.tone === "check" || mine.has(x.code)));
   return `<section class="card"><h2>최근 공시 <small>7일 · 주의 공시와 내 종목</small></h2>
     ${rows.length ? `<ul class="list">${rows.slice(0, 8).map((x) => disRow(x, true)).join("")}</ul>` : `<p class="empty">최근 7일 동안 주의할 공시가 없어요.</p>`}
@@ -3838,7 +3434,7 @@ function marketStatus(m) {
   const [tz, open, close, name, closeAt] = MKT_HOURS[m];
   const now = zoneNow(tz);
   const md0 = DATA.markets && DATA.markets[m];
-  const last = md0 && md0.signal && md0.signal.day;
+  const last = md0 && md0.daily && md0.daily.day;
   let state, cls = "";
   if (now.weekend) state = "주말이라 쉬어요";
   else if (now.min < open) state = "열기 전";
@@ -3899,7 +3495,7 @@ function bigEventsCard() {
 }
 
 // 다가오는 일정 (econ_calendar.py): 경제 일정(큰 발표·금리 결정·만기일·실적 시즌)과 종목 실적·배당 발표를 두 칸으로 나눠요 (사용자 요청 2026-10-17).
-// 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목·가상계좌 종목만, 나머지 대형주 실적은 개수만.
+// 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목만, 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
 const EARN_DAYS = 30;  // 실적·배당은 한 달 치
 const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
@@ -3987,7 +3583,7 @@ function earningsCard() {
   const more = hidden ? `<button type="button" class="more" data-cal-all>${calAll ? "관심종목 실적만 보기" : `대형주 실적 발표 ${hidden}건 더 보기`}<span aria-hidden="true">›</span></button>` : "";
   return `<section class="card" id="earn-card"><h2>실적·배당 발표 <small>${EARN_DAYS}일 · 국장·미장</small></h2>
     ${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">앞으로 ${EARN_DAYS}일 동안 내 종목 실적·배당 일정이 없어요.</p>`}${more}
-    <p class="muted note" style="margin:10px 0 0">📢 실적 발표, 💰 배당락이에요. ⭐는 내 관심종목·가상계좌 종목이에요. 종목을 누르면 종목 화면으로 가요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">📢 실적 발표, 💰 배당락이에요. ⭐는 내 관심종목이에요. 종목을 누르면 종목 화면으로 가요.</p></section>`;
 }
 
 // 시장 히트맵 (토스·TradingView처럼): 대형주를 업종별로 묶고, 크기는 시가총액, 색은 등락(빨강 오름·파랑 내림)
@@ -4033,7 +3629,7 @@ function heatmapCard(d) {
   const all = stocksOf(d).filter((s) => !s.extra && s.close != null);
   if (all.length < 5) return "";
   if (!HEAT_P.some((x) => x[0] === heatP)) heatP = "d1";
-  const funds = d.funds || {}, of = (d.signal && d.signal.sector_of) || {};
+  const funds = d.funds || {}, of = (d.daily && d.daily.sector_of) || {};
   const groups = new Map();
   all.forEach((s) => {
     const g = of[s.code] || (s.code === "SPY" ? "ETF" : "기타");
@@ -4076,7 +3672,7 @@ function heatmapCard(d) {
 }
 
 function sectorsCard(d) {
-  const secs = d.signal && d.signal.sectors;
+  const secs = d.daily && d.daily.sectors;
   if (!secs || !secs.length) return "";
   let cur = SECTOR[market];
   const s = secs.find((x) => x.name === cur);
@@ -4114,7 +3710,7 @@ function sectorsCard(d) {
 
 // 많이 오른·내린 종목과 추정 이유 (movers.py). 예전 기록엔 없을 수 있어요.
 function moversCard(d) {
-  const mv = d.signal && d.signal.movers;
+  const mv = d.daily && d.daily.movers;
   if (!mv) return "";
   const row = (p) => {
     const n = (p.news || [])[0];
@@ -4188,7 +3784,7 @@ function fillFlows(x) {
 
 // 주가는 그대로인데 거래량만 크게 늘어난 종목 (quiet_volume.py). 예전 기록엔 없을 수 있어요.
 function quietVolumeCard(d) {
-  const q = d.signal && d.signal.quiet_volume;
+  const q = d.daily && d.daily.quiet_volume;
   if (!q) return "";
   const rows = (q.rows || []).map((r) => `<li data-stock="${esc(r.code)}"><div class="l"><div class="name">${esc(r.name)}</div>
       <div class="meta">거래량 평소의 ${r.ratio.toFixed(1)}배 · 가장 많은 날 ${r.peak.toFixed(1)}배${r.r20 == null ? "" : ` · 20일 ${pct(r.r20)}`}</div></div>
@@ -4198,16 +3794,6 @@ function quietVolumeCard(d) {
     ${rows ? `<ul class="list">${rows}</ul>${more}` : `<p class="empty">오늘은 조건에 맞는 종목이 없어요.</p>`}
     <p class="muted note" style="margin:10px 0 0">주가는 ±${Math.round(q.max_move * 100)}% 안인데 거래량이 평소(${q.base}일 평균)의 ${q.min_ratio}배 이상인 종목이에요.
       조용히 사 모으는 중인지 팔아 넘기는 중인지는 숫자만으론 몰라요. 참고용이고 매매 규칙은 안 바꿔요.</p></section>`;
-}
-
-function widePicksCard(d) {
-  if (market !== "kr" || !d.signal || !d.signal.wide) return "";
-  const picks = d.signal.wide;
-  const items = picks.map((p, i) => `<li><div class="l"><div class="name">${i + 1}. ${esc(p.name)} <span class="meta">${esc(p.code)}</span></div>
-      <div class="meta">RSI2 ${p.rsi2} · 손절 참고 ${num(p.stop)}원</div></div><div class="r">${num(p.close)}원</div></li>`).join("");
-  return `<section class="card"><h2>넓은 범위 후보 <small>참고 · 코스피 상위 200</small></h2>
-    ${items ? `<ul class="list">${items}</ul>` : `<p class="empty">오늘은 넓은 범위에서도 조건에 맞는 종목이 없어요.</p>`}
-    <p class="muted note" style="margin:10px 0 0">같은 조건을 2015년 이후 커진 회사까지 넓혀 봤어요. 검증 전이라 가상계좌엔 안 넣고 성과 화면 추천 성과로만 기록해요.</p></section>`;
 }
 
 // 내 판단 기록장 (텔레그램 '메모 삼성전자 산다')
@@ -4234,11 +3820,6 @@ function healthCard() {
   const rows = h.workflows.map((w) => `<li><div class="l"><div class="name">${w.ok ? "✅" : "⚠️"} ${esc(w.label)}</div>
       <div class="meta">성공 ${w.success}회${w.expected ? `/${w.expected}회 예정` : ""}${w.failure ? ` · 실패 ${w.failure}회` : ""}${w.github_skipped ? ` · GitHub 사정으로 못 돈 것 ${w.github_skipped}회` : ""}</div></div></li>`).join("");
   return `<section class="card"><h2>자동 실행 점검 <small>${md(h.checked.slice(0, 10))} 기준 지난 7일</small></h2><ul class="list">${rows}</ul></section>`;
-}
-
-function rulesCard(d) {
-  return `<section class="card"><details><summary>${esc(d.name)} 규칙 보기</summary>
-    <ol>${d.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol></details></section>`;
 }
 
 // ---------------------------------------------------------------- 종목 화면 (차트 + 재무제표)
@@ -4272,10 +3853,7 @@ function stockHeadCard(d) {
   const s = stocksOf(d).find((y) => y.code === code) || liteStock(market, code);
   const name = (s && s.name) || (x && x.name) || code;
   const on = WATCH[market].includes(code);
-  const sig = d.signal || {};
   const badges = [];
-  if ((sig.picks || []).some((p) => p.code === code)) badges.push(`<span class="badge good">오늘 매수 후보</span>`);
-  if ((sig.rulebook || []).some((p) => p.code === code)) badges.push(`<span class="badge">규칙표 후보</span>`);
   if (s && s.extra) badges.push(`<span class="badge">추가한 종목</span>`);
   const kind = s && s.extra ? kindName(market, [code, name, s.exch || "", s.kind || "s"])
     : x && x.lite ? kindName(market, [code, name, x.exch || "", x.kind || "s"])
@@ -4305,7 +3883,7 @@ function sectorLine(x, why) {
 }
 // 종목 이름 아래 작은 업종 키워드: #이 종목 업종 + 연관 업종 (누르면 아래 '업종과 연관 업종' 칸으로)
 function sectorTags(d, code) {
-  const sig = d.signal || {};
+  const sig = d.daily || {};
   const name = (sig.sector_of || {})[code];
   if (!name) return "";
   const rel = ((sig.sector_links || {})[name] || []).map(([n]) => n);
@@ -4314,7 +3892,7 @@ function sectorTags(d, code) {
 }
 
 function stockSectorCard(d) {
-  const sig = d.signal || {};
+  const sig = d.daily || {};
   const secs = sig.sectors || [];
   const name = (sig.sector_of || {})[stockCode];
   const mine = secs.find((x) => x.name === name);
@@ -5007,13 +4585,28 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 $(".search-btn").addEventListener("click", () => go("search"));
-$(".inbox-btn").addEventListener("click", () => (screen === "inbox" ? back() : go("inbox")));  // 한 번 더 누르면 닫혀요
+inboxHandle($(".inbox-btn"));
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
   if (screen === "map") { mapTrail = []; setMapFocus(""); window.scrollTo(0, 0); } else openMap("");
 });
-document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => go(b.dataset.screen)));
+// 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
+// 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
+function resetFolds() {
+  [HOME_OPEN, POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
+  saveHomeOpen();
+  try { localStorage.setItem("world_open", "0"); } catch (e) { /* 이번만 */ }
+  worldOpen = false; worldPick = null; polMore = false; polJump = null; calAll = false;
+  cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
+}
+document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {
+  resetFolds();
+  if (b.dataset.screen !== screen) { go(b.dataset.screen); return; }
+  lastView = "";  // 지금 화면 버튼을 또 누르면 접어서 다시 그리고 맨 위로
+  window.scrollTo(0, 0);
+  render();
+}));
 window.addEventListener("popstate", () => {
   const h = fromHash();
   if (h.s === "stock" && h.code) stockCode = h.code;
@@ -5070,11 +4663,9 @@ new MutationObserver((recs) => {
 
 // ---------------------------------------------------------------- 폭락 대비 점검
 // 2008 금융위기·2020 코로나·2022 금리 인상 때 각 종목이 실제로 얼마나 빠졌는지(returns.py가 매주 월봉으로 계산)를
-// 지금 가상계좌 보유 비중이나 관심종목(똑같이 나눠 샀다고 치고)에 그대로 대입해요. 그때 상장 전이면 지수 값으로 대신해요.
+// 관심종목(똑같이 나눠 샀다고 치고)에 그대로 대입해요. 그때 상장 전이면 지수 값으로 대신해요.
 const RET_IDX = { kr: null, us: null };  // 지수 하락장 [[낙폭 %, 회복 개월] | null] × 3
 let CRISES = ["2008 금융위기", "2020 코로나", "2022 금리 인상"];
-const RULE_MDD = { kr: "국장 알림 규칙 -3.2%", us: "미장 알림 규칙 -9.5%", etf: "ETF 계좌 규칙 -8.4%" };
-let stressOf = "acct";
 function crisisOf(m, code) {
   const r = RET[m] && RET[m][code];
   return (r && r[5]) || null;
@@ -5097,36 +4688,15 @@ function stressRun(m, items, cash) {
     return { name, dd: dd * (1 - cash), rec, slow, worst, proxies, index: idx[k] };
   });
 }
-function stressTargets(d) {
-  const out = [];
-  if (d.account) out.push(["acct", "가상계좌"]);
-  if (d.etf && d.etf.account) out.push(["etf", "ETF 계좌"]);
-  out.push(["watch", "관심종목"]);
-  return out;
-}
 function stressCard(d) {
-  const targets = stressTargets(d);
-  if (!targets.some((t) => t[0] === stressOf)) stressOf = targets[0][0];
   if (!RET[market]) {
     return `<section class="card" id="stress-card"><h2>폭락 대비 점검</h2><p class="muted">과거 하락장 자료를 불러오는 중이에요…</p></section>`;
   }
-  const chips = targets.map(([k, l]) => `<button type="button" data-stress="${k}" aria-pressed="${stressOf === k}">${l}</button>`).join("");
-  let items = [], cash = 0, base = 0, what = "", empty = "";
-  if (stressOf === "watch") {
-    const list = stocksOf(d).filter((s) => WATCH[market].includes(s.code));
-    items = list.map((s) => ({ code: s.code, name: s.name, w: 1 / list.length }));
-    base = market === "kr" ? 1e7 : 7470;
-    what = `관심종목 ${list.length}개에 ${money(market, base)}을 똑같이 나눠 넣었다면`;
-    if (!list.length) empty = "관심 화면에서 ☆를 눌러 종목을 넣으면 계산해요.";
-  } else {
-    const a = stressOf === "etf" ? d.etf.account : d.account;
-    base = a.equity;
-    const value = a.positions.reduce((s, p) => s + p.value, 0);
-    items = a.positions.map((p) => ({ code: p.code, name: p.name, w: value ? p.value / value : 0 }));
-    cash = a.equity ? 1 - value / a.equity : 1;
-    what = `지금 ${stressOf === "etf" ? "ETF 계좌" : "가상계좌"} (주식 ${Math.round((1 - cash) * 100)}%, 현금 ${Math.round(cash * 100)}%)`;
-    if (!items.length) empty = "지금은 전부 현금이라 폭락이 와도 계좌는 그대로예요. 규칙은 지수가 꺾이면 현금으로 쉬어요.";
-  }
+  const list = stocksOf(d).filter((s) => WATCH[market].includes(s.code));
+  const items = list.map((s) => ({ code: s.code, name: s.name, w: 1 / list.length })), cash = 0;
+  const base = market === "kr" ? 1e7 : 7470;
+  const what = `관심종목 ${list.length}개에 ${money(market, base)}을 똑같이 나눠 넣었다면`;
+  const empty = list.length ? "" : "관심 화면에서 ☆를 눌러 종목을 넣으면 계산해요.";
   const res = stressRun(market, items, cash);
   const worstDd = Math.min(...res.map((r) => r.dd), 0);
   const rows = res.map((r) => {
@@ -5144,7 +4714,6 @@ function stressCard(d) {
     : worstDd > -30 ? `<p class="caution">⚠️ 가장 나빴던 때 ${Math.round(worstDd)}%까지 빠져요. 현금 비중을 늘리거나 종목을 나누는 걸 생각해 보세요.</p>`
       : `<p class="caution">🚨 가장 나빴던 때 ${Math.round(worstDd)}%예요. 낙폭 최소화 원칙보다 훨씬 커요.</p>`;
   return `<section class="card" id="stress-card"><h2>폭락 대비 점검 <small>그때 같은 폭락이 오면</small></h2>
-    <div class="period" role="group" aria-label="점검할 대상">${chips}</div>
     <p class="muted" style="margin:10px 0 6px">${what}</p>
     ${empty ? `<p class="empty">${empty}</p>` : ""}
     <ul class="list stress-list">${rows}</ul>
@@ -5152,37 +4721,28 @@ function stressCard(d) {
     ${verdict}
     ${proxies.length ? `<p class="muted" style="margin:8px 0 0">그때 상장 전이라 ${esc(d.index_name)} 값으로 대신 계산: ${proxies.slice(0, 6).map(esc).join(", ")}${proxies.length > 6 ? ` 외 ${proxies.length - 6}개` : ""}</p>` : ""}
     <p class="muted note" style="margin:10px 0 0">낙폭은 하락장 직전 월말 고점에서 월중 최저가까지예요. 회복은 다시 그 고점 종가를 넘기까지 걸린 달이에요(배당 빼고 주가만).
-      현금은 0%로 쳐요. 알림 규칙은 지수가 200일선 아래로 내려가면 현금으로 쉬어서 실제로는 덜 빠져요(백테스트 2011~ 최대 낙폭: ${RULE_MDD[stressOf === "etf" ? "etf" : market]}).
       과거 폭락이 그대로 반복된다는 뜻은 아니에요.</p></section>`;
 }
-function bindStress(d) {
-  const card = $("#stress-card");
-  if (!card) return;
-  card.querySelectorAll("[data-stress]").forEach((b) => b.addEventListener("click", () => {
-    stressOf = b.dataset.stress;
-    try { localStorage.setItem("stress_of", stressOf); } catch (e) { /* 이번만 */ }
-    card.outerHTML = stressCard(d);
-    bindStress(d);
-    keepTap();
-  }));
-}
+function bindStress() { /* 고를 대상이 관심종목 하나뿐이라 묶을 버튼이 없어요 */ }
 
 // ---------------------------------------------------------------- 사기 전 체크리스트
 // 종목 화면 맨 위 신호등. 이미 있는 숫자(지수 추세, 종목 일봉, 재무 등급, 실적 일정)를 한눈에 모아요. 참고용이에요.
-const VOL_MAX = { kr: 0.45, us: 0.45 };
-const SEASONS = [[1, 20, 2, 15], [4, 20, 5, 15], [7, 20, 8, 14], [10, 20, 11, 14]];  // strategy.EARNINGS_SEASONS
+const VOL_MAX = { kr: 0.45, us: 0.45 };  // 이보다 크게 출렁이면 주의 (연율)
+const SEASONS = [[1, 20, 2, 15], [4, 20, 5, 15], [7, 20, 8, 14], [10, 20, 11, 14]];  // 국장 분기 실적 발표가 몰리는 때
 function inSeason(day) {
   const m = +day.slice(5, 7), dd = +day.slice(8, 10);
   return SEASONS.some(([m1, d1, m2, d2]) => (m === m1 && dd >= d1) || (m === m2 && dd <= d2));
 }
 function checks(d, x) {
-  const sig = d.signal || {};
+  const sig = d.daily || {};
   const out = [];
   const add = (label, state, why) => out.push({ label, state, why });
-  if (sig.index && sig.ma50 && sig.ma200) {
-    const up = sig.index > sig.ma200 && sig.index > sig.ma50;
-    add("시장 추세", up ? "ok" : sig.index > sig.ma200 ? "warn" : "bad",
-      `${esc(d.index_name)}가 50일선 ${sig.index > sig.ma50 ? "위" : "아래"}, 200일선 ${sig.index > sig.ma200 ? "위" : "아래"}`);
+  const lastOf = (a) => (a || []).filter((v) => v != null).pop();
+  const ma50 = lastOf(sig.series && sig.series.ma50), ma200 = lastOf(sig.series && sig.series.ma200);
+  if (sig.index && ma50 && ma200) {
+    const up = sig.index > ma200 && sig.index > ma50;
+    add("시장 추세", up ? "ok" : sig.index > ma200 ? "warn" : "bad",
+      `${esc(d.index_name)}가 50일선 ${sig.index > ma50 ? "위" : "아래"}, 200일선 ${sig.index > ma200 ? "위" : "아래"}`);
   } else add("시장 추세", "na", "지수 자료 없음");
   const c = x && x.candles;
   const cl = c && c.c && c.c.length > 30 ? c.c : null;
@@ -5199,14 +4759,14 @@ function checks(d, x) {
     const rets = cl.slice(-21).map((v2, i, a) => (i ? Math.log(v2 / a[i - 1]) : null)).filter((v2) => v2 != null);
     const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
     const vol = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, rets.length - 1)) * Math.sqrt(252);
-    add("변동성", vol <= VOL_MAX[market] * 0.7 ? "ok" : vol <= VOL_MAX[market] ? "warn" : "bad", `최근 20일 연 ${Math.round(vol * 100)}% 출렁임 (규칙 한도 ${Math.round(VOL_MAX[market] * 100)}%)`);
+    add("변동성", vol <= VOL_MAX[market] * 0.7 ? "ok" : vol <= VOL_MAX[market] ? "warn" : "bad", `최근 20일 연 ${Math.round(vol * 100)}% 출렁임 (주의 기준 ${Math.round(VOL_MAX[market] * 100)}%)`);
   }
   const f = (x && x.fund) || (d.funds || {})[stockCode] || {};
   const earn = f.events && f.events.earn;
   const today = TODAY();
   const nEarn = earn ? Math.round((Date.parse(earn) - Date.parse(today)) / 864e5) : null;
   if (nEarn != null && nEarn >= 0 && nEarn <= 7) add("실적 발표", "bad", `실적 발표 ${ymd(earn)} (${dday(earn)}). 발표 직후 크게 움직일 수 있어요`);
-  else if (market === "kr" && inSeason(today)) add("실적 발표", "warn", "국장 실적 시즌이라 규칙상 새로 사지 않는 때예요");
+  else if (market === "kr" && inSeason(today)) add("실적 발표", "warn", "국장 실적 시즌이에요. 발표 뒤 크게 움직이는 종목이 많아요");
   else add("실적 발표", "ok", earn && nEarn > 0 ? `다음 발표 ${ymd(earn)} (${dday(earn)})` : "가까운 발표 없음");
   const g = f.grade;
   if (g && g[2]) {
@@ -5232,7 +4792,7 @@ function checkCard(d) {
   return `<section class="card" id="check-card"><h2>사기 전 체크리스트 <small>${head}</small></h2>
     <ul class="checks">${list.map((c) => `<li class="ck-${c.state}"><span class="ck-dot" aria-hidden="true">${LIGHT[c.state][0]}</span>
       <span class="ck-l"><b>${c.label}</b> <span class="sr">${LIGHT[c.state][1]}</span><small>${c.why}</small></span></li>`).join("")}</ul>
-    <p class="muted note" style="margin:10px 0 0">빨간 불이 하나라도 있으면 기다리는 게 보수적인 선택이에요. 모두 초록이어도 매수 추천은 아니에요. 지수 추세는 오늘 신호, 나머지는 일봉·재무(매주 갱신) 기준이에요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">빨간 불이 하나라도 있으면 기다리는 게 보수적인 선택이에요. 모두 초록이어도 매수 추천은 아니에요. 지수 추세는 매일 자료, 나머지는 일봉·재무(매주 갱신) 기준이에요.</p></section>`;
 }
 function fillCheck() {
   const el = $("#check-card");
@@ -5245,7 +4805,6 @@ const GOAL = { title: "목표", end: "", now: 0, monthly: 50, target: 0 };
 try { Object.assign(GOAL, JSON.parse(localStorage.getItem("goal") || "{}")); } catch (e) { /* 처음 */ }
 const GOAL_PLANS = [
   ["예금", 0.03 * (1 - 0.154), "연 3% 예금 (이자세 15.4% 뗀 뒤)"],
-  ["ETF 규칙", 0.071, "ETF 계좌 규칙 백테스트 연 +7.1% (2011~, 최대 낙폭 -8.4%)"],
   ["S&P500 그냥 적립", null, "TIGER 미국S&P500 최근 10년 실제 상승률·분배율 (낙폭 -30% 안팎을 견뎌야 해요)"],
 ];
 function goalRate(p) {
@@ -5312,7 +4871,7 @@ function bindGoal() {
     const out = $("#goal-out"); if (out) out.innerHTML = goalOut();
   }));
 }
-// 홈 성과 카드에 한 줄 (목표 날짜를 넣었을 때만)
+// 홈 리포트 카드에 한 줄 (목표 날짜를 넣었을 때만)
 function goalLine() {
   const left = monthsLeft();
   if (!left || left.days < 0) return "";
@@ -5321,42 +4880,27 @@ function goalLine() {
 }
 
 // ---------------------------------------------------------------- 수익률 달력
-// 날마다 몇 % 올랐는지 달력 칸에 색으로 (오르면 빨강, 내리면 파랑). 가상계좌는 기록 시작일부터, 지수는 최근 5년쯤.
+// 지수가 날마다 몇 % 움직였는지 달력 칸에 색으로 (오르면 빨강, 내리면 파랑). 최근 5년쯤.
 // 관심종목 배당락일(💰)도 같이 찍어요.
-let calSrc = "acct";
+let calSrc = "idx";
 let calMonth = null;  // "YYYY-MM"
 let calPick = null;   // 눌러 본 날
 function calSources(d) {
   const out = [];
-  if (d.account) out.push(["acct", "가상계좌"]);
-  if (d.rulebook && d.rulebook.account) out.push(["rule", "규칙표"]);
-  if (d.etf && d.etf.account) out.push(["etf", "ETF 계좌"]);
-  if (d.signal && d.signal.candles) out.push(["idx", d.index_name]);
+  if (d.daily && d.daily.candles) out.push(["idx", d.index_name]);
   return out;
 }
 // 고른 것 → {날짜: 그날 수익률}
 function dailyReturns(d, src) {
   const out = {};
-  if (src === "idx") {
-    const c = d.signal.candles;
-    for (let i = 1; i < c.dates.length; i++) out[c.dates[i]] = c.c[i] / c.c[i - 1] - 1;
-    return out;
-  }
-  const a = src === "etf" ? d.etf.account : src === "rule" ? d.rulebook.account : d.account;
-  if (!a) return out;
-  let prev = 0;
-  a.curve.forEach((p) => { out[p.date] = (1 + p.account) / (1 + prev) - 1; prev = p.account; });
+  const c = d.daily.candles;
+  for (let i = 1; i < c.dates.length; i++) out[c.dates[i]] = c.c[i] / c.c[i - 1] - 1;
   return out;
-}
-// 가상계좌가 종목 없이 현금만 들고 있던 날 (그날 0.0%는 고장이 아니라 쉰 거예요)
-function cashDays(d, src) {
-  const a = src === "idx" ? null : src === "etf" ? d.etf.account : src === "rule" ? d.rulebook.account : d.account;
-  return new Set(a ? a.curve.filter((p) => p.cash_only).map((p) => p.date) : []);
 }
 function exdivDays(d) {
   const out = {};
   const funds = d.funds || {};
-  const codes = new Set([...WATCH[market], ...((d.account && d.account.positions) || []).map((p) => p.code)]);
+  const codes = new Set(WATCH[market]);
   const names = Object.fromEntries(stocksOf(d).map((s) => [s.code, s.name]));
   codes.forEach((c) => { const e = (funds[c] || {}).events; if (e && e.exdiv) (out[e.exdiv] = out[e.exdiv] || []).push(names[c] || c); });
   return out;
@@ -5372,7 +4916,7 @@ function retCalendarCard(d) {
   const srcs = calSources(d);
   if (!srcs.length) return "";
   if (!srcs.some((s) => s[0] === calSrc)) calSrc = srcs[0][0];
-  const daily = dailyReturns(d, calSrc), idle = cashDays(d, calSrc);
+  const daily = dailyReturns(d, calSrc);
   const days = Object.keys(daily).sort();
   const last = days[days.length - 1] || TODAY();
   if (!calMonth || (days.length && (calMonth < days[0].slice(0, 7) || calMonth > last.slice(0, 7)))) calMonth = last.slice(0, 7);
@@ -5380,7 +4924,6 @@ function retCalendarCard(d) {
   const exd = exdivDays(d);
   const inMonth = days.filter((x) => x.startsWith(calMonth));
   const mret = inMonth.length ? compound(inMonth.map((x) => daily[x])) : null;
-  const allIdle = inMonth.length > 0 && inMonth.every((x) => idle.has(x));
   const upN = inMonth.filter((x) => daily[x] > 0).length, downN = inMonth.filter((x) => daily[x] < 0).length;
   // 월~금 다섯 칸 (주말은 장이 없어서 빼요)
   const first = new Date(Date.UTC(y, m - 1, 1)), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -5392,10 +4935,10 @@ function retCalendarCard(d) {
     if (wd === 0 || wd === 6) continue;
     const key = `${calMonth}-${String(dd).padStart(2, "0")}`;
     const r = daily[key];
-    const ex = exd[key], rest = idle.has(key);
-    cells += `<button type="button" class="cal-cell${r == null ? " off" : ""}${rest ? " idle" : ""}${calPick === key ? " picked" : ""}" data-calday="${key}" style="${rest ? "" : calColor(r)}"
-      aria-label="${m}월 ${dd}일 ${r == null ? "기록 없음" : rest ? "현금만" : pct(r, 2)}${ex ? `, 배당락 ${ex.join(", ")}` : ""}">
-      <span class="cd">${dd}${ex ? "<i>💰</i>" : ""}</span><span class="cr">${r == null ? "" : rest ? "현금" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1)}`}</span></button>`;
+    const ex = exd[key];
+    cells += `<button type="button" class="cal-cell${r == null ? " off" : ""}${calPick === key ? " picked" : ""}" data-calday="${key}" style="${calColor(r)}"
+      aria-label="${m}월 ${dd}일 ${r == null ? "기록 없음" : pct(r, 2)}${ex ? `, 배당락 ${ex.join(", ")}` : ""}">
+      <span class="cd">${dd}${ex ? "<i>💰</i>" : ""}</span><span class="cr">${r == null ? "" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1)}`}</span></button>`;
   }
   const months = [];
   for (let k = 1; k <= 12; k++) {
@@ -5408,29 +4951,23 @@ function retCalendarCard(d) {
   const yearDays = days.filter((x) => x.startsWith(`${y}-`));
   const yret = yearDays.length ? compound(yearDays.map((x) => daily[x])) : null;
   const pick = calPick && calPick.startsWith(calMonth) ? calPick : null;
-  const pickLine = pick ? `<p class="cal-pick">${pick.slice(5, 7)}.${pick.slice(8)} ${daily[pick] == null ? "장이 없었거나 기록 전이에요" : idle.has(pick) ? "종목 없이 현금만 들고 있던 날이라 0%예요" : `<b class="${sign(daily[pick])}">${pct(daily[pick], 2)}</b>`}${exd[pick] ? ` · 💰 배당락: ${exd[pick].map(esc).join(", ")}` : ""}</p>` : "";
+  const pickLine = pick ? `<p class="cal-pick">${pick.slice(5, 7)}.${pick.slice(8)} ${daily[pick] == null ? "장이 없었거나 기록 전이에요" : `<b class="${sign(daily[pick])}">${pct(daily[pick], 2)}</b>`}${exd[pick] ? ` · 💰 배당락: ${exd[pick].map(esc).join(", ")}` : ""}</p>` : "";
   const firstM = days.length ? days[0].slice(0, 7) : calMonth;
-  return `<section class="card" id="retcal-card"><h2>수익률 달력 <small>날마다 몇 %</small></h2>
-    <div class="chips" role="group" aria-label="무엇의 수익률" style="margin-top:0">${srcs.map(([k, l]) => `<button type="button" data-calsrc="${k}" aria-pressed="${calSrc === k}">${esc(l)}</button>`).join("")}</div>
+  return `<section class="card" id="retcal-card"><h2>수익률 달력 <small>${esc(d.index_name)} 날마다 몇 %</small></h2>
     <div class="cal-head"><button type="button" class="cal-nav" data-calstep="-1" aria-label="이전 달" ${calMonth <= firstM ? "disabled" : ""}>‹</button>
-      <div><b>${y}년 ${m}월</b><small>${mret == null ? "기록 없음" : allIdle ? "살 신호가 없어 현금만 들고 있었어요" : `<span class="${sign(mret)}">${pct(mret)}</span> · 오른 날 ${upN} · 내린 날 ${downN}`}</small></div>
+      <div><b>${y}년 ${m}월</b><small>${mret == null ? "기록 없음" : `<span class="${sign(mret)}">${pct(mret)}</span> · 오른 날 ${upN} · 내린 날 ${downN}`}</small></div>
       <button type="button" class="cal-nav" data-calstep="1" aria-label="다음 달" ${calMonth >= last.slice(0, 7) ? "disabled" : ""}>›</button></div>
     <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
     ${pickLine}
     <h3 class="sav-h">${y}년 달별 <small class="muted">${yret == null ? "" : `한 해 ${pct(yret)}`}</small></h3>
     <div class="cal-months">${months.join("")}</div>
-    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 많이 움직인 날이에요(±2%면 가장 진해요). 가상계좌는 그날 평가금액이 전날보다 몇 % 바뀌었는지, 지수는 종가 기준이에요. '현금'은 종목 없이 쉬던 날이에요(보수적 규칙이라 신호가 없으면 안 사요).
-      💰는 관심종목·보유 종목의 다음 배당락일이에요(야후 무료 자료라 바뀔 수 있어요).</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 많이 움직인 날이에요(±2%면 가장 진해요). 지수 종가 기준이에요.
+      💰는 관심종목의 다음 배당락일이에요(야후 무료 자료라 바뀔 수 있어요).</p></section>`;
 }
 function bindRetCal(d) {
   const card = $("#retcal-card");
   if (!card) return;
   const redraw = () => { const c = $("#retcal-card"); if (c) { c.outerHTML = retCalendarCard(d); bindRetCal(d); keepTap(); } };
-  card.querySelectorAll("[data-calsrc]").forEach((b) => b.addEventListener("click", () => {
-    calSrc = b.dataset.calsrc; calMonth = null; calPick = null;
-    try { localStorage.setItem("cal_src", calSrc); } catch (e) { /* 이번만 */ }
-    redraw();
-  }));
   card.querySelectorAll("[data-calstep]").forEach((b) => b.addEventListener("click", () => {
     const [y, m] = calMonth.split("-").map(Number);
     const t = new Date(Date.UTC(y, m - 1 + Number(b.dataset.calstep), 1));
@@ -5440,7 +4977,6 @@ function bindRetCal(d) {
   card.querySelectorAll("[data-calm]").forEach((b) => b.addEventListener("click", () => { calMonth = b.dataset.calm; redraw(); }));
   card.querySelectorAll("[data-calday]").forEach((b) => b.addEventListener("click", () => { calPick = calPick === b.dataset.calday ? null : b.dataset.calday; redraw(); }));
 }
-try { stressOf = localStorage.getItem("stress_of") || stressOf; calSrc = localStorage.getItem("cal_src") || calSrc; } catch (e) { /* 처음 */ }
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 render();  // 데이터가 오기 전에도 주소에 맞는 시장·화면 버튼을 표시해요

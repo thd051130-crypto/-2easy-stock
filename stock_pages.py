@@ -5,13 +5,13 @@ pages 워크플로가 dashboard.py 다음에 돌려요 (`python stock_pages.py -
   - candles: 야후에 있는 첫날(보통 상장일. 야후 자료는 국장 2000년, 미장 1962년부터라 그 전 상장 종목은 그때)부터 일봉
     (시가·고가·저가·종가·거래량). full=true면 처음부터라는 뜻이라 앱이 첫 주·첫 달 캔들을 버리지 않아요.
     야후 원래 가격(액면분할만 반영, 배당은 빼지 않음)이라 증권사 앱 차트와 같아요.
-    대시보드 다른 화면과 맞추려고 오늘 신호 날짜(signal.json의 day)까지만 넣어요.
+    대시보드 다른 화면과 맞추려고 매일 자료 날짜(daily.json의 day)까지만 넣어요.
   - fund: paper/<시장>/fundamentals.json(fundamentals.py가 매주 갱신)의 그 종목 재무 요약
   - flows: 국장만, paper/kr/flows.json(flows.py가 평일마다 갱신)의 최근 20일 외국인·기관 순매수
 야후를 못 받은 종목은 재무만으로 파일을 만들어요 (화면엔 '차트 자료 없음'). 전 종목 파일(all_stocks.py, pages가 먼저 풀어 둠)이
 있으면 그 차트(최근 2년 일봉 + 월봉)를 대신 써요.
 텔레그램으로 넣은 관심종목(paper/watch.json)도 만들고, 그 종목들의 종가·전일 대비·최근 60일 종가를
-<out>/data.json의 extras에 채워요 (알림 종목처럼 swing-signals가 시세를 받지 않아서요). 이 종목들을 먼저 받아요.
+<out>/data.json의 extras에 채워요 (기본 종목처럼 daily가 시세를 받지 않아서요). 이 종목들을 먼저 받아요.
 세계 지수(world.py GROUPS의 지수들)도 <out>/indexes/<기호>.json으로 처음부터 일봉을 만들어요. 차트 화면 지수 버튼이 읽어요.
 실패해도 오류로 끝내지 않아요 (대시보드 배포가 멈추지 않게).
 """
@@ -99,7 +99,7 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
     반환: (차트까지 만든 수, 재무만 만든 수, 텔레그램으로 넣은 종목 줄)."""
     fund = (read_json(paper / market / "fundamentals.json") or {}).get("stocks", {})
     flow = read_json(paper / market / "flows.json") if market == "kr" else None
-    until = (read_json(paper / market / "signal.json") or {}).get("day")
+    until = (read_json(paper / market / "daily.json") or {}).get("day")
     extra = watchlist.extras(market, paper)
     rets = (read_json(paper / "symbols" / f"{market}_returns.json") or {}).get("s", {})
     names = {code: e.get("name") or code for code, e in extra.items()}

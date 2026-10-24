@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """관심종목 공시 알림: 금감원 전자공시(오픈DART, 무료 키)에서 오늘 올라온 공시 중 우리 종목 것을 골라요.
 
-  - 대상: 국장 감시 종목 + 텔레그램으로 넣은 국장 관심종목 + 가상계좌 보유 종목
+  - 대상: 국장 기본 종목 + 텔레그램으로 넣은 국장 관심종목
   - 유상증자·전환사채·감자·최대주주 변경·횡령 같은 '주의' 공시는 바로 텔레그램으로 알려요 (낙폭을 키우는 일이 많아서)
   - 자사주 매입·배당·공급계약 같은 공시는 앱 종목 화면과 홈에만 보여요
   - 결과는 paper/kr/disclosures.json (최근 30일, 종목마다 최근 10개). 이미 알린 공시는 다시 안 보내요
@@ -26,7 +26,6 @@ import requests
 
 import fundamentals
 import watchlist
-from econ_calendar import held_codes
 
 KST = dt.timezone(dt.timedelta(hours=9))
 URL = "https://opendart.fss.or.kr/api/list.json"
@@ -78,12 +77,10 @@ def fetch_day(key, day, get=requests.get, pause=0.2):
 
 
 def targets(paper):
-    """{종목코드: 이름}: 감시 종목 + 텔레그램으로 넣은 국장 종목 + 가상계좌 보유 종목."""
+    """{종목코드: 이름}: 기본 종목 + 텔레그램으로 넣은 국장 종목."""
     out = dict(fundamentals.stocks("kr", extras=False))
     for code, e in watchlist.extras("kr", paper).items():
         out.setdefault(code, e.get("name") or code)
-    for code in held_codes(paper, "kr"):
-        out.setdefault(code, code)
     return out
 
 

@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-"""경제 일정 달력: 미국 금리 결정(FOMC), 한국은행 금리 결정(금통위), 선물·옵션 만기일, 국장 실적 시즌, 종목 실적 발표·배당락.
+"""경제 일정 달력: 미국 금리 결정(FOMC), 한국은행 금리 결정(금통위), 선물·옵션 만기일, 종목 실적 발표·배당락.
 
 전부 무료예요 (키 필요 없음).
   - FOMC: 연준 홈페이지 일정표 (federalreserve.gov/monetarypolicy/fomccalendars.htm)
   - 금통위: 한국은행 홈페이지 '통화정책방향 결정회의 일정' 표
   - 만기일: 규칙으로 계산 (국장 매달 둘째 목요일, 미장 매달 셋째 금요일, 3·6·9·12월은 선물까지 같이 만기).
     거래소 휴일이면 하루 앞당겨질 수 있어요
-  - 국장 실적 시즌: 우리 규칙이 새로 사지 않는 기간 (strategy.EARNINGS_SEASONS)
-  - 종목 실적 발표일·배당락: fundamentals.py가 매주 받는 야후 자료 (감시 종목·텔레그램으로 넣은 종목·가상계좌 보유 종목)
+  - 종목 실적 발표일·배당락: fundamentals.py가 매주 받는 야후 자료 (감시 종목·텔레그램으로 넣은 종목)
   - 미국 물가(CPI)·고용·PCE·GDP 같은 큰 발표: 몇 달 치 날짜는 FRED(세인트루이스 연준) 발표 일정표
     (fred.stlouisfed.org/releases/calendar, 미국 중부 시간 → 한국시간). 미국 노동부 홈페이지는 자동 접속을 막아서 FRED로 받아요.
     이번 주 일정은 big_events.py가 받아 둔 paper/events.json(예상치 포함)이 같은 시각 FRED 일정 대신 들어가요.
 
 매일 06:50 macro 워크플로가 돌려서 paper/calendar.json에 저장하고(앱 홈 '다가오는 일정'),
 월요일엔 텔레그램으로 '[이번 주 일정]'을 보내요. 홈페이지를 못 받으면 지난번에 받은 날짜를 그대로 써요.
-매매 규칙은 안 바꿔요 (국장 실적 시즌 쉬기는 원래 규칙이에요).
 
 사용법:
     python econ_calendar.py --save paper/calendar.json            # 저장만
@@ -31,7 +29,6 @@ import re
 import requests
 from zoneinfo import ZoneInfo
 
-import strategy
 import watchlist
 from markets import MARKETS
 
@@ -186,38 +183,15 @@ def expiries(start, end):
     return out
 
 
-def seasons(start, end):
-    """국장 실적 시즌(우리 규칙이 새로 사지 않는 기간)의 시작·끝."""
-    out = []
-    for year in range(start.year, end.year + 1):
-        for m1, d1, m2, d2 in strategy.EARNINGS_SEASONS:
-            for d, title in ((dt.date(year, m1, d1), "국장 실적 시즌 시작"), (dt.date(year, m2, d2), "국장 실적 시즌 끝")):
-                if start <= d <= end:
-                    out.append(dict(date=f"{d:%Y-%m-%d}", market="kr", kind="season", title=title,
-                                    note="우리 규칙은 이 기간에 새로 사지 않아요" if "시작" in title else "다음 날부터 다시 새로 살 수 있어요"))
-    return out
-
-
-def held_codes(paper, market):
-    """가상계좌(알림·규칙표·ETF)에 들고 있는 종목."""
-    out = set()
-    for folder in (paper / market, paper / market / "rulebook") + ((paper / "etf",) if market == "kr" else ()):
-        try:
-            out |= {p["code"] for p in json.loads((folder / "state.json").read_text()).get("positions", [])}
-        except (OSError, ValueError, KeyError):
-            continue
-    return out
-
-
 def stock_events(paper, start, end):
-    """종목 실적 발표·배당락 (fundamentals.json). mine: 텔레그램으로 넣었거나 가상계좌에 있는 종목."""
+    """종목 실적 발표·배당락 (fundamentals.json). mine: 텔레그램으로 넣은 관심종목."""
     out = []
     for market in MARKETS:
         try:
             stocks = json.loads((paper / market / "fundamentals.json").read_text()).get("stocks", {})
         except (OSError, ValueError):
             continue
-        mine = set(watchlist.extras(market, paper)) | held_codes(paper, market)
+        mine = set(watchlist.extras(market, paper))
         for code, f in stocks.items():
             e = f.get("events") or {}
             for key, kind, title in (("earn", "earn", "실적 발표"), ("exdiv", "exdiv", "배당락")):
@@ -242,7 +216,7 @@ def build(today, fomc, bok, paper, releases=()):
 
     week = big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
     ev += week + release_events(releases, start, end, {(e["date"], e["note"]) for e in week})
-    ev += expiries(start, end) + seasons(start, end) + stock_events(paper, start, end)
+    ev += expiries(start, end) + stock_events(paper, start, end)
     ev.sort(key=lambda x: (x["date"], x["kind"] not in ("big", "rate"), -(x.get("cap") or 0)))
     return ev
 
@@ -268,7 +242,7 @@ def week_text(events, today, limit=EARN_MAX):
     if any(e.get("big") for e in big):
         lines.append("🚨 지수가 크게 움직일 수 있는 발표예요. 전날과 발표 뒤에 따로 알려 드려요.")
     if any(e.get("mine") for e in stocks):
-        lines.append("⭐ 텔레그램으로 넣은 종목이나 가상계좌에 있는 종목이에요.")
+        lines.append("⭐ 텔레그램으로 넣은 관심종목이에요.")
     return "\n".join(lines)
 
 

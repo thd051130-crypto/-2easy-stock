@@ -12,3 +12,5 @@ Implemented in rulebook.py (defaults chosen: RSI14; adds only when close > last 
 PR #11 merged to main 2026-10-04; parallel rulebook paper accounts start with the KR run Mon 2026-10-05 17:30 KST. User chose "나란히 검증" on the decision card 2026-10-04: keep current alert rule, verify table in parallel paper account. PR #11 does the parallel option: paper/<m>/rulebook, "[규칙표 후보]" section in Telegram, dashboard card. If the user picks "규칙표로 교체", switch strategy for alerts/paper.
 
 Related: [[paper-trading-log]]
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].

@@ -157,12 +157,12 @@ def fetch_industry(symbol):
 
 def update(path=PATH, refresh=False, fetch=fetch_industry, pause=0.4):
     """알림 종목 + 넓은 범위 종목의 업종을 채워요. 못 받은 종목은 다음 주에 다시 시도해요."""
-    import wide
+    import marketdata as md
     from markets import MARKETS
 
     smap = {"kr": {}, "us": {}} if refresh else load(path)
-    targets = {"kr": dict(MARKETS["kr"]["universe"], **wide.universe()),
-               "us": dict(MARKETS["us"]["universe"], **wide.us_universe())}
+    targets = {"kr": dict(MARKETS["kr"]["universe"], **md.wide_kr()),
+               "us": dict(MARKETS["us"]["universe"], **md.wide_us())}
     got = missed = 0
     for market, codes in targets.items():
         smap.setdefault(market, {})

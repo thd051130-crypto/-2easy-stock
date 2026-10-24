@@ -1,7 +1,7 @@
 {
   "name": "이지스톡 대시보드",
   "short_name": "이지스톡",
-  "description": "국장·미장 보수적 매매 신호와 가상계좌 기록",
+  "description": "국장·미장 시세·차트와 오늘의 리포트",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",

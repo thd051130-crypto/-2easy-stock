@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """고장 감시: 자동 작업이 실패하면 바로, 일요일엔 한 주 동안 잘 돌았는지 텔레그램으로 알려 줘요.
 
-알림이 안 온 날이 "신호 없음"인지 "고장"인지 구분할 수 있게 하려는 거예요.
+알림이 안 온 날이 "쉬는 날"인지 "고장"인지 구분할 수 있게 하려는 거예요.
   - 워크플로가 실패하면 마지막 단계에서 `python health.py fail`이 "[고장]" 알림을 보내요.
     15분마다 도는 telegram-bot처럼 같은 실패가 이어지면 처음 한 번만 보내요 (바로 전 실행도 실패였으면 조용히).
-  - 매매 신호를 계산하기 전에 check_data()로 시세 데이터를 점검해요 (kr_swing_signals.py가 불러요).
-    대형주 30% 넘게 시세가 비었거나 지수가 없으면 신호를 내지 않고 "[고장]"으로 알려요.
+  - 매일 자료를 만들기 전에 check_data()로 시세 데이터를 점검해요 (daily.py가 불러요).
+    대형주 30% 넘게 시세가 비었거나 지수가 없으면 그날 자료를 만들지 않고 "[고장]"으로 알려요.
   - `python health.py weekly`: 지난 7일 워크플로 실행 결과를 세서 "[주간 점검]"을 보내고 paper/health.json에 남겨요
-    (대시보드와 실전 전환 판정표가 읽어요).
+    (대시보드가 읽어요).
 
 GitHub API는 워크플로가 주는 GITHUB_TOKEN으로 읽어요 (actions: read 권한). 유료 서비스는 안 써요.
 """
@@ -27,15 +27,14 @@ KST = dt.timezone(dt.timedelta(hours=9))
 API = "https://api.github.com"
 PATH = pathlib.Path("paper/health.json")
 ERROR_NOTE = pathlib.Path("data/health_error.txt")  # 작업이 멈춘 이유를 남기면 고장 알림에 붙여요
-MISSING_MAX = 0.30   # 이보다 많은 종목이 비면 신호를 내지 않아요
+MISSING_MAX = 0.30   # 이보다 많은 종목이 비면 그날 자료를 만들지 않아요
 JUMP_MAX = 0.30      # 하루 ±30% 넘게 움직인 종목은 데이터 오류일 수 있어서 경고
 STALE_BDAYS = 3      # 지수 마지막 날짜가 평일 기준 이만큼 넘게 지났으면 경고 (연휴면 정상)
 
 # 워크플로 이름 → (한국어 이름, 한 주에 몇 번 성공해야 정상인지; None이면 세지 않음)
 WORKFLOWS = {
-    "swing-signals": ("매매 신호·가상매매", 10),
+    "daily": ("매일 시세·오늘의 리포트", 10),
     "telegram-bot": ("텔레그램 봇", None),
-    "learner": ("학습팀", 7),
     "pages": ("대시보드 배포", None),
     "fundamentals": ("재무·종목 목록", 1),
     "macro": ("경기 리포트", 5),

@@ -38,13 +38,11 @@ def test_parse_bok():
     assert ec.parse_bok("년도 없음") == []
 
 
-def test_expiries_and_seasons():
+def test_expiries():
     ex = ec.expiries(dt.date(2026, 10, 1), dt.date(2026, 12, 31))
     assert [(e["date"], e["market"]) for e in ex] == [
         ("2026-10-08", "kr"), ("2026-10-16", "us"), ("2026-11-12", "kr"), ("2026-11-20", "us"), ("2026-12-10", "kr"), ("2026-12-18", "us")]
     assert "동시" in ex[-1]["title"] and "동시" not in ex[0]["title"]
-    se = ec.seasons(dt.date(2026, 10, 1), dt.date(2026, 11, 30))
-    assert [(e["date"], e["title"]) for e in se] == [("2026-10-20", "국장 실적 시즌 시작"), ("2026-11-14", "국장 실적 시즌 끝")]
 
 
 def test_build_and_week_text(tmp_path):
@@ -53,7 +51,7 @@ def test_build_and_week_text(tmp_path):
     (tmp_path / "kr" / "fundamentals.json").write_text(json.dumps(dict(stocks={
         "005930": dict(name="삼성전자", cap=1.5e15, events=dict(earn="2026-10-28", exdiv="2026-12-29")),
         "000660": dict(name="SK하이닉스", cap=1e15, events=dict(earn="2026-10-23"))})))
-    (tmp_path / "kr" / "state.json").write_text(json.dumps(dict(positions=[dict(code="000660")])))
+    (tmp_path / "watch.json").write_text(json.dumps(dict(kr=[dict(code="000660")], us=[])))
     (tmp_path / "us" / "fundamentals.json").write_text(json.dumps(dict(stocks={"AAPL": dict(name="애플", cap=3e12, events=dict(earn="2026-11-02"))})))
     fomc = [dict(date="2026-10-28", sep=False)]
     ev = ec.build(dt.date(2026, 10, 19), fomc, ["2026-10-22"], tmp_path)

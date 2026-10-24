@@ -7,7 +7,7 @@
                         + 적립식 계산기 숫자(paper/symbols/<시장>_returns.json의 그 종목 줄, 있으면)
   - <out>/_quotes.json : 종목마다 [종가, 전일 대비, 3개월 등락, 200일선 대비, 52주 고점 대비, RSI14] (조건 검색 '전 종목'용)
 all-stocks 워크플로가 장 마감 뒤 돌려서 아티팩트(stocks-<시장>)로 올리면, pages 워크플로가 받아서 _site/stocks/<시장>/에 풀어요.
-대시보드 종목은 그다음 stock_pages.py가 상장일부터 받은 파일로 덮어써요. 매매 규칙·가상계좌 신호는 안 바꿔요 (보기 전용).
+대시보드 종목은 그다음 stock_pages.py가 상장일부터 받은 파일로 덮어써요. (보기 전용).
 
 사용법:
     python all_stocks.py --market kr --out _all/kr
@@ -20,7 +20,7 @@ import json
 import pathlib
 import time
 
-from kr_swing_signals import screen_stats
+from daily import screen_stats
 from returns import ticker
 from stock_pages import candles
 

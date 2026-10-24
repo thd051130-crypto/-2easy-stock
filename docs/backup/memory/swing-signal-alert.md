@@ -12,3 +12,5 @@ Paid Claude opinion was removed in PR #7 (2026-10-04); opinions are now rule-bas
 
 **Why:** the user can't open a brokerage account yet (2026-10-04) and wanted the next step that needs no account.
 **How to apply:** the schedule only fires after merge to main. Check run results with the GitHub MCP actions tools, not by asking the user. Related: [[user-mobile-only]]
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].

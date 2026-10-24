@@ -3,7 +3,7 @@
   - paper/watch.json : {"kr": [{"code", "name", "symbol", "exch", "kind", "added"}], "us": [...]}
   - paper/alerts.json: {"next": 다음 알림 번호, "active": [기다리는 알림], "done": [최근 울린 알림]}
   - paper/bot.json   : {"username": 봇 아이디}  (웹앱의 텔레그램 시작 링크에 써요)
-대시보드 화면(시세·차트·재무제표)에만 쓰고, 매매 신호·가상매매(paper_trade) 종목에는 안 넣어요.
+대시보드 화면(시세·차트·재무제표)과 리포트·공시·일정의 ⭐ 표시에 써요.
 네트워크·pandas 없이 읽고 써요 (dashboard.py도 써요).
 """
 

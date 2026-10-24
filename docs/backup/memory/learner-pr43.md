@@ -11,3 +11,5 @@ Backtest: 5y +3.9%/-2.3% → +3.0%/-0.5%; 2011~ +4.5%/-3.2% → +3.3%/-1.1%. Few
 US learner said keep → unchanged. desk_backtest.py pinned to old 50%/45%/-5% baseline.
 
 **How to apply:** future "학습팀 제안 적용" = read docs/learning-latest.md, change strategy.py constants, fix test stop-price expectations. Related: [[learner-pr17]]
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].

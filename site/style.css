@@ -120,22 +120,33 @@ h1 { font-size: 19px; font-weight: 800; margin: 0; letter-spacing: -0.03em; }
 .search-btn[aria-current="page"], .map-btn[aria-current="page"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-fg); }
 .map-btn { width: 36px; height: 36px; margin-left: 2px; }  /* 이지스톡 옆 산업 지도 바로가기 */
 .map-btn svg { width: 18px; height: 18px; }
-/* 메시지함 (텔레그램으로 보낸 알림). 안 읽은 알림이 있으면 빨간 점 */
+/* 메시지함 (텔레그램으로 보낸 알림). 평소엔 오른쪽 가장자리 얇은 손잡이라 글자를 안 가려요 (사용자 2026-10-24).
+   누르거나 왼쪽으로 밀면 동그란 버튼으로 나오고, 위아래로 끌어 옮겨요 (app.js). 안 읽은 알림이 있으면 빨간 점 */
 .inbox-btn {
-  position: fixed; z-index: 7; width: 48px; height: 48px; border-radius: 999px; border: 0; padding: 0;
-  right: max(16px, calc((100% - 640px) / 2 + 16px)); bottom: calc(60px + env(safe-area-inset-bottom) + 12px);
+  position: fixed; z-index: 7; top: calc(100% - 132px); right: max(16px, calc((100% - 640px) / 2 + 16px));
+  width: 48px; height: 48px; border-radius: 999px; border: 0; padding: 0; margin-top: 0;
   background: var(--accent); color: #fff; display: grid; place-items: center; cursor: pointer;
-  box-shadow: var(--pop-shadow); -webkit-tap-highlight-color: transparent;
+  box-shadow: var(--pop-shadow); -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; -webkit-user-select: none;
+  transition: right .22s ease, width .22s ease, height .22s ease, margin-top .22s ease, border-radius .22s ease, opacity .22s ease, box-shadow .22s ease;
 }
-.inbox-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.inbox-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: opacity .15s ease; }
 .inbox-btn[aria-current="page"] { box-shadow: 0 0 0 3px var(--accent-bg), var(--pop-shadow); }
+.inbox-btn.tucked { right: 0; width: 12px; height: 56px; margin-top: -4px; border-radius: 10px 0 0 10px; opacity: .55; box-shadow: none; }
+.inbox-btn.tucked svg { opacity: 0; }
+.inbox-btn.tucked::before { content: ""; position: absolute; inset: -6px 0 -6px -22px; }  /* 얇아도 손가락으로 잡기 쉽게 */
+.inbox-btn.dragging { transition: none; opacity: .9; }
 .inbox-btn .unread[hidden] { display: none; }
 .inbox-btn .unread { position: absolute; top: 2px; right: 2px; width: 11px; height: 11px; border-radius: 999px; background: #e5484d; border: 2px solid var(--surface-1); }
+.inbox-btn.tucked .unread { top: -5px; right: auto; left: -5px; }
+.inbox-btn.tucked:has(.unread:not([hidden])) { opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .inbox-btn, .inbox-btn svg { transition: none; } }
 .brief { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
 .brief li { margin: 3px 0; }
 .brief-top { font-size: 15px; color: var(--text-primary); }
 .brief-h { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 12px 0 4px; }
 details.brief-more > summary { margin-top: 8px; }
+.rp-chain { margin: 8px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
+.rp-chain li { margin: 4px 0; }
 .inbox-day { font-size: 12px; font-weight: 700; color: var(--text-muted); margin: 14px 0 6px; }
 .inbox-day:first-of-type { margin-top: 4px; }
 details.msg { border-top: 1px solid var(--border); padding: 4px 0; }
@@ -433,30 +444,10 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 #app.fx-pop > * { animation: fx-from-l .3s cubic-bezier(.2, .8, .2, 1) both; }
 #app.fx-swap > * { animation: fx-in .25s ease-out both; }
 
-/* 오늘의 신호: 할 일이 있는 날(매수 후보·매수 신호는 초록, 매도 신호는 주황)은 카드에 색, 새 신호는 처음 볼 때 한 번 반짝 */
-.card.sig { position: relative; --glow: rgba(42, 120, 214, .5); }
-.card.sig-hot.buy { border-color: var(--good-fg); background: linear-gradient(165deg, var(--good-bg), var(--surface-1) 58%); --glow: rgba(27, 175, 122, .55); }
-.card.sig-hot.sell { border-color: var(--wait-fg); background: linear-gradient(165deg, var(--wait-bg), var(--surface-1) 58%); --glow: rgba(214, 140, 0, .55); }
 .badge.new { background: var(--accent); color: #fff; }
-.card.sig-pulse::before {
-  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
-  animation: fx-glow 1.4s .45s ease-out 2;
-}
-@keyframes fx-glow { from { box-shadow: 0 0 0 0 var(--glow); } to { box-shadow: 0 0 0 14px rgba(0, 0, 0, 0); } }
-.sig-pulse .chip { position: relative; overflow: hidden; }
-.sig-pulse .chip::after {
-  content: ""; position: absolute; inset: 0; transform: translateX(-110%); pointer-events: none;
-  background: linear-gradient(105deg, transparent 25%, rgba(255, 255, 255, .65) 50%, transparent 75%);
-  animation: fx-shine 1.1s .6s ease-in-out 2;
-}
-@keyframes fx-shine { to { transform: translateX(110%); } }
-.sig-pulse .list li { animation: fx-up-s .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: .3s; }
-.sig-pulse .list li:nth-child(2) { animation-delay: .4s; }
-.sig-pulse .list li:nth-child(3) { animation-delay: .5s; }
-.sig-pulse .list li:nth-child(n+4) { animation-delay: .6s; }
 
 @media (prefers-reduced-motion: reduce) {
-  #app > *, .card.sig-pulse::before, .sig-pulse .chip::after, .sig-pulse .list li { animation: none !important; }
+  #app > * { animation: none !important; }
 }
 
 /* 종목 이름 아래 작은 업종 키워드 */
@@ -818,13 +809,6 @@ details.fold-chart { margin-top: 10px; }
 details.fold-chart summary { padding: 8px 0; color: var(--text-secondary); font-size: 14px; }
 details.fold-chart[open] summary { margin-bottom: 6px; }
 /* 신호 화면 부서별 보고: 설명 한 줄, 누르면 펼침 */
-details.desk { width: 100%; min-width: 0; }
-details.desk > summary { list-style: none; color: var(--text-primary); position: relative; padding-right: 22px; font-weight: 400; min-height: 0; -webkit-tap-highlight-color: transparent; }
-details.desk > summary::-webkit-details-marker { display: none; }
-details.desk > summary::after { content: "›"; position: absolute; right: 2px; top: 50%; margin-top: -11px; font-size: 20px; line-height: 1; color: var(--text-muted); transition: transform .15s; }
-details.desk[open] > summary::after { transform: rotate(90deg); top: 2px; margin-top: 0; }
-details.desk:not([open]) .desk-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-details.desk[open] .desk-text { color: var(--text-secondary); line-height: 1.5; }
 
 /* 성과 화면 맨 위 선택 바: 옆으로 밀어서 골라요. 따라 내려오지 않아요 (사용자 요청) */
 .perf-tabs { margin: -4px -16px 2px; padding: 8px 16px; }

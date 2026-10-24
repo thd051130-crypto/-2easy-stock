@@ -18,8 +18,7 @@ import math
 import pathlib
 import time
 
-import departments
-import strategy
+import fundcheck
 import watchlist
 from markets import MARKETS
 
@@ -31,10 +30,8 @@ YEARS, QUARTERS = 4, 6
 
 
 def stocks(market, extras=True):
-    """화면에 종목 화면이 있는 종목: 알림이 보는 종목 + 미장은 SPY (+ extras면 텔레그램으로 넣은 관심종목)."""
+    """화면에 종목 화면이 있는 종목: 기본 종목 (+ extras면 텔레그램으로 넣은 관심종목)."""
     out = dict(MARKETS[market]["universe"])
-    if market == "us":
-        out[strategy.US_ETF] = strategy.US_ETF
     if extras:
         for code, e in watchlist.extras(market).items():
             out.setdefault(code, e.get("name") or code)
@@ -147,10 +144,10 @@ def summarize(market, code, info, annual, quarterly, equity, today=None):
     pbr = num(info.get("priceToBook"))
     if pbr is None or not 0.05 < pbr < 200:  # 야후가 단위를 틀리게 줄 때가 있어요 (예: BRK-B 0.001배)
         pbr = cap / equity if cap and equity and equity > 0 else None
-    f = departments.fundamentals(info)
-    if per is not None:  # 펀더멘탈부 등급도 화면에 보이는 PER로 매겨요
+    f = fundcheck.fundamentals(info)
+    if per is not None:  # 재무 등급도 화면에 보이는 PER로 매겨요
         f.update(per=per, per_kind="PER")
-    g = departments.grade(f)
+    g = fundcheck.grade(f)
     return dict(
         code=code, name=stocks(market).get(code, code), asof=f"{today or dt.datetime.now(KST).date():%Y-%m-%d}",
         currency=info.get("financialCurrency") or info.get("currency"),

@@ -18,3 +18,5 @@ Workflow swing-signals: KR cron 08:30 UTC weekdays, US cron 22:30 UTC weekdays; 
 Related: [[swing-signal-alert]], [[user-mobile-only]]
 
 2026-10-04: user wants trade opinions with no API fees. PR #7 (merged 2026-10-04) replaced the paid Claude opinion (ANTHROPIC_API_KEY, anthropic dep removed) with rule-based kr_opinion/us_opinion lines (reason, stop/exit level, risks) in kr_swing_signals.py. Don't reintroduce paid API calls without asking.
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].
