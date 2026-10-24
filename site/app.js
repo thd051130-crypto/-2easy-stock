@@ -5054,7 +5054,10 @@ function fillCheck() {
 
 // ---------------------------------------------------------------- 목표 트래커
 // 목표 이름·날짜·지금 모은 돈·매달 저축·목표를 넣으면 남은 날, 진척도, 그 속도로 그날 얼마인지 세 가지로 보여줘요 (이 폰에만 저장).
-const GOAL = { title: "목표", end: "", now: 0, monthly: 50, target: 0 };
+const GOAL_START = { title: "목표", end: "", now: 0, monthly: 50, target: 0 };
+const GOAL = { ...GOAL_START };
+// 화살표가 원을 그리는 '처음으로' 아이콘 (사용자 2026-10-24)
+const RESET_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg>`;
 try { Object.assign(GOAL, JSON.parse(localStorage.getItem("goal") || "{}")); } catch (e) { /* 처음 */ }
 const GOAL_PLANS = [
   ["예금", 0.03 * (1 - 0.154), "연 3% 예금 (이자세 15.4% 뗀 뒤)"],
@@ -5105,7 +5108,8 @@ function goalOut() {
 }
 function goalCard() {
   const inp = (k, label, unit, type = "text") => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-goal="${k}" type="${type}" ${type === "text" ? `inputmode="decimal"` : ""} value="${esc(GOAL[k] || (type === "date" ? "" : 0))}">${unit ? `<span>${unit}</span>` : ""}</span></label>`;
-  return `<section class="card" id="goal-card"><h2><span id="goal-title">${esc(goalTitle())}</span> <small>이 폰에만 저장</small></h2>
+  return `<section class="card" id="goal-card"><h2 class="goal-h"><span id="goal-title">${esc(goalTitle())}</span>
+    <span class="goal-h-r"><small>이 폰에만 저장</small><button type="button" class="goal-reset" data-goal-reset aria-label="목표 초기화">${RESET_ICON}<span>한 번 더 누르면 초기화</span></button></span></h2>
     <label class="sav-in goal-name"><span>목표 이름</span><span class="alert-input"><input data-goal="title" type="text" maxlength="30" placeholder="목표" value="${esc(GOAL.title || "")}"></span></label>
     <div class="sav-grid">${inp("end", "목표 날짜", "", "date")}${inp("target", "목표 금액", "만 원")}${inp("now", "지금 모은 돈", "만 원")}${inp("monthly", "매달 저축", "만 원")}</div>
     <div id="goal-out">${goalOut()}</div>
@@ -5123,6 +5127,20 @@ function bindGoal() {
     try { localStorage.setItem("goal", JSON.stringify(GOAL)); } catch (e) { /* 이번만 */ }
     const out = $("#goal-out"); if (out) out.innerHTML = goalOut();
   }));
+  // 초기화: 실수로 지우지 않게 한 번 누르면 '한 번 더 누르면 초기화'로 바뀌고, 3초 안에 다시 누르면 처음 상태로
+  const rb = card.querySelector("[data-goal-reset]");
+  if (rb) rb.addEventListener("click", () => {
+    if (!rb.classList.contains("armed")) {
+      rb.classList.add("armed");
+      setTimeout(() => rb.classList.remove("armed"), 3000);
+      return;
+    }
+    Object.keys(GOAL).forEach((k) => delete GOAL[k]);
+    Object.assign(GOAL, GOAL_START);
+    try { localStorage.removeItem("goal"); } catch (e) { /* 이번만 */ }
+    holdHeight(); card.outerHTML = goalCard();
+    bindGoal(); keepTap();
+  });
 }
 // 홈 리포트 카드에 한 줄 (목표 날짜를 넣었을 때만)
 function goalLine() {
