@@ -44,11 +44,11 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox"];
+const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search", "map", "inbox"];  // 메시지함(#kr/inbox)도 한 겹 위
+const LAYERS = ["stock", "search", "map", "inbox", "world"];  // 메시지함(#kr/inbox), 세계 지수(#kr/world)도 한 겹 위
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
@@ -305,7 +305,8 @@ function countUp(root) {
 const VIEWS = {
   // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 세계 지수 → 더 보기 → 오늘의 리포트 요약.
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
-  home: (d) => [bigEventsCard(), marketStatusCard(), worldCard(), homeMoreCard(d), homeReportCard()],
+  // 맨 위 얇은 지수 바는 세계 지수가 돌아가며 보이고, 누르면 세계 지수 화면(한 겹 위)이 열려요 (사용자 2026-10-24)
+  home: (d) => [worldTicker(), bigEventsCard(), marketStatusCard(), worldHomeCard(), homeMoreCard(d), homeReportCard()],
   report: (d) => reportCards(d),
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
@@ -317,6 +318,7 @@ const VIEWS = {
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
   inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
+  world: () => [worldCard()],
 };
 
 let lastView = "", holdH = 0;
@@ -326,26 +328,55 @@ const tapSig = (el) => {
   const data = el.getAttributeNames().filter((a) => a.startsWith("data-")).map((a) => `${a}=${el.getAttribute(a)}`).join("&");
   return `${el.tagName}|${data || (el.textContent || "").trim().slice(0, 40)}`;
 };
-// 같은 표시의 버튼이 여럿이면(예: '자세히') 몇 번째였는지로 찾아요
-const tapAll = (sig) => [...document.querySelectorAll(`#app ${sig.split("|")[0]}`)].filter((x) => tapSig(x) === sig);
+// 같은 표시의 버튼이 여럿이면(예: '자세히') 몇 번째였는지로 찾아요.
+// 같은 버튼이 다른 칸에도 있으면(예: 관심 화면 ★가 내 관심종목·전체 종목 두 곳) 누른 칸(id가 있는 가장 가까운 칸) 안에서만 찾아요.
+// 안 그러면 ★를 넣는 순간 위 칸에 생긴 같은 ★ 자리로 화면이 올라가요 (사용자 2026-10-24)
+const tapBox = (el) => { const b = el.parentElement && el.parentElement.closest("#app [id]"); return b ? b.id : ""; };
+const tapAll = (sig, box) => {
+  const root = (box && document.getElementById(box)) || $("#app");
+  return root ? [...root.querySelectorAll(sig.split("|")[0])].filter((x) => tapSig(x) === sig) : [];
+};
 document.addEventListener("click", (e) => {
   const el = e.target.closest && e.target.closest("#app button, #app summary, #app li, #app [role=button]");
   if (!el) { lastTap = null; return; }
-  const sig = tapSig(el);
-  lastTap = { sig, idx: tapAll(sig).indexOf(el), top: el.getBoundingClientRect().top, at: performance.now() };
+  const sig = tapSig(el), box = tapBox(el);
+  lastTap = { sig, box, idx: tapAll(sig, box).indexOf(el), top: el.getBoundingClientRect().top, at: performance.now() };
 }, true);
 function keepTap() {
   const t = lastTap;
   if (!t || performance.now() - t.at > 1000) return;
   lastTap = null;
   const fix = () => {
-    const el = tapAll(t.sig)[t.idx];
+    const el = tapAll(t.sig, t.box)[t.idx];
     if (el) { const dy = el.getBoundingClientRect().top - t.top; if (Math.abs(dy) > 1) window.scrollBy(0, dy); }
   };
   fix();
   requestAnimationFrame(fix);
   setTimeout(fix, 250);
 }
+// 페이지 아래쪽에서 칸이 줄면(접기, ★ 빼기, 다시 그리기) 브라우저가 화면을 끌어올려요. 그래서 높이를 붙잡아 두고,
+// 1.5초 뒤부터는 보던 화면 아래에 빈칸이 안 보일 때(위로 올려 볼 때) 놓아요 (사용자 2026-10-24 '화면 돌아가지 않게')
+let holdReady = false;
+function holdHeight() {
+  const app = $("#app");
+  if (!app) return;
+  app.style.minHeight = `${Math.max(app.offsetHeight, parseFloat(app.style.minHeight) || 0)}px`;
+  holdReady = false;
+  clearTimeout(holdH);
+  holdH = setTimeout(() => { holdReady = true; releaseHold(); }, 1500);
+}
+function releaseHold() {
+  const app = $("#app");
+  if (!holdReady || !app || !app.style.minHeight) return;
+  const last = app.lastElementChild;
+  if (!last || last.getBoundingClientRect().bottom >= window.innerHeight) { app.style.minHeight = ""; holdReady = false; }
+}
+window.addEventListener("scroll", releaseHold, { passive: true });
+// 펼친 칸(details)을 접기 직전에 높이를 붙잡아요
+document.addEventListener("click", (e) => {
+  const sum = e.target.closest && e.target.closest("#app summary");
+  if (sum && sum.parentElement && sum.parentElement.open) holdHeight();
+}, true);
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
   const sb = $(".search-btn");
@@ -366,7 +397,8 @@ function render() {
   const view = `${screen}|${market}|${stockCode}`, keepAt = view === lastView ? window.scrollY : null;
   lastView = view;
   // 다시 그리는 동안 차트·재무제표가 잠깐 비어 화면이 짧아지면 위치가 밀려요. 그동안만 높이를 붙잡아 둬요
-  if (keepAt != null) { app.style.minHeight = `${app.offsetHeight}px`; clearTimeout(holdH); holdH = setTimeout(() => { app.style.minHeight = ""; }, 1500); }
+  if (keepAt != null) holdHeight();
+  else { clearTimeout(holdH); app.style.minHeight = ""; holdReady = false; }  // 다른 화면은 붙잡은 높이 없이
   app.innerHTML = VIEWS[screen](d).join("");
   if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
   if (screen === "home") tidyHomeMore(app);
@@ -471,7 +503,10 @@ function render() {
   }));
   const keepY = (f) => () => { const y = window.scrollY; f(); render(); window.scrollTo(0, y); };
   app.querySelectorAll("[data-world]").forEach((b) => b.addEventListener("click", keepY(() => {
-    worldPick = worldPick === b.dataset.world ? null : b.dataset.world;
+    // 맨 위 한국·미국 그래프와 탭 쪽 그래프는 따로 열려요 (한쪽을 눌러도 다른 쪽이 접히지 않게)
+    const top = DATA.world.groups.some((g) => WORLD_FIXED.includes(g.name) && g.items.some((r) => `t:${r.sym}` === b.dataset.world));
+    if (top) worldTop = worldTop === b.dataset.world ? null : b.dataset.world;
+    else if (!worldPicks.delete(b.dataset.world)) worldPicks.add(b.dataset.world);  // 세계 지수 화면은 여러 개 같이 펼쳐도 돼요
   })));
   app.querySelectorAll("[data-world-g]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldG = b.dataset.worldG;
@@ -483,11 +518,19 @@ function render() {
     go("chart");
   }));
   drawWorldGraph();
+  if (screen === "home") spinTicker();
   app.querySelectorAll("[data-world-tab]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldTab = b.dataset.worldTab;
-    worldPick = null;
+    worldPicks.clear();
     try { localStorage.setItem("world_tab", worldTab); } catch (e) { /* 이번만 기억 */ }
   })));
+  // 탭 줄은 옆으로 밀어 둔 자리 그대로 (무엇을 눌러 다시 그려도 '주요' 쪽으로 돌아가지 않게)
+  const wtBar = $(".wt-tabs");
+  if (wtBar) {
+    const on = wtBar.querySelector('[aria-pressed="true"]');
+    wtBar.scrollLeft = worldTabsX != null ? worldTabsX : on ? on.offsetLeft - wtBar.offsetLeft - 8 : 0;
+    wtBar.addEventListener("scroll", () => { worldTabsX = wtBar.scrollLeft; }, { passive: true });
+  }
   if (screen === "home" && jumpSectors) {
     jumpSectors = false;
     const card = $("#sectors-card");
@@ -1466,8 +1509,8 @@ function bindResults(el) {
     const input = $("#search-input");
     if (input) input.value = searchQuery;
     const list = $("#search-results");
-    if (list) { list.innerHTML = searchResults(); bindResults(list); }
-    window.scrollTo(0, 0);
+    if (list) { holdHeight(); list.innerHTML = searchResults(); bindResults(list); }
+    // 화면은 그 자리 그대로예요. 결과는 누른 칩 자리부터 보여요 (사용자 규칙 '버튼 눌러도 화면 고정')
   }));
   el.querySelectorAll("[data-tsec]").forEach((b) => b.addEventListener("click", () => {
     const [m, name] = b.dataset.tsec.split("/");
@@ -1778,7 +1821,7 @@ function setMapFocus(name, back = false) {
   const all = $("[data-mapall]");
   if (all) all.hidden = !name;
   const old = $("#map-detail");
-  if (old) { old.innerHTML = mapDetailCard(); bindMapDetail(old); }
+  if (old) { holdHeight(); old.innerHTML = mapDetailCard(); bindMapDetail(old); }
 }
 function bindMapDetail(el) {
   el.querySelectorAll("[data-mapgo]").forEach((b) => b.addEventListener("click", () => {
@@ -3256,8 +3299,9 @@ function bindSavings() {
       const k = p.dataset.savP, at = SAV.picks.indexOf(k);
       if (at >= 0) SAV.picks.splice(at, 1); else SAV.picks.push(k);
     } else return;
-    // 위에 고른 종목 줄이 늘거나 줄어도 누른 버튼(검색창 아래)이 제자리에 있게 화면을 맞춰요
-    const q = $("#sav-q"), top = q && q.getBoundingClientRect().top;
+    // 위에 고른 종목 줄이 늘거나 줄어도 누른 버튼(검색창 아래)이 제자리에 있게 화면을 맞춰요.
+    // 고른 종목 줄의 ×를 눌렀으면 그 줄이 제자리예요 (검색창에 맞추면 화면이 올라가요)
+    const q = e.target.closest("#sav-picked") ? $("#sav-picked") : $("#sav-q"), top = q && q.getBoundingClientRect().top;
     redrawPicks(); refresh();
     if (q) window.scrollBy(0, q.getBoundingClientRect().top - top);
   });
@@ -3295,9 +3339,10 @@ function bindSavings() {
 // 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).
 // 세계 지수·환율 (world.py, 국장·미장 같이). 보기용이고 매매 규칙엔 안 써요.
 // 한눈에 보기 (사용자 2026-10-24): 묶음 탭 + 3칸 타일. 타일 색이 진할수록 많이 움직인 거예요. 누르면 아래에 그래프.
+// 한국·미국 지수는 탭과 상관없이 늘 맨 위에 (사용자 2026-10-24 "이전처럼 두되")
+const WORLD_FIXED = ["한국", "미국"];
 const WORLD_TABS = [
-  ["main", "주요", ["^KS11", "^KQ11", "^GSPC", "^IXIC", "KRW=X", "^TNX", "CL=F", "GC=F", "^VIX"]],
-  ["kr_us", "한국·미국", ["한국", "미국"]],
+  ["main", "주요", ["KRW=X", "^TNX", "US10Y2Y", "CL=F", "GC=F", "^VIX"]],
   ["asia_eu", "아시아·유럽", ["아시아", "유럽"]],
   ["fx", "환율", ["환율"]],
   ["rate", "금리", ["채권 금리"]],
@@ -3306,7 +3351,7 @@ const WORLD_TABS = [
 ];
 let worldTab = "main";
 try { worldTab = localStorage.getItem("world_tab") || "main"; } catch (e) { /* 처음 */ }
-if (!WORLD_TABS.some((t) => t[0] === worldTab)) worldTab = "main";
+if (!WORLD_TABS.some((t) => t[0] === worldTab)) worldTab = "main";  // 옛 '한국·미국' 탭은 주요로
 // 타일엔 짧은 이름 (그래프를 펼치면 원래 이름)
 const WORLD_SHORT = {
   "^SOX": "필라 반도체", "^N225": "닛케이225", "000001.SS": "상하이", "^HSI": "항셍", "^TWII": "대만 가권",
@@ -3333,19 +3378,19 @@ function worldTint(r, v) {
   return `background:color-mix(in srgb, var(${v > 0 ? "--up" : "--down"}) ${a}%, var(--surface-0))`;
 }
 // 줄을 누르면 바로 아래에 그 지수·환율 그래프가 펼쳐져요 (다시 누르면 접혀요). 지수는 차트 화면 캔들로도 갈 수 있어요
-let worldPick = null;
+let worldPicks = new Set(), worldTop = null, worldTabsX = null;
 const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월", 130], ["y1", "1년", 0]];
 let worldG = "m3";
 try { worldG = localStorage.getItem("world_g") || "m3"; } catch (e) { /* 처음 */ }
 if (!WORLD_G.some((p) => p[0] === worldG)) worldG = "m3";
-function worldTile(r) {
+function worldTile(r, cur) {
   const [key] = WORLD_P.find((p) => p[0] === worldP);
-  const open = worldPick === `t:${r.sym}`, v = r[key];
+  const open = cur === `t:${r.sym}`, v = r[key];
   return `<button type="button" class="wt${open ? " on" : ""}" data-world="t:${esc(r.sym)}" aria-expanded="${open}" style="${worldTint(r, v)}"
     aria-label="${esc(r.name)} ${worldValue(r)} ${worldChg(r, v)}"><span class="wt-n">${esc(WORLD_SHORT[r.sym] || r.name)}</span>
     <b class="wt-v">${worldValue(r, true)}</b><span class="wt-c ${sign(v)}">${worldChg(r, v)}</span></button>`;
 }
-function worldGraph(r) {
+function worldGraph(r, id = "world-chart") {
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
   const c = n ? r.closes.slice(-n) : r.closes;
   const ch = c.length > 1 ? worldMove(r, c) : null;
@@ -3355,13 +3400,15 @@ function worldGraph(r) {
   return `<div class="world-graph"><div class="wg-head"><b>${esc(r.name)}</b><span class="muted">${worldValue(r)} · ${md(r.day)} 종가</span></div>
     <div class="period" role="group" aria-label="그래프 기간">${chips}</div>
     <p class="muted" style="margin:8px 0 4px">${ch == null ? "" : `이 기간 <b class="${sign(ch)}">${worldChg(r, ch)}</b> · `}최고 ${worldValue({ ...r, last: hi })} · 최저 ${worldValue({ ...r, last: lo })}</p>
-    <div class="chart" id="world-chart"></div>${toChart}</div>`;
+    <div class="chart" id="${id}" data-sym="${esc(r.sym)}"></div>${toChart}</div>`;
 }
 function drawWorldGraph() {
-  const el = $("#world-chart");
+  document.querySelectorAll("#app .world-graph .chart[data-sym]").forEach((el) => drawWorldChart(el, el.dataset.sym));
+}
+function drawWorldChart(el, sym) {
   const w = DATA && DATA.world;
   if (!el || !w) return;
-  const r = worldPick && w.groups.flatMap((g) => g.items).find((x) => x.sym === worldPick.slice(worldPick.indexOf(":") + 1));
+  const r = w.groups.flatMap((g) => g.items).find((x) => x.sym === sym);
   if (!r) return;
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
   const c = n ? r.closes.slice(-n) : r.closes;
@@ -3375,9 +3422,67 @@ function drawWorldGraph() {
     fmt: (v) => v.toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits }),
   });
 }
-function worldCard() {
+// 홈 맨 위 얇은 바: 한국·미국 말고 나머지 지수·환율이 3초마다 하나씩 바뀌어요. 높이는 늘 같아서 화면이 안 밀려요 (바는 따라 내려오지 않아요)
+let tickAt = 0, tickTimer = 0;
+function tickItems() {
+  const w = DATA && DATA.world;
+  if (!w || !w.groups) return [];
+  const all = w.groups.flatMap((g) => g.items);
+  const order = WORLD_TABS.find((t) => t[0] === "main")[2].map((s) => all.find((r) => r.sym === s)).filter(Boolean);
+  return order.concat(w.groups.filter((g) => !WORLD_FIXED.includes(g.name)).flatMap((g) => g.items).filter((r) => !order.includes(r)));
+}
+function tickHTML(r) {
+  return `<span class="wk-n">${esc(WORLD_SHORT[r.sym] || r.name)}</span><b class="wk-v">${worldValue(r, true)}</b><span class="wk-c ${sign(r.d1)}">${worldChg(r, r.d1)}</span>`;
+}
+function worldTicker() {
+  const list = tickItems();
+  if (!list.length) return "";
+  tickAt %= list.length;
+  return `<button type="button" class="wtick" data-go="world" aria-label="세계 지수·환율 전체 보기">
+    <span class="wk-tag">세계</span><span class="wk-item" aria-live="off">${tickHTML(list[tickAt])}</span><span class="wk-go" aria-hidden="true">›</span></button>`;
+}
+function spinTicker() {
+  clearInterval(tickTimer);
+  tickTimer = setInterval(() => {
+    const el = $(".wtick .wk-item"), list = tickItems();
+    if (!el || !list.length || screen !== "home") { clearInterval(tickTimer); return; }
+    if (document.hidden) return;
+    tickAt = (tickAt + 1) % list.length;
+    if (calm()) { el.innerHTML = tickHTML(list[tickAt]); return; }
+    el.classList.add("out");
+    setTimeout(() => { el.innerHTML = tickHTML(list[tickAt]); el.classList.remove("out"); }, 220);
+  }, 3000);
+}
+// 홈엔 한국·미국 지수만 (이전처럼). 나머지는 맨 위 바를 눌러 세계 지수 화면에서
+function worldHomeCard() {
   const w = DATA.world;
   if (!w || !w.groups || !w.groups.length) return "";
+  const [, label] = WORLD_P.find((p) => p[0] === worldP);
+  const period = `<div class="period" role="group" aria-label="등락 기간">${WORLD_P.map(([k, l]) =>
+    `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
+  const fixed = w.groups.filter((g) => WORLD_FIXED.includes(g.name)).flatMap((g) => g.items);
+  if (!fixed.length) return "";
+  const pickedFixed = worldTop && fixed.find((r) => `t:${r.sym}` === worldTop);
+  const up = fixed.filter((r) => r[worldP] > 0).length, down = fixed.filter((r) => r[worldP] < 0).length;
+  return `<section class="card" id="world-card"><h2>한국·미국 지수 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
+    <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
+    <div class="wt-grid">${fixed.map((r) => worldTile(r, worldTop)).join("")}</div>${pickedFixed ? worldGraph(pickedFixed, "world-chart-top") : ""}
+    <button type="button" class="more" data-go="world">세계 지수·환율 전체 보기<span aria-hidden="true">›</span></button></section>`;
+}
+// 세계 지수 화면은 따로 열리는 넓은 공간이라 색칸 대신 한 줄에 하나씩 작은 그래프로 (사용자 2026-10-24)
+function worldRow(r) {
+  const [key, , n, glabel] = WORLD_P.find((p) => p[0] === worldP);
+  const open = worldPicks.has(`t:${r.sym}`), v = r[key];
+  const c = n ? r.closes.slice(-n) : r.closes;
+  const line = spark(c, `${r.name} ${glabel} 흐름`);
+  return `<button type="button" class="wr${open ? " on" : ""}" data-world="t:${esc(r.sym)}" aria-expanded="${open}"
+    aria-label="${esc(r.name)} ${worldValue(r)} ${worldChg(r, v)}"><span class="wr-l"><span class="wr-n">${esc(WORLD_SHORT[r.sym] || r.name)}</span>
+    <b class="wr-v">${worldValue(r)}</b></span><span class="wr-s">${line}</span><span class="wr-c ${sign(v)}">${worldChg(r, v)}</span></button>${open ? worldGraph(r, `world-chart-${r.sym.replace(/[^A-Za-z0-9]/g, "_")}`) : ""}`;
+}
+// 세계 지수 화면: 묶음 탭 + 줄마다 작은 그래프 (한국·미국은 홈에 있어서 여기선 탭만)
+function worldCard() {
+  const w = DATA.world;
+  if (!w || !w.groups || !w.groups.length) return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button><p class="empty">아직 세계 지수 기록이 없어요.</p></section>`;
   const all = w.groups.flatMap((g) => g.items);
   const [, label] = WORLD_P.find((p) => p[0] === worldP);
   const [, , pick] = WORLD_TABS.find((t) => t[0] === worldTab);
@@ -3388,14 +3493,13 @@ function worldCard() {
     .map(([k, l]) => `<button type="button" data-world-tab="${k}" aria-pressed="${k === worldTab}">${l}</button>`).join("");
   const period = `<div class="period" role="group" aria-label="등락 기간">${WORLD_P.map(([k, l]) =>
     `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
-  const picked = worldPick && items.find((r) => `t:${r.sym}` === worldPick);
   const up = items.filter((r) => r[worldP] > 0).length, down = items.filter((r) => r[worldP] < 0).length;
-  return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
+  return `<section class="card" id="world-card"><button type="button" class="back" data-back>‹ 뒤로</button>
+    <h2 class="stock-name">세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
     <div class="wt-tabs" role="group" aria-label="묶음 고르기">${tabs}</div>
     <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
-    <div class="wt-grid">${items.map(worldTile).join("")}</div>
-    ${picked ? worldGraph(picked) : ""}
-    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 ${label} 많이 움직인 거예요. 누르면 그래프가 열려요. 금리는 몇 %p 바뀌었는지, 장단기 금리 차가 마이너스면 '역전'(경기 침체 앞에 자주 나왔어요), VIX는 20을 넘으면 불안이 커진 거예요. 원/달러가 오르면 원화 약세예요. 미국 2년 금리·장단기 차는 FRED, 나머지는 야후 자료이고 나라마다 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
+    <div class="wr-list">${items.map(worldRow).join("")}</div>
+    <p class="muted note" style="margin:10px 0 0">줄마다 작은 그래프는 최근 ${WORLD_P.find((p) => p[0] === worldP)[3]} 흐름이에요. 누르면 큰 그래프가 열려요. 금리는 몇 %p 바뀌었는지, 장단기 금리 차가 마이너스면 '역전'(경기 침체 앞에 자주 나왔어요), VIX는 20을 넘으면 불안이 커진 거예요. 원/달러가 오르면 원화 약세예요. 미국 2년 금리·장단기 차는 FRED, 나머지는 야후 자료이고 나라마다 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
@@ -4718,7 +4822,7 @@ $(".map-btn").addEventListener("click", () => {
 function resetFolds() {
   [HOME_OPEN, POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
   saveHomeOpen();
-  worldPick = null; polMore = false; polJump = null; calAll = false;
+  worldPicks.clear(); worldTop = null; worldTabsX = null; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {

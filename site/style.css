@@ -824,6 +824,7 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .wt-tabs button[aria-pressed="true"] { background: var(--text-primary); border-color: var(--text-primary); color: var(--surface-1); }
 .wt-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 13px; }
 .wt-bar .up, .wt-bar .down { font-weight: 700; font-variant-numeric: tabular-nums; }
+.wt-grid + .wt-tabs, .world-graph + .wt-tabs { margin-top: 12px; }
 .wt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .wt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 9px 10px 8px; border: 0; border-radius: var(--radius-s);
   background: var(--surface-0); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
@@ -882,3 +883,28 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .mkt-status.stale { border-color: color-mix(in srgb, var(--wait-fg) 45%, transparent); background: color-mix(in srgb, var(--wait-bg) 55%, var(--surface-1)); }
 .mkt-warn { margin: 8px 0 0; font-size: 13px; color: var(--wait-fg); }
 .mkt-open { color: var(--accent-fg); font-weight: 600; }
+
+/* 홈 맨 위 얇은 세계 지수 바 (돌아가며 하나씩, 누르면 세계 지수 화면). 따라 내려오지 않아요 */
+.wtick { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--surface-1); color: var(--text-primary); font: inherit; font-size: 14px; text-align: left; cursor: pointer; overflow: hidden; box-shadow: var(--card-shadow); }
+.wtick .wk-tag { flex: none; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.wtick .wk-item { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; overflow: hidden; transition: opacity .22s, transform .22s; }
+.wtick .wk-item.out { opacity: 0; transform: translateY(-6px); }
+.wtick .wk-n { overflow: hidden; text-overflow: ellipsis; }
+.wtick .wk-v, .wtick .wk-c { font-variant-numeric: tabular-nums; }
+.wtick .wk-v { font-weight: 700; }
+.wtick .wk-c { font-weight: 600; font-size: 13px; }
+.wtick .wk-go { flex: none; color: var(--accent); font-size: 18px; }
+
+/* 세계 지수 화면: 한 줄에 하나씩 이름·값 | 작은 그래프 | 등락 */
+.wr-list { display: flex; flex-direction: column; }
+.wr { display: grid; grid-template-columns: minmax(0, 1fr) 96px 76px; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 2px;
+  border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.wr-list > .wr:last-of-type { border-bottom: 0; }
+.wr.on { border-bottom-color: transparent; }
+.wr-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wr-n { font-size: 13px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-v { font-size: 16px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-s .spark { height: 36px; }
+.wr-c { justify-self: end; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wr-list > .world-graph { margin: 0 0 8px; }
