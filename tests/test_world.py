@@ -52,14 +52,14 @@ def test_dashboard_reads_world(tmp_path):
     assert dashboard.build(tmp_path)["world"]["updated"] == "2026-10-08T07:05"
 
 
-def test_parse_naver_rate():
-    html = """<table><tr><td class="date">2026.10.23</td>
-      <td class="num">2.580</td><td class="num"><img alt="상승">0.010</td></tr>
-      <tr><td class="date">
-        2026.10.22
-      </td><td class="num">2.570</td></tr></table>"""
-    rows = world.parse_naver_rate(html)
-    assert rows == [(pd.Timestamp("2026-10-23"), 2.58), (pd.Timestamp("2026-10-22"), 2.57)]
+def test_parse_ecos_rows():
+    rows = [{"TIME": "20261023", "DATA_VALUE": "2.580"}, {"TIME": "20261022", "DATA_VALUE": "2.57"},
+            {"TIME": "20261021", "DATA_VALUE": ""}]
+    s = world.parse_ecos_rows(rows)
+    assert list(s.index) == list(pd.to_datetime(["2026-10-22", "2026-10-23"])) and list(s) == [2.57, 2.58]
+    assert world.parse_ecos_rows([]) is None
+    items = [{"ITEM_NAME": "국고채(3년)", "ITEM_CODE": "X3", "CYCLE": "D"}]
+    assert world.ecos_codes(items) == {"KR3Y": "X3", "KR10Y": "010210000"}
     c = closes()
     c["KR3Y"] = pd.Series([2.5, 2.6], index=pd.to_datetime(["2026-10-22", "2026-10-23"]))
     rows = {r["sym"]: r for g in world.snapshot(c)["groups"] for r in g["items"]}
