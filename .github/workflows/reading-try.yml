@@ -17,13 +17,15 @@ jobs:
       - run: pip install requests
       - run: |
           python - <<'PY'
-          import reading, re
-          for path in ["market_info_list.naver", "industry_list.naver"]:
-              t = reading.fetch(path)
-              print(len(t), t[:300].replace("\n", " "))
-              i = t.find("type_1")
-              print(t[i:i+2500])
-              print("ROWS", len(reading.parse(t, "market")))
+          import requests, re
+          H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
+          t = requests.get("https://finance.naver.com/research/market_info_list.naver", headers=H, timeout=20).content.decode("utf-8", "replace")
+          for k in [".pdf", "__NEXT_DATA__", "nid", "/api/", "self.__next_f"]:
+              idx = [m.start() for m in re.finditer(re.escape(k), t)][:3]
+              print("==", k, len(re.findall(re.escape(k), t)))
+              for x in idx[:2]:
+                  print(repr(t[max(0, x - 400): x + 300]))
+          print(sorted(set(re.findall(r'https?://[a-zA-Z0-9.\-]+/[a-zA-Z0-9_/\-]*api[a-zA-Z0-9_/\-]*', t)))[:30])
           PY
       - run: python reading.py --out /tmp/r.json
       - run: python -c "import json;d=json.load(open('/tmp/r.json'));[print(k, x) for k in d['items'] for x in d['items'][k][:3]]"

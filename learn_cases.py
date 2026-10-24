@@ -3,7 +3,8 @@
 
 앱 투자 공부 → 오늘 왜 움직였나 아래 '사례 일지'에 나와요. 매일 장 마감 작업(daily 워크플로)이 리포트 다음에 돌려요.
 이미 저장된 paper/world.json(세계 지수·금리·환율·유가·VIX), events.json(큰 발표 결과), report.json(업종)만 읽어요 (네트워크 없음).
-원인은 '같은 때 크게 움직인 숫자'일 뿐이라 후보로만 적어요. 기준은 site/app.js DRIVERS의 now()와 같아요.
+원인은 '같은 때 크게 움직인 숫자'일 뿐이라 후보로만 적어요. 크다·작다는 그 숫자의 최근 120거래일 보통 크기(표준편차)와 비교해요.
+기준은 site/app.js DRIVERS의 now()(zOf)와 같아요.
 
 사용법:
     python learn_cases.py                 # 오늘(지수 마지막 날) 사례를 더해요
@@ -44,6 +45,19 @@ class Series:
                 break
         return i
 
+    def z(self, day, diff=False, look=120):
+        """그날 하루·1주 변화가 지난 120거래일 보통 크기(표준편차)의 몇 배인지. 시장이 늘 출렁이는 때엔 기준도 같이 커져요."""
+        i = self.at(day, self.before)
+        if i is None or i < 30:
+            return 0.0
+        c = self.closes[max(0, i - look - 5): i + 1]
+        ch = (lambda a, b: a - b) if diff else (lambda a, b: a / b - 1 if b else 0.0)
+        d1 = [ch(c[k], c[k - 1]) for k in range(1, len(c))]
+        d5 = [ch(c[k], c[k - 5]) for k in range(5, len(c))]
+        sd = lambda xs: (sum((x - sum(xs) / len(xs)) ** 2 for x in xs) / len(xs)) ** 0.5 if len(xs) > 5 else 0.0
+        s1, s5 = sd(d1[:-1]), sd(d5[:-1])
+        return max(abs(d1[-1]) / s1 if s1 else 0.0, abs(d5[-1]) / s5 if s5 else 0.0)
+
     def change(self, day, back, diff=False):
         i = self.at(day, self.before)
         if i is None or i - back < 0:
@@ -74,51 +88,52 @@ def bp(x):
     return "-" if x is None else f"{round(x * 100):+d}bp"
 
 
-def level(v, strong, some):
-    v = abs(v or 0)
-    return 2 if v >= strong else 1 if v >= some else 0
+Z_STRONG, Z_SOME, Z_NOTE = 2.0, 1.5, 1.0  # 평소 크기의 2배 넘게 = 크게 의심, 1.5배 = 움직임 있음, 1배 = 조금
+
+
+def zhit(z):
+    return 2 if z >= Z_STRONG else 1 if z >= Z_SOME else 0
 
 
 def market_causes(w, day, market):
     """세계 지수 기록으로 본 그날의 원인 후보 [{key, title, hit, text}]."""
     out = []
 
-    def add(key, title, hit, text):
-        if hit:
-            out.append(dict(key=key, title=title, hit=hit, text=text))
+    def add(key, title, z, text, hit=None):
+        # 평소 크기의 1배 넘게 움직인 것만 적고, 몇 배였는지(z)도 남겨요. hit: 2배↑ 크게, 1.5배↑ 움직임, 그 아래는 '조금'(0)
+        if z >= Z_NOTE or hit:
+            out.append(dict(key=key, title=title, hit=max(zhit(z), hit or 0), z=round(z, 1), text=text))
 
     if "^TNX" in w:
         last, ch = w["^TNX"].change(day, 5, diff=True)
         if last is not None:
-            add("rate", "금리", level(ch, 0.15, 0.08), f"미국 10년 {last:.2f}% · 1주 {bp(ch)}")
+            add("rate", "금리", w["^TNX"].z(day, diff=True), f"미국 10년 {last:.2f}% · 1주 {bp(ch)}")
     fx = "KRW=X" if market == "kr" else "DX-Y.NYB"
     if fx in w:
         last, c1 = w[fx].change(day, 1)
         _, c5 = w[fx].change(day, 5)
         if last is not None:
-            lim = (0.015, 0.008) if market == "kr" else (0.01, 0.006)
-            hit = max(level(c5, *lim), 1 if abs(c1 or 0) >= lim[1] else 0)
-            add("fx", "환율", hit, (f"원/달러 {last:,.0f}원" if market == "kr" else f"달러인덱스 {last:.1f}") + f" · 1주 {pct(c5)}")
+            add("fx", "환율", w[fx].z(day), (f"원/달러 {last:,.0f}원" if market == "kr" else f"달러인덱스 {last:.1f}") + f" · 1주 {pct(c5)}")
     if "CL=F" in w:
         last, c1 = w["CL=F"].change(day, 1)
         _, c5 = w["CL=F"].change(day, 5)
         if last is not None:
-            add("oil", "유가", max(level(c5, 0.05, 0.03), level(c1, 0.04, 0.02)), f"WTI {last:.1f}달러 · 하루 {pct(c1)} · 1주 {pct(c5)}")
+            add("oil", "유가", w["CL=F"].z(day), f"WTI {last:.1f}달러 · 하루 {pct(c1)} · 1주 {pct(c5)}")
     if "^SOX" in w:
         _, c1 = w["^SOX"].change(day, 1)
         _, c5 = w["^SOX"].change(day, 5)
         if c1 is not None:
-            add("chip", "반도체·대형 기술주", max(level(c1, 0.025, 0.015), level(c5, 0.06, 0.035)), f"필라델피아 반도체 하루 {pct(c1)} · 1주 {pct(c5)}")
+            add("chip", "반도체·대형 기술주", w["^SOX"].z(day), f"필라델피아 반도체 하루 {pct(c1)} · 1주 {pct(c5)}")
     others = ["^GSPC", "^IXIC"] if market == "kr" else ["^N225", "^STOXX50E"]
     moves = [(w[s].name, w[s].change(day, 1)[1]) for s in others if s in w]
     moves = [(n, c) for n, c in moves if c is not None]
     if moves:
-        add("global", "다른 나라 증시", level(max(abs(c) for _, c in moves), 0.015, 0.008), " · ".join(f"{n} {pct(c)}" for n, c in moves))
+        add("global", "다른 나라 증시", max(w[s].z(day) for s in others if s in w), " · ".join(f"{n} {pct(c)}" for n, c in moves))
     if "^VIX" in w:
         last, c1 = w["^VIX"].change(day, 1)
         if last is not None:
-            hit = 2 if last >= 30 or (c1 or 0) >= 0.25 else 1 if last >= 22 or (c1 or 0) >= 0.12 else 0
-            add("fear", "공포·심리", hit, f"VIX {last:.1f} · 하루 {pct(c1)}")
+            z = w["^VIX"].z(day) if (c1 or 0) > 0 else 0.0  # 공포는 오를 때만
+            add("fear", "공포·심리", z, f"VIX {last:.1f} · 하루 {pct(c1)}", hit=2 if last >= 30 else 1 if last >= 22 else 0)
     return out
 
 
@@ -171,7 +186,7 @@ def build_case(w, day, market, events=None, report=None):
     _, w1 = own.change(day, 5)
     hi = max(own.closes[max(0, i - 251): i + 1])
     causes = event_causes(events, day) + market_causes(w, day, market)
-    causes.sort(key=lambda c: -c["hit"])
+    causes.sort(key=lambda c: (-c["hit"], -c.get("z", 9)))
     case = dict(day=day, index=NAME[market], d1=round(d1, 5), w1=None if w1 is None else round(w1, 5),
                 dd=round(own.closes[i] / hi - 1, 5), causes=causes)
     news = shock_news(events, day, market)

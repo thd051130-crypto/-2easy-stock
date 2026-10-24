@@ -1009,3 +1009,4 @@ details.learn-quiz summary::-webkit-details-marker { display: none; }
 .learn-quiz-open { color: var(--accent); font-weight: 600; white-space: nowrap; }
 details.learn-quiz[open] .learn-quiz-open { display: none; }
 details.learn-quiz p { margin: 6px 0 0; color: var(--text-secondary); }
+.learn-tag.local { background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }

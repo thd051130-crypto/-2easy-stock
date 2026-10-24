@@ -2414,6 +2414,21 @@ function newsTopic(topic) {
   return out;
 }
 const newsHit = (topic) => { const n = newsTopic(topic); return n.length ? { n: n.length, line: `뉴스 ${n.length}건 · ${esc(n[0].title)}` } : null; };
+// 하루·1주 변화가 최근 120거래일 보통 크기(표준편차)의 몇 배인지 (learn_cases.py Series.z와 같아요).
+// 시장이 늘 크게 출렁이는 때엔 '큰 움직임' 기준도 같이 커져요. 2배↑ 크게, 1.5배↑ 움직임
+function zOf(r, diff) {
+  const c = (r && r.closes || []).filter((x) => x != null).slice(-126);
+  if (c.length < 31) return 0;
+  const ch = (a, b) => (diff ? a - b : b ? a / b - 1 : 0);
+  const d1 = [], d5 = [];
+  for (let k = 1; k < c.length; k++) d1.push(ch(c[k], c[k - 1]));
+  for (let k = 5; k < c.length; k++) d5.push(ch(c[k], c[k - 5]));
+  const sd = (xs) => { const m = xs.reduce((a, b) => a + b, 0) / xs.length; return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length); };
+  const s1 = sd(d1.slice(0, -1)), s5 = sd(d5.slice(0, -1));
+  return Math.max(s1 ? Math.abs(d1[d1.length - 1]) / s1 : 0, s5 ? Math.abs(d5[d5.length - 1]) / s5 : 0);
+}
+const zHit = (z) => (z >= 2 ? 2 : z >= 1.5 ? 1 : 0);
+const zText = (z) => (z >= 1 ? ` (평소의 ${z.toFixed(1)}배)` : "");
 const chg = (r, k = "d1") => (r && r[k] != null ? `<b class="${sign(r[k])}">${pct(r[k], 1)}</b>` : "-");
 
 // 시장을 움직이는 요인. now(m)은 오늘 자료로 본 이 요인의 모습: {hit 0~2, text, dir}. hit 2 = 크게 의심, 1 = 있음, 0 = 조용
@@ -2426,9 +2441,9 @@ const DRIVERS = [
     now: (m) => {
       const r = wItem("^TNX"), k = wItem("KR3Y");
       if (!r) return null;
-      const big = Math.max(Math.abs(r.w1 || 0), m === "kr" && k ? Math.abs(k.w1 || 0) : 0);
-      const text = `미국 10년 ${r.last.toFixed(2)}% · 1주 ${bp(r.w1)}${m === "kr" && k ? ` / 한국 3년 ${k.last.toFixed(2)}% · 1주 ${bp(k.w1)}` : ""}`;
-      return { hit: big >= 0.15 ? 2 : big >= 0.08 ? 1 : 0, text, dir: (r.w1 || 0) > 0 ? "금리가 올라 주식엔 부담 쪽" : "금리가 내려 숨통 쪽" };
+      const z = zOf(r, true);
+      const text = `미국 10년 ${r.last.toFixed(2)}% · 1주 ${bp(r.w1)}${zText(z)}${m === "kr" && k ? ` / 한국 3년 ${k.last.toFixed(2)}% · 1주 ${bp(k.w1)}` : ""}`;
+      return { hit: zHit(z), text, dir: (r.w1 || 0) > 0 ? "금리가 올라 주식엔 부담 쪽" : "금리가 내려 숨통 쪽" };
     } },
   { key: "infl", quiz: "CPI가 3.5%로 지난달(3.7%)보다 낮아졌는데 주가가 빠졌어요. 왜 그럴까요?", answer: "예상치가 3.3%였다면 '예상보다 높게' 나온 거라서요. 시장은 지난달보다 예상과의 차이에 반응해요.", icon: "🛒", title: "물가", one: "물가가 예상보다 높게 나오면 '금리 더 오르겠네' 걱정에 주가가 빠져요.",
     chain: ["물가가 높으면 중앙은행이 금리를 올리거나 내리지 못해요", "그 걱정에 국채 금리가 먼저 뛰어요", "그다음 주식, 특히 성장주가 빠져요"],
@@ -2478,10 +2493,9 @@ const DRIVERS = [
     now: (m) => {
       const r = m === "kr" ? wItem("KRW=X") : wItem("DX-Y.NYB");
       if (!r) return null;
-      const w = Math.abs(r.w1 || 0), d = Math.abs(r.d1 || 0);
-      const text = m === "kr" ? `원/달러 ${num(r.last)}원 · 하루 ${chg(r)} · 1주 ${chg(r, "w1")}` : `달러인덱스 ${r.last.toFixed(1)} · 1주 ${chg(r, "w1")}`;
-      const lim = m === "kr" ? [0.015, 0.008] : [0.01, 0.006];
-      return { hit: w >= lim[0] ? 2 : w >= lim[1] || d >= lim[1] ? 1 : 0, text,
+      const z = zOf(r);
+      const text = (m === "kr" ? `원/달러 ${num(r.last)}원 · 하루 ${chg(r)} · 1주 ${chg(r, "w1")}` : `달러인덱스 ${r.last.toFixed(1)} · 1주 ${chg(r, "w1")}`) + zText(z);
+      return { hit: zHit(z), text,
         dir: m === "kr" ? ((r.w1 || 0) > 0 ? "원화가 약해지는 쪽 (외국인엔 부담)" : "원화가 강해지는 쪽 (외국인엔 도움)") : ((r.w1 || 0) > 0 ? "달러가 강해지는 쪽" : "달러가 약해지는 쪽") };
     } },
   { key: "oil", quiz: "유가가 한 달에 30% 올랐어요. 항공사와 정유사 중 웃는 쪽은?", answer: "정유사예요. 파는 기름 값이 올라요. 항공사는 연료비가 늘어 이익이 줄기 쉬워요.", icon: "🛢️", title: "유가", one: "유가가 급하게 오르면 물가가 오르고 회사 비용이 늘어 증시엔 대체로 부담이에요.",
@@ -2492,9 +2506,9 @@ const DRIVERS = [
     now: () => {
       const r = wItem("CL=F");
       if (!r) return null;
-      const w = Math.abs(r.w1 || 0), d = Math.abs(r.d1 || 0);
-      return { hit: w >= 0.05 || d >= 0.04 ? 2 : w >= 0.03 || d >= 0.02 ? 1 : 0,
-        text: `WTI ${r.last.toFixed(1)}달러 · 하루 ${chg(r)} · 1주 ${chg(r, "w1")} · 1년 ${chg(r, "y1")}`,
+      const z = zOf(r);
+      return { hit: zHit(z),
+        text: `WTI ${r.last.toFixed(1)}달러 · 하루 ${chg(r)} · 1주 ${chg(r, "w1")} · 1년 ${chg(r, "y1")}${zText(z)}`,
         dir: (r.y1 || 0) > 0.5 ? "1년 새 50% 넘게 올라 경기 경고 중" : (r.w1 || 0) > 0 ? "오르는 쪽" : "내리는 쪽" };
     } },
   { key: "chip", quiz: "밤사이 미국 반도체 지수가 -5% 빠졌어요. 다음 날 아침 국장에서 가장 먼저 볼 종목은?", answer: "삼성전자·SK하이닉스예요. 코스피에서 비중이 커서 이 둘이 빠지면 지수 전체가 끌려 내려가기 쉬워요.", icon: "💾", title: "반도체·대형 기술주", one: "코스피는 반도체 비중이 커서 미국 반도체 주가를 많이 따라가요.",
@@ -2505,9 +2519,9 @@ const DRIVERS = [
     now: () => {
       const r = wItem("^SOX");
       if (!r) return null;
-      const d = Math.abs(r.d1 || 0), w = Math.abs(r.w1 || 0);
-      return { hit: d >= 0.025 || w >= 0.06 ? 2 : d >= 0.015 || w >= 0.035 ? 1 : 0,
-        text: `필라델피아 반도체 하루 ${chg(r)} · 1주 ${chg(r, "w1")} · 1달 ${chg(r, "m1")}`, dir: (r.w1 || 0) > 0 ? "반도체가 오르는 쪽" : "반도체가 내리는 쪽" };
+      const z = zOf(r);
+      return { hit: zHit(z),
+        text: `필라델피아 반도체 하루 ${chg(r)} · 1주 ${chg(r, "w1")} · 1달 ${chg(r, "m1")}${zText(z)}`, dir: (r.w1 || 0) > 0 ? "반도체가 오르는 쪽" : "반도체가 내리는 쪽" };
     } },
   { key: "global", quiz: "미국·일본은 조용했는데 코스피만 -3% 빠졌어요. 원인을 어디서 찾을까요?", answer: "한국만의 이유예요. 환율 급등, 국내 정책·정치 뉴스, 반도체 같은 특정 업종 소식, 외국인 대량 매도를 먼저 봐요.", icon: "🌏", title: "다른 나라 증시", one: "세계 돈은 이어져 있어서 큰 나라 증시가 흔들리면 같이 흔들려요.",
     chain: ["국장은 밤사이 미국 마감을 보고 아침을 시작해요", "미장도 아시아·유럽에서 먼저 터진 큰 사건에 반응해요", "다른 나라는 멀쩡한데 우리만 빠졌다면 우리만의 이유(환율·정책·특정 업종)를 찾아봐요"],
@@ -2518,9 +2532,9 @@ const DRIVERS = [
       const [a, b] = pair;
       if (!a) return null;
       const own = wItem(OWN_IDX[m]);
-      const big = Math.max(Math.abs(a.d1 || 0), Math.abs((b && b.d1) || 0));
-      const alone = own && own.d1 != null && Math.abs(own.d1) >= 0.02 && big < 0.008;
-      return { hit: big >= 0.015 ? 2 : big >= 0.008 ? 1 : 0,
+      const z = Math.max(zOf(a), b ? zOf(b) : 0);
+      const alone = own && own.d1 != null && zOf(own) >= 1.5 && z < 1;
+      return { hit: zHit(z),
         text: `${esc(a.name)} ${chg(a)}${b ? ` · ${esc(b.name)} ${chg(b)}` : ""}`,
         dir: alone ? `다른 나라는 조용한데 ${m === "kr" ? "국장" : "미장"}만 크게 움직였어요 → 우리만의 이유 쪽` : "" };
     } },
@@ -2548,7 +2562,8 @@ const DRIVERS = [
     now: () => {
       const r = wItem("^VIX");
       if (!r) return null;
-      return { hit: r.last >= 30 || (r.d1 || 0) >= 0.25 ? 2 : r.last >= 22 || (r.d1 || 0) >= 0.12 ? 1 : 0,
+      const z = (r.d1 || 0) > 0 ? zOf(r) : 0;  // 공포는 오를 때만
+      return { hit: r.last >= 30 ? 2 : Math.max(zHit(z), r.last >= 22 ? 1 : 0),
         text: `VIX ${r.last.toFixed(1)} · 하루 ${chg(r)}`, dir: r.last >= 30 ? "큰 공포" : r.last >= 20 ? "불안한 편" : "평온한 편 (보통 12~20)" };
     } },
   { key: "macro", quiz: "장단기 금리가 역전됐어요. 바로 주가가 빠질까요?", answer: "꼭 그렇진 않아요. 과거엔 역전 뒤 침체까지 1~2년 걸리기도 했고, 그동안 주가가 오른 때도 있었어요. 경고 신호로만 봐요.", icon: "🌡️", title: "경기 흐름", one: "길게 보면 주가는 회사 이익을, 이익은 경기를 따라가요.",
@@ -2790,11 +2805,15 @@ function learnCaseCard() {
   const ic = DRIVER_ICON(), show = L.slice(0, 12);
   const row = (c) => {
     const big = c.causes.filter((x) => x.hit > 1), some = c.causes.filter((x) => x.hit === 1);
-    const tags = [...big, ...some].slice(0, 4).map((x) => `<span class="learn-tag${x.hit > 1 ? " strong" : ""}">${ic[x.key] || ""} ${esc(x.title)}</span>`).join("");
+    const local = !big.length && !some.length && Math.abs(c.d1) >= 0.015;  // 해외·금리·환율은 평소대로인데 지수만 크게
+    const tags = [...big, ...some].slice(0, 4).map((x) => `<span class="learn-tag${x.hit > 1 ? " strong" : ""}">${ic[x.key] || ""} ${esc(x.title)}</span>`).join("")
+      || (local ? `<span class="learn-tag local">🏠 ${c.index === "코스피" ? "국내" : "미국 안"} 사정 쪽</span>` : "");
     const open = LEARN_OPEN.has(`case:${c.day}`);
     return `<details class="lesson learn-case" data-learn-open="case:${esc(c.day)}"${open ? " open" : ""}><summary><span class="learn-case-d">${md(c.day)}</span>
       <span class="hm-t"><b>${esc(c.index)} <span class="${sign(c.d1)}">${pct(c.d1, 2)}</span></b><span class="learn-tags">${tags || `<span class="muted">크게 튄 요인 없음</span>`}</span></span></summary>
-      <div class="lesson-body"><ul class="brief">${c.causes.map((x) => `<li>${ic[x.key] || ""} <b>${esc(x.title)}</b> ${esc(x.text)}</li>`).join("") || "<li>원인 후보로 볼 만큼 크게 움직인 숫자가 없었어요. 이런 날은 업종·종목 소식이 더 중요해요.</li>"}</ul>
+      <div class="lesson-body"><ul class="brief">${c.causes.map((x) => `<li>${ic[x.key] || ""} <b>${esc(x.title)}</b> ${esc(x.text)}${x.z != null ? ` <small class="muted">평소의 ${x.z.toFixed(1)}배${x.hit ? "" : " (조금)"}</small>` : ""}</li>`).join("")
+        || "<li>금리·환율·유가·해외 증시 모두 평소 크기였어요.</li>"}</ul>
+        ${local ? `<p class="learn-tip">💡 해외·금리·환율은 평소대로인데 ${esc(c.index)}만 ${pct(c.d1, 1)} 움직였어요. 이럴 땐 ${c.index === "코스피" ? "국내 정책·정치, 외국인·기관 수급, 특정 업종(반도체 등) 소식" : "미국 안 소식(실적·정책·특정 종목)"}을 먼저 찾아봐요.</p>` : ""}
         ${(c.strong || []).length ? `<p class="learn-why1">강한 업종 ${c.strong.map((x) => `${esc(x.name)} ${pct(x.r5)}`).join(", ")} · 약한 업종 ${(c.weak || []).map((x) => `${esc(x.name)} ${pct(x.r5)}`).join(", ")}</p>` : ""}
         ${(c.news || []).map((n) => `<p class="learn-why1">📰 ${/^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title)}</p>`).join("")}
         <p class="learn-why1">1년 고점 대비 ${pct(c.dd)} · 1주 ${pct(c.w1)}</p></div></details>`;
@@ -2812,7 +2831,8 @@ function learnCaseCard() {
     }
   }
   return `<section class="card" id="learn-cases"><h2>📒 사례 일지 <small>최근 ${L.length}거래일 · 매일 늘어요</small></h2>${same}${show.map(row).join("")}
-    <p class="muted note" style="margin:10px 0 0">장 마감 뒤마다 그날 지수 움직임과 같은 때 크게 움직인 숫자(금리·환율·유가·반도체·해외 증시·VIX·큰 발표)를 한 줄씩 적어 둬요. 국장은 그 전날 밤 미국 자료로 맞춰 봐요. 원인 후보일 뿐이에요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">장 마감 뒤마다 그날 지수 움직임과 같은 때 움직인 숫자(금리·환율·유가·반도체·해외 증시·VIX·큰 발표)를 한 줄씩 적어 둬요.
+      크다·작다는 그 숫자가 최근 반년 동안 보통 움직이던 크기와 비교해요 (2배 넘으면 '크게'). 국장은 그 전날 밤 미국 자료로 맞춰 봐요. 원인 후보일 뿐이에요.</p></section>`;
 }
 
 // ── 전문가 리포트: reading.py가 매일 받은 증권사 무료 리포트(PDF) 목록. 고른 묶음은 이 폰에 기억해요
