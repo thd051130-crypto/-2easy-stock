@@ -808,6 +808,12 @@ button.hm:active .hm-t > b { color: var(--accent); }
 .hm-s b { font-weight: 600; }
 .hm-arrow { font-size: 20px; line-height: 1; color: var(--text-muted); }
 .more-back { padding: 0 4px; }
+/* 🔥 핫 뉴스 (읽기 전까지 남아요) */
+.hot-card { border-color: var(--up); }
+.hot-card li { align-items: center; }
+.hot-card li.read { opacity: .45; }
+.hot-ok { flex: none; border: 1px solid var(--border); background: var(--surface-0); color: var(--text-secondary); font: inherit; font-size: 13px; border-radius: 999px; padding: 4px 10px; min-height: 32px; cursor: pointer; }
+
 .more-back .back { margin: 0; }
 
 /* 성과 화면: 가상계좌 한 줄 요약과 접는 그래프 */

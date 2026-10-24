@@ -188,7 +188,38 @@ let NEWS = null;
 function loadNews(url) {
   if (!url) return Promise.resolve(null);
   return fetch(`${url}?t=${Date.now()}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
-    .then((x) => { if (x && x.updated) NEWS = x; return x; }).catch(() => null);
+    .then((x) => { if (x && x.updated) { NEWS = x; stashHot(x); } return x; }).catch(() => null);
+}
+// 🔥 핫 뉴스는 읽기(기사 누르기) 전까지 이 폰에 따로 남겨 둬요 (사용자 2026-10-24 "핫 뉴스는 따로, 읽기 전까지").
+// 서버는 7일까지만 갖고 있어서, 받은 핫 뉴스를 시장별로 여기 모아 둬요. 읽은 건 빼고, 30일 넘은 건 정리해요
+const HOT_KEEP_DAYS = 30, HOT_MAX = 40;
+let HOT = { kr: [], us: [] };
+try { const h = JSON.parse(localStorage.getItem("hot_news") || "{}"); for (const m of ["kr", "us"]) if (Array.isArray(h[m])) HOT[m] = h[m]; } catch (e) { /* 처음 */ }
+let HOT_READ = new Set();
+try { HOT_READ = new Set(JSON.parse(localStorage.getItem("hot_read") || "[]")); } catch (e) { /* 처음 */ }
+const hotId = (n) => n.link || n.title;
+function saveHot() {
+  try {
+    localStorage.setItem("hot_news", JSON.stringify(HOT));
+    localStorage.setItem("hot_read", JSON.stringify([...HOT_READ].slice(-300)));
+  } catch (e) { /* 이번만 기억 */ }
+}
+function stashHot(x) {
+  const cut = Date.now() - HOT_KEEP_DAYS * 864e5;
+  for (const m of ["kr", "us"]) {
+    const fresh = ((x.hot || {})[m] || []).filter((n) => n && n.title);
+    // 같은 사건은 새로 받은 것으로 바꿔요 (핵심 낱말 2개 이상 겹치면 같은 사건, 서버와 같은 규칙)
+    const same = (a, b) => (a.key || []).filter((w) => (b.key || []).includes(w)).length >= 2;
+    const old = HOT[m].filter((o) => !fresh.some((n) => hotId(n) === hotId(o) || same(n, o)));
+    HOT[m] = [...fresh, ...old].filter((n) => Date.parse(n.at || n.since) > cut && !HOT_READ.has(hotId(n))).slice(0, HOT_MAX);
+  }
+  saveHot();
+}
+const hotOf = (m) => HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
+function readHot(ids) {
+  ids.forEach((id) => HOT_READ.add(id));
+  for (const m of ["kr", "us"]) HOT[m] = HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
+  saveHot();
 }
 
 async function load() {
@@ -443,6 +474,14 @@ function render() {
   app.innerHTML = VIEWS[screen](d).join("");
   if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
   app.querySelectorAll("[data-more]").forEach((b) => b.addEventListener("click", () => openMore(b.dataset.more)));
+  // 핫 뉴스: 기사를 누르면 읽음 (화면은 그대로, 연하게만 — 다음에 그릴 때 빠져요). '읽음'·'모두 읽음'은 바로 빼요
+  app.querySelectorAll("[data-hot-read]").forEach((a) => a.addEventListener("click", () => {
+    readHot([a.dataset.hotRead]);
+    const li = a.closest("li");
+    if (li) li.classList.add("read");
+  }));
+  app.querySelectorAll("[data-hot-ok]").forEach((b) => b.addEventListener("click", () => { readHot([b.dataset.hotOk]); render(); }));
+  app.querySelectorAll("[data-hot-all]").forEach((b) => b.addEventListener("click", () => { readHot(hotOf(market).map(hotId)); render(); }));
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
@@ -2130,9 +2169,10 @@ function homeMoreRows(d) {
   const s = d.daily || {};
   const rows = [];
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
-  // 지금 뉴스: 증시에 영향 줄 만한 가장 최근 뉴스 한 줄 (30분마다 따로 받아요)
-  const N = newsOf(market), n1 = N && N[0];
-  add("news", "📰", "지금 뉴스", n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard());
+  // 지금 뉴스: 안 읽은 🔥 핫 뉴스가 있으면 그걸, 없으면 가장 최근 뉴스 한 줄 (30분마다 따로 받아요)
+  const N = newsOf(market), n1 = N && N[0], hot = hotOf(market);
+  add("news", "📰", "지금 뉴스", hot.length ? `🔥 <b>${hot.length}건</b> · ${esc(hot[0].title)}`
+    : n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard());
   const dn = dropNow(d);
   add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
   // 다가오는 일정: 가장 가까운 큰 일정
@@ -2200,10 +2240,25 @@ function newsLi(n) {
 const NEWS_HOURS = 24;
 const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m].filter((n) => Date.now() - Date.parse(n.at) < NEWS_HOURS * 36e5) : null);
 // 증시에 영향 줄 만한 사건 뉴스 (금리·환율·관세·유가·전쟁 등). 종목 하나하나 뉴스는 안 받아요 (사용자 2026-10-24)
+function hotLi(n) {
+  const id = esc(hotId(n));
+  const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener" data-hot-read="${id}">${esc(n.title)}</a>` : esc(n.title);
+  return `<li data-hot="${id}"><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
+    <div class="meta">언론 ${n.sources || "여러"}곳 · ${n.since ? `처음 ${md(n.since.slice(0, 10))} ${hm(n.since)}` : ""}${n.at ? ` · 최근 기사 ${ago(n.at)}` : ""}</div></div>
+    <button type="button" class="hot-ok" data-hot-ok="${id}" aria-label="읽음으로 표시">읽음</button></li>`;
+}
+function hotCard() {
+  const H = hotOf(market);
+  if (!H.length) return "";
+  return `<section class="card hot-card" id="hot-card"><h2>🔥 핫 뉴스 <small>안 읽은 ${H.length}건</small></h2>
+    <ul class="list">${H.map(hotLi).join("")}</ul>
+    ${H.length > 1 ? `<button type="button" class="more" data-hot-all>모두 읽음<span aria-hidden="true">✓</span></button>` : ""}
+    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 기사를 누르거나 '읽음'을 누를 때까지 여기 남아요.</p></section>`;
+}
 function newsCard() {
   const N = newsOf(market);
-  if (!N) return DATA.news_url ? `<section class="card"><h2>지금 뉴스</h2><p class="empty">뉴스를 아직 못 받았어요. 잠시 뒤 다시 열어 주세요.</p></section>` : "";
-  return `<section class="card" id="news-card"><h2>지금 뉴스 <small>${ago(NEWS.updated)} 받음 · 30분마다</small></h2>
+  if (!N) return DATA.news_url ? `${hotCard()}<section class="card"><h2>지금 뉴스</h2><p class="empty">뉴스를 아직 못 받았어요. 잠시 뒤 다시 열어 주세요.</p></section>` : "";
+  return `${hotCard()}<section class="card" id="news-card"><h2>지금 뉴스 <small>${ago(NEWS.updated)} 받음 · 30분마다</small></h2>
     ${N.length ? `<ul class="list">${N.map(newsLi).join("")}</ul>` : `<p class="empty">최근 24시간 큰 뉴스가 없어요.</p>`}
     <p class="muted note" style="margin:10px 0 0">금리·환율·관세·유가·전쟁처럼 ${market === "kr" ? "국장" : "미장"} 전체에 영향 줄 만한 뉴스 제목을 30분마다 새로 받아 바꿔요 (GitHub 사정으로 더 늦을 때도 있어요). 24시간 지난 기사는 빼요. 주제 표시는 제목 낱말로 짐작한 거예요. 기사 원문을 꼭 확인하세요.</p></section>`;
 }
