@@ -21,22 +21,23 @@ def test_merge_drops_same_title():
     assert [x["title"] for x in news.merge([a, b])] == ["환율", "코스피 상승"]
 
 
-def test_build_market_and_stocks():
-    def fake(q, lang="ko", n=3):
-        if q == "삼성전자 주가":
-            return [dict(title="삼성전자 신고가", source="s", at="2026-10-24T10:00+09:00", link="https://x")]
-        if q in ("코스피", "뉴욕증시"):
-            return [dict(title=f"{q} 뉴스", source="s", at="2026-10-24T09:00+09:00", link="https://y")]
+def test_build_merges_queries_and_tags_topics():
+    def fake(q, lang="ko", n=6):
+        if q == "코스피 증시":
+            return [dict(title="한은 기준금리 동결", source="s", at="2026-10-24T10:00+09:00", link="https://x")]
+        if q == "원달러 환율":
+            return [dict(title="환율 1,380원대 마감", source="s", at="2026-10-24T11:00+09:00", link="https://y"),
+                    dict(title="한은 기준금리  동결", source="s2", at="2026-10-24T09:00+09:00", link="https://z")]
         return []
     now = dt.datetime(2026, 10, 24, 13, 43, tzinfo=news.KST)
-    out = news.build({"kr": {"005930": "삼성전자", "000660": "SK하이닉스"}, "us": {"AAPL": "애플"}}, fetch=fake, now=now)
+    out = news.build(fetch=fake, now=now)
     assert out["updated"] == "2026-10-24T13:43+09:00"
-    assert [x["title"] for x in out["kr"]["market"]] == ["코스피 뉴스"]
-    assert list(out["kr"]["stocks"]) == ["005930"]  # 뉴스 없는 종목은 빼요
-    assert out["us"]["stocks"] == {} and out["us"]["market"][0]["title"] == "뉴욕증시 뉴스"
+    assert [(x["title"], x["topic"]) for x in out["kr"]] == [("환율 1,380원대 마감", "환율"), ("한은 기준금리 동결", "금리")]
+    assert out["us"] == []
 
 
-def test_targets_add_telegram_extras(tmp_path):
-    (tmp_path / "watch.json").write_text('{"kr": [{"code": "012450", "name": "한화에어로스페이스"}], "us": []}')
-    t = news.targets(tmp_path)
-    assert t["kr"]["012450"] == "한화에어로스페이스" and "005930" in t["kr"] and "AAPL" in t["us"]
+def test_topic():
+    assert news.topic("트럼프, 중국산 관세 인상 예고") == "무역·관세"
+    assert news.topic("Fed signals rate cut") == "금리"
+    assert news.topic("corporate earnings beat") == "실적"  # corporate의 rate는 금리가 아니에요
+    assert news.topic("삼성전자 신제품 공개") is None

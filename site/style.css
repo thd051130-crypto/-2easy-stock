@@ -783,24 +783,22 @@ details.pol-sec { margin-top: 6px; }
 /* 홈 '더 보기': 칸마다 한 줄, 누르면 그 자리에서 펼쳐져요 */
 .home-more { padding-bottom: 6px; }
 .home-more > h2 { margin-bottom: 2px; }
-details.hm { border-top: 1px solid var(--border); }
-details.hm:first-of-type { border-top: 0; }
-details.hm > summary {
-  list-style: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0;
-  font-weight: 400; color: var(--text-primary); -webkit-tap-highlight-color: transparent;
+/* 줄을 누르면 그 칸만 있는 화면으로 넘어가요 (#kr/more/<칸>) */
+button.hm {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 0; margin: 0;
+  border: 0; border-top: 1px solid var(--border); background: none; font: inherit; font-weight: 400; text-align: left;
+  color: var(--text-primary); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-details.hm > summary::-webkit-details-marker { display: none; }
+.home-more > h2 + button.hm { border-top: 0; }
+button.hm:active .hm-t > b { color: var(--accent); }
 .hm-ico { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-s); background: var(--surface-0); font-size: 16px; }
 .hm-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hm-t > b { font-size: 15px; font-weight: 600; }
 .hm-s { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-s b { font-weight: 600; }
-.hm-arrow { font-size: 20px; line-height: 1; color: var(--text-muted); transition: transform .2s; }
-details.hm[open] > summary .hm-arrow { transform: rotate(90deg); }
-.hm-body { padding: 0 0 14px; }
-.hm-body > .card { border: 0; background: none; padding: 0; border-radius: 0; box-shadow: none; }
-.hm-meta { margin: 0 0 8px; font-size: 12px; color: var(--text-muted); }
-@media (prefers-reduced-motion: reduce) { .hm-arrow { transition: none; } }
+.hm-arrow { font-size: 20px; line-height: 1; color: var(--text-muted); }
+.more-back { padding: 0 4px; }
+.more-back .back { margin: 0; }
 
 /* 성과 화면: 가상계좌 한 줄 요약과 접는 그래프 */
 .acc-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
