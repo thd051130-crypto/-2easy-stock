@@ -85,3 +85,8 @@ def test_build_with_empty_files(tmp_path):
     r = rd.build(rd.load_inputs(tmp_path), today=dt.date(2026, 10, 24))
     assert r["sectors"] == {} and r["stocks"] == {} and r["headline"][0].startswith("시장 분위기")
     rd.format_text(r)
+
+
+def test_fact_text_rate_in_points():
+    f = dict(name="미국 10년 국채 금리", kind="rate", last=4.99, d1=0.04, m1=-0.13)
+    assert rd.fact_text(f) == "미국 10년 국채 금리 4.99% (+0.04%p, 1달 -0.13%p)"
