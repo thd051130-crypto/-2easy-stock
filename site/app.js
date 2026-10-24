@@ -102,14 +102,10 @@ function adoptExtras() {
 }
 let watchQuery = "";
 let jumpSectors = false;
-// 세계 지수·환율 칸에서 고른 기간과 '전체 보기'를 펼쳤는지 (이 폰 브라우저에 기억해요)
+// 세계 지수·환율 칸에서 고른 기간 (이 폰 브라우저에 기억해요)
 const WORLD_P = [["d1", "오늘", 6, "1주"], ["w1", "1주", 22, "1개월"], ["m1", "1개월", 66, "3개월"], ["y1", "1년", 0, "1년"]];
 let worldP = "d1";
-let worldOpen = false;
-try {
-  worldP = localStorage.getItem("world_p") || "d1";
-  worldOpen = localStorage.getItem("world_open") === "1";
-} catch (e) { /* 기본값 */ }
+try { worldP = localStorage.getItem("world_p") || "d1"; } catch (e) { /* 기본값 */ }
 if (!WORLD_P.some((p) => p[0] === worldP)) worldP = "d1";
 // 고른 업종 (홈 '업종별 호재·악재'와 관심 화면 '전체 종목'이 같이 써요). 시장마다 따로
 const SECTOR = { kr: "", us: "" };
@@ -487,11 +483,11 @@ function render() {
     go("chart");
   }));
   drawWorldGraph();
-  const wd = $("#world-all");
-  if (wd) wd.addEventListener("toggle", () => {
-    worldOpen = wd.open;
-    try { localStorage.setItem("world_open", worldOpen ? "1" : "0"); } catch (e) { /* 이번만 기억 */ }
-  });
+  app.querySelectorAll("[data-world-tab]").forEach((b) => b.addEventListener("click", keepY(() => {
+    worldTab = b.dataset.worldTab;
+    worldPick = null;
+    try { localStorage.setItem("world_tab", worldTab); } catch (e) { /* 이번만 기억 */ }
+  })));
   if (screen === "home" && jumpSectors) {
     jumpSectors = false;
     const card = $("#sectors-card");
@@ -878,17 +874,90 @@ const HANGUL = /[가-힣]/;
 const LETTERS = { a: "에이", b: "비", c: "씨", d: "디", e: "이", f: "에프", g: "지", h: "에이치", i: "아이", j: "제이", k: "케이",
   l: "엘", m: "엠", n: "엔", o: "오", p: "피", q: "큐", r: "알", s: "에스", t: "티", u: "유", v: "브이", w: "더블유", x: "엑스", y: "와이", z: "지" };
 const BRAND_KO = { 코덱스: "kodex", 타이거: "tiger", 에이스: "ace", 라이즈: "rise", 플러스: "plus", 하나로: "hanaro",
-  아리랑: "arirang", 키움: "kiwoom", 코세프: "kosef", 쏠: "sol" };
+  아리랑: "arirang", 키움: "kiwoom", 코세프: "kosef", 쏠: "sol", 솔: "sol", 타임폴리오: "timefolio", 타임: "time", 킨덱스: "kindex",
+  히어로즈: "heroes" };
+// 같은 뜻 낱말 (한쪽으로 쳐도 다른 쪽 이름이 나와요)
+const SYNONYMS = [["나스닥", "nasdaq"], ["에스앤피", "sp"], ["에스엔피", "sp"], ["snp", "sp"], ["미국", "us"], ["다우", "dow"],
+  ["코스피", "kospi"], ["코스닥", "kosdaq"], ["반도체", "semicon"], ["커버드콜", "covered"], ["레버리지", "leverage"],
+  ["인버스", "inverse"], ["배당", "dividend"], ["채권", "bond"], ["국채", "treasury"], ["비트코인", "bitcoin"],
+  ["이더리움", "ethereum"], ["원유", "oil"], ["일본", "japan"], ["중국", "china"], ["인도", "india"],
+  ["베트남", "vietnam"], ["리츠", "reit"], ["테크", "tech"], ["바이오", "bio"], ["헬스케어", "healthcare"],
+  ["배터리", "battery"], ["액티브", "active"], ["선물", "futures"], ["골드", "gold"], ["커버드", "covered"],
+  ["월배당", "monthly"], ["고배당", "highdividend"], ["이티에프", "etf"], ...Object.entries(BRAND_KO)];
+// 붙여 쳐도 낱말로 나눠요 ('코덱스나스닥100' → 코덱스 / 나스닥100). 영문 브랜드는 맨 앞에 있을 때만.
+const SPLIT_KO = new RegExp(`(${uniq(SYNONYMS.map((x) => x[0]).filter((k) => /^[가-힣]/.test(k) && k.length >= 2)).sort((a, b) => b.length - a.length).join("|")})`, "g");
+const SPLIT_EN = uniq(Object.values(BRAND_KO)).sort((a, b) => b.length - a.length);
+// 이름에 없어도 되는 낱말 ('미국 나스닥100'으로 QQQ도). 다 이런 낱말뿐이면 그때는 꼭 있어야 해요.
+const OPTIONAL = new Set(["미국", "us", "etf", "이티에프", "주식", "종목", "국내", "한국", "우리나라"]);
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const JAMO = /[ㄱ-ㅎ]/;
 const norm = (s) => String(s || "").toLowerCase().replace(CORP, "").replace(/[^0-9a-z가-힣]/g, "");
 // 한글 바로 옆 영문은 한글 읽기로도: 'sk하이닉스' → '에스케이하이닉스'
 const spell = (s) => s.replace(/[a-z]+/g, (w, i) =>
   (HANGUL.test(s.slice(Math.max(0, i - 1), i) + s.slice(i + w.length, i + w.length + 1)) ? [...w].map((c) => LETTERS[c]).join("") : w));
-const uniq = (a) => a.filter((k, i) => k && a.indexOf(k) === i);
+// 한글은 첫 자음만: '삼성전자' → 'ㅅㅅㅈㅈ'
+const chosung = (s) => s.replace(/[가-힣]/g, (c) => CHO[Math.floor((c.charCodeAt(0) - 0xAC00) / 588)]);
+function uniq(a) { return a.filter((k, i) => k && a.indexOf(k) === i); }
+function splitWords(w) {
+  w = w.replace(SPLIT_KO, " $1 ").replace(/([a-z])(?=[가-힣ㄱ-ㅎ])|([가-힣ㄱ-ㅎ])(?=[a-z])/g, "$1$2 ");
+  const out = [];
+  for (let p of w.split(/\s+/).filter(Boolean)) {
+    const b = SPLIT_EN.find((x) => p.startsWith(x) && p.length > x.length + 1);
+    if (b) p = `${b} ${p.slice(b.length)}`;
+    out.push(...p.split(" "));
+  }
+  return out;
+}
+function wordAlts(t) {
+  const alts = [t, spell(t)];
+  for (const [a, b] of SYNONYMS) {
+    if (t.includes(a)) alts.push(t.split(a).join(b));
+    if (t.includes(b)) alts.push(t.split(b).join(a));
+  }
+  return uniq(alts);
+}
+// 띄어 쓴 낱말마다 따로 찾아요 (순서 상관없이 다 들어 있으면). 초성만 친 낱말은 초성으로.
+function queryTokens(q) {
+  const raw = String(q || "").toLowerCase().replace(CORP, " ").replace(/[^0-9a-z가-힣ㄱ-ㅎ\s]/g, "").split(/\s+/).filter(Boolean);
+  const toks = [];
+  for (const t of uniq(raw.flatMap(splitWords))) {
+    if (JAMO.test(t)) { if (t.length >= 2) toks.push({ alts: [], cho: chosung(t), opt: false, fz: null }); continue; }
+    toks.push({ alts: wordAlts(t), cho: null, opt: OPTIONAL.has(t), fz: t.length >= 3 && !/^\d+$/.test(t) ? t : null });
+  }
+  if (toks.length && toks.every((t) => t.opt)) toks.forEach((t) => { t.opt = false; });
+  toks.words = raw.filter((w) => !JAMO.test(w) && !OPTIONAL.has(w)).map(wordAlts);  // 친 그대로 다 붙어 있으면 더 앞에
+  return toks;
+}
+// t가 s 안에 k글자 이하로 틀리게 들어 있나 (오타: 글자 하나 바뀜·빠짐·더함)
+function near(t, s, k) {
+  let have = 0;
+  for (const c of t) if (s.includes(c)) have++;
+  if (have < t.length - k) return false;
+  const n = t.length;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i), cur = new Array(n + 1);
+  for (let j = 0; j < s.length; j++) {
+    cur[0] = 0;
+    const c = s[j];
+    for (let i = 1; i <= n; i++) cur[i] = Math.min(prev[i - 1] + (t[i - 1] === c ? 0 : 1), prev[i] + 1, cur[i - 1] + 1);
+    if (cur[n] <= k) return true;
+    [prev, cur] = [cur, prev];
+  }
+  return false;
+}
+let QK = null;  // 마지막 검색어 (화면마다 여러 번 불러요)
 function queryKeys(q) {
+  const ready = !!(SYM.kr && SYM.us);
+  if (QK && QK.q === q && QK.ready === ready) return QK.qs;
   const n = norm(q);
   const keys = [n, spell(n)];
   for (const [ko, en] of Object.entries(BRAND_KO)) if (n.includes(ko)) keys.push(n.split(ko).join(en));
-  return uniq(keys);
+  const qs = JAMO.test(q) ? [] : uniq(keys);  // 초성이 섞여 있으면 통째로는 안 맞춰요 (낱말로만)
+  qs.toks = queryTokens(q);
+  qs.fuzzy = false;
+  // 딱 맞는 종목이 하나도 없을 때만 오타를 허용해서 찾아요
+  if (ready && qs.toks.some((t) => t.fz) && !["kr", "us"].some((m) => SYM[m].some((e) => scoreOf(e.row, e.keys, qs) != null))) qs.fuzzy = true;
+  QK = { q, ready, qs };
+  return qs;
 }
 function nameKeys(row) {
   const keys = [];
@@ -900,7 +969,9 @@ function nameKeys(row) {
   }
   return uniq(keys);
 }
-// 작을수록 잘 맞아요: 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부. 안 맞으면 null.
+// 작을수록 잘 맞아요: 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부,
+// 5 친 낱말이 다 들어 있음(순서 상관없이, 초성도), 6 붙여 친 낱말을 나눠서 다 들어 있음,
+// 7 '미국' 같은 없어도 되는 낱말만 빠짐, 8 오타 허용으로 맞음. 안 맞으면 null. (symbols.py score와 같아요)
 function scoreOf(row, keys, qs) {
   const code = row[0].toLowerCase();
   if (qs.includes(code)) return 0;
@@ -912,7 +983,20 @@ function scoreOf(row, keys, qs) {
     }
     if (code.startsWith(q) && (best == null || best > 3)) best = 3;
   }
-  return best;
+  const toks = qs.toks;
+  if (best != null || !toks || !toks.length) return best;
+  const hay = keys.hay || (keys.hay = keys.join("|"));
+  let miss = 0, typo = 0;
+  for (const t of toks) {
+    if (t.alts.some((a) => hay.includes(a))) continue;
+    if (t.cho && (keys.cho || (keys.cho = chosung(hay))).includes(t.cho)) continue;
+    if (t.opt) { miss++; continue; }
+    if (qs.fuzzy && t.fz && near(t.fz, hay, t.fz.length >= 8 ? 2 : 1)) { typo++; continue; }
+    return null;
+  }
+  if (miss === toks.length) return null;
+  if (typo || miss) return typo ? 8 : 7;
+  return toks.words.every((w) => w.some((a) => hay.includes(a))) ? 5 : 6;
 }
 
 const SYM = { kr: null, us: null };  // [{ row, keys }]
@@ -1139,7 +1223,7 @@ function glossaryCard() {
 function findStocks(q) {
   const qs = queryKeys(q);
   const tracked = [], others = [];
-  if (!qs.length || !DATA) return { tracked, others };
+  if ((!qs.length && !qs.toks.length) || !DATA) return { tracked, others };
   for (const m of ["kr", "us"]) {
     const mine = stocksOf(DATA.markets[m]);
     const byCode = new Map(mine.map((x) => [x.code, x]));
@@ -1168,6 +1252,8 @@ function searchResults() {
   if (!q) {
     return `<section class="card"><ul class="help" style="margin:0">
       <li>이름 일부만 쳐도 돼요: '하이닉스', '삼성sdi', '코덱스 200', '슈드'</li>
+      <li>낱말 순서·띄어쓰기는 상관없고 '미국'은 빼도 돼요: 'kodex 나스닥100', '나스닥100 타이거'</li>
+      <li>초성·별명·작은 오타도 찾아요: 'ㅅㅅㅈㅈ', '삼전', '하닉', '곱버스', '하이닉쓰'</li>
       <li>문장으로 쳐도 돼요: '전력 관련분야 종목 찾아줘', '미국 원전주', '화장품 대장주'</li>
       <li>어떤 상장 종목이든 누르면 차트가 나오고, ☆를 누르면 바로 관심종목에 들어가요. 하나씩 추가할 필요 없어요.</li>
       <li>대형주(대시보드 종목)는 재무제표·수급까지 나와요.</li></ul></section>
@@ -3208,28 +3294,56 @@ function bindSavings() {
 
 // 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).
 // 세계 지수·환율 (world.py, 국장·미장 같이). 보기용이고 매매 규칙엔 안 써요.
-const WORLD_MAIN = ["^KS11", "^GSPC", "^IXIC", "KRW=X"];  // 펼치지 않아도 늘 보이는 것
-function worldValue(r) {
-  const v = r.last.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// 한눈에 보기 (사용자 2026-10-24): 묶음 탭 + 3칸 타일. 타일 색이 진할수록 많이 움직인 거예요. 누르면 아래에 그래프.
+const WORLD_TABS = [
+  ["main", "주요", ["^KS11", "^KQ11", "^GSPC", "^IXIC", "KRW=X", "^TNX", "CL=F", "GC=F", "^VIX"]],
+  ["kr_us", "한국·미국", ["한국", "미국"]],
+  ["asia_eu", "아시아·유럽", ["아시아", "유럽"]],
+  ["fx", "환율", ["환율"]],
+  ["rate", "금리", ["채권 금리"]],
+  ["goods", "원자재·리츠", ["원자재", "리츠·부동산"]],
+  ["coin", "공포·코인", ["공포·코인"]],
+];
+let worldTab = "main";
+try { worldTab = localStorage.getItem("world_tab") || "main"; } catch (e) { /* 처음 */ }
+if (!WORLD_TABS.some((t) => t[0] === worldTab)) worldTab = "main";
+// 타일엔 짧은 이름 (그래프를 펼치면 원래 이름)
+const WORLD_SHORT = {
+  "^SOX": "필라 반도체", "^N225": "닛케이225", "000001.SS": "상하이", "^HSI": "항셍", "^TWII": "대만 가권",
+  "^STOXX50E": "유로스톡스50", "^GDAXI": "독일 DAX", "^FTSE": "영국 FTSE", "JPYKRW=X": "원/엔(100)",
+  "US2Y": "미 2년 금리", "^TNX": "미 10년 금리", "US10Y2Y": "장단기 금리 차", "KR3Y": "국고채 3년", "KR10Y": "국고채 10년",
+  "TLT": "미 장기채 TLT", "CL=F": "WTI 유가", "GC=F": "금", "HG=F": "구리", "VNQ": "미 리츠 VNQ", "329200.KS": "국내 리츠",
+  "^VIX": "VIX 공포", "BTC-USD": "비트코인", "DX-Y.NYB": "달러인덱스",
+};
+function worldValue(r, short = false) {
+  const big = Math.abs(r.last) >= 10000;
+  const v = r.last.toLocaleString("ko-KR", { minimumFractionDigits: big && short ? 0 : 2, maximumFractionDigits: big && short ? 0 : 2 });
+  if (short) return r.kind === "rate" ? `${v}%` : v;  // 타일은 좁아서 원·달러를 빼요 (이름에 있어요)
   return r.kind === "krw" ? `${v}원` : r.kind === "rate" ? `${v}%` : r.kind === "usd" ? `${v}달러` : v;
 }
 // 등락: 금리는 % 대신 몇 %p 바뀌었는지 (4%→4.5%는 +0.50%p)
 const worldChg = (r, v) => (r.kind === "rate" ? (v == null ? "-" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%p`) : pct(v, 2));
 const worldMove = (r, c) => (r.kind === "rate" ? c[c.length - 1] - c[0] : c[c.length - 1] / c[0] - 1);
+// 타일 색: 기간마다 '가장 진한 색'이 되는 움직임 (오늘 2%, 1주 4%, 1개월 8%, 1년 25%. 금리는 %p로 그 1/20)
+const WORLD_FULL = { d1: 0.02, w1: 0.04, m1: 0.08, y1: 0.25 };
+function worldTint(r, v) {
+  if (v == null || Math.abs(v) < 1e-9) return "";
+  const full = WORLD_FULL[worldP] * (r.kind === "rate" ? 5 : 1);  // 금리 0.1%p(오늘)면 가장 진해요
+  const a = Math.round((Math.min(1, Math.abs(v) / full) * 0.3 + 0.05) * 100);
+  return `background:color-mix(in srgb, var(${v > 0 ? "--up" : "--down"}) ${a}%, var(--surface-0))`;
+}
 // 줄을 누르면 바로 아래에 그 지수·환율 그래프가 펼쳐져요 (다시 누르면 접혀요). 지수는 차트 화면 캔들로도 갈 수 있어요
 let worldPick = null;
 const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월", 130], ["y1", "1년", 0]];
 let worldG = "m3";
 try { worldG = localStorage.getItem("world_g") || "m3"; } catch (e) { /* 처음 */ }
 if (!WORLD_G.some((p) => p[0] === worldG)) worldG = "m3";
-function worldRow(r, where = "main") {
-  const [key, , n, line] = WORLD_P.find((p) => p[0] === worldP);
-  const closes = n ? r.closes.slice(-n) : r.closes;
-  const open = worldPick === `${where}:${r.sym}`;  // 위 4개 목록과 '전체 보기' 목록에 같은 줄이 있어서 누른 쪽만 펼쳐요
-  return `<li class="stock spark-row no-star world-row${open ? " open" : ""}" data-world="${where}:${esc(r.sym)}" role="button" aria-expanded="${open}"><div class="name">${esc(r.name)}</div>
-    <div class="meta">${md(r.day)} 종가${n && closes.length > 1 ? ` · ${line} ${worldChg(r, worldMove(r, closes))}` : ""}</div>
-    <div class="mini">${spark(closes, `${r.name} 최근 ${line}`)}</div>
-    <div class="price">${worldValue(r)}</div><div class="chg ${sign(r[key])}">${worldChg(r, r[key])}</div></li>${open ? worldGraph(r) : ""}`;
+function worldTile(r) {
+  const [key] = WORLD_P.find((p) => p[0] === worldP);
+  const open = worldPick === `t:${r.sym}`, v = r[key];
+  return `<button type="button" class="wt${open ? " on" : ""}" data-world="t:${esc(r.sym)}" aria-expanded="${open}" style="${worldTint(r, v)}"
+    aria-label="${esc(r.name)} ${worldValue(r)} ${worldChg(r, v)}"><span class="wt-n">${esc(WORLD_SHORT[r.sym] || r.name)}</span>
+    <b class="wt-v">${worldValue(r, true)}</b><span class="wt-c ${sign(v)}">${worldChg(r, v)}</span></button>`;
 }
 function worldGraph(r) {
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
@@ -3238,9 +3352,10 @@ function worldGraph(r) {
   const hi = Math.max(...c), lo = Math.min(...c);
   const chips = WORLD_G.map(([k, l]) => `<button type="button" data-world-g="${k}" aria-pressed="${k === worldG}">${l}</button>`).join("");
   const toChart = r.kind === "idx" ? `<button type="button" class="more" data-world-chart="${esc(r.sym)}">${esc(r.name)} 캔들 차트로 크게 보기<span aria-hidden="true">›</span></button>` : "";
-  return `<li class="world-graph"><div class="period" role="group" aria-label="그래프 기간">${chips}</div>
+  return `<div class="world-graph"><div class="wg-head"><b>${esc(r.name)}</b><span class="muted">${worldValue(r)} · ${md(r.day)} 종가</span></div>
+    <div class="period" role="group" aria-label="그래프 기간">${chips}</div>
     <p class="muted" style="margin:8px 0 4px">${ch == null ? "" : `이 기간 <b class="${sign(ch)}">${worldChg(r, ch)}</b> · `}최고 ${worldValue({ ...r, last: hi })} · 최저 ${worldValue({ ...r, last: lo })}</p>
-    <div class="chart" id="world-chart"></div>${toChart}</li>`;
+    <div class="chart" id="world-chart"></div>${toChart}</div>`;
 }
 function drawWorldGraph() {
   const el = $("#world-chart");
@@ -3264,16 +3379,23 @@ function worldCard() {
   const w = DATA.world;
   if (!w || !w.groups || !w.groups.length) return "";
   const all = w.groups.flatMap((g) => g.items);
-  const main = WORLD_MAIN.map((s) => all.find((r) => r.sym === s)).filter(Boolean);
-  const [, label, , line] = WORLD_P.find((p) => p[0] === worldP);
-  const chips = `<div class="chips" role="group" aria-label="기간 고르기" style="margin:0 0 6px">${WORLD_P.map(([k, l]) =>
+  const [, label] = WORLD_P.find((p) => p[0] === worldP);
+  const [, , pick] = WORLD_TABS.find((t) => t[0] === worldTab);
+  // 주요 탭은 기호 목록, 나머지는 world.py 묶음 이름
+  const items = worldTab === "main" ? pick.map((s) => all.find((r) => r.sym === s)).filter(Boolean)
+    : w.groups.filter((g) => pick.includes(g.name)).flatMap((g) => g.items);
+  const tabs = WORLD_TABS.filter(([k, , p]) => k === "main" || w.groups.some((g) => p.includes(g.name)))
+    .map(([k, l]) => `<button type="button" data-world-tab="${k}" aria-pressed="${k === worldTab}">${l}</button>`).join("");
+  const period = `<div class="period" role="group" aria-label="등락 기간">${WORLD_P.map(([k, l]) =>
     `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
-  const groups = w.groups.map((g) => `<h3 class="muted" style="margin:12px 0 4px">${esc(g.name)}</h3>
-    <ul class="list">${g.items.map((r) => worldRow(r, "all")).join("")}</ul>`).join("");
-  return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
-    <ul class="list">${main.map((r) => worldRow(r)).join("")}</ul>
-    <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
-    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 금리는 몇 %p 바뀌었는지예요. 장단기 금리 차가 마이너스면 '역전'으로, 경기 침체 앞에 자주 나왔어요. VIX는 20을 넘으면 불안이 커진 거예요. 미국 2년 금리·장단기 차는 FRED, 한국 국고채 금리는 네이버, 나머지는 야후 자료예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
+  const picked = worldPick && items.find((r) => `t:${r.sym}` === worldPick);
+  const up = items.filter((r) => r[worldP] > 0).length, down = items.filter((r) => r[worldP] < 0).length;
+  return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
+    <div class="wt-tabs" role="group" aria-label="묶음 고르기">${tabs}</div>
+    <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
+    <div class="wt-grid">${items.map(worldTile).join("")}</div>
+    ${picked ? worldGraph(picked) : ""}
+    <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 ${label} 많이 움직인 거예요. 누르면 그래프가 열려요. 금리는 몇 %p 바뀌었는지, 장단기 금리 차가 마이너스면 '역전'(경기 침체 앞에 자주 나왔어요), VIX는 20을 넘으면 불안이 커진 거예요. 원/달러가 오르면 원화 약세예요. 미국 2년 금리·장단기 차는 FRED, 나머지는 야후 자료이고 나라마다 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
@@ -4596,8 +4718,7 @@ $(".map-btn").addEventListener("click", () => {
 function resetFolds() {
   [HOME_OPEN, POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
   saveHomeOpen();
-  try { localStorage.setItem("world_open", "0"); } catch (e) { /* 이번만 */ }
-  worldOpen = false; worldPick = null; polMore = false; polJump = null; calAll = false;
+  worldPick = null; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {

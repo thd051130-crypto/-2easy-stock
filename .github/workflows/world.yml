@@ -34,6 +34,8 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python world.py --save paper/world.json
+        env:
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}  # 한국 국고채 금리 (한국은행 무료 키). 없으면 그 두 줄만 빠져요
       - name: commit world log
         run: |
           git config user.name "github-actions[bot]"

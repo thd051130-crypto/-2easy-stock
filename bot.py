@@ -158,11 +158,10 @@ class Bot:
             for row in self.rows.get(m, []):
                 if row[0].lower() == q.lower():
                     return (m, row), []
-        qs = symbols.query_keys(q)
         found = []
         for m in markets:
-            for row in symbols.search(self.rows.get(m, []), q, limit=6):
-                found.append((symbols.score(row, symbols.name_keys(row), qs), m, row))
+            for sc, row in symbols.search_scored(self.rows.get(m, []), q, limit=6):
+                found.append((sc, m, row))
         found.sort(key=lambda x: x[0])
         if not found:
             return None, []

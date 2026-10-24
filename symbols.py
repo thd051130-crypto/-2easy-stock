@@ -95,7 +95,23 @@ LETTERS = dict(a="에이", b="비", c="씨", d="디", e="이", f="에프", g="�
                y="와이", z="지")
 # 한글로 친 ETF 브랜드 → 영문 ('코덱스 200' → 'kodex200')
 BRAND_KO = {"코덱스": "kodex", "타이거": "tiger", "에이스": "ace", "라이즈": "rise", "플러스": "plus", "하나로": "hanaro",
-            "아리랑": "arirang", "키움": "kiwoom", "코세프": "kosef", "쏠": "sol"}
+            "아리랑": "arirang", "키움": "kiwoom", "코세프": "kosef", "쏠": "sol", "솔": "sol", "타임폴리오": "timefolio",
+            "타임": "time", "킨덱스": "kindex", "히어로즈": "heroes"}
+# 같은 뜻 낱말 (한쪽으로 쳐도 다른 쪽 이름이 나와요). 이름이 한글이거나 영문이거나 다 찾게 둘 다 적어요.
+SYNONYMS = [("나스닥", "nasdaq"), ("에스앤피", "sp"), ("에스엔피", "sp"), ("snp", "sp"), ("미국", "us"), ("다우", "dow"),
+            ("코스피", "kospi"), ("코스닥", "kosdaq"), ("반도체", "semicon"), ("커버드콜", "covered"), ("레버리지", "leverage"),
+            ("인버스", "inverse"), ("배당", "dividend"), ("채권", "bond"), ("국채", "treasury"), ("비트코인", "bitcoin"),
+            ("이더리움", "ethereum"), ("원유", "oil"), ("일본", "japan"), ("중국", "china"), ("인도", "india"),
+            ("베트남", "vietnam"), ("리츠", "reit"), ("테크", "tech"), ("바이오", "bio"), ("헬스케어", "healthcare"),
+            ("배터리", "battery"), ("액티브", "active"), ("선물", "futures"), ("골드", "gold"), ("커버드", "covered"),
+            ("월배당", "monthly"), ("고배당", "highdividend"), ("이티에프", "etf")] + list(BRAND_KO.items())
+# 띄어 쓰지 않고 붙여 쳐도 낱말로 나눠요 ('코덱스나스닥100' → 코덱스 / 나스닥100)
+SPLIT_KO = re.compile("(" + "|".join(sorted({k for k, _ in SYNONYMS if HANGUL.match(k) and len(k) >= 2}, key=len, reverse=True)) + ")")
+SPLIT_EN = sorted({v for _, v in BRAND_KO.items()}, key=len, reverse=True)  # 영문 브랜드는 맨 앞에 있을 때만
+# 이름에 없어도 되는 낱말 ('미국 나스닥100'으로 QQQ도). 다 이런 낱말뿐이면 그때는 꼭 있어야 해요.
+OPTIONAL = {"미국", "us", "etf", "이티에프", "주식", "종목", "국내", "한국", "우리나라"}
+CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+JAMO = re.compile(r"[ㄱ-ㅎ]")
 
 
 def norm(s):
@@ -111,13 +127,79 @@ def spell(s):
     return re.sub(r"[a-z]+", sub, s)
 
 
+def chosung(s):
+    """한글 글자는 첫 자음만: '삼성전자' → 'ㅅㅅㅈㅈ'. 영문·숫자는 그대로."""
+    return "".join(CHO[(ord(c) - 0xAC00) // 588] if "가" <= c <= "힣" else c for c in s)
+
+
 def query_keys(q):
+    """검색어 통째로 맞춰 볼 글자들. 초성이 섞여 있으면 통째로는 안 맞춰요(낱말로만)."""
+    if JAMO.search(q or ""):
+        return []
     n = norm(q)
     keys = [n, spell(n)]
     for ko, en in BRAND_KO.items():
         if ko in n:
             keys.append(n.replace(ko, en))
     return [k for i, k in enumerate(keys) if k and k not in keys[:i]]
+
+
+def split_words(w):
+    """한 낱말을 더 작게: 한글↔영문 경계, 붙여 친 브랜드·'미국'·'나스닥' 같은 낱말 앞뒤."""
+    w = SPLIT_KO.sub(r" \1 ", w)
+    w = re.sub(r"(?<=[a-z])(?=[가-힣ㄱ-ㅎ])|(?<=[가-힣ㄱ-ㅎ])(?=[a-z])", " ", w)
+    out = []
+    for p in w.split():
+        for b in SPLIT_EN:
+            if p.startswith(b) and len(p) > len(b) + 1:
+                p = f"{b} {p[len(b):]}"
+                break
+        out += p.split()
+    return out
+
+
+def word_alts(t):
+    alts = [t, spell(t)]
+    for a, b in SYNONYMS:
+        if a in t:
+            alts.append(t.replace(a, b))
+        if b in t:
+            alts.append(t.replace(b, a))
+    return list(dict.fromkeys(alts))
+
+
+def query_tokens(q):
+    """띄어 쓴 낱말마다 {찾을 글자들, 초성, 이름에 없어도 됨, 오타 허용 글자}. 낱말 순서는 상관없어요.
+    붙여 친 낱말은 더 나눠요(split_words). 맨 끝 항목 {"words": ...}는 친 그대로의 낱말 (다 붙어 있으면 더 앞에)."""
+    raw = re.sub(r"[^0-9a-z가-힣ㄱ-ㅎ\s]", "", CORP.sub(" ", (q or "").lower())).split()
+    toks = []
+    for t in dict.fromkeys(t for w in raw for t in split_words(w)):
+        if JAMO.search(t):  # 초성으로 친 낱말 ('ㅅㅅㅈㅈ')
+            if len(t) >= 2:
+                toks.append(dict(alts=[], cho=chosung(t), opt=False, fz=None))
+            continue
+        toks.append(dict(alts=word_alts(t), cho=None, opt=t in OPTIONAL, fz=t if len(t) >= 3 and not t.isdigit() else None))
+    if toks and all(t["opt"] for t in toks):
+        for t in toks:
+            t["opt"] = False
+    if toks:
+        toks.append(dict(words=[word_alts(w) for w in raw if not JAMO.search(w) and w not in OPTIONAL]))
+    return toks
+
+
+def near(t, s, k):
+    """t가 s 안에 k글자 이하로 틀리게 들어 있나 (오타 허용, 글자 하나 바뀜·빠짐·더함)."""
+    if sum(c in s for c in t) < len(t) - k:
+        return False
+    prev = list(range(len(t) + 1))
+    for c in s:
+        cur = [0]
+        for i in range(1, len(t) + 1):
+            cur.append(min(prev[i - 1] + (t[i - 1] != c), prev[i] + 1, cur[i - 1] + 1))
+        if cur[-1] <= k:
+            return True
+        prev = cur
+    return False
 
 
 def name_keys(row):
@@ -131,8 +213,10 @@ def name_keys(row):
     return [k for i, k in enumerate(keys) if k and k not in keys[:i]]
 
 
-def score(row, keys, qs):
-    """작을수록 잘 맞아요. 안 맞으면 None. 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부."""
+def score(row, keys, qs, toks=None, fuzzy=False):
+    """작을수록 잘 맞아요. 안 맞으면 None. 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부,
+    5 친 낱말이 다 들어 있음(순서 상관없이, 초성도), 6 붙여 친 낱말을 나눠서 다 들어 있음,
+    7 '미국' 같은 없어도 되는 낱말만 빠짐, 8 오타 허용으로 맞음."""
     code = row[0].lower()
     if any(code == q for q in qs):
         return 0
@@ -144,21 +228,55 @@ def score(row, keys, qs):
                 best = s
         if code.startswith(q) and (best is None or 3 < best):
             best = 3
-    return best
+    if best is not None or not toks:
+        return best
+    hay = "|".join(keys)
+    cho = None
+    miss = typo = 0
+    *parts, whole = toks
+    for t in parts:
+        if any(a in hay for a in t["alts"]):
+            continue
+        if t["cho"]:
+            cho = cho or chosung(hay)
+            if t["cho"] in cho:
+                continue
+        if t["opt"]:
+            miss += 1
+            continue
+        if fuzzy and t["fz"] and near(t["fz"], hay, 2 if len(t["fz"]) >= 8 else 1):
+            typo += 1
+            continue
+        return None
+    if miss == len(parts):
+        return None
+    if typo or miss:
+        return 8 if typo else 7
+    return 5 if all(any(a in hay for a in w) for w in whole["words"]) else 6
 
 
 def search(rows, q, limit=20):
-    """rows(종목 목록) 중 q에 맞는 줄을 잘 맞는 순서로. 같은 점수면 목록 순서(시가총액 큰 순)."""
-    qs = query_keys(q)
-    if not qs:
+    """rows(종목 목록) 중 q에 맞는 줄을 잘 맞는 순서로. 같은 점수면 목록 순서(시가총액 큰 순).
+    딱 맞는 게 하나도 없을 때만 오타를 허용해서 다시 찾아요."""
+    return [row for _, row in search_scored(rows, q, limit)]
+
+
+def search_scored(rows, q, limit=20):
+    """[(점수, 줄)] (search와 같은 순서)."""
+    qs, toks = query_keys(q), query_tokens(q)
+    if not qs and not toks:
         return []
-    found = []
-    for i, row in enumerate(rows):
-        s = score(row, name_keys(row), qs)
-        if s is not None:
-            found.append((s, i, row))
+    keyed = [(row, name_keys(row)) for row in rows]
+    for fuzzy in (False, True):
+        found = []
+        for i, (row, keys) in enumerate(keyed):
+            s = score(row, keys, qs, toks, fuzzy)
+            if s is not None:
+                found.append((s, i, row))
+        if found:
+            break
     found.sort(key=lambda x: (x[0], x[1]))
-    return [row for _, _, row in found[:limit]]
+    return [(s, row) for s, _, row in found[:limit]]
 
 
 # ---------------------------------------------------------------- 미장 한국어 이름 (많이 찾는 종목만, '/' 뒤는 다른 이름)
@@ -222,6 +340,53 @@ US_KO = {
     "XBI": "바이오 ETF (SPDR)", "IBB": "바이오 ETF (아이셰어즈)", "KRE": "지역은행 ETF", "MAGS": "매그니피센트7 ETF",
     "BOTZ": "로봇·AI ETF", "NVDL": "엔비디아 2배 ETF", "TSLL": "테슬라 2배 ETF",
 }
+
+# ---------------------------------------------------------------- 별명 (사람들이 줄여 부르는 이름, '|'로 여러 개)
+# 검색 빅데이터: 이름에 없는 흔한 별명·줄임말. 이름 일부·초성·영문/한글 바꿔 읽기는 검색이 알아서 해요.
+
+NICKNAMES = {
+    "kr": {
+        "005930": "삼전|삼성", "005935": "삼전우|삼성우", "000660": "하닉|닉스|하이닉", "373220": "엔솔|엘솔|엘지엔솔",
+        "207940": "삼바|삼성바이오", "005380": "현차|현기", "000270": "기아차|현기", "068270": "셀트", "035420": "네이버",
+        "323410": "카뱅", "377300": "카페|카카오페이", "006400": "삼디|삼성에스디아이", "051910": "엘화|엘지화학",
+        "005490": "포스코|포홀", "028260": "삼물", "032830": "삼생", "000810": "삼화", "012330": "현모|모비스",
+        "009540": "한조양|조선해양", "329180": "현중|현대중공업", "010140": "삼중", "034020": "두빌|두에빌|두산에너지",
+        "012450": "한에|한화에어로|한에스", "010130": "고아", "011200": "흠|hmm", "003490": "대항|대한항",
+        "015760": "한전", "042700": "한미반", "196170": "알테", "247540": "에코비엠|에코프로bm", "066570": "엘전|엘지전자",
+        "017670": "skt|에스케이텔레콤", "033780": "담배인삼공사", "055550": "신한|신한금융", "105560": "국민은행|kb",
+        "086790": "하나|하나금융", "316140": "우리|우리은행", "009150": "삼전기|삼성전기", "018260": "삼성sds|삼에스",
+        "096770": "sk이노|에스케이이노", "000720": "현건", "047050": "포인터|포스코인터", "003670": "포퓨|포스코퓨처",
+        "042660": "한오|대우조선", "064350": "현로|로템", "079550": "lig넥스원|넥스원|lig", "272210": "한시",
+        "267260": "현일|현대일렉", "010120": "엘일|엘에스일렉", "041510": "sm|에스엠", "035900": "jyp",
+        "036570": "엔씨|nc", "293490": "카겜", "263750": "펄비", "028300": "hlb|에이치엘비", "000100": "유한",
+        "128940": "한미약", "326030": "sk바팜|바이오팜", "302440": "sk바사|바사", "097950": "제당|씨제이제일제당",
+        "004020": "현제", "011170": "롯케", "018880": "한온", "090430": "아모레", "051900": "엘생|엘지생건|생건",
+        "034730": "에스케이|sk주식회사", "402340": "스퀘어",
+        "458730": "한국슈드|국장슈드|슈드", "446720": "한국슈드|국장슈드|슈드",
+        "122630": "코레버|코덱스레버리지", "252670": "곱버스|인버스2x", "114800": "인버스",
+        "233740": "코스닥레버리지",
+    },
+    "us": {
+        "MSFT": "마소|엠에스", "META": "페북", "NVDA": "엔비|엔디비아", "TSLA": "테슬|테사", "GOOGL": "구글",
+        "AVGO": "브컴", "NFLX": "넷플", "BRK-B": "버크셔", "PLTR": "팔란", "IONQ": "아온큐",
+        "TQQQ": "티큐|티큐큐큐|나스닥3배", "SQQQ": "숏큐|에스큐큐큐", "SOXL": "속슬", "SOXS": "속스", "SOXX": "속스엑스",
+        "QQQM": "큐큐큐엠", "SPY": "스파이", "VOO": "브이오오", "SCHG": "슈그", "JEPI": "제피", "JEPQ": "젭큐",
+        "TLT": "티엘티|미국채20년", "TMF": "티엠에프", "UPRO": "유프로", "O": "리얼티인컴",
+        "MSTR": "엠스트", "COIN": "코베", "AMD": "에이엠디", "INTC": "인텔",
+    },
+}
+
+
+def with_nicknames(rows, market):
+    """별명을 다른 이름 칸 끝에 붙여요 (이미 있으면 그대로)."""
+    nick = NICKNAMES.get(market, {})
+    for row in rows:
+        extra = [n for n in nick.get(row[0], "").split("|") if n]
+        if extra:
+            have = [a for a in row[4].split("|") if a] if len(row) > 4 else []
+            row[4] = "|".join(have + [n for n in extra if n not in have])
+    return rows
+
 
 # ---------------------------------------------------------------- 네이버 ETF 정식 이름
 
@@ -359,7 +524,7 @@ def build(market, fetch=fetch, etf_names=None):
     if market == "kr" and etf_names is None:
         etf_names = naver_etf_names()
     rows = rows_kr(stocks, etfs, etf_names=etf_names) if market == "kr" else rows_us(stocks, etfs)
-    return dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), rows=rows)
+    return dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), rows=with_nicknames(rows, market))
 
 
 def save(path, data, minimum):
