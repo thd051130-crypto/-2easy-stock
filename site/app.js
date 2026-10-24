@@ -475,6 +475,22 @@ document.addEventListener("click", (e) => {
   const sum = e.target.closest && e.target.closest("#app summary");
   if (sum && sum.parentElement && sum.parentElement.open) holdHeight();
 }, true);
+// 가로로 미는 버튼 줄(차트 지수·도구·세계 지수 묶음·달 버튼): 다시 그려도 밀어 둔 가로 위치 그대로예요.
+// 처음 열 때만 고른 버튼을 가운데로, 화면 끝에 반쯤 걸친 버튼을 누르면 그만큼만 부드럽게 밀어 보여 줘요 (사용자 2026-10-24 '화면이 확확 바뀌니 눈이 아파')
+const ROW_X = {};
+function keepRow(row, key) {
+  if (!row) return;
+  const on = row.querySelector('[aria-pressed="true"], .on');
+  const rel = (b) => b.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft;
+  if (ROW_X[key] != null) row.scrollLeft = ROW_X[key];
+  else if (on) row.scrollLeft = Math.max(0, rel(on) - (row.clientWidth - on.offsetWidth) / 2);
+  ROW_X[key] = row.scrollLeft;
+  row.addEventListener("scroll", () => { ROW_X[key] = row.scrollLeft; }, { passive: true });
+  if (!on) return;
+  const l = rel(on) - row.scrollLeft, r = l + on.offsetWidth, pad = 12;
+  const dx = l < 0 ? l - pad : r > row.clientWidth ? r - row.clientWidth + pad : 0;
+  if (dx) row.scrollBy({ left: dx, behavior: calm() ? "auto" : "smooth" });
+}
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
   const sb = $(".search-btn");
@@ -524,9 +540,7 @@ function render() {
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "tools") {
-    const bar = $(".perf-tabs", app);
-    const on = bar && bar.querySelector('[aria-pressed="true"]');
-    if (on) bar.scrollLeft = Math.max(0, on.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2);  // 고른 버튼이 가운데 보이게
+    keepRow($(".perf-tabs", app), "tools");
     app.querySelectorAll("[data-perf-tab]").forEach((b) => b.addEventListener("click", () => {
       perfTabKey = b.dataset.perfTab;
       try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
@@ -584,14 +598,7 @@ function render() {
   pinEcon();
   const ecBar = app.querySelector(".ec-months");
   if (ecBar) {
-    // 달 버튼 줄: 밀어 둔 가로 위치를 그대로, 고른 달이 안 보이면 가로로만 맞춰요 (화면 세로 위치는 안 건드려요)
-    if (econBarX != null) ecBar.scrollLeft = econBarX;
-    const on = ecBar.querySelector(".cal-m.on");
-    if (on && (on.offsetLeft < ecBar.scrollLeft || on.offsetLeft + on.offsetWidth > ecBar.scrollLeft + ecBar.clientWidth)) {
-      ecBar.scrollLeft = on.offsetLeft - (ecBar.clientWidth - on.offsetWidth) / 2;
-    }
-    econBarX = ecBar.scrollLeft;
-    ecBar.addEventListener("scroll", () => { econBarX = ecBar.scrollLeft; }, { passive: true });
+    keepRow(ecBar, "ec");  // 달 버튼 줄 (화면 세로 위치는 안 건드려요)
   }
   app.querySelectorAll("[data-ecm]").forEach((b) => b.addEventListener("click", () => { econMonth = b.dataset.ecm; econPick = null; renderEcon(); }));
   app.querySelectorAll("[data-ecstep]").forEach((b) => b.addEventListener("click", () => {
@@ -645,9 +652,7 @@ function render() {
   // 탭 줄은 옆으로 밀어 둔 자리 그대로 (무엇을 눌러 다시 그려도 '주요' 쪽으로 돌아가지 않게)
   const wtBar = $(".wt-tabs");
   if (wtBar) {
-    const on = wtBar.querySelector('[aria-pressed="true"]');
-    wtBar.scrollLeft = worldTabsX != null ? worldTabsX : on ? on.offsetLeft - wtBar.offsetLeft - 8 : 0;
-    wtBar.addEventListener("scroll", () => { worldTabsX = wtBar.scrollLeft; }, { passive: true });
+    keepRow(wtBar, "world");
   }
   if (screen === "watch") {
     bindWatch(d);
@@ -668,8 +673,7 @@ function render() {
       render();
       window.scrollTo(0, y);
     }));
-    const row = app.querySelector(".idx-chips"), on = row && row.querySelector('[aria-pressed="true"]');
-    if (on) row.scrollLeft = on.offsetLeft - row.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;  // 고른 지수 버튼이 보이게
+    keepRow(app.querySelector(".idx-chips"), `chart:${market}`);
     drawTrend(d);
     bindCompare(d);
     app.querySelectorAll(".period button[data-frame]").forEach((b) => b.addEventListener("click", () => {
@@ -3575,7 +3579,7 @@ function worldTint(r, v) {
   return `background:color-mix(in srgb, var(${v > 0 ? "--up" : "--down"}) ${a}%, var(--surface-0))`;
 }
 // 줄을 누르면 바로 아래에 그 지수·환율 그래프가 펼쳐져요 (다시 누르면 접혀요). 지수는 차트 화면 캔들로도 갈 수 있어요
-let worldPicks = new Set(), worldTop = null, worldTabsX = null;
+let worldPicks = new Set(), worldTop = null;
 const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월", 130], ["y1", "1년", 0]];
 let worldG = "m3";
 try { worldG = localStorage.getItem("world_g") || "m3"; } catch (e) { /* 처음 */ }
@@ -3946,7 +3950,7 @@ function calRows(list) {
 // 다가오는 일정 달력: 일정이 있는 모든 달(작년 1월~내년 12월). 지난달~5개월 뒤 버튼은 눈에 띄게.
 // 칸엔 일정 표시, 아래엔 그달(또는 고른 날) 목록. 지난 일정은 연하게
 const ECON_NEAR = 6;
-let econMonth = null, econPick = null, econBarX = null;
+let econMonth = null, econPick = null;
 const ymAdd = (ym, k) => { const [y, m] = ym.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + k, 1)); return t.toISOString().slice(0, 7); };
 function calendarCard() {
   const all = ((DATA && DATA.calendar) || []).filter((e) => !STOCK_KINDS.includes(e.kind));
@@ -5041,7 +5045,7 @@ $(".map-btn").addEventListener("click", () => {
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
   [POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
-  worldPicks.clear(); worldTop = null; hotReadOpen = false; worldTabsX = null; polMore = false; polJump = null; calAll = false;
+  worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {
