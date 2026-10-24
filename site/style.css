@@ -865,6 +865,14 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .ec-cell.past { opacity: .4; }
 .list.cal li.past { opacity: .45; }
 .goal-name { margin: 0 0 8px; }
+.card h2.goal-h { align-items: center; }
+.goal-h-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.goal-reset { display: inline-flex; align-items: center; gap: 6px; height: 32px; min-width: 32px; padding: 0 7px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface-0); color: var(--text-secondary); font: 600 12px var(--font); cursor: pointer; }
+.goal-reset > span { display: none; }
+.goal-reset.armed { background: var(--wait-bg); color: var(--wait-fg); border-color: transparent; }
+.goal-reset.armed > span { display: inline; }
+.goal-h-r:has(.armed) small { display: none; }
 /* 적립식 계산기: 종목마다 정하기 */
 .sav-eachs { display: grid; gap: 6px; margin-top: 8px; }
 .sav-each { border: 1px solid var(--border); border-radius: 12px; }
