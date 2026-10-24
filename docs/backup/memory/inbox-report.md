@@ -11,5 +11,5 @@ metadata:
 - 워크플로 커밋에 paper/inbox 추가: macro·learner·disclosures·health (swing-signals·telegram-bot은 원래 git add paper). health 주간 점검이 90일 지난 파일 지움.
 - dashboard.py가 최근 60일·200통을 _site/inbox.json으로(앱은 열 때만 받음), data.json엔 inbox_last만 → 안 읽은 알림이면 버튼에 빨간 점(localStorage inbox_seen).
 - 앱: 화면 #kr/inbox (층 화면, 버튼 다시 누르면 닫힘). 위에서부터 메시지함 제목 → 오늘의 리포트(한 줄 요약 3줄 + '자세히 보기': 지수·환율, 신호, 많이 움직인 종목, 국장 수급, 업종 흐름, 오늘·내일 일정, 가상계좌. data.json만으로 앱이 만듦) → 받은 알림(날짜별, 가장 최근 것만 펼침, 텔레그램 접기는 '자세히').
-- 버튼: .inbox-btn 48px 파란 원, fixed, right max(16px, (100%-640px)/2+16px), bottom 72px+safe-area.
+- 버튼 (2026-10-24 사용자: 글자 가리지 않게): 평소엔 오른쪽 가장자리 12×56px 얇은 손잡이(.inbox-btn.tucked, 빨간 점 보임). 누르거나 왼쪽으로 밀면 48px 파란 동그라미로 나오고, 그걸 누르면 메시지함. 오른쪽으로 밀거나 4초 지나면 다시 숨음. 위아래로 끌어 옮기고 localStorage inbox_y(화면 높이 비율)에 기억. app.js inboxHandle().
 관련: [[telegram-format-pr27]], [[ui-no-jump-rule]], [[phone-dashboard]]

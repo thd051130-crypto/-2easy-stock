@@ -956,6 +956,57 @@ function loadInbox() {
   }
   return inboxLoading;
 }
+// 메시지함 버튼: 평소엔 오른쪽 가장자리 얇은 손잡이라 글자를 안 가려요 (사용자 2026-10-24, 폰 엣지 패널처럼).
+// 손잡이를 누르거나 왼쪽으로 밀면 동그란 버튼이 나오고, 그걸 누르면 메시지함(열려 있으면 닫기). 오른쪽으로 밀거나 4초 지나면 다시 숨어요.
+// 위아래로 끌면 옮겨지고, 위치는 이 폰에 기억해요 (화면 높이 비율). 키보드로 누르면 바로 열어요.
+function inboxHandle(b) {
+  let out = false, timer = 0, y = NaN, drag = null;
+  try { y = parseFloat(localStorage.getItem("inbox_y")); } catch (e) { /* 기본 위치 */ }
+  const range = () => {
+    const top = ($(".top") || { offsetHeight: 60 }).offsetHeight + 12;
+    return [top, window.innerHeight - ($(".nav") || { offsetHeight: 60 }).offsetHeight - 60];
+  };
+  const clamp = (t) => { const [lo, hi] = range(); return Math.min(Math.max(t, lo), Math.max(lo, hi)); };
+  const place = () => { b.style.top = `${clamp(Number.isFinite(y) ? y * window.innerHeight : Infinity)}px`; };
+  const set = (o) => {
+    out = o;
+    b.classList.toggle("tucked", !o);
+    clearTimeout(timer);
+    if (o) timer = setTimeout(() => set(false), 4000);
+  };
+  const open = () => { set(false); if (screen === "inbox") back(); else go("inbox"); };
+  place();
+  window.addEventListener("resize", place);
+  b.addEventListener("pointerdown", (e) => {
+    drag = { x: e.clientX, y: e.clientY, top: b.offsetTop, moved: false, swiped: false };
+    try { b.setPointerCapture(e.pointerId); } catch (err) { /* 그냥 진행 */ }
+  });
+  b.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && !drag.swiped && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { drag.moved = true; b.classList.add("dragging"); clearTimeout(timer); }
+    if (drag.moved) { b.style.top = `${clamp(drag.top + dy)}px`; e.preventDefault(); return; }
+    if (!drag.swiped && dx < -14 && !out) { drag.swiped = true; set(true); }
+    else if (!drag.swiped && dx > 14 && out) { drag.swiped = true; set(false); }
+  });
+  const end = (e) => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    b.classList.remove("dragging");
+    if (d.moved) {
+      y = b.offsetTop / window.innerHeight;
+      try { localStorage.setItem("inbox_y", y.toFixed(4)); } catch (err) { /* 이번만 기억 */ }
+      if (out) set(true);  // 옮긴 뒤 4초 다시 세기
+      return;
+    }
+    if (d.swiped || e.type === "pointercancel") return;
+    if (!out && screen !== "inbox") set(true); else open();
+  };
+  b.addEventListener("pointerup", end);
+  b.addEventListener("pointercancel", end);
+  b.addEventListener("click", (e) => { if (e.detail === 0) open(); });  // 키보드(Enter·Space)로 누를 때
+}
 function inboxDot() {
   const b = $(".inbox-btn");
   if (!b) return;
@@ -4535,7 +4586,7 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 $(".search-btn").addEventListener("click", () => go("search"));
-$(".inbox-btn").addEventListener("click", () => (screen === "inbox" ? back() : go("inbox")));  // 한 번 더 누르면 닫혀요
+inboxHandle($(".inbox-btn"));
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
