@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""세계 지수·환율·금리·원자재: 야후 무료 일봉(미국 2년 금리·장단기 차는 FRED, 한국 국고채 금리는 네이버 금융)으로 모아 paper/world.json에 남겨요.
+"""세계 지수·환율·금리·원자재: 야후 무료 일봉(미국 2년 금리·장단기 차는 FRED, 한국 국고채 금리는 한국은행 ECOS)으로 모아 paper/world.json에 남겨요.
 
 앱 홈 "세계 지수·환율" 칸이 이걸 읽어서 오늘·1주·1개월·1년 등락률과 작은 추세선을 보여 줘요.
 매매 규칙엔 안 쓰고 보기용이에요. 전부 무료 (유료 API 안 씀).
@@ -12,6 +12,7 @@
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
 import re
 import time
@@ -43,9 +44,13 @@ GROUPS = [
 DERIVED = {"CNYKRW": ("KRW=X", "CNY=X")}
 # 야후에 없거나(2년 금리 선물 2YY=F는 값이 멈춰 있어요) 믿기 어려운 금리는 다른 무료 자료에서 받아요. 못 받으면 그 줄만 빠져요
 #  - 미국 2년 금리, 장단기 금리 차(10년-2년, 마이너스면 역전): FRED (미국 연준 무료 CSV, 하루 늦게 나와요)
-#  - 한국 국고채 금리: 네이버 금융 '시장지표' 일별 시세
+#  - 한국 국고채 금리: 한국은행 ECOS 시장금리(일별) 817Y002. 무료 인증키를 Secrets ECOS_API_KEY에 넣어야 해요
+#    (네이버 금융 옛 금리 페이지는 2026-10에 없어졌어요). 키가 없으면 두 줄만 빠져요
 FRED_RATE = {"US2Y": "DGS2", "US10Y2Y": "T10Y2Y"}
-NAVER_RATE = {"KR3Y": "IRR_GOVT03Y", "KR10Y": "IRR_GOVT10Y"}
+ECOS_TABLE = "817Y002"
+ECOS_RATE = {"KR3Y": ("국고채(3년)", "010200000"), "KR10Y": ("국고채(10년)", "010210000")}  # (항목 이름, 이름으로 못 찾을 때 코드)
+ECOS_URL = "https://ecos.bok.or.kr/api"
+KR_RATE = ECOS_RATE
 SCALE = {"JPYKRW=X": 100}  # 원/엔은 100엔 기준으로 보여 줘요
 KEEP = 260  # 앱에 보낼 종가 수 (약 1년)
 
@@ -54,7 +59,7 @@ def symbols():
     out = []
     for _, items in GROUPS:
         for sym, _, _ in items:
-            if sym not in NAVER_RATE and sym not in FRED_RATE:
+            if sym not in KR_RATE and sym not in FRED_RATE:
                 out.extend(DERIVED.get(sym, (sym,)))
     return list(dict.fromkeys(out))
 
@@ -90,46 +95,62 @@ def fetch(days=400, pause=1.0, retries=3):
         rate = big_events.fred(code)
         if rate is not None and len(rate):
             out[sym] = rate[rate.index >= pd.Timestamp(start)]
-    for sym, code in NAVER_RATE.items():
+    key = os.environ.get("ECOS_API_KEY", "").strip()
+    if not key:
+        print("참고: ECOS_API_KEY가 없어서 한국 국고채 금리는 빠져요")
+    else:
         try:
-            rate = naver_rate(code, start)
-        except Exception as e:  # 네이버가 막히거나 화면이 바뀌면 그 줄만 빠져요
-            print(f"경고: {sym} 네이버 금리 못 받음: {e!r}")
-            continue
-        if rate is not None:
-            out[sym] = rate
+            out.update(ecos_rates(key, start))
+        except Exception as e:  # ECOS가 막히면 그 줄만 빠져요. 키가 주소에 들어가니 오류 글은 남기지 않아요
+            print(f"경고: ECOS 국고채 금리 못 받음 ({type(e).__name__})")
     return out
 
 
-DAY_ROW = re.compile(r'class="date">\s*(\d{4})\.(\d{2})\.(\d{2})\s*</td>\s*<td[^>]*>\s*([\d.,]+)', re.S)
-
-
-def parse_naver_rate(html):
-    """네이버 금융 금리 일별 시세 한 쪽 → [(날짜, 금리 %)]."""
-    return [(pd.Timestamp(f"{y}-{m}-{d}"), float(v.replace(",", ""))) for y, m, d, v in DAY_ROW.findall(html)]
-
-
-def naver_rate(code, start, max_pages=60, pause=0.3):
-    """한 쪽에 며칠씩이라 start 날짜까지 쪽을 넘겨요. 날짜→금리 Series, 하나도 없으면 None."""
+def ecos_get(key, *parts):
     import requests
 
-    rows, seen = [], set()
-    for page in range(1, max_pages + 1):
-        r = requests.get("https://finance.naver.com/marketindex/interestDailyQuote.naver",
-                         params=dict(marketindexCd=code, page=page), timeout=10, headers={"User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
-        part = [x for x in parse_naver_rate(r.content.decode("euc-kr", "replace")) if x[0] not in seen]
-        if not part:  # 마지막 쪽을 지나면 같은 쪽이 또 나와요
-            break
-        rows += part
-        seen.update(x[0] for x in part)
-        if min(x[0] for x in part) < pd.Timestamp(start):
-            break
-        time.sleep(pause)
-    if not rows:
-        return None
-    s = pd.Series(dict(rows)).sort_index()
-    return s[s.index >= pd.Timestamp(start)]
+    r = requests.get("/".join([ECOS_URL, parts[0], key, "json", "kr", *map(str, parts[1:])]), timeout=20)
+    r.raise_for_status()
+    data = r.json()
+    if parts[0] not in data:  # 키가 틀리거나 자료가 없으면 {"RESULT": {"CODE", "MESSAGE"}}
+        res = data.get("RESULT", {})
+        raise RuntimeError(f"ECOS {res.get('CODE')} {res.get('MESSAGE')}")
+    return data[parts[0]].get("row", [])
+
+
+def ecos_codes(items):
+    """ECOS 항목 목록 → {기호: 항목 코드}. 이름으로 찾고, 없으면 적어 둔 코드."""
+    by_name = {re.sub(r"\s", "", x.get("ITEM_NAME", "")): x.get("ITEM_CODE") for x in items if x.get("CYCLE") in (None, "D")}
+    return {sym: by_name.get(name, code) for sym, (name, code) in ECOS_RATE.items()}
+
+
+def parse_ecos_rows(rows):
+    """ECOS StatisticSearch 줄들 → 날짜→금리 Series (값 없는 날 빼요). 하나도 없으면 None."""
+    pts = {}
+    for x in rows:
+        try:
+            pts[pd.Timestamp(dt.datetime.strptime(x["TIME"], "%Y%m%d"))] = float(x["DATA_VALUE"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return pd.Series(pts).sort_index() if pts else None
+
+
+def ecos_rates(key, start):
+    try:
+        codes = ecos_codes(ecos_get(key, "StatisticItemList", 1, 100, ECOS_TABLE))
+    except Exception:
+        codes = {sym: code for sym, (_, code) in ECOS_RATE.items()}
+    end = dt.datetime.now(KST).strftime("%Y%m%d")
+    out = {}
+    for sym, code in codes.items():
+        rate = parse_ecos_rows(ecos_get(key, "StatisticSearch", 1, 1000, ECOS_TABLE, "D",
+                                        start.replace("-", ""), end, code))
+        if rate is None:
+            print(f"경고: {sym} ECOS 값 없음")
+        else:
+            out[sym] = rate
+            print(f"{sym} ECOS {len(rate)}일, 마지막 {rate.index[-1].date()} {rate.iloc[-1]}%")
+    return out
 
 
 def series_of(sym, closes):
