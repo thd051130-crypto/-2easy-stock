@@ -1010,3 +1010,6 @@ details.learn-quiz summary::-webkit-details-marker { display: none; }
 details.learn-quiz[open] .learn-quiz-open { display: none; }
 details.learn-quiz p { margin: 6px 0 0; color: var(--text-secondary); }
 .learn-tag.local { background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
+h3.learn-note-t { font-size: 15px; font-weight: 700; margin: 0 0 8px; line-height: 1.4; }
+.learn-p { font-size: 14px; line-height: 1.65; color: var(--text-secondary); margin: 0 0 10px; }
+button.learn-tag { border: 0; font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }

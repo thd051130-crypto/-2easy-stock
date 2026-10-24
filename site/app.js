@@ -2685,7 +2685,7 @@ function learnWhyCards(d) {
   const c = COPE.find((x) => x.key === situ);
   const todo = `<section class="card"><h2>🧭 이럴 때 어떻게? <small>${esc(c.title)}</small></h2>${copeBody(c)}
     <button type="button" class="more" data-learn-tab="cope">상황별 대처법 전부 보기<span aria-hidden="true">›</span></button></section>`;
-  return [head, sus2, learnCaseCard(), secCard, todo];
+  return [head, learnNoteCard(), sus2, learnCaseCard(), secCard, todo];
 }
 
 // ── 움직이는 이유
@@ -2868,7 +2868,35 @@ function termOfDay() {
   return keys[((day * 37) % keys.length + keys.length) % keys.length];
 }
 
+// ── 공부 노트: paper/learn_notes.json에 평일 장 마감 뒤 한 편씩 더해요 (그날 사례 일지·리포트·뉴스로 쓴 해설 + 확인 문제 + 새 용어)
+const learnNotes = () => ((DATA && DATA.learn_notes) || []).filter((n) => !n.market || n.market === "both" || n.market === market)
+  .sort((a, b) => (b.day || "").localeCompare(a.day || ""));
+let notesMerged = null;
+function mergeNoteTerms() {  // 노트의 새 용어를 용어집에 더해요 (자료를 새로 받을 때마다 한 번)
+  if (!DATA || notesMerged === DATA) return;
+  notesMerged = DATA;
+  for (const n of DATA.learn_notes || []) for (const [t, v] of Object.entries(n.terms || {})) if (!TERMS[t]) TERMS[t] = v;
+}
+function noteBody(n) {
+  const ic = DRIVER_ICON();
+  return `${(n.tags || []).length ? `<div class="learn-tags" style="margin-bottom:8px">${n.tags.map((k) => `<button type="button" class="learn-tag" data-learn-go="${esc(k)}">${ic[k] || ""} ${esc((DRIVERS.find((x) => x.key === k) || {}).title || k)}</button>`).join("")}</div>` : ""}
+    ${(n.body || []).map((p) => `<p class="learn-p">${esc(p)}</p>`).join("")}
+    ${n.quiz ? `<details class="learn-quiz"><summary><b>🤔 확인 문제</b> ${esc(n.quiz[0])} <span class="learn-quiz-open">답 보기</span></summary><p>${esc(n.quiz[1])}</p></details>` : ""}
+    ${termChips(Object.keys(n.terms || {}))}`;
+}
+function learnNoteCard() {
+  const N = learnNotes();
+  if (!N.length) return "";
+  const [n, ...old] = N;
+  return `<section class="card" id="learn-note"><h2>📝 공부 노트 <small>${md(n.day)} · 평일 장 마감 뒤 새로</small></h2>
+    <h3 class="learn-note-t">${esc(n.title)}</h3>${noteBody(n)}
+    ${old.length ? `<details class="more-list"${LEARN_OPEN.has("notes") ? " open" : ""} data-learn-open="notes"><summary>지난 노트 ${old.length}편</summary>${old.map((x) =>
+      `<details class="lesson" data-learn-open="note:${esc(x.day)}"${LEARN_OPEN.has(`note:${x.day}`) ? " open" : ""}><summary><span class="learn-case-d">${md(x.day)}</span><span class="hm-t"><b>${esc(x.title)}</b></span></summary>
+        <div class="lesson-body">${noteBody(x)}</div></details>`).join("")}</details>` : ""}</section>`;
+}
+
 function learnView(d) {
+  mergeNoteTerms();
   const cards = learnTab === "drivers" ? learnDriverCards() : learnTab === "read" ? learnReadCards() : learnTab === "cope" ? learnCopeCards() : learnTab === "terms" ? learnTermCards() : learnWhyCards(d);
   return [`<section class="card learn-head"><h2>📚 투자 공부 <small>${MK_NAME[market]} 자료로</small></h2>
     <p class="muted" style="margin:0 0 4px">앱이 모은 자료로 '왜 움직였나'를 매일 새로 풀어 줘요. 사고팔기 신호는 아니에요.</p>
@@ -2876,6 +2904,9 @@ function learnView(d) {
 }
 // 홈 '더 보기' 한 줄: 오늘 지수와 움직인 요인 수
 function learnSummary() {
+  mergeNoteTerms();
+  const nt = learnNotes()[0];
+  if (nt && nt.day >= TODAY()) return `📝 새 노트 · ${esc(nt.title)}`;
   const s = idxStory(OWN_IDX[market]);
   const n = driversFor(market).map((x) => driverNow(x)).filter((x) => x && x.hit > 0).length;
   const R = DATA.reading, r = R && R.items ? Object.values(R.items).flat().filter((x) => x.date === TODAY()).length : 0;
