@@ -3223,7 +3223,7 @@ function worldCard() {
   return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>${chips}
     <ul class="list">${main.map((r) => worldRow(r)).join("")}</ul>
     <details id="world-all" class="more-list"${worldOpen ? " open" : ""}><summary class="muted">나라별 지수·환율 전체 보기 (${all.length}개)</summary>${groups}</details>
-    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 금리는 몇 %p 바뀌었는지, VIX는 20을 넘으면 불안이 커진 거예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">숫자는 ${label} 등락률, 선은 최근 ${line} 종가예요. 원/달러가 오르면 원화 약세(달러가 비싸짐)예요. 금리는 몇 %p 바뀌었는지예요. 장단기 금리 차가 마이너스면 '역전'으로, 경기 침체 앞에 자주 나왔어요. VIX는 20을 넘으면 불안이 커진 거예요. 미국 2년 금리·장단기 차는 FRED, 한국 국고채 금리는 네이버, 나머지는 야후 자료예요. 나라마다 장 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
 
 // 경기 국면 (macro.py, 국장·미장 같이). 매매 규칙엔 안 쓰고 참고로만 보여 줘요.
