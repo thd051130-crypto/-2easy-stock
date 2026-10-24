@@ -878,17 +878,90 @@ const HANGUL = /[가-힣]/;
 const LETTERS = { a: "에이", b: "비", c: "씨", d: "디", e: "이", f: "에프", g: "지", h: "에이치", i: "아이", j: "제이", k: "케이",
   l: "엘", m: "엠", n: "엔", o: "오", p: "피", q: "큐", r: "알", s: "에스", t: "티", u: "유", v: "브이", w: "더블유", x: "엑스", y: "와이", z: "지" };
 const BRAND_KO = { 코덱스: "kodex", 타이거: "tiger", 에이스: "ace", 라이즈: "rise", 플러스: "plus", 하나로: "hanaro",
-  아리랑: "arirang", 키움: "kiwoom", 코세프: "kosef", 쏠: "sol" };
+  아리랑: "arirang", 키움: "kiwoom", 코세프: "kosef", 쏠: "sol", 솔: "sol", 타임폴리오: "timefolio", 타임: "time", 킨덱스: "kindex",
+  히어로즈: "heroes" };
+// 같은 뜻 낱말 (한쪽으로 쳐도 다른 쪽 이름이 나와요)
+const SYNONYMS = [["나스닥", "nasdaq"], ["에스앤피", "sp"], ["에스엔피", "sp"], ["snp", "sp"], ["미국", "us"], ["다우", "dow"],
+  ["코스피", "kospi"], ["코스닥", "kosdaq"], ["반도체", "semicon"], ["커버드콜", "covered"], ["레버리지", "leverage"],
+  ["인버스", "inverse"], ["배당", "dividend"], ["채권", "bond"], ["국채", "treasury"], ["비트코인", "bitcoin"],
+  ["이더리움", "ethereum"], ["원유", "oil"], ["일본", "japan"], ["중국", "china"], ["인도", "india"],
+  ["베트남", "vietnam"], ["리츠", "reit"], ["테크", "tech"], ["바이오", "bio"], ["헬스케어", "healthcare"],
+  ["배터리", "battery"], ["액티브", "active"], ["선물", "futures"], ["골드", "gold"], ["커버드", "covered"],
+  ["월배당", "monthly"], ["고배당", "highdividend"], ["이티에프", "etf"], ...Object.entries(BRAND_KO)];
+// 붙여 쳐도 낱말로 나눠요 ('코덱스나스닥100' → 코덱스 / 나스닥100). 영문 브랜드는 맨 앞에 있을 때만.
+const SPLIT_KO = new RegExp(`(${uniq(SYNONYMS.map((x) => x[0]).filter((k) => /^[가-힣]/.test(k) && k.length >= 2)).sort((a, b) => b.length - a.length).join("|")})`, "g");
+const SPLIT_EN = uniq(Object.values(BRAND_KO)).sort((a, b) => b.length - a.length);
+// 이름에 없어도 되는 낱말 ('미국 나스닥100'으로 QQQ도). 다 이런 낱말뿐이면 그때는 꼭 있어야 해요.
+const OPTIONAL = new Set(["미국", "us", "etf", "이티에프", "주식", "종목", "국내", "한국", "우리나라"]);
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const JAMO = /[ㄱ-ㅎ]/;
 const norm = (s) => String(s || "").toLowerCase().replace(CORP, "").replace(/[^0-9a-z가-힣]/g, "");
 // 한글 바로 옆 영문은 한글 읽기로도: 'sk하이닉스' → '에스케이하이닉스'
 const spell = (s) => s.replace(/[a-z]+/g, (w, i) =>
   (HANGUL.test(s.slice(Math.max(0, i - 1), i) + s.slice(i + w.length, i + w.length + 1)) ? [...w].map((c) => LETTERS[c]).join("") : w));
-const uniq = (a) => a.filter((k, i) => k && a.indexOf(k) === i);
+// 한글은 첫 자음만: '삼성전자' → 'ㅅㅅㅈㅈ'
+const chosung = (s) => s.replace(/[가-힣]/g, (c) => CHO[Math.floor((c.charCodeAt(0) - 0xAC00) / 588)]);
+function uniq(a) { return a.filter((k, i) => k && a.indexOf(k) === i); }
+function splitWords(w) {
+  w = w.replace(SPLIT_KO, " $1 ").replace(/([a-z])(?=[가-힣ㄱ-ㅎ])|([가-힣ㄱ-ㅎ])(?=[a-z])/g, "$1$2 ");
+  const out = [];
+  for (let p of w.split(/\s+/).filter(Boolean)) {
+    const b = SPLIT_EN.find((x) => p.startsWith(x) && p.length > x.length + 1);
+    if (b) p = `${b} ${p.slice(b.length)}`;
+    out.push(...p.split(" "));
+  }
+  return out;
+}
+function wordAlts(t) {
+  const alts = [t, spell(t)];
+  for (const [a, b] of SYNONYMS) {
+    if (t.includes(a)) alts.push(t.split(a).join(b));
+    if (t.includes(b)) alts.push(t.split(b).join(a));
+  }
+  return uniq(alts);
+}
+// 띄어 쓴 낱말마다 따로 찾아요 (순서 상관없이 다 들어 있으면). 초성만 친 낱말은 초성으로.
+function queryTokens(q) {
+  const raw = String(q || "").toLowerCase().replace(CORP, " ").replace(/[^0-9a-z가-힣ㄱ-ㅎ\s]/g, "").split(/\s+/).filter(Boolean);
+  const toks = [];
+  for (const t of uniq(raw.flatMap(splitWords))) {
+    if (JAMO.test(t)) { if (t.length >= 2) toks.push({ alts: [], cho: chosung(t), opt: false, fz: null }); continue; }
+    toks.push({ alts: wordAlts(t), cho: null, opt: OPTIONAL.has(t), fz: t.length >= 3 && !/^\d+$/.test(t) ? t : null });
+  }
+  if (toks.length && toks.every((t) => t.opt)) toks.forEach((t) => { t.opt = false; });
+  toks.words = raw.filter((w) => !JAMO.test(w) && !OPTIONAL.has(w)).map(wordAlts);  // 친 그대로 다 붙어 있으면 더 앞에
+  return toks;
+}
+// t가 s 안에 k글자 이하로 틀리게 들어 있나 (오타: 글자 하나 바뀜·빠짐·더함)
+function near(t, s, k) {
+  let have = 0;
+  for (const c of t) if (s.includes(c)) have++;
+  if (have < t.length - k) return false;
+  const n = t.length;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i), cur = new Array(n + 1);
+  for (let j = 0; j < s.length; j++) {
+    cur[0] = 0;
+    const c = s[j];
+    for (let i = 1; i <= n; i++) cur[i] = Math.min(prev[i - 1] + (t[i - 1] === c ? 0 : 1), prev[i] + 1, cur[i - 1] + 1);
+    if (cur[n] <= k) return true;
+    [prev, cur] = [cur, prev];
+  }
+  return false;
+}
+let QK = null;  // 마지막 검색어 (화면마다 여러 번 불러요)
 function queryKeys(q) {
+  const ready = !!(SYM.kr && SYM.us);
+  if (QK && QK.q === q && QK.ready === ready) return QK.qs;
   const n = norm(q);
   const keys = [n, spell(n)];
   for (const [ko, en] of Object.entries(BRAND_KO)) if (n.includes(ko)) keys.push(n.split(ko).join(en));
-  return uniq(keys);
+  const qs = JAMO.test(q) ? [] : uniq(keys);  // 초성이 섞여 있으면 통째로는 안 맞춰요 (낱말로만)
+  qs.toks = queryTokens(q);
+  qs.fuzzy = false;
+  // 딱 맞는 종목이 하나도 없을 때만 오타를 허용해서 찾아요
+  if (ready && qs.toks.some((t) => t.fz) && !["kr", "us"].some((m) => SYM[m].some((e) => scoreOf(e.row, e.keys, qs) != null))) qs.fuzzy = true;
+  QK = { q, ready, qs };
+  return qs;
 }
 function nameKeys(row) {
   const keys = [];
@@ -900,7 +973,9 @@ function nameKeys(row) {
   }
   return uniq(keys);
 }
-// 작을수록 잘 맞아요: 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부. 안 맞으면 null.
+// 작을수록 잘 맞아요: 0 코드 그대로, 1 이름 그대로, 2 이름 앞부분, 3 코드 앞부분, 4 이름 일부,
+// 5 친 낱말이 다 들어 있음(순서 상관없이, 초성도), 6 붙여 친 낱말을 나눠서 다 들어 있음,
+// 7 '미국' 같은 없어도 되는 낱말만 빠짐, 8 오타 허용으로 맞음. 안 맞으면 null. (symbols.py score와 같아요)
 function scoreOf(row, keys, qs) {
   const code = row[0].toLowerCase();
   if (qs.includes(code)) return 0;
@@ -912,7 +987,20 @@ function scoreOf(row, keys, qs) {
     }
     if (code.startsWith(q) && (best == null || best > 3)) best = 3;
   }
-  return best;
+  const toks = qs.toks;
+  if (best != null || !toks || !toks.length) return best;
+  const hay = keys.hay || (keys.hay = keys.join("|"));
+  let miss = 0, typo = 0;
+  for (const t of toks) {
+    if (t.alts.some((a) => hay.includes(a))) continue;
+    if (t.cho && (keys.cho || (keys.cho = chosung(hay))).includes(t.cho)) continue;
+    if (t.opt) { miss++; continue; }
+    if (qs.fuzzy && t.fz && near(t.fz, hay, t.fz.length >= 8 ? 2 : 1)) { typo++; continue; }
+    return null;
+  }
+  if (miss === toks.length) return null;
+  if (typo || miss) return typo ? 8 : 7;
+  return toks.words.every((w) => w.some((a) => hay.includes(a))) ? 5 : 6;
 }
 
 const SYM = { kr: null, us: null };  // [{ row, keys }]
@@ -1139,7 +1227,7 @@ function glossaryCard() {
 function findStocks(q) {
   const qs = queryKeys(q);
   const tracked = [], others = [];
-  if (!qs.length || !DATA) return { tracked, others };
+  if ((!qs.length && !qs.toks.length) || !DATA) return { tracked, others };
   for (const m of ["kr", "us"]) {
     const mine = stocksOf(DATA.markets[m]);
     const byCode = new Map(mine.map((x) => [x.code, x]));
@@ -1168,6 +1256,8 @@ function searchResults() {
   if (!q) {
     return `<section class="card"><ul class="help" style="margin:0">
       <li>이름 일부만 쳐도 돼요: '하이닉스', '삼성sdi', '코덱스 200', '슈드'</li>
+      <li>낱말 순서·띄어쓰기는 상관없고 '미국'은 빼도 돼요: 'kodex 나스닥100', '나스닥100 타이거'</li>
+      <li>초성·별명·작은 오타도 찾아요: 'ㅅㅅㅈㅈ', '삼전', '하닉', '곱버스', '하이닉쓰'</li>
       <li>문장으로 쳐도 돼요: '전력 관련분야 종목 찾아줘', '미국 원전주', '화장품 대장주'</li>
       <li>어떤 상장 종목이든 누르면 차트가 나오고, ☆를 누르면 바로 관심종목에 들어가요. 하나씩 추가할 필요 없어요.</li>
       <li>대형주(대시보드 종목)는 재무제표·수급까지 나와요.</li></ul></section>

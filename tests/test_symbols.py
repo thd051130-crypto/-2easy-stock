@@ -72,6 +72,37 @@ def test_search(q, want):
     assert [r[0] for r in sy.search(ROWS, q)] == want
 
 
+ETFS = [
+    ["379810", "KODEX 미국나스닥100", "KS", "e", "KODEX US NASDAQ100"],
+    ["133690", "TIGER 미국나스닥100", "KS", "e", "TIGER NASDAQ100"],
+    ["360750", "TIGER 미국S&P500", "KS", "e", "TIGER S&P500"],
+    ["494300", "KODEX 미국나스닥100데일리커버드콜OTM", "KS", "e", ""],
+    ["QQQ", "나스닥100 ETF (인베스코)", "", "e", "Invesco QQQ Trust"],
+] + ROWS
+
+
+@pytest.mark.parametrize("q, want", [
+    ("kodex 나스닥100", ["379810", "494300"]),        # '미국'을 안 쳐도, 순서·띄어쓰기 상관없이
+    ("나스닥100 코덱스", ["379810", "494300"]),
+    ("kodex나스닥100", ["379810", "494300"]),         # 붙여 쳐도
+    ("tiger 에스앤피500", ["360750"]),                # 영문/한글 바꿔 읽기
+    ("미국 나스닥100 인베스코", ["QQQ"]),              # '미국'은 이름에 없어도 돼요
+    ("코덱스 커브드콜", ["494300"]),                   # 오타 (딱 맞는 게 없을 때만)
+    ("ㅅㅅㅈㅈ", ["005930", "005935"]),               # 초성
+    ("sk ㅎㅇㄴㅅ", ["000660"]),
+    ("삼성잔자", ["005930", "005935"]),
+    ("카카오 은행", []),                              # 없는 낱말이 있으면 안 나와요
+])
+def test_search_forgiving(q, want):
+    assert [r[0] for r in sy.search(ETFS, q)] == want
+
+
+def test_with_nicknames():
+    rows = sy.with_nicknames([["000660", "SK하이닉스", "KS", "s", "SK hynix"], ["999999", "없음", "KS", "s", ""]], "kr")
+    assert rows[0][4].startswith("SK hynix|하닉") and rows[1][4] == ""
+    assert [r[0] for r in sy.search(rows, "하닉")] == ["000660"]
+
+
 def yahoo(symbol, long_name=None, short_name=None):
     return dict(symbol=symbol, longName=long_name, shortName=short_name)
 
@@ -147,4 +178,4 @@ def test_save_keeps_old_file_when_too_few(tmp_path):
 def test_build_with_fake_fetch():
     fake = lambda market: ([yahoo("005930.KS", "삼성전자(주)", "SamsungElec")], [])  # noqa: E731
     data = sy.build("kr", fetch=fake, etf_names={})
-    assert data["rows"] == [["005930", "삼성전자", "KS", "s", "SamsungElec"]] and data["updated"]
+    assert data["rows"] == [["005930", "삼성전자", "KS", "s", "SamsungElec|삼전|삼성"]] and data["updated"]  # 별명도 붙여요
