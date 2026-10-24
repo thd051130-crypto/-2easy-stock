@@ -17,3 +17,5 @@ User picked proposals 1,2,3,4,6,7,8,9 from /mnt/project-files/proposals/system-g
 - dashboard data: total (won, fx from signal.json usdkrw), markets.kr.etf, readiness, health, memos.
 
 Related: [[phone-dashboard]], [[paper-trading-log]], [[pr18-stock-search-bot]]
+
+2026-10-24 사용자 "메모·점검 기능은 지금 안 쓰는 것 같다" → 봇 '메모' 명령(내 판단 기록장, memos.json — 한 번도 저장된 적 없음)과 금요일 판단 결산 없앰. 고장 알림·주간 점검(health.py)은 남김.
