@@ -4,6 +4,7 @@
 paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없음).
   - daily.json : 매일 시세 자료 (많이 움직인 종목·업종·지수 캔들·관심종목 시세, daily.py)
   - paper/report.json : 오늘의 리포트 (리포트 부서, report_desks.py)
+  - paper/learn_cases.json, reading.json : 투자 공부 사례 일지·증권사 무료 리포트 목록 (learn_cases.py, reading.py)
   - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
@@ -86,6 +87,8 @@ def build(paper_dir):
                 calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), events=read_json(paper_dir / "events.json"),
                 world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
                 report=read_json(paper_dir / "report.json"),
+                # 투자 공부: 날마다 쌓는 사례 일지(learn_cases.py)와 증권사 무료 리포트 목록(reading.py)
+                learn_cases=read_json(paper_dir / "learn_cases.json"), reading=read_json(paper_dir / "reading.json"),
                 # 30분마다 news 워크플로가 live 브랜치에 올리는 장중 뉴스 (앱이 바로 읽어요)
                 news_url=f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY') or REPO}/live/news.json")
 

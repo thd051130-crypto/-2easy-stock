@@ -2389,7 +2389,7 @@ function newsCard() {
 // 홈 '더 보기' 📚 투자 공부 → #kr/more/learn. 위 가로 줄에서 네 묶음 중 하나: 오늘 왜? · 움직이는 이유 · 대처법 · 용어집.
 // '오늘 왜?'는 앱이 이미 받은 자료(세계 지수·경기 국면·큰 발표·뉴스·업종·수급·리포트)로 열 때마다 새로 만들어요. 나머지는 고정 글.
 // 사고팔기 신호는 안 줘요 (매매 규칙은 사용자가 없앴어요). 숫자는 참고용, 원인은 '후보'로만 말해요.
-const LEARN_TABS = [["why", "오늘 왜 움직였나"], ["drivers", "움직이는 이유"], ["cope", "대처법"], ["terms", "용어집"]];
+const LEARN_TABS = [["why", "오늘 왜 움직였나"], ["drivers", "움직이는 이유"], ["read", "전문가 리포트"], ["cope", "대처법"], ["terms", "용어집"]];
 let learnTab = "why";
 try { learnTab = localStorage.getItem("learn_tab") || "why"; } catch (e) { /* 처음 */ }
 const LEARN_OPEN = new Set();  // 펼친 요인·상황 (아래 버튼을 누르면 접혀요)
@@ -2418,7 +2418,7 @@ const chg = (r, k = "d1") => (r && r[k] != null ? `<b class="${sign(r[k])}">${pc
 
 // 시장을 움직이는 요인. now(m)은 오늘 자료로 본 이 요인의 모습: {hit 0~2, text, dir}. hit 2 = 크게 의심, 1 = 있음, 0 = 조용
 const DRIVERS = [
-  { key: "rate", icon: "🏦", title: "금리", one: "금리가 오르면 주식 값은 내려가기 쉬워요.",
+  { key: "rate", quiz: "미국 10년 금리가 한 주에 0.3%p 뛰었어요. 은행주와 성장 기술주 중 버티기 쉬운 쪽은?", answer: "은행주예요. 예금·대출 금리 차이로 버는 이자가 늘 수 있어요. 성장주는 먼 미래 이익의 지금 값이 깎여서 더 크게 빠지기 쉬워요.", icon: "🏦", title: "금리", one: "금리가 오르면 주식 값은 내려가기 쉬워요.",
     chain: ["금리가 오르면 예금·채권만 들고 있어도 이자를 더 받아요", "그만큼 위험한 주식을 살 이유가 줄고, 회사는 빌린 돈 이자가 늘어요", "먼 미래에 돈을 벌 회사(성장주)일수록 지금 값이 크게 깎여요"],
     good: "은행·보험 (이자로 더 벌어요)", bad: "기술·바이오 같은 성장주, 건설·부동산·리츠 (빚이 많거나 이익이 먼 미래)",
     ex: "2022년 미국이 0%대 금리를 한 해 만에 4%대로 올리자 나스닥이 그해 30% 넘게 빠졌어요.",
@@ -2430,7 +2430,7 @@ const DRIVERS = [
       const text = `미국 10년 ${r.last.toFixed(2)}% · 1주 ${bp(r.w1)}${m === "kr" && k ? ` / 한국 3년 ${k.last.toFixed(2)}% · 1주 ${bp(k.w1)}` : ""}`;
       return { hit: big >= 0.15 ? 2 : big >= 0.08 ? 1 : 0, text, dir: (r.w1 || 0) > 0 ? "금리가 올라 주식엔 부담 쪽" : "금리가 내려 숨통 쪽" };
     } },
-  { key: "infl", icon: "🛒", title: "물가", one: "물가가 예상보다 높게 나오면 '금리 더 오르겠네' 걱정에 주가가 빠져요.",
+  { key: "infl", quiz: "CPI가 3.5%로 지난달(3.7%)보다 낮아졌는데 주가가 빠졌어요. 왜 그럴까요?", answer: "예상치가 3.3%였다면 '예상보다 높게' 나온 거라서요. 시장은 지난달보다 예상과의 차이에 반응해요.", icon: "🛒", title: "물가", one: "물가가 예상보다 높게 나오면 '금리 더 오르겠네' 걱정에 주가가 빠져요.",
     chain: ["물가가 높으면 중앙은행이 금리를 올리거나 내리지 못해요", "그 걱정에 국채 금리가 먼저 뛰어요", "그다음 주식, 특히 성장주가 빠져요"],
     tip: "숫자 자체보다 예상치와의 차이가 중요해요. 3.7%라도 예상이 3.6%였으면 '높게 나왔다'예요.",
     good: "에너지·원자재 (물가 오를 때 같이 올라요)", bad: "성장주, 소비 관련주",
@@ -2443,7 +2443,7 @@ const DRIVERS = [
       if (next.length) return { hit: 1, text: evNext(next[0]), dir: "발표를 앞두고 눈치 보기" };
       return cpi ? { hit: 0, text: `${esc(cpi.name)} ${esc(cpi.value)} · ${esc(cpi.note)}`, dir: "" } : null;
     } },
-  { key: "jobs", icon: "👷", title: "고용", one: "일자리 숫자는 '경기가 괜찮나'와 '금리가 어떻게 될까'를 같이 알려 줘요.",
+  { key: "jobs", quiz: "일자리가 예상의 두 배로 늘었는데 주가가 빠졌어요. 말이 되나요?", answer: "돼요. 경기가 너무 뜨거우면 연준이 금리를 못 내리거나 더 올릴 거라고 보거든요. 그래서 고용은 '적당히'가 제일 좋아요.", icon: "👷", title: "고용", one: "일자리 숫자는 '경기가 괜찮나'와 '금리가 어떻게 될까'를 같이 알려 줘요.",
     chain: ["일자리가 너무 많이 늘면 임금·물가가 올라 금리 걱정이 커져요", "너무 적게 늘거나 실업률이 뛰면 경기 침체 걱정이 커져요", "그래서 '적당히'가 제일 좋고, 예상과 크게 다르면 어느 쪽이든 출렁여요"],
     good: "적당할 때: 대부분 업종", bad: "약할 때: 경기에 민감한 업종(소비·산업재), 강할 때: 성장주",
     ex: "2024년 8월 초 미국 고용이 예상보다 크게 약하게 나와 경기 걱정이 번졌고, 엔화 강세까지 겹쳐 8월 5일 코스피가 하루 -8.8%, 일본 닛케이가 -12.4% 빠졌어요.",
@@ -2455,7 +2455,7 @@ const DRIVERS = [
       if (next.length) return { hit: 1, text: evNext(next[0]), dir: "발표를 앞두고 눈치 보기" };
       return sahm ? { hit: 0, text: `${esc(sahm.name)} ${esc(sahm.value)} · ${esc(sahm.note)}`, dir: "" } : null;
     } },
-  { key: "cb", icon: "🏛️", title: "중앙은행 회의", one: "금리를 정하는 날엔 결과보다 '앞으로 어떻게 하겠다'는 말에 더 크게 움직여요.",
+  { key: "cb", quiz: "연준이 모두가 예상한 대로 금리를 0.25%p 내렸는데 주가가 빠졌어요. 왜일까요?", answer: "인하는 이미 주가에 들어 있었고, 의장이 '앞으로는 천천히 내리겠다'고 하면 실망할 수 있어요. 결과보다 다음 방향이 중요해요.", icon: "🏛️", title: "중앙은행 회의", one: "금리를 정하는 날엔 결과보다 '앞으로 어떻게 하겠다'는 말에 더 크게 움직여요.",
     chain: ["미국 연준(FOMC)·한국은행(금통위)이 1년에 8번 기준금리를 정해요", "시장은 결과를 미리 짐작해서 주가에 넣어 둬요", "예상과 다르거나 의장 말에서 다음 방향이 바뀌면 크게 움직여요"],
     tip: "모두가 아는 인상·인하는 발표 날 오히려 반대로 움직이기도 해요 (소문에 사고 뉴스에 판다).",
     good: "인하 쪽: 성장주·부동산", bad: "인상 쪽: 성장주·빚 많은 회사",
@@ -2469,7 +2469,7 @@ const DRIVERS = [
       if (kr.length) return { hit: 1, text: `${md(kr[0].date)} ${esc(kr[0].title)} · ${dday(kr[0].date)}`, dir: "회의를 앞두고 눈치 보기" };
       return { hit: 0, text: "3일 안 금리 회의 없음", dir: "" };
     } },
-  { key: "fx", icon: "💱", title: "환율", one: "원/달러 환율이 뛰면(원화 약세) 외국인이 국장을 팔기 쉬워요.",
+  { key: "fx", quiz: "원/달러가 1,300원에서 1,400원이 됐어요. 외국인이 산 국장 주식 값이 원화로 그대로라면 달러로는 이익일까요?", answer: "손해예요. 같은 원화 금액을 달러로 바꾸면 약 7% 줄어요 (1,300 ÷ 1,400). 그래서 원화가 약할 때 외국인이 팔기 쉬워요.", icon: "💱", title: "환율", one: "원/달러 환율이 뛰면(원화 약세) 외국인이 국장을 팔기 쉬워요.",
     chain: ["외국인은 달러를 원화로 바꿔 국장 주식을 사요", "원화 값이 떨어지면 주가가 그대로여도 달러로 치면 손해(환차손)예요", "그래서 원화가 약할 땐 외국인 매도가 늘고, 원화가 강해지면 사러 들어오기 쉬워요"],
     tip: "미장에선 달러인덱스를 봐요. 달러가 강해지면 미국 회사의 해외 매출이 줄어 보이고, 신흥국에서 돈이 빠져요.",
     good: "원화 약세: 수출 회사 (자동차·조선·반도체 — 같은 달러 매출이 원화로 커져요)", bad: "원화 약세: 원료를 사 오는 회사 (항공·정유·음식료), 외국인이 많이 가진 대형주",
@@ -2484,7 +2484,7 @@ const DRIVERS = [
       return { hit: w >= lim[0] ? 2 : w >= lim[1] || d >= lim[1] ? 1 : 0, text,
         dir: m === "kr" ? ((r.w1 || 0) > 0 ? "원화가 약해지는 쪽 (외국인엔 부담)" : "원화가 강해지는 쪽 (외국인엔 도움)") : ((r.w1 || 0) > 0 ? "달러가 강해지는 쪽" : "달러가 약해지는 쪽") };
     } },
-  { key: "oil", icon: "🛢️", title: "유가", one: "유가가 급하게 오르면 물가가 오르고 회사 비용이 늘어 증시엔 대체로 부담이에요.",
+  { key: "oil", quiz: "유가가 한 달에 30% 올랐어요. 항공사와 정유사 중 웃는 쪽은?", answer: "정유사예요. 파는 기름 값이 올라요. 항공사는 연료비가 늘어 이익이 줄기 쉬워요.", icon: "🛢️", title: "유가", one: "유가가 급하게 오르면 물가가 오르고 회사 비용이 늘어 증시엔 대체로 부담이에요.",
     chain: ["유가가 오르면 기름값·운송비·원료비가 올라요", "물가가 올라 금리 걱정이 커지고, 사람들은 다른 데 쓸 돈이 줄어요", "정유·에너지 회사는 더 벌지만 항공·운송·화학은 비용이 늘어요"],
     good: "에너지·정유", bad: "항공·운송·화학",
     ex: "2022년 러시아가 우크라이나를 침공한 뒤 WTI가 한때 배럴당 120달러를 넘었어요.",
@@ -2497,7 +2497,7 @@ const DRIVERS = [
         text: `WTI ${r.last.toFixed(1)}달러 · 하루 ${chg(r)} · 1주 ${chg(r, "w1")} · 1년 ${chg(r, "y1")}`,
         dir: (r.y1 || 0) > 0.5 ? "1년 새 50% 넘게 올라 경기 경고 중" : (r.w1 || 0) > 0 ? "오르는 쪽" : "내리는 쪽" };
     } },
-  { key: "chip", icon: "💾", title: "반도체·대형 기술주", one: "코스피는 반도체 비중이 커서 미국 반도체 주가를 많이 따라가요.",
+  { key: "chip", quiz: "밤사이 미국 반도체 지수가 -5% 빠졌어요. 다음 날 아침 국장에서 가장 먼저 볼 종목은?", answer: "삼성전자·SK하이닉스예요. 코스피에서 비중이 커서 이 둘이 빠지면 지수 전체가 끌려 내려가기 쉬워요.", icon: "💾", title: "반도체·대형 기술주", one: "코스피는 반도체 비중이 커서 미국 반도체 주가를 많이 따라가요.",
     chain: ["삼성전자·SK하이닉스가 코스피 시가총액의 큰 몫을 차지해요", "두 회사 실적은 세계 반도체 경기(메모리 값, AI 서버 투자)에 달려 있어요", "그래서 전날 밤 미국 반도체 지수(SOX)가 크게 움직이면 다음 날 국장도 따라가기 쉬워요"],
     tip: "미장도 비슷해요. 엔비디아·애플·마이크로소프트 같은 큰 기술주 몇 개가 S&P500의 큰 몫이라 이들이 흔들리면 지수 전체가 흔들려요.",
     good: "AI·반도체 경기가 좋을 때: 반도체·장비·전력", bad: "반도체 값이 꺾일 때: 반도체 비중 큰 지수 전체",
@@ -2509,7 +2509,7 @@ const DRIVERS = [
       return { hit: d >= 0.025 || w >= 0.06 ? 2 : d >= 0.015 || w >= 0.035 ? 1 : 0,
         text: `필라델피아 반도체 하루 ${chg(r)} · 1주 ${chg(r, "w1")} · 1달 ${chg(r, "m1")}`, dir: (r.w1 || 0) > 0 ? "반도체가 오르는 쪽" : "반도체가 내리는 쪽" };
     } },
-  { key: "global", icon: "🌏", title: "다른 나라 증시", one: "세계 돈은 이어져 있어서 큰 나라 증시가 흔들리면 같이 흔들려요.",
+  { key: "global", quiz: "미국·일본은 조용했는데 코스피만 -3% 빠졌어요. 원인을 어디서 찾을까요?", answer: "한국만의 이유예요. 환율 급등, 국내 정책·정치 뉴스, 반도체 같은 특정 업종 소식, 외국인 대량 매도를 먼저 봐요.", icon: "🌏", title: "다른 나라 증시", one: "세계 돈은 이어져 있어서 큰 나라 증시가 흔들리면 같이 흔들려요.",
     chain: ["국장은 밤사이 미국 마감을 보고 아침을 시작해요", "미장도 아시아·유럽에서 먼저 터진 큰 사건에 반응해요", "다른 나라는 멀쩡한데 우리만 빠졌다면 우리만의 이유(환율·정책·특정 업종)를 찾아봐요"],
     good: "", bad: "",
     terms: ["S&P500", "나스닥"], go: ["world", "세계 지수 보기"],
@@ -2524,13 +2524,13 @@ const DRIVERS = [
         text: `${esc(a.name)} ${chg(a)}${b ? ` · ${esc(b.name)} ${chg(b)}` : ""}`,
         dir: alone ? `다른 나라는 조용한데 ${m === "kr" ? "국장" : "미장"}만 크게 움직였어요 → 우리만의 이유 쪽` : "" };
     } },
-  { key: "trade", icon: "🚢", title: "관세·무역", one: "한국은 수출로 먹고사는 나라라 관세·무역 분쟁 소식에 특히 민감해요.",
+  { key: "trade", quiz: "미국이 한국 자동차에 관세를 올린다는 뉴스가 나왔어요. 가장 먼저 영향받는 업종은?", answer: "자동차와 자동차 부품이에요. 관세는 어느 품목이냐에 따라 업종마다 다르게 맞아요.", icon: "🚢", title: "관세·무역", one: "한국은 수출로 먹고사는 나라라 관세·무역 분쟁 소식에 특히 민감해요.",
     chain: ["관세가 붙으면 수출품 값이 비싸져 덜 팔리거나 이익이 줄어요", "어느 나라·어느 품목이냐에 따라 업종별로 다르게 맞아요 (반도체·자동차·철강 등)", "협상 타결·유예 소식이 나오면 반대로 크게 오르기도 해요"],
     good: "협상 타결: 수출주 전반", bad: "관세 강화: 그 품목 수출 회사",
     ex: "2025년 4월 미국이 거의 모든 나라에 상호관세를 발표하자 S&P500이 이틀 만에 10% 넘게 빠졌고, 일주일 뒤 90일 유예 발표 날엔 하루 +9.5% 올랐어요.",
     terms: ["안전자산"], go: ["more:policy", "정부 정책 보기"],
     now: () => { const n = newsHit("무역·관세"); return n ? { hit: n.n >= 3 ? 2 : 1, text: n.line, dir: "" } : { hit: 0, text: "최근 24시간 관세·무역 뉴스 조용", dir: "" }; } },
-  { key: "geo", icon: "⚔️", title: "전쟁·지정학", one: "전쟁·분쟁 소식은 앞을 안 보이게 만들어 '일단 팔고 보자'는 심리를 키워요.",
+  { key: "geo", quiz: "중동에서 전쟁이 났어요. 같이 오르기 쉬운 것 두 가지는?", answer: "유가와 금값이에요. 원유 공급 걱정에 유가가, 불안해서 안전자산인 금으로 돈이 가요.", icon: "⚔️", title: "전쟁·지정학", one: "전쟁·분쟁 소식은 앞을 안 보이게 만들어 '일단 팔고 보자'는 심리를 키워요.",
     chain: ["불확실하면 투자자는 주식을 줄이고 안전자산(달러·금·국채)으로 가요", "중동이면 유가가, 대만·북한이면 반도체·국장이 특히 흔들려요", "다만 과거엔 충격이 생각보다 빨리 회복된 경우가 많았어요"],
     good: "방산·에너지, 금", bad: "항공·여행, 위험이 큰 성장주",
     terms: ["안전자산", "VIX"], go: ["more:news", "지금 뉴스 보기"],
@@ -2540,7 +2540,7 @@ const DRIVERS = [
       if (!n && !gold) return { hit: 0, text: "최근 24시간 전쟁·분쟁 뉴스 조용", dir: "" };
       return { hit: n && n.n >= 3 ? 2 : 1, text: [n && n.line, gold && `금값 하루 ${chg(g)} (안전자산으로 돈이 감)`].filter(Boolean).join(" · "), dir: "" };
     } },
-  { key: "fear", icon: "😨", title: "공포·심리", one: "겁이 커지면 이유를 따지기 전에 다 같이 팔아요. VIX(공포 지수)로 그 정도를 봐요.",
+  { key: "fear", quiz: "VIX가 15에서 35로 뛰었어요. 무슨 뜻일까요?", answer: "시장이 앞으로 한 달 크게 출렁일 거라고 겁먹었다는 뜻이에요. 30을 넘으면 큰 공포예요. 언제 가라앉을지는 미리 알 수 없어요.", icon: "😨", title: "공포·심리", one: "겁이 커지면 이유를 따지기 전에 다 같이 팔아요. VIX(공포 지수)로 그 정도를 봐요.",
     chain: ["나쁜 소식이 겹치면 VIX가 뛰어요", "빚내서 산 사람들의 주식이 강제로 팔리면(반대매매) 하락이 더 커져요", "공포가 가라앉으면 좋은 회사부터 먼저 회복하는 경우가 많아요"],
     good: "", bad: "빚(신용)이 많이 낀 종목, 작은 회사",
     ex: "2020년 3월 코로나 때 VIX가 80을 넘었어요 (평소 12~20).",
@@ -2551,7 +2551,7 @@ const DRIVERS = [
       return { hit: r.last >= 30 || (r.d1 || 0) >= 0.25 ? 2 : r.last >= 22 || (r.d1 || 0) >= 0.12 ? 1 : 0,
         text: `VIX ${r.last.toFixed(1)} · 하루 ${chg(r)}`, dir: r.last >= 30 ? "큰 공포" : r.last >= 20 ? "불안한 편" : "평온한 편 (보통 12~20)" };
     } },
-  { key: "macro", icon: "🌡️", title: "경기 흐름", one: "길게 보면 주가는 회사 이익을, 이익은 경기를 따라가요.",
+  { key: "macro", quiz: "장단기 금리가 역전됐어요. 바로 주가가 빠질까요?", answer: "꼭 그렇진 않아요. 과거엔 역전 뒤 침체까지 1~2년 걸리기도 했고, 그동안 주가가 오른 때도 있었어요. 경고 신호로만 봐요.", icon: "🌡️", title: "경기 흐름", one: "길게 보면 주가는 회사 이익을, 이익은 경기를 따라가요.",
     chain: ["경기가 식으면 사람들이 덜 사고 회사 이익이 줄어요", "시장은 미리 알아채려고 금리 차·신용·구리 값 같은 신호를 봐요", "이 앱 '경기 국면' 칸이 그런 신호 7개를 매일 점검해요"],
     good: "확장기: 산업재·소재·금융", bad: "위축기: 경기 민감주 (방어주·채권이 상대적으로 버텨요)",
     terms: ["경기 침체", "장단기 금리 역전", "구리/금 비율", "하이일드", "섹터 로테이션"], go: ["more:macro", "경기 국면 보기"],
@@ -2562,7 +2562,7 @@ const DRIVERS = [
       return { hit: m.score >= 4 ? 2 : m.score >= 2 ? 1 : 0, text: `${esc(m.regime)} · 경고 ${m.score}/${m.total}${warns.length ? ` (${esc(warns.join(", "))})` : ""}`,
         dir: m.prev_regime && m.prev_regime !== m.regime ? `${esc(m.prev_regime)}에서 바뀜` : "" };
     } },
-  { key: "earn", icon: "📢", title: "실적", one: "주가에는 '이 정도 벌겠지' 예상이 들어 있어서, 실적 날엔 예상과의 차이에 움직여요.",
+  { key: "earn", quiz: "영업이익이 작년보다 50% 늘었는데 주가가 -8% 빠졌어요. 왜일까요?", answer: "시장 예상(컨센서스)이 +70%였거나, 다음 분기 전망(가이던스)이 나빴을 수 있어요. 주가는 예상과의 차이에 반응해요.", icon: "📢", title: "실적", one: "주가에는 '이 정도 벌겠지' 예상이 들어 있어서, 실적 날엔 예상과의 차이에 움직여요.",
     chain: ["회사는 3달마다 실적을 발표해요 (실적 시즌)", "예상보다 좋으면 오르고 나쁘면 빠져요", "지난 실적보다 앞으로의 전망(가이던스)에 더 크게 반응하기도 해요"],
     good: "", bad: "",
     terms: ["실적 시즌", "어닝 서프라이즈", "가이던스", "컨센서스"], go: ["more:earn", "실적·배당 발표 보기"],
@@ -2572,7 +2572,7 @@ const DRIVERS = [
       if (!er.length && !n) return { hit: 0, text: "5일 안 큰 실적 발표 없음", dir: "" };
       return { hit: er.length >= 3 ? 1 : 0, text: [er.length && `5일 안 ${er.length}건: ${er.slice(0, 3).map((e) => `${md(e.date)} ${esc(e.title.replace(/ 실적 발표$/, ""))}`).join(", ")}`, n && n.line].filter(Boolean).join(" · "), dir: er.length >= 3 ? "실적 시즌" : "" };
     } },
-  { key: "flows", icon: "🏦", title: "외국인·기관 수급", only: "kr", one: "국장은 외국인·기관 같은 큰손이 한쪽으로 몰려 사고팔면 크게 움직여요.",
+  { key: "flows", quiz: "외국인이 5일 연속 삼성전자를 팔고 있어요. 먼저 확인할 것은?", answer: "환율(원화 약세인지), 미국 반도체 흐름, 실적 전망이에요. 외국인은 회사 하나보다 나라·업종 전체를 보고 비중을 바꿀 때가 많아요.", icon: "🏦", title: "외국인·기관 수급", only: "kr", one: "국장은 외국인·기관 같은 큰손이 한쪽으로 몰려 사고팔면 크게 움직여요.",
     chain: ["큰손은 한 번에 많이 사고팔아 주가를 밀어요", "외국인은 환율·미국 금리·세계 경기를 보고 국장 비중을 정해요", "외국인·기관이 같이 계속 판다면 그 이유(환율·실적·업종 전망)를 확인해 봐요"],
     good: "", bad: "",
     terms: ["순매수", "외국인 보유율", "공매도"], go: ["more:flows", "외국인·기관 수급 보기"],
@@ -2582,7 +2582,7 @@ const DRIVERS = [
       const w = (f.warn || []).length;
       return { hit: w >= 8 ? 2 : w >= 4 ? 1 : 0, text: w ? `외국인·기관이 같이 파는 종목 ${w}개` : "같이 파는 종목 없음", dir: "" };
     } },
-  { key: "policy", icon: "📜", title: "정부 정책", one: "세금·규제·예산 같은 정부 정책은 업종마다 호재와 악재가 갈려요.",
+  { key: "policy", quiz: "정부가 어느 업종 지원책을 '발표'했어요. 이제 확실한 호재일까요?", answer: "아직 아니에요. 국회 통과, 예산, 시행 날짜까지 가야 해요. 발표 날 크게 오른 뒤 실제 시행이 늦어지면 빠지기도 해요.", icon: "📜", title: "정부 정책", one: "세금·규제·예산 같은 정부 정책은 업종마다 호재와 악재가 갈려요.",
     chain: ["정부가 돈을 쓰거나 세금을 깎아 주는 업종은 이익이 늘 거라 기대해요", "규제가 생기거나 세금이 늘면 그 업종은 부담이에요", "발표 뒤 실제로 시행되는지(국회 통과, 날짜)를 끝까지 봐야 해요"],
     good: "", bad: "",
     ex: "2026년 자사주 소각 의무화·배당 분리과세 같은 주주 친화 정책이 금융·지주 회사에 호재로 꼽혔어요 (앱 정부 정책 칸).",
@@ -2670,7 +2670,7 @@ function learnWhyCards(d) {
   const c = COPE.find((x) => x.key === situ);
   const todo = `<section class="card"><h2>🧭 이럴 때 어떻게? <small>${esc(c.title)}</small></h2>${copeBody(c)}
     <button type="button" class="more" data-learn-tab="cope">상황별 대처법 전부 보기<span aria-hidden="true">›</span></button></section>`;
-  return [head, sus2, secCard, todo];
+  return [head, sus2, learnCaseCard(), secCard, todo];
 }
 
 // ── 움직이는 이유
@@ -2680,6 +2680,7 @@ function lessonBody(x, n) {
     ${x.good || x.bad ? `<div class="learn-gb">${x.good ? `<div><span class="badge good">유리</span> ${esc(x.good)}</div>` : ""}${x.bad ? `<div><span class="badge bad">불리</span> ${esc(x.bad)}</div>` : ""}</div>` : ""}
     ${x.ex ? `<p class="learn-ex">📜 ${esc(x.ex)}</p>` : ""}
     ${n ? `<p class="learn-now"><b>지금 앱 자료</b> ${n.text}${n.dir ? ` · ${n.dir}` : ""}</p>` : ""}
+    ${x.quiz ? `<details class="learn-quiz"><summary><b>🤔 확인 문제</b> ${esc(x.quiz)} <span class="learn-quiz-open">답 보기</span></summary><p>${esc(x.answer)}</p></details>` : ""}
     ${termChips(x.terms)}${goBtn(x.go)}`;
 }
 function learnDriverCards() {
@@ -2781,16 +2782,84 @@ function learnTermCards() {
     ${body}</section>`];
 }
 
+// ── 사례 일지: learn_cases.py가 날마다 쌓은 '그날 지수와 원인 후보' (매일 장 마감 뒤 한 줄씩 늘어요)
+const DRIVER_ICON = () => Object.fromEntries(DRIVERS.map((x) => [x.key, x.icon]));
+function learnCaseCard() {
+  const L = DATA.learn_cases && DATA.learn_cases[market];
+  if (!L || !L.length) return "";
+  const ic = DRIVER_ICON(), show = L.slice(0, 12);
+  const row = (c) => {
+    const big = c.causes.filter((x) => x.hit > 1), some = c.causes.filter((x) => x.hit === 1);
+    const tags = [...big, ...some].slice(0, 4).map((x) => `<span class="learn-tag${x.hit > 1 ? " strong" : ""}">${ic[x.key] || ""} ${esc(x.title)}</span>`).join("");
+    const open = LEARN_OPEN.has(`case:${c.day}`);
+    return `<details class="lesson learn-case" data-learn-open="case:${esc(c.day)}"${open ? " open" : ""}><summary><span class="learn-case-d">${md(c.day)}</span>
+      <span class="hm-t"><b>${esc(c.index)} <span class="${sign(c.d1)}">${pct(c.d1, 2)}</span></b><span class="learn-tags">${tags || `<span class="muted">크게 튄 요인 없음</span>`}</span></span></summary>
+      <div class="lesson-body"><ul class="brief">${c.causes.map((x) => `<li>${ic[x.key] || ""} <b>${esc(x.title)}</b> ${esc(x.text)}</li>`).join("") || "<li>원인 후보로 볼 만큼 크게 움직인 숫자가 없었어요. 이런 날은 업종·종목 소식이 더 중요해요.</li>"}</ul>
+        ${(c.strong || []).length ? `<p class="learn-why1">강한 업종 ${c.strong.map((x) => `${esc(x.name)} ${pct(x.r5)}`).join(", ")} · 약한 업종 ${(c.weak || []).map((x) => `${esc(x.name)} ${pct(x.r5)}`).join(", ")}</p>` : ""}
+        ${(c.news || []).map((n) => `<p class="learn-why1">📰 ${/^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title)}</p>`).join("")}
+        <p class="learn-why1">1년 고점 대비 ${pct(c.dd)} · 1주 ${pct(c.w1)}</p></div></details>`;
+  };
+  // 오늘 가장 크게 움직인 원인이 지난 반년 동안 크게 움직인 날엔 지수가 보통 얼마나 움직였나
+  const top = (L[0].causes.find((x) => x.hit > 1) || {}).key;
+  let same = "";
+  if (top) {
+    const days = L.slice(1).filter((c) => c.causes.some((x) => x.key === top && x.hit > 1));
+    if (days.length >= 3) {
+      const avg = days.reduce((a, c) => a + Math.abs(c.d1), 0) / days.length, all = L.reduce((a, c) => a + Math.abs(c.d1), 0) / L.length;
+      const name = (DRIVERS.find((x) => x.key === top) || {}).title || top;
+      same = `<p class="learn-tip">💡 지난 ${L.length}거래일 중 '${esc(name)}'이(가) 크게 움직인 날은 ${days.length}일. 그날 ${esc(L[0].index)}는 평균 ±${(avg * 100).toFixed(1)}% 움직였어요 (모든 날 평균 ±${(all * 100).toFixed(1)}%).
+        ${avg > all * 1.2 ? "이 요인이 움직이는 날은 지수도 더 크게 출렁이는 편이었어요." : "이 요인만으로 지수가 크게 출렁이진 않았어요."}</p>`;
+    }
+  }
+  return `<section class="card" id="learn-cases"><h2>📒 사례 일지 <small>최근 ${L.length}거래일 · 매일 늘어요</small></h2>${same}${show.map(row).join("")}
+    <p class="muted note" style="margin:10px 0 0">장 마감 뒤마다 그날 지수 움직임과 같은 때 크게 움직인 숫자(금리·환율·유가·반도체·해외 증시·VIX·큰 발표)를 한 줄씩 적어 둬요. 국장은 그 전날 밤 미국 자료로 맞춰 봐요. 원인 후보일 뿐이에요.</p></section>`;
+}
+
+// ── 전문가 리포트: reading.py가 매일 받은 증권사 무료 리포트(PDF) 목록. 고른 묶음은 이 폰에 기억해요
+let readCat = "all";
+try { readCat = localStorage.getItem("read_cat") || "all"; } catch (e) { /* 처음 */ }
+const READ_Q = ["핵심 주장이 뭔가요? 한 줄로 적어 봐요", "그 주장을 받치는 숫자·근거는?", "어떤 전제(금리·환율·수요)를 깔고 있나요?", "그 전제가 바뀌면 결론이 틀리나요?",
+  "지금 주가·금리·환율이 이미 그 이야기를 반영했나요?", "이득 보는 업종과 손해 보는 업종은?", "반대 의견은 뭐가 있을까요?", "쓴 날 뒤에 새로 나온 자료로 결론이 바뀌나요?"];
+function learnReadCards() {
+  const R = DATA.reading, cats = (R && R.cats) || [];
+  const items = (R && R.items) || {};
+  const all = cats.flatMap(([k, n]) => (items[k] || []).map((x) => ({ ...x, cat: n }))).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const list = readCat === "all" ? all : (items[readCat] || []).map((x) => ({ ...x, cat: (cats.find((c) => c[0] === readCat) || [])[1] }));
+  const li = (x) => {
+    const url = /^https:\/\//.test(x.pdf || "") ? x.pdf : /^https:\/\//.test(x.link || "") ? x.link : "";
+    const t = url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title);
+    return `<li><div class="l"><div class="name news-t"><span class="badge">${esc(x.sector || x.cat || "")}</span> ${t}</div>
+      <div class="meta">${esc(x.broker || "증권사 미상")} · ${md(x.date)}${x.pdf ? " · PDF" : ""}</div></div></li>`;
+  };
+  const chips = `<div class="chips">${[["all", "전체"], ...cats].map(([k, n]) => `<button type="button" data-read-cat="${k}" aria-pressed="${k === readCat}">${esc(n)}</button>`).join("")}</div>`;
+  const body = !R ? `<p class="empty">리포트 목록을 아직 못 받았어요. 매일 장 마감 뒤 받아요.</p>`
+    : list.length ? `<ul class="list">${list.slice(0, 15).map(li).join("")}</ul>${list.length > 15 ? `<details class="more-list"${LEARN_OPEN.has(`read:${readCat}`) ? " open" : ""} data-learn-open="read:${readCat}"><summary>${list.length - 15}개 더 보기</summary><ul class="list">${list.slice(15).map(li).join("")}</ul></details>` : ""}`
+    : `<p class="empty">이 묶음엔 최근 리포트가 없어요.</p>`;
+  return [`<section class="card" id="learn-read"><h2>📑 증권사 무료 리포트 <small>${R ? `${ago(R.updated)} 받음 · 매일` : "매일 받아요"}</small></h2>
+    ${chips}<div style="margin-top:12px">${body}</div>
+    <p class="muted note" style="margin:10px 0 0">${esc((R && R.source) || "네이버페이 증권 리서치")}에 증권사가 무료로 올린 리포트(PDF)예요. 제목을 누르면 원문이 열려요. 최근 30일 것만 남겨요. 리포트는 그 증권사의 전망·의견이라 사실과 구분해서 읽고, 목표주가는 낙관적인 경우가 많아요.</p></section>`,
+  `<section class="card"><h2>🧠 리포트 읽는 법 <small>질문 8개</small></h2><ol class="learn-chain">${READ_Q.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>
+    <p class="learn-tip">💡 '확인된 사실'(지난 실적·발표된 숫자)과 '전망'(앞으로 이럴 것)과 '의견'(사라·팔라)을 따로 표시하며 읽으면 덜 휘둘려요.</p>
+    ${termChips(["컨센서스", "목표주가", "가이던스", "밸류에이션"])}</section>`];
+}
+// 오늘의 용어: 날짜마다 하나씩 돌아가요 (같은 날엔 같은 말)
+function termOfDay() {
+  const keys = Object.keys(TERMS), day = Math.floor(Date.parse(TODAY()) / 864e5);
+  return keys[((day * 37) % keys.length + keys.length) % keys.length];
+}
+
 function learnView(d) {
-  const cards = learnTab === "drivers" ? learnDriverCards() : learnTab === "cope" ? learnCopeCards() : learnTab === "terms" ? learnTermCards() : learnWhyCards(d);
+  const cards = learnTab === "drivers" ? learnDriverCards() : learnTab === "read" ? learnReadCards() : learnTab === "cope" ? learnCopeCards() : learnTab === "terms" ? learnTermCards() : learnWhyCards(d);
   return [`<section class="card learn-head"><h2>📚 투자 공부 <small>${MK_NAME[market]} 자료로</small></h2>
-    <p class="muted" style="margin:0 0 4px">앱이 모은 자료로 '왜 움직였나'를 매일 새로 풀어 줘요. 사고팔기 신호는 아니에요.</p>${learnTabsBar()}</section>`, ...cards].join("");
+    <p class="muted" style="margin:0 0 4px">앱이 모은 자료로 '왜 움직였나'를 매일 새로 풀어 줘요. 사고팔기 신호는 아니에요.</p>
+    <p class="learn-tod">📌 오늘의 용어 <button type="button" class="learn-term" data-term="${esc(termOfDay())}">${esc(termOfDay())}</button></p>${learnTabsBar()}</section>`, ...cards].join("");
 }
 // 홈 '더 보기' 한 줄: 오늘 지수와 움직인 요인 수
 function learnSummary() {
   const s = idxStory(OWN_IDX[market]);
   const n = driversFor(market).map((x) => driverNow(x)).filter((x) => x && x.hit > 0).length;
-  return s ? `${esc(s.r.name)} ${upDown(s.d1)} 왜? · 원인 후보 ${n}개 · 용어 ${Object.keys(TERMS).length}개` : `용어 ${Object.keys(TERMS).length}개 · 대처법`;
+  const R = DATA.reading, r = R && R.items ? Object.values(R.items).flat().filter((x) => x.date === TODAY()).length : 0;
+  return `${s ? `${esc(s.r.name)} ${upDown(s.d1)} 왜? · 원인 후보 ${n}개` : "대처법"}${r ? ` · 오늘 리포트 ${r}개` : ""} · 오늘의 용어 ${esc(termOfDay())}`;
 }
 function bindLearn() {
   const app = $("#app");
@@ -2819,6 +2888,11 @@ function bindLearn() {
     perfTabKey = b.dataset.learnTool;
     try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
     go("tools");
+  }));
+  app.querySelectorAll("[data-read-cat]").forEach((b) => b.addEventListener("click", () => {
+    readCat = b.dataset.readCat;
+    try { localStorage.setItem("read_cat", readCat); } catch (e) { /* 이번만 기억 */ }
+    render();
   }));
   const q = $("#learn-q", app);
   if (q) q.addEventListener("input", () => {

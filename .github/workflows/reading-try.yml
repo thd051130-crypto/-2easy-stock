@@ -15,5 +15,15 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
+      - run: |
+          python - <<'PY'
+          import reading, re
+          for path in ["market_info_list.naver", "industry_list.naver"]:
+              t = reading.fetch(path)
+              print(len(t), t[:300].replace("\n", " "))
+              i = t.find("type_1")
+              print(t[i:i+2500])
+              print("ROWS", len(reading.parse(t, "market")))
+          PY
       - run: python reading.py --out /tmp/r.json
       - run: python -c "import json;d=json.load(open('/tmp/r.json'));[print(k, x) for k in d['items'] for x in d['items'][k][:3]]"

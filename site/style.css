@@ -997,3 +997,15 @@ details.lesson[open] > summary::after { transform: rotate(90deg); }
 .learn-math { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
 .learn-group h3.brief-h { margin-top: 16px; }
 #learn-terms .search { margin-bottom: 4px; }
+.learn-tod { margin: 6px 0 2px; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.learn-case > summary { padding: 10px 0; }
+.learn-case-d { flex: none; width: 44px; font-size: 13px; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.learn-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.learn-tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); white-space: nowrap; }
+.learn-tag.strong { background: var(--wait-bg); color: var(--wait-fg); font-weight: 700; }
+details.learn-quiz { margin-top: 10px; border-radius: var(--radius-s); background: var(--surface-0); padding: 8px 10px; font-size: 13px; line-height: 1.5; }
+details.learn-quiz summary { cursor: pointer; color: var(--text-primary); list-style: none; }
+details.learn-quiz summary::-webkit-details-marker { display: none; }
+.learn-quiz-open { color: var(--accent); font-weight: 600; white-space: nowrap; }
+details.learn-quiz[open] .learn-quiz-open { display: none; }
+details.learn-quiz p { margin: 6px 0 0; color: var(--text-secondary); }
