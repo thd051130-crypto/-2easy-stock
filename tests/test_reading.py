@@ -2,50 +2,46 @@ import json
 
 import reading
 
-PAGE = """<table class="type_1"><tr><th>제목</th><th>증권사</th></tr>
-<tr><td><a href="market_info_read.naver?nid=1&amp;page=1">코스피 반등 시도</a></td><td>OO증권</td>
-<td class="file"><a href="https://stock.pstatic.net/stock-research/market/1/a.pdf" target="_blank"><img alt="PDF"></a></td>
-<td class="date">26.10.24</td><td class="date">120</td></tr>
-<tr><td colspan="5" class="blank"></td></tr>
-<tr><td><a href="market_info_read.naver?nid=2">채권 금리 점검</a></td><td>XX투자증권</td><td class="file"></td>
-<td class="date">26.10.23</td><td class="date">9</td></tr></table>"""
-
-INDUSTRY = """<tr><td><a href="/research/industry_list.naver?upjong=반도체">반도체</a></td>
-<td><a href="industry_read.naver?nid=7">메모리 가격 반등</a></td><td>OO증권</td>
-<td class="file"><a href="https://stock.pstatic.net/x/b.pdf">PDF</a></td><td class="date">26.10.24</td><td class="date">3</td></tr>"""
+DATA = {"hasNext": True, "items": [
+    {"nid": "37912", "title": "마켓레이더 - 코스피 5,400↓", "content": "<p><strong>KOSPI는 2.6% 하락</strong></p><p><br>:META(-7.0%)&nbsp;약세<br>:반대매매 진정</p>",
+     "brokerName": "신한투자증권", "writeDate": "2026-10-23"},
+    {"nid": "1", "title": "", "writeDate": "2026-10-23"},
+    {"nid": "46614", "title": "방어 and Beyond", "content": "<p>음식료</p>", "brokerName": "DS투자증권", "writeDate": "2026-10-23",
+     "analystName": "장지혜", "industryKoreanName": "음식료"},
+]}
 
 
-def test_parse_rows_with_and_without_pdf():
-    out = reading.parse(PAGE, "market")
-    assert [x["title"] for x in out] == ["코스피 반등 시도", "채권 금리 점검"]
-    assert out[0]["broker"] == "OO증권" and out[0]["date"] == "2026-10-24"
-    assert out[0]["pdf"].endswith("a.pdf") and out[0]["link"].startswith("https://finance.naver.com/research/market_info_read")
-    assert out[1]["pdf"] == ""
+def test_parse_json_items():
+    a, b = reading.parse(DATA, "market")
+    assert a["id"] == "market:37912" and a["broker"] == "신한투자증권" and a["date"] == "2026-10-23"
+    assert a["summary"] == "KOSPI는 2.6% 하락\n:META(-7.0%) 약세\n:반대매매 진정"
+    assert b["sector"] == "음식료" and b["analyst"] == "장지혜"
 
 
-def test_parse_industry_keeps_sector():
-    [x] = reading.parse(INDUSTRY, "industry")
-    assert x["title"] == "메모리 가격 반등" and x["sector"] == "반도체" and x["broker"] == "OO증권"
+def test_summary_is_cut():
+    long = {"items": [{"nid": "9", "title": "t", "writeDate": "2026-10-23", "content": "가" * 1000}]}
+    [x] = reading.parse(long, "market")
+    assert len(x["summary"]) == reading.SUMMARY + 1 and x["summary"].endswith("…")
 
 
 def test_run_merges_keeps_old_and_survives_failures(tmp_path):
     out = tmp_path / "reading.json"
-    out.write_text(json.dumps({"items": {"market": [dict(title="옛 리포트", date="2099-01-01", pdf="old.pdf")]}}))
+    out.write_text(json.dumps({"items": {"market": [dict(id="market:old", title="옛 리포트", date="2099-01-01")]}}))
 
-    def get(path):
-        if path.startswith("market"):
-            return PAGE
+    def get(cat):
+        if cat == "market":
+            return DATA
         raise RuntimeError("막힘")
     data, fails = reading.run(out, get)
-    assert [x["title"] for x in data["items"]["market"]][:1] == ["옛 리포트"]
-    assert len(data["items"]["market"]) == 3 and len(fails) == 4
+    assert [x["title"] for x in data["items"]["market"]] == ["옛 리포트", "마켓레이더 - 코스피 5,400↓", "방어 and Beyond"]
+    assert len(fails) == 4 and data["home"].startswith("https://stock.naver.com")
 
 
 def test_run_keeps_file_when_nothing_fetched(tmp_path):
     out = tmp_path / "reading.json"
     out.write_text('{"items":{"market":[]}}')
 
-    def get(path):
+    def get(cat):
         raise RuntimeError("막힘")
     data, fails = reading.run(out, get)
     assert out.read_text() == '{"items":{"market":[]}}' and len(fails) == 5

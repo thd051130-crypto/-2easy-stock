@@ -15,19 +15,24 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
+      - run: pip install playwright && python -m playwright install --with-deps chromium
       - run: |
           python - <<'PY'
-          import requests, json
-          H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36", "Referer": "https://stock.naver.com/research"}
-          for c in ["market", "invest", "economy", "industry", "debenture", "bond", "company", "daily", "strategy"]:
-              r = requests.get(f"https://stock.naver.com/api/stockSecurity/researches/v2/{c}?index=0&size=2", headers=H, timeout=20)
-              print("##", c, r.status_code)
-              try:
-                  d = r.json()
-                  it = (d.get("items") or [{}])[0]
-                  print({k: (str(v)[:120]) for k, v in it.items()})
-              except Exception as e:
-                  print(r.text[:200])
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              b = p.chromium.launch()
+              for path in ["research/daily", "research/industry"]:
+                  pg = b.new_page()
+                  pg.goto("https://stock.naver.com/" + path, wait_until="networkidle", timeout=60000)
+                  hrefs = pg.eval_on_selector_all("a[href]", "els => els.map(e => e.getAttribute('href')).filter(h => /research/.test(h))")
+                  print("##", path, sorted(set(hrefs))[:40])
+                  try:
+                      pg.get_by_text("마켓레이더", exact=False).first.click(timeout=5000) if path == "research/daily" else pg.locator("main a, main li, main tr").nth(5).click(timeout=5000)
+                      pg.wait_for_timeout(3000)
+                      print("AFTER CLICK", pg.url, [pp.url for pp in pg.context.pages])
+                      print(pg.eval_on_selector_all("a[href]", "els => els.map(e => e.href).filter(h => /pdf|download|stock-research/i.test(h))")[:10])
+                  except Exception as e:
+                      print("click fail", e)
           PY
       - run: python reading.py --out /tmp/r.json
       - run: python -c "import json;d=json.load(open('/tmp/r.json'));[print(k, x) for k in d['items'] for x in d['items'][k][:3]]"

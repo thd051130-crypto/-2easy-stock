@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""투자 공부 '전문가 리포트': 증권사가 무료로 올린 리포트(PDF) 제목·증권사·날짜·링크를 모아요.
+"""투자 공부 '전문가 리포트': 증권사가 무료로 올린 리포트의 제목·증권사·날짜·첫머리 요약을 모아요.
 
-네이버페이 증권 리서치(finance.naver.com/research) 목록에서 시황·투자 전략·경제·산업·채권 다섯 묶음을 받아요.
-리포트 원문은 증권사가 공개한 PDF라 링크만 저장하고 내용은 옮기지 않아요. 키·계좌 필요 없음.
+네이버페이 증권 리서치(stock.naver.com/research)가 화면에 쓰는 JSON에서 시황·투자 전략·경제·산업·채권 다섯 묶음을 받아요.
+(2026-10 옛 목록 finance.naver.com/research/*_list.naver는 자바스크립트 화면으로 바뀌어 HTML로는 못 읽어요.)
+요약은 증권사가 올린 첫머리 몇 줄만 저장하고, 원문은 네이버 리서치에서 봐요. 키·계좌 필요 없음.
 매일 장 마감 작업(daily 워크플로)이 돌려요. 이 클라우드 작업 환경에선 네이버가 막혀 있어 GitHub Actions에서만 받아져요.
 받은 건 지난 파일과 합쳐 묶음마다 최근 30일·40개까지 쌓아요 (못 받은 날도 예전 목록은 그대로).
 
 사용법:
     python reading.py              # paper/reading.json 갱신
-    python reading.py --html 파일  # 저장해 둔 목록 HTML로 시험 (네트워크 없이)
 """
 
 import argparse
@@ -17,82 +17,64 @@ import html
 import json
 import pathlib
 import re
-import urllib.parse
 
 import requests
 
-BASE = "https://finance.naver.com/research/"
-CATS = [  # (키, 이름, 목록 주소)
-    ("market", "시황", "market_info_list.naver"),
-    ("invest", "투자 전략", "invest_list.naver"),
-    ("economy", "경제 분석", "economy_list.naver"),
-    ("industry", "산업 분석", "industry_list.naver"),
-    ("bond", "채권", "debenture_list.naver"),
+API = "https://stock.naver.com/api/stockSecurity/researches/v2/{cat}?index=0&size={n}"
+CATS = [  # (키, 이름, 네이버 묶음). 종목 리포트(company)는 '매수·목표주가' 의견이라 빼요 (앱은 사고팔기 판단을 안 해요)
+    ("market", "시황", "market"),
+    ("invest", "투자 전략", "invest"),
+    ("economy", "경제 분석", "economy"),
+    ("industry", "산업 분석", "industry"),
+    ("bond", "채권", "debenture"),
 ]
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
-           "Referer": "https://finance.naver.com/research/"}
+           "Referer": "https://stock.naver.com/research"}
+PAGE = 20
+SUMMARY = 360  # 요약 글자 수 (증권사가 올린 첫머리만)
 KEEP_DAYS, KEEP_N = 30, 40
 KST = dt.timezone(dt.timedelta(hours=9))
 OUT = pathlib.Path("paper/reading.json")
 
-ROW = re.compile(r"<tr[^>]*>(.*?)</tr>", re.S | re.I)
-CELL = re.compile(r"<td[^>]*>(.*?)</td>", re.S | re.I)
 TAG = re.compile(r"<[^>]+>")
-HREF = re.compile(r'href="([^"]+)"', re.I)
-DATE = re.compile(r"^(\d{2})\.(\d{2})\.(\d{2})$")
 
 
 def text(s):
-    return re.sub(r"\s+", " ", html.unescape(TAG.sub(" ", s))).strip()
+    s = re.sub(r"<br\s*/?>|</p>", "\n", s or "", flags=re.I)
+    s = html.unescape(TAG.sub("", s)).replace("\xa0", " ")
+    lines = [re.sub(r"\s+", " ", x).strip() for x in s.split("\n")]
+    return "\n".join(x for x in lines if x)
 
 
-def parse(page, cat):
-    """목록 HTML → [{title, broker, date, pdf, link, sector?}]. 표 모양이 조금 바뀌어도 되게 칸 내용으로 찾아요."""
+def parse(data, cat):
+    """네이버 리서치 JSON → [{id, title, broker, date, summary, analyst?, sector?}]."""
     out = []
-    for row in ROW.findall(page):
-        cells = CELL.findall(row)
-        if len(cells) < 4:
+    for it in (data or {}).get("items") or []:
+        title, date = (it.get("title") or "").strip(), it.get("writeDate") or ""
+        if not title or not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
             continue
-        title = link = pdf = date = None
-        rest = []
-        for c in cells:
-            hrefs = HREF.findall(c)
-            t = text(c)
-            read = next((h for h in hrefs if "_read.naver" in h), None)
-            pdfh = next((h for h in hrefs if h.lower().split("?")[0].endswith(".pdf")), None)
-            if read and not title:
-                title, link = t, urllib.parse.urljoin(BASE, html.unescape(read))
-            elif pdfh:
-                pdf = urllib.parse.urljoin(BASE, html.unescape(pdfh))
-            elif DATE.match(t) and not date:
-                m = DATE.match(t)
-                date = f"20{m.group(1)}-{m.group(2)}-{m.group(3)}"
-            elif t and not t.isdigit():
-                rest.append(t)
-        if not (title and date):
-            continue
-        # 산업 분석은 [업종, 제목, 증권사, …], 나머지는 [제목, 증권사, …]
-        item = dict(title=title, date=date, link=link, pdf=pdf or "")
-        if cat == "industry" and len(rest) >= 2:
-            item["sector"], item["broker"] = rest[0], rest[1]
-        elif rest:
-            item["broker"] = rest[-1] if cat == "industry" else rest[0]
+        body = text(it.get("content"))
+        item = dict(id=f"{cat}:{it.get('nid')}", title=title, date=date, broker=it.get("brokerName") or "",
+                    summary=body[:SUMMARY] + ("…" if len(body) > SUMMARY else ""))
+        if it.get("analystName"):
+            item["analyst"] = it["analystName"]
+        if it.get("industryKoreanName"):
+            item["sector"] = it["industryKoreanName"]
         out.append(item)
     return out
 
 
-def fetch(path):
-    r = requests.get(BASE + path, headers=HEADERS, timeout=20)
+def fetch(cat):
+    r = requests.get(API.format(cat=cat, n=PAGE), headers=HEADERS, timeout=20)
     r.raise_for_status()
-    r.encoding = "euc-kr"  # 네이버 금융은 아직 EUC-KR
-    return r.text
+    return r.json()
 
 
 def merge(old, new, today):
     cut = (dt.date.fromisoformat(today) - dt.timedelta(days=KEEP_DAYS)).isoformat()
     seen, out = set(), []
     for x in sorted([*new, *(old or [])], key=lambda x: x.get("date") or "", reverse=True):
-        key = x.get("pdf") or x.get("link") or x["title"]
+        key = x.get("id") or x["title"]
         if key in seen or (x.get("date") or "") < cut:
             continue
         seen.add(key)
@@ -106,11 +88,12 @@ def run(out=OUT, get=fetch):
     got, fails = {}, []
     for key, name, path in CATS:
         try:
-            got[key] = parse(get(path), key)
+            got[key] = parse(get(path), path)
         except Exception as e:  # 한 묶음이 안 돼도 나머지는 받아요
             fails.append(f"{name}: {e}")
             got[key] = []
     data = {"updated": dt.datetime.now(KST).isoformat(timespec="minutes"), "source": "네이버페이 증권 리서치",
+            "home": "https://stock.naver.com/research",
             "cats": [[k, n] for k, n, _ in CATS],
             "items": {k: merge((old.get("items") or {}).get(k), got[k], today) for k, _, _ in CATS}}
     if not any(got.values()):  # 하나도 못 받았으면 지난 파일을 그대로 둬요
@@ -123,12 +106,7 @@ def run(out=OUT, get=fetch):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", type=pathlib.Path, default=OUT)
-    parser.add_argument("--html", type=pathlib.Path, help="저장해 둔 목록 HTML로 시험 (시황 묶음으로 읽어요)")
     args = parser.parse_args()
-    if args.html:
-        for x in parse(args.html.read_text(encoding="euc-kr", errors="replace"), "market")[:10]:
-            print(x)
-        return
     data, fails = run(args.out)
     for k, n in (data.get("cats") or []):
         items = (data.get("items") or {}).get(k) or []
