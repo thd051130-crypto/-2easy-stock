@@ -33,7 +33,6 @@ import os
 import pathlib
 import shutil
 
-import commands
 import flows
 import inbox
 import industry_map
@@ -85,7 +84,7 @@ def build(paper_dir):
                 bot=watchlist.bot_username(paper_dir), health=read_json(paper_dir / "health.json"),
                 macro=read_json(paper_dir / "macro.json"), policies=policies.payload(paper_dir),
                 calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), events=read_json(paper_dir / "events.json"),
-                world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
+                world=read_json(paper_dir / "world.json"),
                 report=read_json(paper_dir / "report.json"), weekly=read_json(paper_dir / "weekly.json"),
                 # 30분마다 news 워크플로가 live 브랜치에 올리는 장중 뉴스 (앱이 바로 읽어요)
                 news_url=f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY') or REPO}/live/news.json")

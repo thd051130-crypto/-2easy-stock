@@ -2285,7 +2285,6 @@ const PERF_TABS = [
   ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
   ["stress", "폭락 대비", (d) => [stressCard(d)]],
   ["goal", "목표", () => [goalCard()]],
-  ["memo", "메모·점검", () => [memoCard(), healthCard()]],
 ];
 let perfTabKey = "sav";
 try { perfTabKey = localStorage.getItem("tools_tab") || "sav"; } catch (e) { /* 처음 */ }
@@ -3055,7 +3054,7 @@ function indHelp() {
   return `<ul class="help">${items.join("")}<li>보조지표는 지금 보는 캔들로 계산해요. 주봉이면 20주 평균, 14주 RSI예요.</li></ul>`;
 }
 
-// ---------------------------------------------------------------- 내 자산 합계·실전 전환·ETF·메모·점검
+// ---------------------------------------------------------------- 주간 점검 한 줄
 
 // 지난 주간 점검에서 문제가 있었으면 홈에 한 줄
 function healthLine() {
@@ -4332,32 +4331,6 @@ function quietVolumeCard(d) {
     ${rows ? `<ul class="list">${rows}</ul>${more}` : `<p class="empty">오늘은 조건에 맞는 종목이 없어요.</p>`}
     <p class="muted note" style="margin:10px 0 0">주가는 ±${Math.round(q.max_move * 100)}% 안인데 거래량이 평소(${q.base}일 평균)의 ${q.min_ratio}배 이상인 종목이에요.
       조용히 사 모으는 중인지 팔아 넘기는 중인지는 숫자만으론 몰라요. 참고용이고 매매 규칙은 안 바꿔요.</p></section>`;
-}
-
-// 내 판단 기록장 (텔레그램 '메모 삼성전자 산다')
-function memoCard() {
-  const m = DATA.memos;
-  if (!m) {
-    return `<section class="card"><h2>내 판단 기록장</h2><p class="empty">텔레그램 봇에 '메모 삼성전자 산다 (이유)'처럼 보내면 20거래일 뒤 맞혔는지 여기서 보여 줘요.</p></section>`;
-  }
-  const s = m.score;
-  const head = s ? `<div class="stats">
-      <div class="stat"><span>맞힌 비율</span><b>${Math.round(s.hit * 100)}%</b></div>
-      <div class="stat"><span>'산다' 평균</span><b class="${sign(s.buy_avg)}">${s.buy_avg == null ? "-" : pct(s.buy_avg)}</b></div>
-      <div class="stat"><span>'안 산다' 평균</span><b class="${sign(s.skip_avg)}">${s.skip_avg == null ? "-" : pct(s.skip_avg)}</b></div>
-    </div>` : `<p class="muted">아직 20거래일 지난 판단이 없어요.</p>`;
-  const items = m.recent.map((x) => `<li><div class="l"><div class="name">${esc(x.name)} ${x.view > 0 ? "산다" : "안 산다"}</div>
-      <div class="meta">${md(x.date)} · ${money(x.market, x.price)}${x.note ? ` · ${esc(x.note)}` : ""}</div></div>
-      <div class="r ${x.ret == null ? "" : sign(x.ret)}">${x.ret == null ? "-" : pct(x.ret)}</div></li>`).join("");
-  return `<section class="card"><h2>내 판단 기록장 <small>${m.count}개</small></h2>${head}<ul class="list" style="margin-top:12px">${items}</ul></section>`;
-}
-
-function healthCard() {
-  const h = DATA.health;
-  if (!h) return "";
-  const rows = h.workflows.map((w) => `<li><div class="l"><div class="name">${w.ok ? "✅" : "⚠️"} ${esc(w.label)}</div>
-      <div class="meta">성공 ${w.success}회${w.expected ? `/${w.expected}회 예정` : ""}${w.failure ? ` · 실패 ${w.failure}회` : ""}${w.github_skipped ? ` · GitHub 사정으로 못 돈 것 ${w.github_skipped}회` : ""}</div></div></li>`).join("");
-  return `<section class="card"><h2>자동 실행 점검 <small>${md(h.checked.slice(0, 10))} 기준 지난 7일</small></h2><ul class="list">${rows}</ul></section>`;
 }
 
 // ---------------------------------------------------------------- 종목 화면 (차트 + 재무제표)
