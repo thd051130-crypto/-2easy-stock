@@ -326,26 +326,55 @@ const tapSig = (el) => {
   const data = el.getAttributeNames().filter((a) => a.startsWith("data-")).map((a) => `${a}=${el.getAttribute(a)}`).join("&");
   return `${el.tagName}|${data || (el.textContent || "").trim().slice(0, 40)}`;
 };
-// 같은 표시의 버튼이 여럿이면(예: '자세히') 몇 번째였는지로 찾아요
-const tapAll = (sig) => [...document.querySelectorAll(`#app ${sig.split("|")[0]}`)].filter((x) => tapSig(x) === sig);
+// 같은 표시의 버튼이 여럿이면(예: '자세히') 몇 번째였는지로 찾아요.
+// 같은 버튼이 다른 칸에도 있으면(예: 관심 화면 ★가 내 관심종목·전체 종목 두 곳) 누른 칸(id가 있는 가장 가까운 칸) 안에서만 찾아요.
+// 안 그러면 ★를 넣는 순간 위 칸에 생긴 같은 ★ 자리로 화면이 올라가요 (사용자 2026-10-24)
+const tapBox = (el) => { const b = el.parentElement && el.parentElement.closest("#app [id]"); return b ? b.id : ""; };
+const tapAll = (sig, box) => {
+  const root = (box && document.getElementById(box)) || $("#app");
+  return root ? [...root.querySelectorAll(sig.split("|")[0])].filter((x) => tapSig(x) === sig) : [];
+};
 document.addEventListener("click", (e) => {
   const el = e.target.closest && e.target.closest("#app button, #app summary, #app li, #app [role=button]");
   if (!el) { lastTap = null; return; }
-  const sig = tapSig(el);
-  lastTap = { sig, idx: tapAll(sig).indexOf(el), top: el.getBoundingClientRect().top, at: performance.now() };
+  const sig = tapSig(el), box = tapBox(el);
+  lastTap = { sig, box, idx: tapAll(sig, box).indexOf(el), top: el.getBoundingClientRect().top, at: performance.now() };
 }, true);
 function keepTap() {
   const t = lastTap;
   if (!t || performance.now() - t.at > 1000) return;
   lastTap = null;
   const fix = () => {
-    const el = tapAll(t.sig)[t.idx];
+    const el = tapAll(t.sig, t.box)[t.idx];
     if (el) { const dy = el.getBoundingClientRect().top - t.top; if (Math.abs(dy) > 1) window.scrollBy(0, dy); }
   };
   fix();
   requestAnimationFrame(fix);
   setTimeout(fix, 250);
 }
+// 페이지 아래쪽에서 칸이 줄면(접기, ★ 빼기, 다시 그리기) 브라우저가 화면을 끌어올려요. 그래서 높이를 붙잡아 두고,
+// 1.5초 뒤부터는 보던 화면 아래에 빈칸이 안 보일 때(위로 올려 볼 때) 놓아요 (사용자 2026-10-24 '화면 돌아가지 않게')
+let holdReady = false;
+function holdHeight() {
+  const app = $("#app");
+  if (!app) return;
+  app.style.minHeight = `${Math.max(app.offsetHeight, parseFloat(app.style.minHeight) || 0)}px`;
+  holdReady = false;
+  clearTimeout(holdH);
+  holdH = setTimeout(() => { holdReady = true; releaseHold(); }, 1500);
+}
+function releaseHold() {
+  const app = $("#app");
+  if (!holdReady || !app || !app.style.minHeight) return;
+  const last = app.lastElementChild;
+  if (!last || last.getBoundingClientRect().bottom >= window.innerHeight) { app.style.minHeight = ""; holdReady = false; }
+}
+window.addEventListener("scroll", releaseHold, { passive: true });
+// 펼친 칸(details)을 접기 직전에 높이를 붙잡아요
+document.addEventListener("click", (e) => {
+  const sum = e.target.closest && e.target.closest("#app summary");
+  if (sum && sum.parentElement && sum.parentElement.open) holdHeight();
+}, true);
 function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.market === market)));
   const sb = $(".search-btn");
@@ -366,7 +395,8 @@ function render() {
   const view = `${screen}|${market}|${stockCode}`, keepAt = view === lastView ? window.scrollY : null;
   lastView = view;
   // 다시 그리는 동안 차트·재무제표가 잠깐 비어 화면이 짧아지면 위치가 밀려요. 그동안만 높이를 붙잡아 둬요
-  if (keepAt != null) { app.style.minHeight = `${app.offsetHeight}px`; clearTimeout(holdH); holdH = setTimeout(() => { app.style.minHeight = ""; }, 1500); }
+  if (keepAt != null) holdHeight();
+  else { clearTimeout(holdH); app.style.minHeight = ""; holdReady = false; }  // 다른 화면은 붙잡은 높이 없이
   app.innerHTML = VIEWS[screen](d).join("");
   if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
   if (screen === "home") tidyHomeMore(app);
@@ -1466,8 +1496,8 @@ function bindResults(el) {
     const input = $("#search-input");
     if (input) input.value = searchQuery;
     const list = $("#search-results");
-    if (list) { list.innerHTML = searchResults(); bindResults(list); }
-    window.scrollTo(0, 0);
+    if (list) { holdHeight(); list.innerHTML = searchResults(); bindResults(list); }
+    // 화면은 그 자리 그대로예요. 결과는 누른 칩 자리부터 보여요 (사용자 규칙 '버튼 눌러도 화면 고정')
   }));
   el.querySelectorAll("[data-tsec]").forEach((b) => b.addEventListener("click", () => {
     const [m, name] = b.dataset.tsec.split("/");
@@ -1778,7 +1808,7 @@ function setMapFocus(name, back = false) {
   const all = $("[data-mapall]");
   if (all) all.hidden = !name;
   const old = $("#map-detail");
-  if (old) { old.innerHTML = mapDetailCard(); bindMapDetail(old); }
+  if (old) { holdHeight(); old.innerHTML = mapDetailCard(); bindMapDetail(old); }
 }
 function bindMapDetail(el) {
   el.querySelectorAll("[data-mapgo]").forEach((b) => b.addEventListener("click", () => {
@@ -3256,8 +3286,9 @@ function bindSavings() {
       const k = p.dataset.savP, at = SAV.picks.indexOf(k);
       if (at >= 0) SAV.picks.splice(at, 1); else SAV.picks.push(k);
     } else return;
-    // 위에 고른 종목 줄이 늘거나 줄어도 누른 버튼(검색창 아래)이 제자리에 있게 화면을 맞춰요
-    const q = $("#sav-q"), top = q && q.getBoundingClientRect().top;
+    // 위에 고른 종목 줄이 늘거나 줄어도 누른 버튼(검색창 아래)이 제자리에 있게 화면을 맞춰요.
+    // 고른 종목 줄의 ×를 눌렀으면 그 줄이 제자리예요 (검색창에 맞추면 화면이 올라가요)
+    const q = e.target.closest("#sav-picked") ? $("#sav-picked") : $("#sav-q"), top = q && q.getBoundingClientRect().top;
     redrawPicks(); refresh();
     if (q) window.scrollBy(0, q.getBoundingClientRect().top - top);
   });
