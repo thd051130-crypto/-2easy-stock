@@ -1365,33 +1365,57 @@ function weeklyCards() {
   if (!w) return [`<section class="card"><p class="empty">아직 주간 리포트가 없어요. 토요일 아침에 만들어요.</p></section>`];
   const flag = REPORT_FLAG[market], ix = w.index || {}, sec = (w.sectors || {})[market], mv = (w.movers || {})[market];
   const ev = w.events || {}, nx = w.next || {};
-  const head = `<section class="card"><h2>🗞 주간 리포트 <small>${wkRange(w)} 한 주</small></h2>
-    <ul class="brief brief-top">${(w.headline || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></section>`;
+  const facts = ix.facts || [], fact = (n) => facts.find((f) => f.name === n);
+  const big = ["코스피", "코스닥", "S&P500", "나스닥"].map(fact).filter(Boolean);
+  const chip = (v, d = 1) => `<span class="wk-pill ${sign(v)}">${pct(v, d)}</span>`;
+  // 1. 한눈에: 큰 지수 네 개 1주 등락 + 요일별 막대 + 세 줄 요약
+  const tiles = big.map((f) => `<div class="wk-tile ${sign(f.w1)}"><span>${esc(f.name)}</span><b>${pct(f.w1)}</b>
+    <small>${(f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })} · 1달 ${pct(f.m1)}</small></div>`).join("");
   const dm = (ix.days || {})[market];
-  const days = dm && dm.days.length ? `<div class="wk-days" role="img" aria-label="${esc(dm.index)} 요일별 등락">${dm.days.map(([d, v]) =>
-    `<div class="wk-day"><span>${esc(d)}</span><b class="${sign(v)}">${pct(v)}</b><i class="${sign(v)}" style="height:${Math.min(100, Math.abs(v) * 2500).toFixed(0)}%"></i></div>`).join("")}</div>` : "";
-  const facts = (ix.facts || []).map((f) => f.kind === "rate"
-    ? `<b>${esc(f.name)}</b> ${f.last.toFixed(2)}% <small class="muted">1주 ${f.w1 == null ? "-" : `${f.w1 > 0 ? "+" : ""}${f.w1.toFixed(2)}%p`}</small>`
-    : `<b>${esc(f.name)}</b> ${f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })} ${rpChg(f.w1, 2)} <small class="muted">1달 ${pct(f.m1)}</small>`);
-  const idxCard = `<section class="card"><h2>🌏 이번 주 지수 <small>1주 등락</small></h2>
-    ${dm ? `<p class="muted" style="margin:0 0 6px">${flag} ${esc(dm.index)} 요일별 <b class="${sign(dm.w1)}">${pct(dm.w1)}</b></p>${days}` : ""}
-    <ul class="brief">${facts.map((x) => `<li>${x}</li>`).join("")}</ul></section>`;
-  const secs = sec ? [...sec.up.map((x) => `상위 <b>${esc(x.name)}</b> ${rpChg(x.r5)}${x.best ? ` <small class="muted">대표 ${esc(x.best)}</small>` : ""}`),
-    ...sec.down.map((x) => `하위 <b>${esc(x.name)}</b> ${rpChg(x.r5)}${x.worst ? ` <small class="muted">대표 ${esc(x.worst)}</small>` : ""}`)] : [];
-  const stock = (x, up) => `${up ? "▲" : "▼"} <span data-stock="${esc(x.code)}" role="button"><b>${esc(x.name)}</b></span> ${rpChg(x.r5)}${x.why ? `<br><small class="muted">${esc(x.why)}</small>` : ""}`;
-  const movers = mv ? [...mv.up.map((x) => stock(x, true)), ...mv.down.map((x) => stock(x, false))] : [];
-  const evRows = [...(ev.shocks || []).slice(0, 5).map((s) => `⚡ ${wkDay(s.at)} ${esc(s.at.slice(11, 16))} <b>${esc(s.label)}</b> ${rpChg(s.move)}${s.news ? `<br><small class="muted">${esc(s.news)}</small>` : ""}`),
-    ...(ev.done || []).slice(0, 8).map((e) => `${wkDay(e.date)} ${e.flag || ""} <b>${esc(e.title)}</b>${e.actual ? ` 실제 ${esc(e.actual)}` : ""}${e.forecast ? ` <small class="muted">예상 ${esc(e.forecast)}</small>` : ""}`),
-    ...(ev.regime ? [`경기 판정 <b>${esc(ev.regime)}</b>${ev.prev_regime && ev.prev_regime !== ev.regime ? ` <small class="muted">전엔 ${esc(ev.prev_regime)}</small>` : ` <small class="muted">그대로</small>`}${(ev.warns || []).length ? ` · ⚠️ ${esc(ev.warns.join(", "))}` : ""}`] : [])];
-  const nxRows = [...(nx.big || []).map((e) => [e.date, `${wkDay(e.date)} ${esc(e.time)} ${e.flag || ""} <b>${esc(e.title)}</b>${e.forecast ? ` <small class="muted">예상 ${esc(e.forecast)}</small>` : ""}`]),
-    ...(nx.cal || []).map((c) => [c.date, `${wkDay(c.date)} ${REPORT_FLAG[c.market] || ""} <b>${esc(c.title)}</b>`]),
-    ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => [c.date, `${wkDay(c.date)} ${esc(c.title)}${c.mine ? " ⭐" : ""}`])]
-    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map((x) => x[1]);
-  return [head, idxCard,
-    rpSection("🏭", "이번 주 업종", `${flag} 5일 흐름 상위·하위`, secs),
-    rpSection("🔎", "이번 주 종목", `${flag} 5일 동안 많이 움직인 종목`, movers),
-    rpSection("⚡", "이번 주 사건", "지수 급변·발표 결과·경기", evRows.length ? evRows : ["큰 사건 없음"]),
-    rpSection("🗓", "다음 주 일정", nx.start ? `${wkDay(nx.start)}~${wkDay(nx.end)}` : "", nxRows.length ? nxRows : ["아직 잡힌 큰 일정 없음"]),
+  const peak = dm && dm.days.length ? Math.max(...dm.days.map(([, v]) => Math.abs(v)), 0.005) : 1;
+  const days = dm && dm.days.length ? `<p class="wk-sub">${flag} ${esc(dm.index)} 요일별</p><div class="wk-days" role="img" aria-label="${esc(dm.index)} 요일별 등락">${dm.days.map(([d, v]) =>
+    `<div class="wk-day"><div class="wk-col"><i class="${sign(v)}" style="height:${(Math.abs(v) / peak * 100).toFixed(0)}%;${v < 0 ? "top:50%" : "bottom:50%"}"></i></div><b class="${sign(v)}">${pct(v)}</b><span>${esc(d)}</span></div>`).join("")}</div>` : "";
+  const icons = ["🏭", "🗓", "⚡"];  // 첫 줄(지수)은 위 타일과 같아서 빼요
+  const head = `<section class="card wk-hero"><h2>🗞 주간 리포트 <small>${wkRange(w)}</small></h2>
+    <div class="wk-tiles">${tiles}</div>${days}
+    <ul class="wk-sum">${(w.headline || []).filter((x) => !x.startsWith("이번 주:")).map((x, i) => `<li><span aria-hidden="true">${icons[i] || "•"}</span><p>${esc(x)}</p></li>`).join("")}</ul></section>`;
+  // 2. 나머지 지표: 두 줄 격자
+  const rest = facts.filter((f) => !big.includes(f)).map((f) => {
+    const val = f.kind === "rate" ? `${f.last.toFixed(2)}%` : f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+    const chg = f.kind === "rate" ? `<span class="wk-pill ${sign(f.w1)}">${f.w1 == null ? "-" : `${f.w1 > 0 ? "+" : ""}${f.w1.toFixed(2)}%p`}</span>` : chip(f.w1);
+    return `<div class="wk-cell"><span>${esc(f.name.replace(/ \(.+\)$/, ""))}</span><b>${val}</b>${chg}</div>`;
+  }).join("");
+  const restCard = rest ? `<section class="card"><h2>🌏 다른 지표 <small>1주 등락</small></h2><div class="wk-grid">${rest}</div></section>` : "";
+  // 3. 업종: 0을 가운데 둔 막대
+  const rows = sec ? [...sec.up, ...sec.down.slice().reverse()] : [];
+  const top = Math.max(...rows.map((x) => Math.abs(x.r5 || 0)), 0.01);
+  const secCard = rows.length ? `<section class="card"><h2>🏭 이번 주 업종 <small>${flag} 5일 상위·하위</small></h2>
+    <ul class="wk-bars">${rows.map((x, i) => `${i === sec.up.length ? `<li class="wk-gap" aria-hidden="true"></li>` : ""}<li><div class="wk-bl"><b>${esc(x.name)}</b><small>${esc((x.r5 >= 0 ? x.best : x.worst) || "")}</small></div>
+      <div class="wk-track"><i class="${sign(x.r5)}" style="width:${(Math.abs(x.r5) / top * 50).toFixed(1)}%"></i></div><b class="wk-bv ${sign(x.r5)}">${pct(x.r5)}</b></li>`).join("")}</ul></section>` : "";
+  // 4. 종목: 이름 + 이유, 오른쪽 색 알약
+  const stock = (x) => `<li data-stock="${esc(x.code)}" role="button"><div class="l"><div class="name">${esc(x.name)}</div>${x.why ? `<div class="meta">${esc(x.why)}</div>` : ""}</div><div class="r">${chip(x.r5)}</div></li>`;
+  const mvCard = mv && (mv.up.length || mv.down.length) ? `<section class="card"><h2>🔎 이번 주 종목 <small>${flag} 5일 동안 많이 움직임</small></h2>
+    ${mv.up.length ? `<p class="wk-sub up">▲ 많이 오른 종목</p><ul class="list wk-list">${mv.up.map(stock).join("")}</ul>` : ""}
+    ${mv.down.length ? `<p class="wk-sub down">▼ 많이 내린 종목</p><ul class="list wk-list">${mv.down.map(stock).join("")}</ul>` : ""}</section>` : "";
+  // 5. 사건: 시간 줄
+  const tl = [...(ev.shocks || []).slice(0, 5).map((s) => ({ t: s.at, h: `⚡ <b>${esc(s.label)}</b> 급변 ${chip(s.move)}`, sub: s.news })),
+    ...(ev.done || []).slice(0, 8).map((e) => ({ t: e.date, h: `${e.flag || ""} <b>${esc(e.title)}</b>${e.actual ? ` 실제 ${esc(e.actual)}` : ""}`, sub: e.forecast ? `예상 ${e.forecast}` : "" }))]
+    .sort((a, b) => (a.t < b.t ? -1 : 1));
+  const reg = ev.regime ? `<p class="wk-reg">🌡️ 경기 판정 <b>${esc(ev.regime)}</b>${ev.prev_regime && ev.prev_regime !== ev.regime ? ` <span class="badge bad">${esc(ev.prev_regime)}에서 바뀜</span>` : ` <span class="badge">그대로</span>`}${(ev.warns || []).length ? `<br><small class="muted">⚠️ ${esc(ev.warns.join(", "))}</small>` : ""}</p>` : "";
+  const evCard = `<section class="card"><h2>⚡ 이번 주 사건 <small>지수 급변·발표 결과</small></h2>
+    ${tl.length ? `<ol class="wk-tl">${tl.map((x) => `<li><time>${wkDay(x.t)}${x.t.length > 10 ? `<br>${esc(x.t.slice(11, 16))}` : ""}</time><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ol>` : `<p class="empty">큰 사건 없음</p>`}${reg}</section>`;
+  // 6. 다음 주: 요일별 묶음 + 종류 표시
+  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"] };
+  const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
+    ...(nx.cal || []).map((c) => ({ d: c.date, k: c.kind, h: `${REPORT_FLAG[c.market] || ""} ${esc(c.title)}`, sub: c.note || "" })),
+    ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => ({ d: c.date, k: "earn", h: `${esc(c.title.replace(/ 실적 발표$/, ""))}${c.mine ? " ⭐" : ""}`, sub: "" }))];
+  const byDay = {};
+  items.forEach((x) => (byDay[x.d] = byDay[x.d] || []).push(x));
+  const nxCard = `<section class="card"><h2>🗓 다음 주 일정 <small>${nx.start ? `${wkDay(nx.start)}~${wkDay(nx.end)}` : ""}</small></h2>
+    ${items.length ? Object.keys(byDay).sort().map((d) => `<div class="wk-dayg"><p class="wk-dh">${wkDay(d)}</p><ul>${byDay[d].map((x) =>
+      `<li><span class="badge ${TAG[x.k] ? TAG[x.k][1] : ""}">${TAG[x.k] ? TAG[x.k][0] : "일정"}</span><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ul></div>`).join("")
+    : `<p class="empty">아직 잡힌 큰 일정 없음</p>`}</section>`;
+  return [head, secCard, mvCard, evCard, nxCard, restCard,
     `<section class="card"><p class="muted" style="margin:0">토요일 아침에 한 주를 묶어 텔레그램으로도 보내요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.
       위 국장·미장 탭으로 업종·종목을 바꿔 봐요.</p></section>`];
 }
