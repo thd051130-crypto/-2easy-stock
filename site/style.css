@@ -812,6 +812,14 @@ button.hm:active .hm-t > b { color: var(--accent); }
 .hot-card { border-color: var(--up); }
 .hot-card li { align-items: center; }
 .hot-card li.read { opacity: .45; }
+.hot-card.all-read { border-color: var(--border); }
+.hot-read-list li { opacity: .7; }
+.hot-card [data-hot-all].armed { background: var(--wait-bg); color: var(--wait-fg); }
+.hot-all-t { font-weight: 600; }
+.undo-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 30;
+  display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 16px; border-radius: 999px; max-width: calc(100% - 32px);
+  background: var(--text-primary); color: var(--surface-1, #fff); font-size: 14px; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+.undo-bar button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700; padding: 6px 8px; min-height: 32px; cursor: pointer; }
 .hot-ok { flex: none; border: 1px solid var(--border); background: var(--surface-0); color: var(--text-secondary); font: inherit; font-size: 13px; border-radius: 999px; padding: 4px 10px; min-height: 32px; cursor: pointer; }
 
 .more-back .back { margin: 0; }
