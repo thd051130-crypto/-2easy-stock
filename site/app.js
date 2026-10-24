@@ -1876,7 +1876,6 @@ function bindMap() {
 
 // ---------------------------------------------------------------- 추천 종목 성과
 
-try { PERF_OPEN = new Set(JSON.parse(localStorage.getItem("perf_open") || "[]")); } catch (e) { /* 처음 */ }
 // 도구 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 적립식 계산기, 고른 건 이 폰에 기억해요
 const PERF_TABS = [
   ["sav", "적립식 계산기", () => [savingsCard()]],
@@ -4592,7 +4591,22 @@ $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"
 $(".map-btn").addEventListener("click", () => {
   if (screen === "map") { mapTrail = []; setMapFocus(""); window.scrollTo(0, 0); } else openMap("");
 });
-document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => go(b.dataset.screen)));
+// 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
+// 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
+function resetFolds() {
+  [HOME_OPEN, POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
+  saveHomeOpen();
+  try { localStorage.setItem("world_open", "0"); } catch (e) { /* 이번만 */ }
+  worldOpen = false; worldPick = null; polMore = false; polJump = null; calAll = false;
+  cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
+}
+document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {
+  resetFolds();
+  if (b.dataset.screen !== screen) { go(b.dataset.screen); return; }
+  lastView = "";  // 지금 화면 버튼을 또 누르면 접어서 다시 그리고 맨 위로
+  window.scrollTo(0, 0);
+  render();
+}));
 window.addEventListener("popstate", () => {
   const h = fromHash();
   if (h.s === "stock" && h.code) stockCode = h.code;
