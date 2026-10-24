@@ -15,17 +15,32 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
+      - run: pip install playwright && python -m playwright install --with-deps chromium
       - run: |
           python - <<'PY'
-          import requests, re
-          H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
-          t = requests.get("https://finance.naver.com/research/market_info_list.naver", headers=H, timeout=20).content.decode("utf-8", "replace")
-          for k in [".pdf", "__NEXT_DATA__", "nid", "/api/", "self.__next_f"]:
-              idx = [m.start() for m in re.finditer(re.escape(k), t)][:3]
-              print("==", k, len(re.findall(re.escape(k), t)))
-              for x in idx[:2]:
-                  print(repr(t[max(0, x - 400): x + 300]))
-          print(sorted(set(re.findall(r'https?://[a-zA-Z0-9.\-]+/[a-zA-Z0-9_/\-]*api[a-zA-Z0-9_/\-]*', t)))[:30])
+          from playwright.sync_api import sync_playwright
+          seen = []
+          with sync_playwright() as p:
+              b = p.chromium.launch()
+              pg = b.new_page()
+              def on(r):
+                  ct = r.headers.get("content-type", "")
+                  if r.request.resource_type in ("xhr", "fetch") or "json" in ct:
+                      body = ""
+                      try:
+                          body = r.text()[:600]
+                      except Exception as e:
+                          body = str(e)
+                      seen.append((r.request.method, r.url, ct, body))
+              pg.on("response", on)
+              pg.goto("https://finance.naver.com/research/market_info_list.naver", wait_until="networkidle", timeout=60000)
+              pg.wait_for_timeout(3000)
+              for m, u, ct, body in seen:
+                  print("##", m, u, ct)
+                  print(body)
+              links = pg.eval_on_selector_all("a", "els => els.map(e => e.href).filter(h => /pdf|research|nid/i.test(h)).slice(0, 15)")
+              print("LINKS", links)
+              print(pg.inner_text("body")[:1500])
           PY
       - run: python reading.py --out /tmp/r.json
       - run: python -c "import json;d=json.load(open('/tmp/r.json'));[print(k, x) for k in d['items'] for x in d['items'][k][:3]]"
