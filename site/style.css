@@ -494,14 +494,12 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .imap .node .flow { paint-order: stroke; stroke: var(--surface-1); stroke-width: 4px; stroke-linejoin: round; font-size: 11px; font-weight: 600; opacity: 0; transition: opacity .3s; font-variant-numeric: tabular-nums; }
 .imap .node .flow.up { fill: var(--up); } .imap .node .flow.down { fill: var(--down); } .imap .node .flow:not(.up):not(.down) { fill: var(--text-muted); }
 .imap.focused .node.near .flow, .imap.focused .node.center .flow { opacity: 1; }
-.imap .node .pill { transition: transform .3s; }
-.imap .node.center .pill { transform: scale(1.18); }
+.imap .node .pill { transition: transform .3s; transform: scale(var(--s, 1)); }  /* --s: 산업 크기(시가총액 합)에 따른 점 크기 */
+.imap .node.center .pill { transform: scale(calc(var(--s, 1) * 1.18)); }
 .imap .node.center .pill rect { stroke-width: 2.2; }
-.imap .node.minor:not(.center) .pill { transform: scale(.8); }
 .imap .node.minor:not(.center) .pill text { fill-opacity: .5; }
 .imap .node.minor:not(.center) .pill rect { stroke-opacity: .5; }
 .imap .node.minor:not(.center) .pill circle { opacity: .5; }
-.imap .node.minor:not(.center) .flow { transform: translateY(-3px); }
 .imap .node.dim { opacity: .07; cursor: default; pointer-events: none; }  /* 흐린 산업은 터치를 안 받아요: 겹친 진한 산업이 눌리고, 빈 곳 누르기(이전으로)로 처리 */
 .imap .node:focus-visible .pill rect { stroke: var(--accent); stroke-width: 2.4; }
 .imap .node.heat .pill rect { stroke: var(--border); }
@@ -525,7 +523,19 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .map-legend.lines .k-h { stroke: var(--bb); stroke-dasharray: 1.5 3; stroke-linecap: round; }
 .map-tools { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .map-all { margin-left: auto; border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; font-weight: 600; padding: 6px 0; cursor: pointer; min-height: 36px; }
-.map-all[hidden] { display: none; }
+.map-all.off { visibility: hidden; }  /* 숨겨도 자리는 그대로: 줄바꿈이 바뀌어 지도가 밀리지 않게 */
+/* 지도 위 설명: 두 문장을 같은 자리에 겹쳐 두고 하나만 보여요. 높이는 긴 쪽에 맞춰져서 산업을 눌러도 지도가 안 밀려요 */
+.map-sub { display: grid; }
+.map-sub > span { grid-area: 1 / 1; }
+.map-sub .foc, .map-sub.focused .all { visibility: hidden; }
+.map-sub.focused .foc { visibility: visible; }
+.map-size { display: flex; gap: 10px; align-items: center; margin: 8px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
+.map-size b { color: var(--text-primary); font-weight: 600; }
+.map-size .dots { display: inline-flex; align-items: center; gap: 3px; flex: none; }
+.map-size .dots i { display: block; height: 9px; border-radius: 6px; border: 1.2px solid var(--text-muted); }
+.map-size .dots i:nth-child(1) { width: 12px; height: 7px; } .map-size .dots i:nth-child(2) { width: 17px; height: 10px; } .map-size .dots i:nth-child(3) { width: 24px; height: 14px; }
+.map-cap { margin: 8px 0 0; font-size: 14px; }
+.map-cap small { display: block; font-size: 12px; margin-top: 2px; }
 .badge.k-s { color: var(--accent-fg); background: var(--accent-bg); }
 .badge.k-c { color: var(--text-secondary); }
 .badge.k-n { color: var(--wait-fg); background: var(--wait-bg); }
@@ -855,6 +865,14 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .ec-cell.past { opacity: .4; }
 .list.cal li.past { opacity: .45; }
 .goal-name { margin: 0 0 8px; }
+.card h2.goal-h { align-items: center; }
+.goal-h-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.goal-reset { display: inline-flex; align-items: center; gap: 6px; height: 32px; min-width: 32px; padding: 0 7px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface-0); color: var(--text-secondary); font: 600 12px var(--font); cursor: pointer; }
+.goal-reset > span { display: none; }
+.goal-reset.armed { background: var(--wait-bg); color: var(--wait-fg); border-color: transparent; }
+.goal-reset.armed > span { display: inline; }
+.goal-h-r:has(.armed) small { display: none; }
 /* 적립식 계산기: 종목마다 정하기 */
 .sav-eachs { display: grid; gap: 6px; margin-top: 8px; }
 .sav-each { border: 1px solid var(--border); border-radius: 12px; }

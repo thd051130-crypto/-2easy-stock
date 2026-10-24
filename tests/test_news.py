@@ -41,3 +41,4 @@ def test_topic():
     assert news.topic("Fed signals rate cut") == "금리"
     assert news.topic("corporate earnings beat") == "실적"  # corporate의 rate는 금리가 아니에요
     assert news.topic("삼성전자 신제품 공개") is None
+    assert news.topic("American Express (AXP) stock trades down") is None  # trades는 무역이 아니에요

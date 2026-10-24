@@ -8,6 +8,8 @@
     최근 120거래일 동안 두 산업이 같이 움직인 정도(상관계수, -1~1)를 선마다 붙여요.
     사람이 안 이은 산업 중에 유난히 같이 움직인 쌍(0.6 이상이면서 그 시장 상위 5%)은 '주가로 찾은 연결'로 따로 보여 줘요.
   - 흐름: 산업 대표 종목의 5·20거래일 등락률 중간값과 종목별 5·20일 등락률.
+  - 산업 크기: 산업에 묶인 종목 전부(대표 5개만이 아니라)의 시가총액 합. 지도 점 크기를 이걸로 달리 그려요.
+    한 종목이 여러 산업에 들어가면(삼성전자: AI반도체·스마트폰…) 산업마다 다 더해요. 국장은 원, 미장은 달러.
 연결은 참고용이에요.
 
 dashboard.py가 배포 때 주가 없이 <out>/industry.json(점·선)을 쓰고, pages 워크플로가 이어서
@@ -201,6 +203,36 @@ def download(symbols, period="1y"):
     return close
 
 
+QUOTE = "https://query1.finance.yahoo.com/v7/finance/quote"
+
+
+def download_caps(symbols, batch=100):
+    """야후 시세 요약에서 시가총액 {기호: 시가총액}. 못 받은 기호는 빠져요."""
+    from yfinance.data import YfData
+
+    data, out, syms = YfData(), {}, sorted(set(symbols))
+    for i in range(0, len(syms), batch):
+        try:
+            res = data.get(QUOTE, params={"symbols": ",".join(syms[i:i + batch]), "fields": "marketCap"})
+            res.raise_for_status()
+            for q in res.json()["quoteResponse"]["result"]:
+                if q.get("marketCap"):
+                    out[q["symbol"]] = float(q["marketCap"])
+        except Exception as e:  # 네트워크·레이트리밋: 받은 데까지만
+            print(f"야후 시가총액 실패: {e!r}")
+    return out
+
+
+def sizes(themes_json, market, cap_of, sym_of):
+    """{테마: [시가총액 합, 종목 수]} 산업에 묶인 종목 전부. 시가총액을 하나도 못 받은 산업은 빠져요."""
+    out = {}
+    for t in themes_json["themes"]:
+        caps = [cap_of[sym_of(c)] for c in dict.fromkeys(c for c, _ in t[market]) if sym_of(c) in cap_of]
+        if caps:
+            out[t["name"]] = [round(sum(caps)), len(caps)]
+    return out
+
+
 def r(x):
     return None if x is None or x != x else round(float(x), 4)
 
@@ -266,8 +298,9 @@ def correlations(daily, links, mem):
     return on_link, hidden
 
 
-def build(themes_json, symbol_rows=None, fetch=download):
-    """앱이 읽는 industry.json. symbol_rows {시장: {코드: 거래소}} 로 국장 코스닥(.KQ)을 가려요."""
+def build(themes_json, symbol_rows=None, fetch=download, caps=None):
+    """앱이 읽는 industry.json. symbol_rows {시장: {코드: 거래소}} 로 국장 코스닥(.KQ)을 가려요.
+    caps: 기호들 → {기호: 시가총액} (산업 크기). 없으면 크기 없이 (지도는 점을 다 같은 크기로 그려요)."""
     out = static_map()
     if fetch is None:
         return out
@@ -276,6 +309,12 @@ def build(themes_json, symbol_rows=None, fetch=download):
         mem = members(themes_json, m)
         exch = (symbol_rows or {}).get(m, {})
         sym_of = lambda code, m=m, exch=exch: yahoo_symbol(m, code, exch.get(code, ""))  # noqa: E731
+        if caps is not None:
+            cap_of = caps([sym_of(c) for t in themes_json["themes"] for c, _ in t[m]])
+            sz = sizes(themes_json, m, cap_of, sym_of)
+            if sz:
+                out.setdefault("size", {})[m] = sz
+            print(f"{m}: 산업 {len(sz)}개 크기 (시가총액 {len(cap_of)}종목)")
         close = fetch([sym_of(c) for rows in mem.values() for c, _ in rows])
         if close is None or close.empty:
             print(f"{m}: 시세를 못 받아서 흐름 없이 지도만 써요")
@@ -309,7 +348,7 @@ def main():
     parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path("_site"))
     args = parser.parse_args()
     tj = themes.build(args.paper / "symbols", args.paper / "sectors.json")
-    write(args.out, build(tj, symbol_rows(args.paper / "symbols")))
+    write(args.out, build(tj, symbol_rows(args.paper / "symbols"), caps=download_caps))
     print(f"{args.out}/industry.json 준비 완료")
 
 

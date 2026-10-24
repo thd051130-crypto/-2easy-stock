@@ -61,3 +61,18 @@ def test_minor_themes_are_real_nodes():
     nodes = {n["name"]: n for n in im.static_map()["nodes"]}
     assert nodes["희토류·핵심광물"].get("minor") is True
     assert "minor" not in nodes["조선"]
+
+
+def test_sizes_sum_every_member_cap():
+    tj = {"themes": [dict(name="AI반도체·HBM", kr=[["005930", "삼성전자"], ["000660", "SK하이닉스"], ["005930", "삼성전자"]], us=[]),
+                     dict(name="스마트폰·IT부품", kr=[["005930", "삼성전자"], ["999999", "없는종목"]], us=[]),
+                     dict(name="조선", kr=[["888888", "시총없음"]], us=[])]}
+    cap_of = {"005930.KS": 1000.0, "000660.KS": 600.0}
+    sz = im.sizes(tj, "kr", cap_of, lambda c: f"{c}.KS")
+    assert sz == {"AI반도체·HBM": [1600, 2], "스마트폰·IT부품": [1000, 1]}  # 같은 종목 두 번은 한 번만, 시총 없는 산업은 빠져요
+
+
+def test_build_adds_sizes_when_caps_given():
+    tj = {"themes": [dict(name="조선", kr=[["009540", "HD한국조선해양"]], us=[["HII", "헌팅턴 잉걸스"]])]}
+    out = im.build(tj, fetch=lambda symbols: pd.DataFrame(), caps=lambda syms: {s: 5.0 for s in syms})
+    assert out["size"] == {"kr": {"조선": [5, 1]}, "us": {"조선": [5, 1]}}
