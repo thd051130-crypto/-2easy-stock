@@ -1577,14 +1577,50 @@ function loadMap() {
       .then((x) => {
         if (!x || !Array.isArray(x.nodes)) { imapLoading = null; return; }
         x.at = new Map(x.nodes.map((n, i) => [n.name, i]));
-        // 세부 테마(minor)는 0.8배로 작게 그려서 자리도 0.8배만 차지해요
-        x.nodes.forEach((n) => { n.w = textW(n.short) + 26; n.fw = textW(n.short) * 1.18 + 30; n.s = n.minor ? MAP_MINOR : 1; });
-        mapLayout(x);
+        x.nodes.forEach((n) => { n.w = textW(n.short) + 26; n.fw = textW(n.short) * 1.18 + 30; });
+        x.lays = {};
         IMAP = x;
       });
   }
   return imapLoading;
 }
+// 점 크기: 산업 크기(관련 종목 시가총액 합)를 로그로 나눠 가장 큰 점이 가장 작은 점의 2.2배쯤 되게 해요.
+// 시총은 수백 배 차이라 그대로 그리면 작은 산업은 안 보여서, 순서·차이는 보이되 다 읽히게.
+// 점들이 차지하는 넓이 합은 예전(다 1배, 세부 테마 0.8배)과 같게 맞춰서 지도 안에 겹치지 않고 들어가요.
+// 크기 자료가 없으면 예전처럼 세부 테마(minor)만 0.8배
+const MAP_S_MIN = 0.62, MAP_S_MAX = 1.36;
+const mapSize = (name, m = market) => { const z = IMAP && IMAP.size && IMAP.size[m]; return z ? z[name] : null; };
+function mapScales(m) {
+  const z = IMAP.size && IMAP.size[m];
+  const v = z ? Object.values(z).map((x) => x[0]).filter((x) => x > 0) : [];
+  if (v.length < 5) return IMAP.nodes.map((n) => (n.minor ? MAP_MINOR : 1));
+  const lo = Math.log(Math.min(...v)), hi = Math.log(Math.max(...v));
+  const raw = IMAP.nodes.map((n) => {
+    const c = z[n.name] && z[n.name][0];
+    return c > 0 ? MAP_S_MIN + (MAP_S_MAX - MAP_S_MIN) * (Math.log(c) - lo) / (hi - lo || 1) : MAP_S_MIN;
+  });
+  const area = (sc) => IMAP.nodes.reduce((a, n, i) => a + n.w * sc[i] * sc[i], 0);
+  const k = Math.min(1.15, Math.sqrt(area(IMAP.nodes.map((n) => (n.minor ? MAP_MINOR : 1))) / area(raw)));
+  return raw.map((x) => x * k);
+}
+// 시장마다 점 크기가 달라서 자리도 시장마다 한 번 계산해 두고 써요
+function mapReady() {
+  if (IMAP.layFor === market) return;
+  if (!IMAP.lays[market]) {
+    const sc = mapScales(market);
+    IMAP.nodes.forEach((n, i) => { n.s = sc[i]; });
+    mapLayout(IMAP);
+    IMAP.lays[market] = IMAP.nodes.map((n) => ({ s: n.s, ox: n.ox, oy: n.oy }));
+  }
+  IMAP.lays[market].forEach((l, i) => Object.assign(IMAP.nodes[i], l, { x: l.ox, y: l.oy }));
+  IMAP.layFor = market;
+}
+// 시가총액 글자: 국장 원, 미장 달러
+function capText(v, m = market) {
+  if (m === "us") return v >= 1e12 ? `${(v / 1e12).toFixed(1)}조 달러` : `${num(v / 1e8)}억 달러`;
+  return v >= 1e12 ? `${num(v / 1e12)}조원` : `${num(v / 1e8)}억원`;
+}
+
 // 글자 폭 어림 (12px 글꼴): 한글 12px, 영문·숫자 7px, 기호 4px
 const textW = (s) => [...s].reduce((a, c) => a + (/[가-힣]/.test(c) ? 12 : /[A-Za-z0-9]/.test(c) ? 7.2 : 4), 0);
 
@@ -1601,6 +1637,11 @@ function mapLayout(x) {
   });
   const E = x.links.map((l) => [x.at.get(l.a), x.at.get(l.b)]).filter(([a, b]) => a != null && b != null);
   const H = 26, GAP = 14, ROUNDS = 600;  // GAP: 점 사이 최소 빈 공간 (빈 곳 누르기·두 손가락 벌리기 자리)
+  // 지도 밖으로 나간 점은 안으로 (밀어낸 뒤마다 해야 끝에 가장자리에서 겹치지 않아요)
+  const clamp = () => N.forEach((n) => {
+    n.x = Math.max(n.w * n.s / 2 + 2, Math.min(MAP_W - n.w * n.s / 2 - 2, n.x));
+    n.y = Math.max(H * n.s / 2 + 2, Math.min(MAP_H - H * n.s / 2 - 2, n.y));
+  });
   for (let it = 0; it < ROUNDS; it++) {
     const cool = 1 - it / ROUNDS;
     if (it < ROUNDS - 120) {
@@ -1622,11 +1663,8 @@ function mapLayout(x) {
         if (ox < oy) { const s = (q.x >= p.x ? 1 : -1) * ox / 2; p.x -= s; q.x += s; }
         else { const s = (q.y >= p.y ? 1 : -1) * oy / 2; p.y -= s; q.y += s; }
       }
+      clamp();
     }
-    N.forEach((n) => {
-      n.x = Math.max(n.w * n.s / 2 + 2, Math.min(MAP_W - n.w * n.s / 2 - 2, n.x));
-      n.y = Math.max(H * n.s / 2 + 2, Math.min(MAP_H - H * n.s / 2 - 2, n.y));
-    });
   }
   N.forEach((n) => { n.ox = n.x; n.oy = n.y; });
 }
@@ -1660,11 +1698,15 @@ function mapTargets(focus = mapFocus) {
   const many = nb.length > 8;
   // 둘레 거리: 이어진 산업이 적으면 가깝게, 많을수록 조금씩 넓게 (지도 끝까지 퍼지면 선이 너무 길어요)
   const ry = Math.min(MAP_H / 2 - 36, (many ? 150 : 110) + nb.length * 9);
+  const c = IMAP.nodes[IMAP.at.get(focus)];
+  const ch = (c.w * c.s * 1.18) / 2;  // 가운데 산업 반폭 (크게 그려요)
   nb.forEach((x, i) => {
     const a = -Math.PI / 2 + (i / nb.length) * Math.PI * 2;
     const k = many && i % 2 ? 0.66 : 1;
     const node = IMAP.nodes[IMAP.at.get(x.name)];
-    const rx = (MAP_W / 2 - node.w / 2 - 4) * (many ? 1 : 0.9);
+    const half = (node.w * node.s) / 2;
+    // 옆(왼쪽·오른쪽)에 오는 산업이 큰 가운데 산업과 겹치지 않게, 그래도 지도 밖으로는 안 나가게
+    const rx = Math.min(MAP_W / 2 - half - 2, Math.max((MAP_W / 2 - half - 4) * (many ? 1 : 0.9), ch + half + 10));
     T[IMAP.at.get(x.name)] = { x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k, on: true, center: false };
   });
   return T;
@@ -1682,17 +1724,20 @@ function heat(r, days = 5) {
 }
 
 function mapSvg() {
+  mapReady();
   const hidden = (IMAP.hidden && IMAP.hidden[market]) || [];
   const edges = IMAP.links.map((l, i) => `<polyline class="edge k-${l.kind}" data-e="${i}" points=""/>`).join("")
     + hidden.map((h, i) => `<polyline class="edge k-h" data-h="${i}" points=""/>`).join("");
   const nodes = IMAP.nodes.map((n, i) => {
     const f = mapFlow(n.name);
     const cls = `node g-${n.group}${n.minor ? " minor" : ""}${mapColor === "flow" ? heat(fv(f), mapDays) : ""}`;
-    return `<g class="${cls}" data-n="${i}" role="button" tabindex="0" aria-label="${esc(n.name)}${f ? ` ${mapDays}일 ${pct(fv(f))}` : ""}">
-      <rect class="hit" x="${-n.fw / 2 - 4}" y="-18" width="${n.fw + 8}" height="36"/>
-      <g class="pill"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
+    const z = mapSize(n.name);
+    const hw = Math.max(n.fw, n.w * n.s * 1.18) + 8, hh = Math.max(36, 26 * n.s * 1.18 + 6);
+    return `<g class="${cls}" data-n="${i}" role="button" tabindex="0" aria-label="${esc(n.name)}${z ? ` 시가총액 ${capText(z[0])}` : ""}${f ? ` ${mapDays}일 ${pct(fv(f))}` : ""}">
+      <rect class="hit" x="${(-hw / 2).toFixed(1)}" y="${(-hh / 2).toFixed(1)}" width="${hw.toFixed(1)}" height="${hh.toFixed(1)}"/>
+      <g class="pill" style="--s:${n.s.toFixed(3)}"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
       <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g>
-      <text class="flow ${sign(fv(f))}" y="27">${f ? pct(fv(f)) : ""}</text></g>`;
+      <text class="flow ${sign(fv(f))}" y="${(13 * n.s * 1.18 + 11).toFixed(1)}">${f ? pct(fv(f)) : ""}</text></g>`;
   }).join("");
   return `<svg class="imap${mapFocus ? " focused" : ""}" viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="산업 연관 지도">
     <defs><marker id="imap-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -1758,17 +1803,17 @@ function mapCard() {
     return `<section class="card">${head}<p class="muted" id="map-wait">지도를 불러오는 중이에요…</p></section>`;
   }
   const legend = IMAP.groups.map((g) => `<span class="lg g-${g.id}"><i></i>${esc(g.name)}</span>`).join("");
-  const minorNote = IMAP.nodes.some((n) => n.minor) ? `<span class="muted">작고 흐린 점: 큰 틀 밖 세부 테마</span>` : "";
+  const sized = !!(IMAP.size && IMAP.size[market]);
+  const minorNote = IMAP.nodes.some((n) => n.minor) ? `<span class="muted">${sized ? "흐린 점" : "작고 흐린 점"}: 큰 틀 밖 세부 테마</span>` : "";
   const colors = [["group", "묶음 색"], ["flow", "흐름 색"]].map(([k, label]) =>
     `<button type="button" data-mapcolor="${k}" aria-pressed="${mapColor === k}">${label}</button>`).join("");
   const days = [5, 20].map((d) => `<button type="button" data-mapdays="${d}" aria-pressed="${mapDays === d}">${d}일</button>`).join("");
   const has = !!(IMAP.flows && IMAP.flows[market]);
   return `<section class="card map-card">${head}
-    <p class="sub" id="map-sub">${mapFocus ? `<b>${esc(mapFocus)}</b>에 이어진 산업이에요. 둘레 산업을 누르거나 두 손가락으로 벌리면 그 산업으로, 빈 곳을 누르거나 오므리면 이전으로 가요.`
-      : "산업을 누르거나 두 손가락으로 벌리면 이어진 산업만 선으로 모아 보여 줘요."}</p>
+    <p class="sub map-sub${mapFocus ? " focused" : ""}" id="map-sub"><span class="all">${MAP_SUB_ALL}</span><span class="foc">${MAP_SUB_FOCUS}</span></p>
     <div class="map-tools"><div class="period" role="group" aria-label="점 색">${colors}</div>
       <div class="period" role="group" aria-label="흐름 기간">${days}</div>
-      <button type="button" class="map-all" data-mapall ${mapFocus ? "" : "hidden"}>‹ 전체 보기</button></div>
+      <button type="button" class="map-all${mapFocus ? "" : " off"}" data-mapall>‹ 전체 보기</button></div>
     <div class="imap-wrap">${mapSvg()}</div>
     <div class="map-legend">${mapColor === "flow" && has ? `<span class="lg"><i class="up"></i>${mapDays}일 오름</span><span class="lg"><i class="down"></i>${mapDays}일 내림</span><span class="muted">${MK_NAME[market]} 대표 종목 중간값</span>`
       : legend + minorNote}</div>
@@ -1776,7 +1821,19 @@ function mapCard() {
       <span><svg viewBox="0 0 28 8"><path class="k-c" d="M1 4h26"/></svg>같은 요인</span>
       <span><svg viewBox="0 0 28 8"><path class="k-n" d="M1 4h26"/></svg>반대</span>
       <span><svg viewBox="0 0 28 8"><path class="k-h" d="M1 4h26"/></svg>주가로 찾음</span></div>
+    ${mapSizeLegend()}
     ${mapColor === "flow" && !has ? `<p class="muted" style="margin:6px 0 0">${MK_NAME[market]} 흐름 자료가 아직 없어요. 다음 배포 때 생겨요.</p>` : ""}</section>`;
+}
+
+// 점 크기 기준: 가장 큰·작은 산업을 숫자로 (사용자 2026-10-24 '산업 크기에 따라 크기 차등')
+function mapSizeLegend() {
+  const z = IMAP.size && IMAP.size[market];
+  if (!z || Object.keys(z).length < 5) return "";
+  const r = Object.entries(z).sort((a, b) => b[1][0] - a[1][0]);
+  const short = (name) => { const n = IMAP.nodes[IMAP.at.get(name)]; return esc(n ? n.short : name); };
+  const [big, small] = [r[0], r[r.length - 1]];
+  return `<p class="map-size"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span><b>점 크기 = 산업 크기</b> (관련 종목 시가총액 합)<br>
+    가장 큼 ${short(big[0])} ${capText(big[1][0])} · 가장 작음 ${short(small[0])} ${capText(small[1][0])}</span></p>`;
 }
 
 const together = (v) => (v == null ? "" : v >= 0.6 ? "주가 많이 같이 움직임" : v >= 0.3 ? "주가 조금 같이 움직임"
@@ -1818,8 +1875,13 @@ function mapDetailCard() {
       <div class="r ${sign(fv(xf))}">${xf ? pct(fv(xf)) : "-"}<div class="meta">${mapDays}일</div></div></li>`;
   }).join("");
   const stocks = f ? f.stocks.map((s) => mapStockRow(market, s)).join("") : "";
+  const z = mapSize(mapFocus);
+  const zs = (IMAP.size && IMAP.size[market]) || {};
+  const rank = z ? Object.values(zs).filter((x) => x[0] > z[0]).length + 1 : 0;
+  const sizeLine = z ? `<p class="map-cap"><span class="muted">산업 크기</span> <b>${capText(z[0])}</b>
+    <small class="muted">${MK_NAME[market]} ${Object.keys(zs).length}개 산업 중 ${rank}위 · 관련 종목 ${z[1]}개 시가총액 합</small></p>` : "";
   return `<section class="card"><h2>${esc(mapFocus)} <small>${esc(group ? group.name : "")} · 참고</small></h2>
-    <p class="sub">${esc(node.why)}</p>
+    <p class="sub">${esc(node.why)}</p>${sizeLine}
     ${f ? `<p class="headline ${sign(fv(f))}" style="margin-top:10px">${pct(fv(f))} <small class="muted" style="font-size:13px;font-weight:400">${MK_NAME[market]} ${mapDays}일 중간값 · ${mapDays === 20 ? `5일 ${pct(f.r5)}` : `20일 ${pct(f.r20)}`}</small></p>` : ""}
     <h3 class="map-sec">🔗 이어진 산업 ${nb.length}개 <small>누르면 그 산업으로</small></h3>
     <ul class="list">${lines}</ul>
@@ -1833,6 +1895,8 @@ function mapDetailCard() {
 
 // 지도에서 거쳐 온 산업들. 빈 곳을 누르면 하나씩 되돌아가고, 다 되돌아가면 전체 보기예요
 let mapTrail = [];
+const MAP_SUB_ALL = "산업을 누르거나 두 손가락으로 벌리면 이어진 산업만 선으로 모아 보여 줘요.";
+const MAP_SUB_FOCUS = "가운데 산업에 이어진 산업만 모았어요. 둘레 산업을 누르거나 벌리면 그 산업으로, 빈 곳을 누르거나 오므리면 이전으로 가요.";
 function openMap(name) {
   mapFocus = name || "";
   mapTrail = [];
@@ -1849,11 +1913,11 @@ function setMapFocus(name, back = false) {
   if (!svg) { render(); return; }
   svg.classList.toggle("focused", !!name);
   placeMap(svg, true);
+  // 위 설명·'전체 보기' 버튼은 자리를 그대로 차지한 채 글자만 바꿔요. 높이가 바뀌면 지도가 밀려서 화면이 움직여요 (사용자 2026-10-24)
   const sub = $("#map-sub");
-  if (sub) sub.innerHTML = name ? `<b>${esc(name)}</b>에 이어진 산업이에요. 둘레 산업을 누르거나 두 손가락으로 벌리면 그 산업으로, 빈 곳을 누르거나 오므리면 이전으로 가요.`
-    : "산업을 누르거나 두 손가락으로 벌리면 이어진 산업만 선으로 모아 보여 줘요.";
+  if (sub) sub.classList.toggle("focused", !!name);
   const all = $("[data-mapall]");
-  if (all) all.hidden = !name;
+  if (all) all.classList.toggle("off", !name);
   const old = $("#map-detail");
   if (old) { holdHeight(); old.innerHTML = mapDetailCard(); bindMapDetail(old); }
 }
