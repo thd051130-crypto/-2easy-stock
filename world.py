@@ -101,7 +101,7 @@ def fetch(days=400, pause=1.0, retries=3):
     else:
         try:
             out.update(ecos_rates(key, start))
-        except Exception as e:  # ECOS가 막히면 그 줄만 빠져요. 키가 주소에 들어가니 오류 글은 남기지 않아요
+        except Exception as e:  # ECOS가 막히면 그 줄만 빠져요. 키가 주소에 들어가니 네트워크 오류 글은 남기지 않아요
             print(f"경고: ECOS 국고채 금리 못 받음 ({type(e).__name__})")
     return out
 
@@ -138,13 +138,18 @@ def parse_ecos_rows(rows):
 def ecos_rates(key, start):
     try:
         codes = ecos_codes(ecos_get(key, "StatisticItemList", 1, 100, ECOS_TABLE))
-    except Exception:
+    except Exception as e:
+        print(f"참고: ECOS 항목 목록 못 받아서 적어 둔 코드 씀 ({e if isinstance(e, RuntimeError) else type(e).__name__})")
         codes = {sym: code for sym, (_, code) in ECOS_RATE.items()}
     end = dt.datetime.now(KST).strftime("%Y%m%d")
     out = {}
     for sym, code in codes.items():
-        rate = parse_ecos_rows(ecos_get(key, "StatisticSearch", 1, 1000, ECOS_TABLE, "D",
-                                        start.replace("-", ""), end, code))
+        try:
+            rate = parse_ecos_rows(ecos_get(key, "StatisticSearch", 1, 1000, ECOS_TABLE, "D",
+                                            start.replace("-", ""), end, code))
+        except RuntimeError as e:  # ECOS가 돌려준 오류 코드·글 (키는 안 들어 있어요)
+            print(f"경고: {sym} {e}")
+            continue
         if rate is None:
             print(f"경고: {sym} ECOS 값 없음")
         else:
