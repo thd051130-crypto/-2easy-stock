@@ -44,11 +44,11 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox"];
+const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search", "map", "inbox"];  // 메시지함(#kr/inbox)도 한 겹 위
+const LAYERS = ["stock", "search", "map", "inbox", "world"];  // 메시지함(#kr/inbox), 세계 지수(#kr/world)도 한 겹 위
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
@@ -305,7 +305,8 @@ function countUp(root) {
 const VIEWS = {
   // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 세계 지수 → 더 보기 → 오늘의 리포트 요약.
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
-  home: (d) => [bigEventsCard(), marketStatusCard(), worldCard(), homeMoreCard(d), homeReportCard()],
+  // 맨 위 얇은 지수 바는 세계 지수가 돌아가며 보이고, 누르면 세계 지수 화면(한 겹 위)이 열려요 (사용자 2026-10-24)
+  home: (d) => [worldTicker(), bigEventsCard(), marketStatusCard(), worldHomeCard(), homeMoreCard(d), homeReportCard()],
   report: (d) => reportCards(d),
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
@@ -317,6 +318,7 @@ const VIEWS = {
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
   inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
+  world: () => [worldCard()],
 };
 
 let lastView = "", holdH = 0;
@@ -486,6 +488,7 @@ function render() {
     go("chart");
   }));
   drawWorldGraph();
+  if (screen === "home") spinTicker();
   app.querySelectorAll("[data-world-tab]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldTab = b.dataset.worldTab;
     worldPick = null;  // 맨 위 한국·미국 그래프(worldTop)는 열어 둔 채로
@@ -3390,9 +3393,57 @@ function drawWorldChart(sel, pick) {
     fmt: (v) => v.toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits }),
   });
 }
-function worldCard() {
+// 홈 맨 위 얇은 바: 한국·미국 말고 나머지 지수·환율이 3초마다 하나씩 바뀌어요. 높이는 늘 같아서 화면이 안 밀려요 (바는 따라 내려오지 않아요)
+let tickAt = 0, tickTimer = 0;
+function tickItems() {
+  const w = DATA && DATA.world;
+  if (!w || !w.groups) return [];
+  const all = w.groups.flatMap((g) => g.items);
+  const order = WORLD_TABS.find((t) => t[0] === "main")[2].map((s) => all.find((r) => r.sym === s)).filter(Boolean);
+  return order.concat(w.groups.filter((g) => !WORLD_FIXED.includes(g.name)).flatMap((g) => g.items).filter((r) => !order.includes(r)));
+}
+function tickHTML(r) {
+  return `<span class="wk-n">${esc(WORLD_SHORT[r.sym] || r.name)}</span><b class="wk-v">${worldValue(r, true)}</b><span class="wk-c ${sign(r.d1)}">${worldChg(r, r.d1)}</span>`;
+}
+function worldTicker() {
+  const list = tickItems();
+  if (!list.length) return "";
+  tickAt %= list.length;
+  return `<button type="button" class="wtick" data-go="world" aria-label="세계 지수·환율 전체 보기">
+    <span class="wk-tag">세계</span><span class="wk-item" aria-live="off">${tickHTML(list[tickAt])}</span><span class="wk-go" aria-hidden="true">›</span></button>`;
+}
+function spinTicker() {
+  clearInterval(tickTimer);
+  tickTimer = setInterval(() => {
+    const el = $(".wtick .wk-item"), list = tickItems();
+    if (!el || !list.length || screen !== "home") { clearInterval(tickTimer); return; }
+    if (document.hidden) return;
+    tickAt = (tickAt + 1) % list.length;
+    if (calm()) { el.innerHTML = tickHTML(list[tickAt]); return; }
+    el.classList.add("out");
+    setTimeout(() => { el.innerHTML = tickHTML(list[tickAt]); el.classList.remove("out"); }, 220);
+  }, 3000);
+}
+// 홈엔 한국·미국 지수만 (이전처럼). 나머지는 맨 위 바를 눌러 세계 지수 화면에서
+function worldHomeCard() {
   const w = DATA.world;
   if (!w || !w.groups || !w.groups.length) return "";
+  const [, label] = WORLD_P.find((p) => p[0] === worldP);
+  const period = `<div class="period" role="group" aria-label="등락 기간">${WORLD_P.map(([k, l]) =>
+    `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
+  const fixed = w.groups.filter((g) => WORLD_FIXED.includes(g.name)).flatMap((g) => g.items);
+  if (!fixed.length) return "";
+  const pickedFixed = worldTop && fixed.find((r) => `t:${r.sym}` === worldTop);
+  const up = fixed.filter((r) => r[worldP] > 0).length, down = fixed.filter((r) => r[worldP] < 0).length;
+  return `<section class="card" id="world-card"><h2>한국·미국 지수 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
+    <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
+    <div class="wt-grid">${fixed.map((r) => worldTile(r, worldTop)).join("")}</div>${pickedFixed ? worldGraph(pickedFixed, "world-chart-top") : ""}
+    <button type="button" class="more" data-go="world">세계 지수·환율 전체 보기<span aria-hidden="true">›</span></button></section>`;
+}
+// 세계 지수 화면: 묶음 탭 + 3칸 타일 (한국·미국은 홈에 있어서 여기선 탭만)
+function worldCard() {
+  const w = DATA.world;
+  if (!w || !w.groups || !w.groups.length) return `<section class="card"><button type="button" class="back" data-back>‹ 뒤로</button><p class="empty">아직 세계 지수 기록이 없어요.</p></section>`;
   const all = w.groups.flatMap((g) => g.items);
   const [, label] = WORLD_P.find((p) => p[0] === worldP);
   const [, , pick] = WORLD_TABS.find((t) => t[0] === worldTab);
@@ -3403,15 +3454,12 @@ function worldCard() {
     .map(([k, l]) => `<button type="button" data-world-tab="${k}" aria-pressed="${k === worldTab}">${l}</button>`).join("");
   const period = `<div class="period" role="group" aria-label="등락 기간">${WORLD_P.map(([k, l]) =>
     `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
-  const fixed = w.groups.filter((g) => WORLD_FIXED.includes(g.name)).flatMap((g) => g.items);
-  const pickedFixed = worldTop && fixed.find((r) => `t:${r.sym}` === worldTop);
   const picked = worldPick && items.find((r) => `t:${r.sym}` === worldPick);
-  const both = fixed.concat(items);
-  const up = both.filter((r) => r[worldP] > 0).length, down = both.filter((r) => r[worldP] < 0).length;
-  return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
-    <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
-    ${fixed.length ? `<div class="wt-grid">${fixed.map((r) => worldTile(r, worldTop)).join("")}</div>${pickedFixed ? worldGraph(pickedFixed, "world-chart-top") : ""}` : ""}
+  const up = items.filter((r) => r[worldP] > 0).length, down = items.filter((r) => r[worldP] < 0).length;
+  return `<section class="card" id="world-card"><button type="button" class="back" data-back>‹ 뒤로</button>
+    <h2 class="stock-name">세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
     <div class="wt-tabs" role="group" aria-label="묶음 고르기">${tabs}</div>
+    <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
     <div class="wt-grid">${items.map((r) => worldTile(r)).join("")}</div>
     ${picked ? worldGraph(picked) : ""}
     <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 ${label} 많이 움직인 거예요. 누르면 그래프가 열려요. 금리는 몇 %p 바뀌었는지, 장단기 금리 차가 마이너스면 '역전'(경기 침체 앞에 자주 나왔어요), VIX는 20을 넘으면 불안이 커진 거예요. 원/달러가 오르면 원화 약세예요. 미국 2년 금리·장단기 차는 FRED, 나머지는 야후 자료이고 나라마다 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;

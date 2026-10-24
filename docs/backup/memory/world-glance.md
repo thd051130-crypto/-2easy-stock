@@ -1,13 +1,14 @@
 ---
 name: world-glance
-description: 홈 세계 지수·환율 칸 구조 — 한국·미국 지수 6개 늘 맨 위 고정, 그 아래 묶음 탭(한국·미국 탭 없음), 탭 줄 가로 위치 유지 (2026-10-24 사용자)
+description: 홈 세계 지수 구조 — 맨 위 얇은 지수 바(돌아가며, 누르면 세계 지수 화면 #kr/world), 홈엔 한국·미국 지수 6개만, 탭 줄 가로 위치 유지 (2026-10-24 사용자, PR #97)
 metadata:
   type: feedback
 ---
 
-2026-10-24 사용자: "세계지수환율에서 한국 미국 지수는 이전처럼 두되, 선택하는 버튼 누르면 화면이 메인으로 돌아오는거 취소해".
-- site/app.js worldCard(): 기간 칩 → 한국·미국 6개 타일(WORLD_FIXED=["한국","미국"], 탭과 상관없이 늘 보임) → 묶음 탭(주요·아시아·유럽·환율·금리·원자재·리츠·공포·코인) → 탭 타일. '한국·미국' 탭은 없앰(옛 localStorage world_tab=kr_us는 주요로). 주요 = 원/달러·미 10년·장단기 차·WTI·금·VIX.
-- 그래프 두 개 따로: 맨 위 타일은 worldTop(#world-chart-top), 탭 타일은 worldPick(#world-chart). 탭 바꾸면 worldPick만 접힘. 한쪽 눌러도 다른 쪽 안 접힘(접히면 위 칸이 줄어 화면이 튐).
-- '메인으로 돌아감' 원인: 무엇을 누르든 render()가 탭 줄을 새로 그려서 가로 스크롤이 0(주요 쪽)으로 돌아감. worldTabsX에 탭 줄 scrollLeft를 기억해서 다시 그릴 때 복원, 처음엔 고른 탭이 보이게. 아래 메뉴 resetFolds()에서 worldTop·worldTabsX도 비움.
-**Why:** 폰에서 오른쪽 탭을 고를 때마다 탭 줄이 처음으로 밀려 불편.
-**How to apply:** 가로로 밀리는 줄(탭·칩)을 새로 만들면 scrollLeft도 기억해서 복원. [[ui-no-jump-rule]], [[nav-reset-folds]], [[world-markets-pr23]].
+2026-10-24 사용자: "한국 미국 지수는 이전처럼 두되, 선택하는 버튼 누르면 화면이 메인으로 돌아오는거 취소해" → 이어서 "지수를 홈화면 상단에 얇은 바를 놔두고 돌아가면서 보여주게 하고, 클릭하면 지수 탭만 따로 보이게하자 한국미국지수는 그대로 보이게하고".
+- site/app.js 홈: worldTicker()가 맨 위(큰 발표 칸보다 위) 얇은 바. 한국·미국 말고 나머지(주요 순서 먼저)를 3초마다 하나씩(spinTicker, 높이 40px 고정, sticky 아님). 누르면 data-go="world".
+- worldHomeCard(): '한국·미국 지수' 6개 타일(WORLD_FIXED=["한국","미국"]) + 기간 칩 + 그래프(worldTop, #world-chart-top) + '세계 지수·환율 전체 보기'.
+- 세계 지수 화면 screen "world"(LAYERS, ‹ 뒤로): worldCard() = 묶음 탭(주요·아시아·유럽·환율·금리·원자재·리츠·공포·코인, 한국·미국 탭 없음) + 타일 + 그래프(worldPick).
+- '메인으로 돌아감' 원인: render()가 탭 줄을 새로 그려 가로 스크롤이 0으로. worldTabsX로 scrollLeft 기억·복원. resetFolds()에서 worldTop·worldTabsX도 비움.
+**Why:** 폰에서 오른쪽 탭 고를 때마다 탭 줄이 처음으로 밀려 불편, 홈은 짧게.
+**How to apply:** 가로로 밀리는 줄을 새로 만들면 scrollLeft도 기억. [[ui-no-jump-rule]], [[nav-reset-folds]], [[world-markets-pr23]].
