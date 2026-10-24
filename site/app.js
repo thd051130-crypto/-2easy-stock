@@ -579,8 +579,9 @@ function render() {
   }
   app.querySelectorAll("[data-ecday]").forEach((b) => b.addEventListener("click", () => {
     econPick = econPick === b.dataset.ecday ? null : b.dataset.ecday;
-    render();
+    renderEcon();
   }));
+  pinEcon();
   const ecBar = app.querySelector(".ec-months");
   if (ecBar) {
     // 달 버튼 줄: 밀어 둔 가로 위치를 그대로, 고른 달이 안 보이면 가로로만 맞춰요 (화면 세로 위치는 안 건드려요)
@@ -592,9 +593,9 @@ function render() {
     econBarX = ecBar.scrollLeft;
     ecBar.addEventListener("scroll", () => { econBarX = ecBar.scrollLeft; }, { passive: true });
   }
-  app.querySelectorAll("[data-ecm]").forEach((b) => b.addEventListener("click", () => { econMonth = b.dataset.ecm; econPick = null; render(); }));
+  app.querySelectorAll("[data-ecm]").forEach((b) => b.addEventListener("click", () => { econMonth = b.dataset.ecm; econPick = null; renderEcon(); }));
   app.querySelectorAll("[data-ecstep]").forEach((b) => b.addEventListener("click", () => {
-    econMonth = ymAdd(econMonth, Number(b.dataset.ecstep)); econPick = null; render();
+    econMonth = ymAdd(econMonth, Number(b.dataset.ecstep)); econPick = null; renderEcon();
   }));
   app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
     calAll = !calAll;
@@ -3988,13 +3989,36 @@ function calendarCard() {
   const rows = calRows(pickList);
   return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${Number(lo.slice(0, 4))}~${Number(hi.slice(0, 4))}년 · 경제 일정</small></h2>
     <div class="ec-months" aria-label="달 고르기">${months.join("")}</div>
-    <div class="cal-head"><button type="button" class="cal-nav" data-ecstep="-1" aria-label="이전 달" ${econMonth <= lo ? "disabled" : ""}>‹</button>
+    <div class="ec-pin"><div class="cal-head"><button type="button" class="cal-nav" data-ecstep="-1" aria-label="이전 달" ${econMonth <= lo ? "disabled" : ""}>‹</button>
       <div><b>${y}년 ${m}월</b><small>${pick ? `${Number(pick.slice(5, 7))}.${Number(pick.slice(8))} 일정 · 다시 누르면 한 달 전체` : `일정 ${all.filter((e) => e.date.startsWith(econMonth)).length}개 · 날짜를 누르면 그날만`}</small></div>
       <button type="button" class="cal-nav" data-ecstep="1" aria-label="다음 달" ${econMonth >= hi ? "disabled" : ""}>›</button></div>
-    <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div>
-    ${rows ? `<ul class="list cal" style="margin-top:10px">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}
+    <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div></div>
+    <div class="ec-list">${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}</div>
     <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표, 📌 PPI·소매판매, 🏦 금리 결정, ⏳ 만기일, 📊 국장 실적 시즌이에요 (한국시간). 지난 일정은 연하게 보여요.
       위 달 버튼은 옆으로 밀면 작년·내년도 볼 수 있고, 지난달~5개월 뒤는 파랗게 표시돼요. 미국 발표·FOMC 날짜는 올라온 해까지만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
+}
+// 일정 화면: 달력(월 제목 + 칸)은 위 막대 바로 아래에 멈춰 있고, 그 아래 일정 목록만 움직여요 (사용자 2026-10-24, 이 화면만 sticky 예외)
+// 목록 칸은 최소 '남은 화면 높이'라서 날짜를 눌러 목록이 짧아져도 달력이 멈춘 자리 그대로예요
+const ecStuck = () => {
+  const pin = $("#app .ec-pin");
+  return pin && pin.previousElementSibling ? pin.previousElementSibling.getBoundingClientRect().bottom < pin.getBoundingClientRect().top - 1 : false;
+};
+function pinEcon() {
+  const pin = $("#app .ec-pin"), list = $("#app .ec-list");
+  if (!pin || !list) return;
+  const top = $(".top"), nav = $(".nav"), topH = top ? top.offsetHeight : 0;
+  pin.style.top = `${topH}px`;
+  list.style.minHeight = `${Math.max(0, window.innerHeight - topH - pin.offsetHeight - (nav ? nav.offsetHeight : 0))}px`;
+}
+window.addEventListener("resize", pinEcon, { passive: true });
+// 달력이 멈춘 채로 날짜·달을 바꾸면 새 목록의 맨 위부터 보여요. 아니면 보통처럼 화면 그대로
+function renderEcon() {
+  const stuck = ecStuck();
+  render();
+  if (!stuck) return;
+  lastTap = null;
+  const pin = $("#app .ec-pin"), list = $("#app .ec-list");
+  if (pin && list) window.scrollTo(0, window.scrollY + list.getBoundingClientRect().top - pin.getBoundingClientRect().bottom);
 }
 function earningsCard() {
   if (!((DATA && DATA.calendar) || []).length) return "";

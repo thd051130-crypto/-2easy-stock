@@ -14,4 +14,5 @@ metadata:
 - 앱 홈 '더 보기': cal(다가오는 일정, 경제만) / earn(실적·배당 발표, 30일, 내 종목 + 대형주 실적 더 보기) 두 칸. calendarCard·earningsCard.
 - 세계 지수·환율: 줄 누르면 아래에 lineChart 그래프(1·3·6개월·1년, localStorage world_g), 지수는 '캔들 차트로 크게 보기' → CHART_IDX. world.py가 dates 보냄.
 - 산업 지도 아래 '산업 흐름'에서 산업 눌러도 scrollY 그대로(지도로 안 올라감, 사용자 요청).
+- 2026-10-24 달력 고정(사용자 스크린샷 "이정도 높이에서"): calendarCard가 .ec-pin(월 제목+칸, sticky, top = .top 높이를 pinEcon()이 넣음)과 .ec-list(min-height = 남은 화면 높이, 날짜 눌러 목록이 짧아져도 달력 멈춘 자리 유지)로 나뉨. 달력이 멈춘 상태에서 날짜·‹ ›를 누르면 renderEcon()이 새 목록 맨 위로 맞춤, 안 멈췄을 땐 화면 그대로. jump-audit의 more:cal 맨 아래 '자세히' MOVE는 감사 스크립트가 y=380(달력 밑)에서 눌러서 생기는 가짜.
 Related: [[big-events-pr63]], [[perf-cleanup]], [[world-markets-pr23]], [[industry-map-pr50]]
