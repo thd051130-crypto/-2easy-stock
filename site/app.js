@@ -181,12 +181,24 @@ const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
 const shares = (q) => (Number.isInteger(q) ? `${q}주` : `${q.toFixed(3)}주`);
 let siteVersion = null;  // 이 화면을 연 뒤 처음 받은 data.json의 화면 버전
 
+// 장중 뉴스: news 워크플로가 30분마다 live 브랜치에 올리는 news.json (앱 배포와 따로라서 data.json보다 자주 바뀌어요)
+let NEWS = null;
+function loadNews(url) {
+  if (!url) return Promise.resolve(null);
+  return fetch(`${url}?t=${Date.now()}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+    .then((x) => { if (x && x.updated) NEWS = x; return x; }).catch(() => null);
+}
+
 async function load() {
   let data;
+  let news = null;
   try {
     const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
     data = await res.json();
+    // 뉴스는 잠깐만 기다려요. 늦으면 화면을 먼저 그리고, 받은 뉴스는 다음에 그릴 때 보여요 (화면이 튀지 않게)
+    news = loadNews(data.news_url);
+    await Promise.race([news, new Promise((ok) => setTimeout(ok, 2500))]);
   } catch (e) {
     if (DATA) return;  // 이미 화면이 있으면 그대로 둬요
     $("#app").innerHTML = `<div class="card"><p class="empty">데이터를 못 불러왔어요. 인터넷 연결을 확인하고 다시 열어 주세요.</p></div>`;
@@ -202,7 +214,20 @@ async function load() {
   DATA = data;
   adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
+  const had = NEWS && NEWS.updated;
   render();
+  news.then(() => { if (NEWS && NEWS.updated !== had) paintNews(); });
+}
+// 늦게 도착한 뉴스: 접혀 있는 '지금 뉴스' 줄만 바꿔요 (펼친 칸·종목 화면은 다음에 그릴 때. 보던 화면이 튀지 않게)
+function paintNews() {
+  if (screen !== "home" || !DATA) return;
+  const row = homeMoreRows(DATA.markets[market]).find((r) => r.key === "news");
+  const el = document.querySelector('details.hm[data-hm="news"]');
+  if (!row || !el || el.open) return;
+  const sum = el.querySelector(".hm-s");
+  if (sum) sum.innerHTML = row.sum;
+  const body = el.querySelector(".hm-body");
+  if (body) { body.innerHTML = row.html; trimHeads(el); }
 }
 
 function selectMarket(m) {
@@ -312,7 +337,7 @@ const VIEWS = {
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
   tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
-  stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
+  stock: (d) => [stockHeadCard(d), stockNewsCard(), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
@@ -2052,6 +2077,9 @@ function homeMoreRows(d) {
   const s = d.daily || {};
   const rows = [];
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
+  // 지금 뉴스: 가장 최근 시장 뉴스 한 줄 (30분마다 따로 받아요)
+  const N = newsOf(market), n1 = N && N.market[0];
+  add("news", "📰", "지금 뉴스", n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard(d));
   const dn = dropNow(d);
   add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
   // 다가오는 일정: 가장 가까운 큰 일정
@@ -2113,6 +2141,36 @@ function tidyHomeMore(app) {
   }));
 }
 function openHomeMore(key) { HOME_OPEN.add(key); saveHomeOpen(); }
+
+// 몇 분 전에 받은 뉴스인지
+function ago(at) {
+  const t = Date.parse(at);
+  if (!t) return "";
+  const m = Math.max(0, Math.round((Date.now() - t) / 6e4));
+  return m < 2 ? "방금" : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`;
+}
+const hm = (at) => (at ? `${at.slice(11, 16)}` : "");
+function newsLi(n, who) {
+  const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title);
+  return `<li><div class="l"><div class="name news-t">${who ? `<b>${esc(who)}</b> ` : ""}${t}</div>
+    <div class="meta">${esc(n.source || "")}${n.at ? ` · ${md(n.at.slice(0, 10))} ${hm(n.at)} (${ago(n.at)})` : ""}</div></div></li>`;
+}
+function newsOf(m) { return NEWS && NEWS[m] ? NEWS[m] : null; }
+function newsCard(d) {
+  const N = newsOf(market);
+  if (!N) return DATA.news_url ? `<section class="card"><h2>지금 뉴스</h2><p class="empty">뉴스를 아직 못 받았어요. 잠시 뒤 다시 열어 주세요.</p></section>` : "";
+  const mine = myStocks(d).map((s) => [s, (N.stocks[s.code] || [])[0]]).filter(([, n]) => n);
+  return `<section class="card" id="news-card"><h2>지금 뉴스 <small>${ago(NEWS.updated)} 받음 · 30분마다</small></h2>
+    ${N.market.length ? `<ul class="list">${N.market.map((n) => newsLi(n)).join("")}</ul>` : `<p class="empty">최근 하루 시장 뉴스가 없어요.</p>`}
+    ${mine.length ? `<h3 class="muted" style="margin:14px 0 4px">⭐ 내 관심종목 뉴스</h3><ul class="list">${mine.map(([s, n]) => newsLi(n, s.name)).join("")}</ul>` : ""}
+    <p class="muted note" style="margin:10px 0 0">구글 뉴스 제목을 30분마다 자동으로 모아요 (GitHub 사정으로 더 늦을 때도 있어요). 종목 뉴스는 기본 종목과 텔레그램으로 넣은 종목만 받아요. 기사 원문을 꼭 확인하세요.</p></section>`;
+}
+// 종목 화면: 이 종목 최근 하루 뉴스 (받은 종목만)
+function stockNewsCard() {
+  const N = newsOf(market), l = N && N.stocks[stockCode];
+  if (!l || !l.length) return "";
+  return `<section class="card" id="stock-news"><h2>오늘 뉴스 <small>${ago(NEWS.updated)} 받음</small></h2><ul class="list">${l.map((n) => newsLi(n)).join("")}</ul></section>`;
+}
 
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
 // 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프

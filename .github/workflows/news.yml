@@ -1,0 +1,52 @@
+# 장중 뉴스: 30분마다 구글 뉴스 RSS(무료)에서 시장·종목 뉴스 제목을 받아 `live` 브랜치의 news.json 하나로 올려요.
+#   앱(홈 '더 보기' → 지금 뉴스, 종목 화면)이 raw.githubusercontent.com에서 바로 읽어서, 앱 전체를 다시 올리지 않아요.
+#   live 브랜치는 이 파일 하나만 있고 매번 덮어써요 (기록이 쌓이지 않게).
+#   GitHub 사정으로 몇 분~몇십 분 늦게 돌 때가 있어요. 폰에서 바로 돌리기: Actions → news → Run workflow
+name: news
+
+on:
+  schedule:
+    - cron: "13,43 * * * *"  # 30분마다 (정각은 GitHub가 붐벼서 피했어요)
+  workflow_dispatch:
+
+permissions:
+  contents: write  # live 브랜치 올리기
+  actions: read    # 고장 알림이 바로 전 실행 결과를 봐요
+
+concurrency:
+  group: news
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
+    timeout-minutes: 10
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python news.py --out "$RUNNER_TEMP/news.json"
+      - name: live 브랜치에 올리기
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan live-tmp
+          git rm -rfq --cached .
+          cp "$RUNNER_TEMP/news.json" news.json
+          git add news.json
+          git commit -qm "장중 뉴스 $(TZ=Asia/Seoul date '+%F %H:%M')"
+          git push -f origin HEAD:refs/heads/live
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python health.py fail --workflow news

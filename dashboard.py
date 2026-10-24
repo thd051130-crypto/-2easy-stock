@@ -10,6 +10,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/policies.json, policy_news.json : 정부 정책과 최근 뉴스 (policies.py)
   - paper/world.json : 세계 지수·환율 (world.py)
   - paper/calendar.json : 경제 일정 (econ_calendar.py)
+  - 장중 뉴스는 data.json에 안 넣고 주소(news_url)만 넣어요. 앱이 live 브랜치의 news.json을 바로 읽어요 (news.py)
   - paper/events.json   : 큰 발표(CPI·고용·FOMC) 예상·결과, 지수 급변 (big_events.py)
   - paper/kr/disclosures.json : 국장 종목 공시 (disclosures.py, 오픈DART 키가 있을 때만)
   - paper/kr/flows.json : 국장 외국인·기관 수급 (flows.py) → 홈 경고·요약만 (종목별 막대는 stock_pages.py)
@@ -27,6 +28,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import pathlib
 import shutil
 
@@ -40,6 +42,9 @@ import watchlist
 from markets import MARKETS
 
 KST = dt.timezone(dt.timedelta(hours=9))
+REPO = "thd051130-crypto/-2easy-stock"  # 저장소 이름을 모를 때 (내 PC에서 돌릴 때)
+
+
 def read_json(path):
     return json.loads(path.read_text()) if path.exists() else None
 
@@ -80,7 +85,9 @@ def build(paper_dir):
                 macro=read_json(paper_dir / "macro.json"), policies=policies.payload(paper_dir),
                 calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), events=read_json(paper_dir / "events.json"),
                 world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
-                report=read_json(paper_dir / "report.json"))
+                report=read_json(paper_dir / "report.json"),
+                # 30분마다 news 워크플로가 live 브랜치에 올리는 장중 뉴스 (앱이 바로 읽어요)
+                news_url=f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY') or REPO}/live/news.json")
 
 
 def site_version(site_dir):
