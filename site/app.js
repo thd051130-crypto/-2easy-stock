@@ -2026,23 +2026,6 @@ function perfTabsBar(d) {
     `<button type="button" data-perf-tab="${t.k}" aria-pressed="${t.k === cur}">${esc(t.label)}</button>`).join("")}</nav>`;
 }
 
-function homeIndexCard(d) {
-  const s = d.daily;
-  const close = s && s.series ? s.series.close.filter((v) => v != null) : [];
-  if (close.length < 2) return "";
-  const lastOf = (a) => (a || []).filter((v) => v != null).pop();
-  const last = close[close.length - 1], ch = last / close[close.length - 2] - 1;
-  const ma50 = lastOf(s.series.ma50), ma200 = lastOf(s.series.ma200), gap = ma200 ? last / ma200 - 1 : null;
-  return `<section class="card"><h2>${esc(d.index_name)} <small>${md(s.day)} 종가</small></h2>
-    <div class="tile"><div>
-      <p class="big">${cnt(last, "num", num(last))}</p>
-      <p class="sub nowrap"><b class="${sign(ch)}">${cnt(ch, "pct2", pct(ch, 2))}</b> 전일 대비</p>
-    </div><div class="tile-spark">${spark(close.slice(-63), `${d.index_name} 최근 3개월`)}<span class="muted">최근 3개월</span></div></div>
-    ${ma200 && ma50 ? `<p class="muted" style="margin:8px 0 0">200일선보다 ${(Math.abs(gap) * 100).toFixed(1)}% ${gap >= 0 ? "위" : "아래"} ·
-      50일선보다 ${last >= ma50 ? "위" : "아래"}</p>` : ""}
-    ${more("chart", "차트 크게 보기")}</section>`;
-}
-
 // 홈 '더 보기': 칸마다 제목 + 한 줄 요약만 보이고, 누르면 원래 칸이 그 자리에서 펼쳐져요. 펼친 칸은 기억해요.
 let HOME_OPEN = new Set();
 try { HOME_OPEN = new Set(JSON.parse(localStorage.getItem("home_open") || "[]")); } catch (e) { /* 처음 */ }
@@ -2086,8 +2069,6 @@ function homeMoreRows(d) {
   add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", quietVolumeCard(d));
   const m = DATA && DATA.macro;
   add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", macroCard());
-  const close = s.series ? s.series.close.filter((v) => v != null) : [];
-  add("index", "📈", esc(d.index_name || "지수"), close.length > 1 ? `${num(close[close.length - 1])} <b class="${sign(close[close.length - 1] / close[close.length - 2] - 1)}">${pct(close[close.length - 1] / close[close.length - 2] - 1, 2)}</b>` : "", homeIndexCard(d));
   return rows;
 }
 function homeMoreCard(d) {
