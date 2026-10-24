@@ -50,7 +50,7 @@ def test_build_writes_one_file_per_stock_with_fundamentals(tmp_path):
     (paper / "kr").mkdir(parents=True)
     (paper / "kr" / "fundamentals.json").write_text(json.dumps(dict(stocks={
         "005930": dict(code="005930", per=12.1), "000660": dict(code="000660", per=8.0)})))
-    (paper / "kr" / "signal.json").write_text(json.dumps(dict(day="2026-10-01")))
+    (paper / "kr" / "daily.json").write_text(json.dumps(dict(day="2026-10-01")))
 
     def fetch(symbol):  # SK하이닉스는 시세를 못 받고, 나머지는 받아요
         return None if symbol == "000660.KS" else yahoo_daily(5)
@@ -86,7 +86,7 @@ def test_build_stops_fetching_after_time_budget(tmp_path):
 def test_extras_come_first_with_their_own_symbol_and_fill_data_json(tmp_path):
     paper = tmp_path / "paper"
     (paper / "kr").mkdir(parents=True)
-    (paper / "kr" / "signal.json").write_text(json.dumps(dict(day="2026-10-01")))
+    (paper / "kr" / "daily.json").write_text(json.dumps(dict(day="2026-10-01")))
     (paper / "watch.json").write_text(json.dumps(dict(kr=[
         dict(code="293490", name="카카오게임즈", symbol="293490.KQ", exch="KQ", kind="s", added="2026-10-05"),
         dict(code="035720", name="카카오", symbol="035720.KS", exch="KS", kind="s", added="2026-10-05")])))

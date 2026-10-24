@@ -1,0 +1,77 @@
+# 장 마감 뒤 매일 시세 자료(많이 움직인 종목·업종·지수 캔들·관심종목 시세)를 만들고, 리포트 부서가 "오늘의 리포트"를 텔레그램으로 보내요.
+#   국장: 평일 한국시간 17:30쯤 / 미장: 화~토 한국시간 07:30쯤 (뉴욕 장 마감 뒤)
+# 사고팔기 신호·가상계좌는 없어요 (2026-10-24 사용자가 매매 규칙을 없앰). 계좌·증권사 키 없이 돌아가요.
+# 폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → daily → Run workflow
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+name: daily
+
+on:
+  schedule:
+    - cron: "30 8 * * 1-5"   # UTC 08:30 = 한국 17:30, 월~금 → 국장 (GitHub 사정으로 몇십 분 늦게 돌 수 있어요)
+    - cron: "30 22 * * 1-5"  # UTC 22:30 = 한국 다음 날 07:30, 뉴욕 월~금 장 마감 뒤 → 미장
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "kr=국장, us=미장, both=둘 다"
+        type: choice
+        options: [both, kr, us]
+        default: both
+
+permissions:
+  contents: write  # paper/ 기록을 커밋해요
+  actions: read  # 고장 알림이 바로 전 실행 결과를 봐요
+
+concurrency:
+  group: daily  # 두 번 겹쳐 돌면 기록이 꼬이니까 하나씩
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
+    timeout-minutes: 30
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      MARKETS: ${{ inputs.market == 'both' && 'kr us' || inputs.market || (github.event.schedule == '30 22 * * 1-5' && 'us' || 'kr') }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: daily data (${{ env.MARKETS }})
+        run: |
+          for mk in $MARKETS; do
+            python daily.py --market "$mk" --save-csv "data/${mk}_daily_recent.csv" --save-json "paper/$mk/daily.json"
+          done
+      # 국장 외국인·기관 수급 (네이버 무료 자료, 앱 종목 화면·홈 경고·리포트 종목팀). 못 받아도 위 기록은 저장해요
+      - name: KR flows
+        if: contains(env.MARKETS, 'kr')
+        continue-on-error: true
+        run: python flows.py
+      # 리포트 부서 다섯 팀 → 오늘의 리포트 한 통 (paper/report.json + 텔레그램 + 앱 메시지함)
+      - name: report
+        id: report
+        continue-on-error: true
+        run: python report_desks.py
+      - name: commit paper log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper
+          if git diff --cached --quiet; then echo "기록 변화 없음"; exit 0; fi
+          git commit -m "매일 자료·리포트 $(TZ=Asia/Seoul date +%F) ($MARKETS)"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: 고장 알림
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python health.py fail --workflow daily
+      - name: 리포트 고장 알림
+        if: steps.report.outcome == 'failure'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python health.py fail --workflow daily --step "오늘의 리포트" --always

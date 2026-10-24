@@ -90,8 +90,8 @@ def test_update_keeps_last_value_when_a_stock_fails(tmp_path, monkeypatch):
     assert saved["000660"]["per"] == 7.0 and saved["005930"]["per"] == 10.0 and set(saved) == {"005930", "000660", "035420"}
 
 
-def test_stocks_include_spy_for_us_only():
-    assert "SPY" in fu.stocks("us") and "SPY" not in fu.stocks("kr")
+def test_stocks_are_base_universe():
+    assert "005930" in fu.stocks("kr") and "AAPL" in fu.stocks("us") and "SPY" not in fu.stocks("us")
     assert fu.symbol("kr", "005930") == "005930.KS" and fu.symbol("us", "BRK-B") == "BRK-B"
 
 

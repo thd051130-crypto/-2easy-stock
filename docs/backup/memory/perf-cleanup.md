@@ -12,3 +12,5 @@ metadata:
 - 같은 PR #72: 내 규칙표 후보(신호 화면)는 앞 3개(RB_FIRST)만 이름·가격, 매매 의견과 나머지는 접기. 홈 신호 칸도 3개 + "외 N개".
 
 **How to apply:** 성과 화면에 새 칸은 맞는 묶음에 넣거나 PERF_TABS에 새 묶음 추가. 다른 화면에서 성과의 특정 칸으로 보내려면 perfTabKey를 먼저 바꾸기. 미리보기 /mnt/project-files/perf-tabs-preview/. 관련 [[home-cleanup-pr64]], [[phone-dashboard]], [[calendar-split-pr72]].
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].

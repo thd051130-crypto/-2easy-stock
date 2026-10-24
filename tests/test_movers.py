@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import movers
-import wide
+import marketdata as md
 
 
 def frame(n=260, seed=1):
@@ -65,4 +65,4 @@ def test_us_universe_skips_base_and_share_classes():
             ["GOOG", "알파벳 C", "", "s", "Alphabet Inc."], ["GOOGL", "알파벳", "", "s", "Alphabet Inc."],
             ["BRK-B", "버크셔", "", "s", "Berkshire Hathaway Inc. New"], ["BRK-A", "버크셔 A", "", "s", "Berkshire Hathaway Inc."],
             ["QQQ", "QQQ", "", "e", "Invesco QQQ"], ["TSLA", "테슬라", "", "s", "Tesla, Inc."]]
-    assert wide.us_universe(n=5, rows=rows) == {"NVDA": "엔비디아", "TSLA": "테슬라"}
+    assert md.wide_us(n=5, rows=rows) == {"NVDA": "엔비디아", "TSLA": "테슬라"}

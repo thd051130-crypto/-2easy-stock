@@ -14,3 +14,5 @@ PR #12 in -2easy-stock (branch claude/project-thread-i2bcpr) merged to main 2026
 
 **Why:** user asked to add a fundamentals desk and strengthen each desk, free only, drawdown-first.
 **How to apply:** news analysis is not free/reliable → say so, don't fake. Related: [[paper-trading-log]], [[phone-dashboard]]
+
+2026-10-24: 이 기능은 없앴어요 → [[report-desks]].

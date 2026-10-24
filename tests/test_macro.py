@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 
 import dashboard
-import kr_swing_backtest as kb
-import kr_swing_signals as ks
 import macro
 
 
@@ -84,31 +82,8 @@ def test_should_send_on_report_or_regime_change():
     assert macro.should_send(snap, {"regime": "둔화"}, False)
 
 
-def test_risk_line_joins_department_report():
-    snap = macro.snapshot(frame())
-    report = [("마켓부", "코스피 상승 추세"), ("리스크관리부", "종목당 10%")]
-    out = ks.with_macro(report, snap)
-    assert out[0] == report[0]
-    assert out[1][1].startswith("종목당 10%. 경기 확장(경고 0/7)")
-    assert ks.with_macro(report, None) == report
-
-
 def test_dashboard_reads_macro(tmp_path):
     snap = macro.snapshot(frame())
     (tmp_path / "macro.json").write_text(json.dumps(snap, ensure_ascii=False))
     assert dashboard.build(tmp_path)["macro"]["regime"] == "확장"
     assert dashboard.build(tmp_path / "없음")["macro"] is None
-
-
-def test_simulate_accepts_daily_weight():
-    opens, closes, index_close = kb.synthetic(n_stocks=5)
-    entry = pd.DataFrame(True, closes.index, closes.columns)
-    exit_ = pd.DataFrame(False, closes.index, closes.columns)
-    rank = pd.DataFrame(0.0, closes.index, closes.columns)
-    fixed, *_ = kb.simulate(opens, closes, entry, exit_, rank, 5, kb.COSTS["기본"], weight=0.1)
-    same, *_ = kb.simulate(opens, closes, entry, exit_, rank, 5, kb.COSTS["기본"],
-                           weight=pd.Series(0.1, closes.index))
-    assert np.allclose(fixed, same)
-    half, exposure, *_ = kb.simulate(opens, closes, entry, exit_, rank, 5, kb.COSTS["기본"],
-                                     weight=pd.Series(0.05, closes.index))
-    assert exposure < 0.3

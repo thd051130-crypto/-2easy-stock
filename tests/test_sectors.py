@@ -80,10 +80,10 @@ def test_compute_without_news_or_map():
 
 
 def test_update_fills_only_missing(tmp_path, monkeypatch):
-    import wide
+    import marketdata as md
 
-    monkeypatch.setattr(wide, "universe", lambda: {"999999": "새 회사"})
-    monkeypatch.setattr(wide, "us_universe", lambda: {})
+    monkeypatch.setattr(md, "wide_kr", lambda: {"999999": "새 회사"})
+    monkeypatch.setattr(md, "wide_us", lambda: {})
     path = tmp_path / "sectors.json"
     path.write_text(json.dumps({"kr": {"005930": ["반도체", "Consumer Electronics"]}, "us": {}}))
     calls = []
@@ -101,22 +101,19 @@ def test_update_fills_only_missing(tmp_path, monkeypatch):
     assert json.loads(path.read_text())["kr"]["999999"][0] == "자동차"
 
 
-def test_add_sectors_joins_signal(tmp_path, monkeypatch):
+def test_add_sectors_joins_daily(tmp_path, monkeypatch):
     import argparse
 
-    import kr_swing_signals as ks
+    import daily
     import movers
 
     closes, index_close = closes_frame()
     monkeypatch.setattr(sectors, "load", lambda path=None: {"kr": {"A1": ["반도체", ""], "B1": ["자동차", ""]}})
     monkeypatch.setattr(movers, "google_news", lambda q, lang="ko", n=5: [
         dict(title="반도체 수혜 기대감", source="", date=None, link="")] if "반도체" in q else [])
-    payload = dict(picks=[dict(code="A1", name="가", opinion=["이유: 테스트"])],
-                   movers=dict(up=[dict(code="A1")], down=[]))
+    payload = dict(movers=dict(up=[dict(code="A1")], down=[]))
     args = argparse.Namespace(market="kr")
-    text, out = ks.add_sectors("신호", payload, args, tmp_path / "kr_daily_recent.csv", closes, index_close)
-    assert "[업종별 호재·악재" in text and "오늘 매수 후보의 업종" in text
-    assert out["picks"][0]["opinion"][-1].startswith("업종: 반도체")
+    out = daily.add_sectors(payload, args, tmp_path / "kr_daily_recent.csv", closes, index_close)
     assert out["movers"]["up"][0]["sector"] == "반도체"
     assert out["sector_of"] == {"A1": "반도체", "B1": "자동차"}
     assert out["sector_links"]["반도체"][0][0] == "IT·전자"

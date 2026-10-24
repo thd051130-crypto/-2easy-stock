@@ -12,12 +12,11 @@
       7. 공포 지수: VIX 20일 평균이 25 넘음
     경고 0~1개 '확장', 2~3개 '둔화', 4개 이상 '위축 경고'
     2008년 금융위기를 넣으면 경고가 많을수록 3개월 안 큰 하락이 잦았지만 2010년 이후엔 차이가 없었고,
-    이걸로 매수를 줄이는 규칙은 비중을 그냥 덜 들고 있는 것보다 낙폭·수익 둘 다 나아지지 않았어요 (macro_backtest.py).
-    그래서 매매 규칙은 안 바꾸고, 리스크관리부 보고에 참고로만 붙여요.
+    그래서 판정은 참고로만 보여 줘요 (리포트 부서 시장팀이 경고를 업종 호재·악재로 넘겨요).
   - FRED (미국 연준 무료 자료, 키 없이 CSV): 실업률·삼 법칙·물가는 참고로만 보여 줘요.
-    한 달에 한 번 나오고 나중에 고쳐지는 자료라 과거 시점 그대로를 무료로 구하기 어려워서 규칙엔 안 써요.
+    한 달에 한 번 나오고 나중에 고쳐지는 자료라 과거 시점 그대로를 무료로 구하기 어려워요.
 
-매일 아침 판정을 paper/macro.json에 남기고(앱 홈 "경기 국면" 칸, 국장·미장 리스크관리부 보고),
+매일 아침 판정을 paper/macro.json에 남기고(앱 홈 "경기 국면" 칸, 리포트 부서 시장팀),
 텔레그램은 월요일 아침 "[경기 리포트]"와 판정이 바뀐 날 "[경기 판정 바뀜]"에만 보내요.
 
 사용법:
@@ -226,32 +225,24 @@ def snapshot(d, extra=None):
 
 
 def action_line(n):
-    """리스크관리부가 경기 판정을 어떻게 쓰는지. 백테스트(docs/macro-backtest.md)에서 매수를 줄여도
-    같은 비중을 그냥 덜 들고 있는 것보다 나은 게 없어서, 규칙은 안 바꾸고 참고로만 알려 줘요."""
+    """경기 판정을 한 줄로. 2010년 이후엔 경고 개수와 큰 하락이 잘 안 맞아서 참고로만 알려 줘요."""
     if n >= CONTRACTION:
-        return "2008년 위기 땐 이런 날 뒤에 크게 빠진 적이 많았어요. 2010년 이후엔 잘 안 맞아서 규칙은 그대로, 참고로만"
+        return "2008년 위기 땐 이런 날 뒤에 크게 빠진 적이 많았어요. 2010년 이후엔 잘 안 맞아서 참고로만"
     if n >= SLOW:
-        return "경고가 쌓이는 중이에요. 백테스트에서 매수를 줄여도 낙폭이 안 줄어서 규칙은 그대로 (참고)"
-    return "경고가 적어 평소대로 해요"
-
-
-def risk_line(snap):
-    """부서별 보고 '리스크관리부' 끝에 붙이는 한 줄."""
-    if not snap:
-        return None
-    return f"경기 {snap['regime']}(경고 {snap['score']}/{snap['total']}): {snap['action']}"
+        return "경고가 쌓이는 중이에요. 큰 발표·금리 흐름을 같이 보세요 (참고)"
+    return "경고가 적어요"
 
 
 def format_report(snap):
     lines = [f"[경기 리포트] {snap['day']} 기준",
              f"판정: {snap['regime']} (경고 {snap['score']}/{snap['total']}개)"
              + ("" if snap["month_ago"] == snap["score"] else f", 한 달 전 {snap['month_ago']}개({snap['prev_regime']})"),
-             f"리스크관리부: {snap['action']}", ""]
+             f"한 줄: {snap['action']}", ""]
     for s in snap["signals"]:
         mark = "⚠️" if s["warn"] else "🟡" if s.get("near") else "✅"
         lines.append(f"{mark} {s['name']}: {s['now']} (경고 기준: {s['rule']})")
     if snap["us_economy"]:
-        lines += ["", "[미국 경제 참고 · FRED, 규칙엔 안 씀]"]
+        lines += ["", "[미국 경제 참고 · FRED]"]
         for r in snap["us_economy"]:
             lines.append(f"{'⚠️' if r['warn'] else '·'} {r['name']} {r['value']}, {r['note']}")
     if snap["history"]:
