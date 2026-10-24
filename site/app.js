@@ -1816,10 +1816,14 @@ function mapSvg() {
       <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g>
       <text class="flow ${sign(fv(f))}" y="${(13 * n.s * 1.18 + 11).toFixed(1)}">${f ? pct(fv(f)) : ""}</text></g>`;
   }).join("");
+  // 원래 자리 표시: 확대하면 이어진 산업은 둘레로 옮겨 가요. 전체 지도에서 어디 있던 산업인지 보이게 원래 자리에 흐린 모양을 남겨요
+  const ghosts = IMAP.nodes.map((n, i) => `<g class="ghost g-${n.group}" data-gh="${i}" transform="translate(${n.ox.toFixed(1)},${n.oy.toFixed(1)})">
+      <g class="pill" style="--s:${n.s.toFixed(3)}"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
+      <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g></g>`).join("");
   return `<svg class="imap${mapFocus ? " focused" : ""}" viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="산업 연관 지도">
     <defs><marker id="imap-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M1 1 9 5 1 9z"/></marker></defs>
-    <g class="edges">${edges}</g><g class="nodes">${nodes}</g></svg>`;
+    <g class="ghosts" aria-hidden="true">${ghosts}</g><g class="edges">${edges}</g><g class="nodes">${nodes}</g></svg>`;
 }
 
 // 점·선을 새 자리로 (0.45초). 동작 줄이기를 켰으면 바로.
@@ -1835,6 +1839,8 @@ function placeMap(svg, animate) {
     g.classList.toggle("dim", !T[i].on);
     g.classList.toggle("center", T[i].center);
     g.classList.toggle("near", !!mapFocus && T[i].on && !T[i].center);
+    const gh = svg.querySelector(`[data-gh="${i}"]`);
+    if (gh) gh.classList.toggle("on", !!mapFocus && T[i].on);
   });
   IMAP.links.forEach((l, i) => {
     const e = svg.querySelector(`[data-e="${i}"]`);
