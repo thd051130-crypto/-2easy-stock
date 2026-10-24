@@ -1,0 +1,19 @@
+# 임시: 네이버 리서치 받아오기 시험 (PR 전에 지워요)
+name: reading-try
+on:
+  push:
+    branches: [claude/project-thread-177r8e]
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - run: python reading.py --out /tmp/r.json
+      - run: python -c "import json;d=json.load(open('/tmp/r.json'));[print(k, x) for k in d['items'] for x in d['items'][k][:3]]"
