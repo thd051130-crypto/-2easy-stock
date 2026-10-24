@@ -42,3 +42,33 @@ def test_topic():
     assert news.topic("corporate earnings beat") == "실적"  # corporate의 rate는 금리가 아니에요
     assert news.topic("삼성전자 신제품 공개") is None
     assert news.topic("American Express (AXP) stock trades down") is None  # trades는 무역이 아니에요
+
+
+def test_old_news_dropped():
+    now = dt.datetime(2026, 10, 24, 16, 0, tzinfo=news.KST)
+    items = [dict(title="새 것", at="2026-10-24T10:00+09:00"), dict(title="어제 아침", at="2026-10-23T15:00+09:00"),
+             dict(title="시각 없음", at=None)]
+    assert [x["title"] for x in news.fresh(items, now)] == ["새 것"]
+    out = news.build(fetch=lambda q, lang="ko", n=6: items, now=now)
+    assert [x["title"] for x in out["kr"]] == ["새 것"]
+
+
+def test_hot_needs_three_sources_and_keeps_until_old():
+    now = dt.datetime(2026, 10, 24, 16, 0, tzinfo=news.KST)
+    a = [dict(title="중동 긴장에 국제유가 급등 116달러", source=f"언론{i}", at=f"2026-10-24T1{i}:00+09:00", link="https://x") for i in range(3)]
+    b = [dict(title="한은 기준금리 동결", source="한경", at="2026-10-24T12:00+09:00", link="https://y"),
+         dict(title="한은 기준금리 동결 매파적", source="매경", at="2026-10-24T12:30+09:00", link="https://z")]
+    h = news.hot(a + b)
+    assert len(h) == 1 and h[0]["sources"] == 3 and {"중동", "국제유가"} <= set(h[0]["key"])
+    assert h[0]["since"] == "2026-10-24T10:00+09:00"
+    # 다음 실행: 이번엔 핫이 없어도 지난 핫은 7일 동안 남고, 같은 사건이면 하나로
+    old = dict(h[0], since="2026-10-20T09:00+09:00")
+    assert news.keep_hot([], [old], now) == [old]
+    assert news.keep_hot(h, [old], now)[0]["since"] == "2026-10-20T09:00+09:00" and len(news.keep_hot(h, [old], now)) == 1
+    stale = dict(old, at="2026-10-16T09:00+09:00")
+    assert news.keep_hot([], [stale], now) == []
+
+
+def test_words_drop_josa_and_common():
+    assert news.words("트럼프가 관세를 올렸다…증시 급락") == {"트럼프가", "관세", "올렸다"}
+    assert "국제유가" in news.words("국제유가는 23주째 상승")
