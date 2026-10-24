@@ -2,14 +2,13 @@
 
   1. 이번 주 지수   세계 지수·환율·금리·원자재의 1주 등락, 코스피·S&P500은 요일별로
   2. 이번 주 업종   국장·미장 업종 5일 흐름 상위·하위
-  3. 이번 주 종목   5일 동안 많이 오른·내린 종목과 이유
-  4. 이번 주 사건   지수 급변, 큰 발표 결과, 경기 판정이 바뀌었는지
-  5. 다음 주 일정   월~금 큰 발표·금리 결정·옵션 만기·대형주/관심종목 실적
+  3. 이번 주 사건   지수 급변, 큰 발표 결과, 경기 판정이 바뀌었는지
+  4. 다음 주 일정   월~금 큰 발표·금리 결정·옵션 만기·대형주/관심종목 실적
 
 자료는 다른 워크플로가 이미 저장한 파일만 읽어요 (새로 받지 않아요, 유료 API 안 씀):
   paper/world.json, macro.json, events.json, calendar.json, <시장>/daily.json
 결과: paper/weekly.json (앱 리포트 화면 '주간' 탭) + 텔레그램 한 통 (메시지함에도 저장)
-사고팔기 판단은 안 해요.
+사고팔기 판단은 안 해요. 급등락 종목은 넣지 않아요 (사용자 2026-10-24 '급등락 종목은 빼자').
 
   python weekly.py --dry-run     # 보내지 않고 출력만
 """
@@ -79,17 +78,6 @@ def sector_week(signals, top=3):
     return out
 
 
-def mover_week(signals, top=3):
-    out = {}
-    for mk, sig in signals.items():
-        mv = sig.get("movers") or {}
-        pick = lambda m: dict(code=m["code"], name=m.get("name") or m["code"], r5=m.get("r5"), sector=m.get("sector"),
-                              why=m.get("main") or (m.get("reasons") or [None])[0])
-        if mv.get("up") or mv.get("down"):
-            out[mk] = dict(up=[pick(m) for m in (mv.get("up") or [])[:top]], down=[pick(m) for m in (mv.get("down") or [])[:top]])
-    return out
-
-
 def event_desk(events, shocks, macro, mon, fri):
     start, end = mon.isoformat(), fri.isoformat() + "T99"
     shock = [dict(at=s["at"], label=s.get("label"), way=s.get("way"), move=s.get("move"),
@@ -145,12 +133,11 @@ def build(inputs, today=None):
     mon, fri, nmon, nfri = week_range(today)
     idx = index_desk(inputs["world"], mon, fri)
     sectors = sector_week(inputs["signals"])
-    movers = mover_week(inputs["signals"])
     ev = event_desk(inputs["events"], inputs["shocks"], inputs["macro"], mon, fri)
     nxt = next_week(inputs["events"], inputs["calendar"], nmon, nfri)
     return dict(day=today.isoformat(), week=[mon.isoformat(), fri.isoformat()],
                 generated=dt.datetime.now(KST).isoformat(timespec="minutes"),
-                headline=headline(idx, sectors, ev, nxt), index=idx, sectors=sectors, movers=movers, events=ev, next=nxt)
+                headline=headline(idx, sectors, ev, nxt), index=idx, sectors=sectors, events=ev, next=nxt)
 
 
 def week_fact(f):
@@ -175,10 +162,6 @@ def format_text(r):
         out += ["", f"[이번 주 업종] {FLAGS[mk]} {MARKET_NAMES[mk]} 5일 흐름"]
         out += [f"- 상위 {x['name']} {pct(x['r5'])}" + (f" (대표 {x['best']})" if x["best"] else "") for x in s["up"]]
         out += [f"- 하위 {x['name']} {pct(x['r5'])}" + (f" (대표 {x['worst']})" if x["worst"] else "") for x in s["down"]]
-    for mk, m in r["movers"].items():
-        out += ["", f"[이번 주 종목] {FLAGS[mk]} 5일 동안 많이 움직인 종목"]
-        out += [f"- ▲ {x['name']} {pct(x['r5'])}" + (f": {x['why']}" if x["why"] else "") for x in m["up"]]
-        out += [f"- ▼ {x['name']} {pct(x['r5'])}" + (f": {x['why']}" if x["why"] else "") for x in m["down"]]
     ev = r["events"]
     rows = [f"- ⚡ {md(s['at'])} {s['at'][11:16]} {s['label']} {pct(s['move'])}" + (f" · {s['news']}" if s["news"] else "")
             for s in ev["shocks"][:5]]

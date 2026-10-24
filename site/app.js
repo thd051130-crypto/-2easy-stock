@@ -1363,7 +1363,7 @@ function weeklyLine() {
 function weeklyCards() {
   const w = DATA.weekly;
   if (!w) return [`<section class="card"><p class="empty">아직 주간 리포트가 없어요. 토요일 아침에 만들어요.</p></section>`];
-  const flag = REPORT_FLAG[market], ix = w.index || {}, sec = (w.sectors || {})[market], mv = (w.movers || {})[market];
+  const flag = REPORT_FLAG[market], ix = w.index || {}, sec = (w.sectors || {})[market];
   const ev = w.events || {}, nx = w.next || {};
   const facts = ix.facts || [], fact = (n) => facts.find((f) => f.name === n);
   const big = ["코스피", "코스닥", "S&P500", "나스닥"].map(fact).filter(Boolean);
@@ -1392,11 +1392,6 @@ function weeklyCards() {
   const secCard = rows.length ? `<section class="card"><h2>🏭 이번 주 업종 <small>${flag} 5일 상위·하위</small></h2>
     <ul class="wk-bars">${rows.map((x, i) => `${i === sec.up.length ? `<li class="wk-gap" aria-hidden="true"></li>` : ""}<li><div class="wk-bl"><b>${esc(x.name)}</b><small>${esc((x.r5 >= 0 ? x.best : x.worst) || "")}</small></div>
       <div class="wk-track"><i class="${sign(x.r5)}" style="width:${(Math.abs(x.r5) / top * 50).toFixed(1)}%"></i></div><b class="wk-bv ${sign(x.r5)}">${pct(x.r5)}</b></li>`).join("")}</ul></section>` : "";
-  // 4. 종목: 이름 + 이유, 오른쪽 색 알약
-  const stock = (x) => `<li data-stock="${esc(x.code)}" role="button"><div class="l"><div class="name">${esc(x.name)}</div>${x.why ? `<div class="meta">${esc(x.why)}</div>` : ""}</div><div class="r">${chip(x.r5)}</div></li>`;
-  const mvCard = mv && (mv.up.length || mv.down.length) ? `<section class="card"><h2>🔎 이번 주 종목 <small>${flag} 5일 동안 많이 움직임</small></h2>
-    ${mv.up.length ? `<p class="wk-sub up">▲ 많이 오른 종목</p><ul class="list wk-list">${mv.up.map(stock).join("")}</ul>` : ""}
-    ${mv.down.length ? `<p class="wk-sub down">▼ 많이 내린 종목</p><ul class="list wk-list">${mv.down.map(stock).join("")}</ul>` : ""}</section>` : "";
   // 5. 사건: 시간 줄
   const tl = [...(ev.shocks || []).slice(0, 5).map((s) => ({ t: s.at, h: `⚡ <b>${esc(s.label)}</b> 급변 ${chip(s.move)}`, sub: s.news })),
     ...(ev.done || []).slice(0, 8).map((e) => ({ t: e.date, h: `${e.flag || ""} <b>${esc(e.title)}</b>${e.actual ? ` 실제 ${esc(e.actual)}` : ""}`, sub: e.forecast ? `예상 ${e.forecast}` : "" }))]
@@ -1415,9 +1410,9 @@ function weeklyCards() {
     ${items.length ? Object.keys(byDay).sort().map((d) => `<div class="wk-dayg"><p class="wk-dh">${wkDay(d)}</p><ul>${byDay[d].map((x) =>
       `<li><span class="badge ${TAG[x.k] ? TAG[x.k][1] : ""}">${TAG[x.k] ? TAG[x.k][0] : "일정"}</span><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ul></div>`).join("")
     : `<p class="empty">아직 잡힌 큰 일정 없음</p>`}</section>`;
-  return [head, secCard, mvCard, evCard, nxCard, restCard,
+  return [head, secCard, evCard, nxCard, restCard,
     `<section class="card"><p class="muted" style="margin:0">토요일 아침에 한 주를 묶어 텔레그램으로도 보내요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.
-      위 국장·미장 탭으로 업종·종목을 바꿔 봐요.</p></section>`];
+      위 국장·미장 탭으로 업종을 바꿔 봐요.</p></section>`];
 }
 function bindRpTabs() {
   $("#app").querySelectorAll("[data-rp-tab]").forEach((b) => b.addEventListener("click", () => { rpTab = b.dataset.rpTab; render(); }));

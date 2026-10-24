@@ -43,7 +43,7 @@ def test_build():
     days = r["index"]["days"]["kr"]["days"]
     assert [d for d, _ in days] == ["월", "화", "수", "목", "금"] and abs(days[0][1] - 0.01) < 1e-9
     assert r["sectors"]["kr"]["up"][0]["name"] == "반도체" and r["sectors"]["kr"]["down"][0]["name"] == "운송"
-    assert r["movers"]["kr"]["down"][0]["why"] == "큰 매도" and "us" not in r["movers"]
+    assert "movers" not in r  # 급등락 종목은 빼요 (사용자 2026-10-24)
     ev = r["events"]
     assert len(ev["shocks"]) == 1 and ev["shocks"][0]["news"] == "급락 뉴스"  # 지난주 급변은 빼요
     assert ev["done"][0]["actual"] == "0.3%"
@@ -61,7 +61,7 @@ def test_text_and_html():
     assert "미국 10년 국채 금리 4.99% (1주 -0.11%p)" in t
     assert "금 (온스) 4,007.90 (1주 -4.14%, 1달 -7.2%)" in t
     assert "경기 판정 확장 (전엔 둔화)" in t and "⭐" in t
-    assert "사고팔기 판단은 안 해요" in t
+    assert "사고팔기 판단은 안 해요" in t and "엑스" not in t
     parts = tgfmt.compose(wk.summary_html(r), t)
     assert parts and "주간 리포트" in parts[0] and "10.19~10.23" in parts[0]
 
