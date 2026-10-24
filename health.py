@@ -41,6 +41,7 @@ WORKFLOWS = {
     "world": ("세계 지수·환율", 5),
     "all-stocks": ("전 종목 차트", 10),
     "disclosures": ("공시 알림", None),
+    "news": ("장중 뉴스", None),
 }
 
 

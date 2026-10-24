@@ -44,15 +44,17 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world"];
+const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world", "more"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search", "map", "inbox", "world"];  // 메시지함(#kr/inbox), 세계 지수(#kr/world)도 한 겹 위
+const LAYERS = ["stock", "search", "map", "inbox", "world", "more"];  // 메시지함(#kr/inbox), 세계 지수(#kr/world), 더 보기 칸(#kr/more/<칸>)도 한 겹 위
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
 let mapStart = "";  // 주소로 바로 연 산업 지도의 고른 산업
+let moreKey = "";   // 홈 '더 보기'에서 연 칸 (#kr/more/<칸>)
+let moreFromY = 0;  // 더 보기 칸을 열 때 홈에서 보던 높이 (뒤로 오면 그 자리로)
 const fromHash = () => {
   const [m, s, code] = location.hash.slice(1).split("/");
   let c = null;
@@ -62,14 +64,15 @@ const fromHash = () => {
 {
   const h = fromHash();
   if (h.m === "kr" || h.m === "us") market = h.m;
-  if (SCREENS.includes(h.s) && (h.s !== "stock" || h.code)) {
+  if (SCREENS.includes(h.s) && ((h.s !== "stock" && h.s !== "more") || h.code)) {
     screen = h.s;
     if (h.s === "map") mapStart = h.code || "";
+    else if (h.s === "more") moreKey = h.code;
     else stockCode = h.code;
   }
 }
 const hashFor = () => `#${market}${screen === "home" ? "" : `/${screen}`}${screen === "stock" ? `/${encodeURIComponent(stockCode)}`
-  : screen === "map" && mapFocus ? `/${encodeURIComponent(mapFocus)}` : ""}`;
+  : screen === "map" && mapFocus ? `/${encodeURIComponent(mapFocus)}` : screen === "more" ? `/${encodeURIComponent(moreKey)}` : ""}`;
 
 // 관심종목(★)은 이 폰 브라우저에 시장별로 저장해요. 저장소를 못 쓰면 앱을 닫을 때까지만 기억해요.
 const WATCH = {};
@@ -101,7 +104,6 @@ function adoptExtras() {
   }
 }
 let watchQuery = "";
-let jumpSectors = false;
 // 세계 지수·환율 칸에서 고른 기간 (이 폰 브라우저에 기억해요)
 const WORLD_P = [["d1", "오늘", 6, "1주"], ["w1", "1주", 22, "1개월"], ["m1", "1개월", 66, "3개월"], ["y1", "1년", 0, "1년"]];
 let worldP = "d1";
@@ -181,12 +183,24 @@ const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
 const shares = (q) => (Number.isInteger(q) ? `${q}주` : `${q.toFixed(3)}주`);
 let siteVersion = null;  // 이 화면을 연 뒤 처음 받은 data.json의 화면 버전
 
+// 장중 뉴스: news 워크플로가 30분마다 live 브랜치에 올리는 news.json (앱 배포와 따로라서 data.json보다 자주 바뀌어요)
+let NEWS = null;
+function loadNews(url) {
+  if (!url) return Promise.resolve(null);
+  return fetch(`${url}?t=${Date.now()}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+    .then((x) => { if (x && x.updated) NEWS = x; return x; }).catch(() => null);
+}
+
 async function load() {
   let data;
+  let news = null;
   try {
     const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
     data = await res.json();
+    // 뉴스는 잠깐만 기다려요. 늦으면 화면을 먼저 그리고, 받은 뉴스는 다음에 그릴 때 보여요 (화면이 튀지 않게)
+    news = loadNews(data.news_url);
+    await Promise.race([news, new Promise((ok) => setTimeout(ok, 2500))]);
   } catch (e) {
     if (DATA) return;  // 이미 화면이 있으면 그대로 둬요
     $("#app").innerHTML = `<div class="card"><p class="empty">데이터를 못 불러왔어요. 인터넷 연결을 확인하고 다시 열어 주세요.</p></div>`;
@@ -202,7 +216,16 @@ async function load() {
   DATA = data;
   adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
+  const had = NEWS && NEWS.updated;
   render();
+  news.then(() => { if (NEWS && NEWS.updated !== had) paintNews(); });
+}
+// 늦게 도착한 뉴스: 홈 '더 보기'의 지금 뉴스 한 줄만 바꿔요 (칸 화면은 다음에 그릴 때. 보던 화면이 튀지 않게)
+function paintNews() {
+  if (screen !== "home" || !DATA) return;
+  const row = homeMoreRows(DATA.markets[market]).find((r) => r.key === "news");
+  const sum = document.querySelector('[data-more="news"] .hm-s');
+  if (row && sum) sum.innerHTML = row.sum;
 }
 
 function selectMarket(m) {
@@ -219,7 +242,7 @@ function selectMarket(m) {
 // (예전 버전이 남긴 기록 {screen}은 1층으로 쳐요)
 const depth = () => { const st = history.state; return st ? (st.depth ?? (st.screen ? 1 : 0)) : 0; };
 function go(s, fromBack) {
-  if (!SCREENS.includes(s) || (s === "stock" && !stockCode)) s = "home";
+  if (!SCREENS.includes(s) || (s === "stock" && !stockCode) || (s === "more" && !moreKey)) s = "home";
   const prev = screen;
   if (!fromBack) {
     if (s === "search" && screen === "search") { const i = $("#search-input"); if (i) i.focus(); return; }
@@ -243,6 +266,23 @@ function go(s, fromBack) {
   if (DATA) motion = fromBack ? (LAYERS.includes(prev) ? "pop" : "fade") : LAYERS.includes(screen) ? "push" : "fade";
   window.scrollTo(0, 0);
   render();
+  // 더 보기 칸에서 뒤로 오면 홈의 '더 보기' 보던 자리로
+  if (fromBack && prev === "more" && screen === "home" && moreFromY) window.scrollTo(0, moreFromY);
+}
+
+// 홈 '더 보기' 줄을 누르면 그 칸만 있는 화면으로 넘어가요 (사용자 2026-10-24: 펼치지 말고 다른 화면으로)
+function openMore(key) {
+  if (screen === "more") {  // 더 보기 칸 안에서 다른 칸으로 (정책 → 업종): 같은 층에서 바꿔치기
+    moreKey = key;
+    history.replaceState(history.state, "", hashFor());
+    lastView = "";
+    window.scrollTo(0, 0);
+    render();
+    return;
+  }
+  moreKey = key;
+  if (screen === "home") moreFromY = window.scrollY;
+  go("more");
 }
 
 function openStock(code) {
@@ -319,6 +359,7 @@ const VIEWS = {
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
   inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
   world: () => [worldCard()],
+  more: (d) => moreView(d),
 };
 
 let lastView = "", holdH = 0;
@@ -401,7 +442,7 @@ function render() {
   else { clearTimeout(holdH); app.style.minHeight = ""; holdReady = false; }  // 다른 화면은 붙잡은 높이 없이
   app.innerHTML = VIEWS[screen](d).join("");
   if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
-  if (screen === "home") tidyHomeMore(app);
+  app.querySelectorAll("[data-more]").forEach((b) => b.addEventListener("click", () => openMore(b.dataset.more)));
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
@@ -424,11 +465,9 @@ function render() {
   }));
   app.querySelectorAll("[data-sector-go]").forEach((b) => b.addEventListener("click", () => {
     SECTOR[market] = b.dataset.sectorGo;
-    openHomeMore("sectors");
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
-    jumpSectors = true;  // 홈이 다시 그려지면 업종 칸으로 내려가요 (뒤로 가기로 돌아가는 경우가 있어서 render에서)
     lastTap = null;  // '화면 그대로' 규칙의 예외: 정책의 호재·악재는 누르면 업종 칸으로 이동해요 (사용자 2026-10-18)
-    if (screen === "home") render(); else go("home");  // 홈 정부 정책 칸에서 누르면 바로 다시 그려요
+    openMore("sectors");
   }));
   app.querySelectorAll("[data-sector]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -452,12 +491,11 @@ function render() {
   app.querySelectorAll("[data-pol-go]").forEach((b) => b.addEventListener("click", () => {
     polJump = b.dataset.polGo;  // 홈이 다시 그려지면 그 정책을 펼쳐서 보여 줘요
     POL_OPEN.add(polJump);
-    openHomeMore("policy");
     polR = "";
     lastTap = null;  // 이것도 이동하는 버튼이라 '화면 그대로'에서 빼요
-    if (screen === "home") render(); else go("home");
+    openMore("policy");
   }));
-  if (screen === "home" && polJump) {
+  if (screen === "more" && polJump) {
     const x = app.querySelector(`details[data-pol="${CSS.escape(polJump)}"]`);
     polJump = null;
     if (x) requestAnimationFrame(() => { x.scrollIntoView(); window.scrollBy(0, -70); });
@@ -483,6 +521,8 @@ function render() {
   }));
   app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
     calAll = !calAll;
+    // 펼칠 땐 보던 화면 그대로 두고 아래로 줄이 늘어나요 (버튼을 따라가면 32줄 아래 끝으로 내려가 버려요)
+    if (calAll) lastTap = null;
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -531,15 +571,10 @@ function render() {
     wtBar.scrollLeft = worldTabsX != null ? worldTabsX : on ? on.offsetLeft - wtBar.offsetLeft - 8 : 0;
     wtBar.addEventListener("scroll", () => { worldTabsX = wtBar.scrollLeft; }, { passive: true });
   }
-  if (screen === "home" && jumpSectors) {
-    jumpSectors = false;
-    const card = $("#sectors-card");
-    if (card) requestAnimationFrame(() => { card.scrollIntoView(); window.scrollBy(0, -70); });
-  }
   if (screen === "watch") {
     bindWatch(d);
   }
-  if (screen === "home") bindDrop(d);
+  if (screen === "more" && moreKey === "drop") bindDrop(d);
   if (screen === "stock") bindStock();
   if (screen === "search") bindSearch();
   if (screen === "map") bindMap();
@@ -658,7 +693,7 @@ function bindDrop(d) {
   if (!now || IDX_READY.has(now.sym)) return;
   idxData(now.sym).then(() => {
     const el = $("#drop-card");
-    if (el && screen === "home") { el.outerHTML = dropCard(d); trimHeads($("#app")); }
+    if (el && screen === "more") el.outerHTML = dropCard(d);
   });
 }
 
@@ -1517,8 +1552,7 @@ function bindResults(el) {
     if (m !== market) { market = m; try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ } }
     SECTOR[m] = name;
     try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
-    jumpSectors = true;
-    go("home");
+    openMore("sectors");
   }));
 }
 
@@ -2026,32 +2060,15 @@ function perfTabsBar(d) {
     `<button type="button" data-perf-tab="${t.k}" aria-pressed="${t.k === cur}">${esc(t.label)}</button>`).join("")}</nav>`;
 }
 
-function homeIndexCard(d) {
-  const s = d.daily;
-  const close = s && s.series ? s.series.close.filter((v) => v != null) : [];
-  if (close.length < 2) return "";
-  const lastOf = (a) => (a || []).filter((v) => v != null).pop();
-  const last = close[close.length - 1], ch = last / close[close.length - 2] - 1;
-  const ma50 = lastOf(s.series.ma50), ma200 = lastOf(s.series.ma200), gap = ma200 ? last / ma200 - 1 : null;
-  return `<section class="card"><h2>${esc(d.index_name)} <small>${md(s.day)} 종가</small></h2>
-    <div class="tile"><div>
-      <p class="big">${cnt(last, "num", num(last))}</p>
-      <p class="sub nowrap"><b class="${sign(ch)}">${cnt(ch, "pct2", pct(ch, 2))}</b> 전일 대비</p>
-    </div><div class="tile-spark">${spark(close.slice(-63), `${d.index_name} 최근 3개월`)}<span class="muted">최근 3개월</span></div></div>
-    ${ma200 && ma50 ? `<p class="muted" style="margin:8px 0 0">200일선보다 ${(Math.abs(gap) * 100).toFixed(1)}% ${gap >= 0 ? "위" : "아래"} ·
-      50일선보다 ${last >= ma50 ? "위" : "아래"}</p>` : ""}
-    ${more("chart", "차트 크게 보기")}</section>`;
-}
-
-// 홈 '더 보기': 칸마다 제목 + 한 줄 요약만 보이고, 누르면 원래 칸이 그 자리에서 펼쳐져요. 펼친 칸은 기억해요.
-let HOME_OPEN = new Set();
-try { HOME_OPEN = new Set(JSON.parse(localStorage.getItem("home_open") || "[]")); } catch (e) { /* 처음 */ }
-function saveHomeOpen() { try { localStorage.setItem("home_open", JSON.stringify([...HOME_OPEN])); } catch (e) { /* 이번만 기억 */ } }
+// 홈 '더 보기': 칸마다 제목 + 한 줄 요약만 보이고, 누르면 그 칸만 있는 화면(#kr/more/<칸>)으로 넘어가요 (사용자 2026-10-24)
 const upDown = (r) => (r == null ? "" : `<b class="${sign(r)}">${pct(r)}</b>`);
 function homeMoreRows(d) {
   const s = d.daily || {};
   const rows = [];
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
+  // 지금 뉴스: 증시에 영향 줄 만한 가장 최근 뉴스 한 줄 (30분마다 따로 받아요)
+  const N = newsOf(market), n1 = N && N[0];
+  add("news", "📰", "지금 뉴스", n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard());
   const dn = dropNow(d);
   add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
   // 다가오는 일정: 가장 가까운 큰 일정
@@ -2086,33 +2103,44 @@ function homeMoreRows(d) {
   add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", quietVolumeCard(d));
   const m = DATA && DATA.macro;
   add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", macroCard());
-  const close = s.series ? s.series.close.filter((v) => v != null) : [];
-  add("index", "📈", esc(d.index_name || "지수"), close.length > 1 ? `${num(close[close.length - 1])} <b class="${sign(close[close.length - 1] / close[close.length - 2] - 1)}">${pct(close[close.length - 1] / close[close.length - 2] - 1, 2)}</b>` : "", homeIndexCard(d));
   return rows;
 }
 function homeMoreCard(d) {
   const rows = homeMoreRows(d);
   if (!rows.length) return "";
-  return `<section class="card home-more"><h2>더 보기 <small>누르면 펼쳐져요</small></h2>${rows.map((r) =>
-    `<details class="hm" data-hm="${r.key}"${HOME_OPEN.has(r.key) ? " open" : ""}><summary><span class="hm-ico" aria-hidden="true">${r.icon}</span>
-      <span class="hm-t"><b>${r.title}</b>${r.sum ? `<span class="hm-s">${r.sum}</span>` : ""}</span><span class="hm-arrow" aria-hidden="true">›</span></summary>
-      <div class="hm-body">${r.html}</div></details>`).join("")}</section>`;
+  return `<section class="card home-more"><h2>더 보기 <small>누르면 넘어가요</small></h2>${rows.map((r) =>
+    `<button type="button" class="hm" data-more="${r.key}"><span class="hm-ico" aria-hidden="true">${r.icon}</span>
+      <span class="hm-t"><b>${r.title}</b>${r.sum ? `<span class="hm-s">${r.sum}</span>` : ""}</span><span class="hm-arrow" aria-hidden="true">›</span></button>`).join("")}</section>`;
 }
-// 펼친 칸 안의 원래 제목 줄은 한 줄 요약과 겹쳐서, 날짜 같은 작은 글씨만 남겨요.
-function trimHeads(root) {
-  root.querySelectorAll(".hm-body > .card > h2:first-child").forEach((h) => {
-    const sm = h.querySelector("small");
-    if (sm) { const p = document.createElement("p"); p.className = "hm-meta"; p.innerHTML = sm.innerHTML; h.replaceWith(p); } else h.remove();
-  });
+// 더 보기에서 연 칸 화면: 맨 위 ‹ 더 보기(뒤로) + 원래 칸 그대로
+function moreView(d) {
+  const r = homeMoreRows(d).find((x) => x.key === moreKey);
+  return [`<div class="more-back"><button type="button" class="back" data-back>‹ 더 보기</button></div>`,
+    r ? r.html : `<section class="card"><p class="empty">이 칸은 지금 ${market === "kr" ? "국장" : "미장"}에 자료가 없어요.</p></section>`];
 }
-function tidyHomeMore(app) {
-  trimHeads(app);
-  app.querySelectorAll("details.hm").forEach((x) => x.addEventListener("toggle", () => {
-    if (x.open) HOME_OPEN.add(x.dataset.hm); else HOME_OPEN.delete(x.dataset.hm);
-    saveHomeOpen();
-  }));
+
+// 몇 분 전에 받은 뉴스인지
+function ago(at) {
+  const t = Date.parse(at);
+  if (!t) return "";
+  const m = Math.max(0, Math.round((Date.now() - t) / 6e4));
+  return m < 2 ? "방금" : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`;
 }
-function openHomeMore(key) { HOME_OPEN.add(key); saveHomeOpen(); }
+const hm = (at) => (at ? `${at.slice(11, 16)}` : "");
+function newsLi(n) {
+  const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title);
+  return `<li><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
+    <div class="meta">${esc(n.source || "")}${n.at ? ` · ${md(n.at.slice(0, 10))} ${hm(n.at)} (${ago(n.at)})` : ""}</div></div></li>`;
+}
+const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m] : null);
+// 증시에 영향 줄 만한 사건 뉴스 (금리·환율·관세·유가·전쟁 등). 종목 하나하나 뉴스는 안 받아요 (사용자 2026-10-24)
+function newsCard() {
+  const N = newsOf(market);
+  if (!N) return DATA.news_url ? `<section class="card"><h2>지금 뉴스</h2><p class="empty">뉴스를 아직 못 받았어요. 잠시 뒤 다시 열어 주세요.</p></section>` : "";
+  return `<section class="card" id="news-card"><h2>지금 뉴스 <small>${ago(NEWS.updated)} 받음 · 30분마다</small></h2>
+    ${N.length ? `<ul class="list">${N.map(newsLi).join("")}</ul>` : `<p class="empty">최근 하루 큰 뉴스가 없어요.</p>`}
+    <p class="muted note" style="margin:10px 0 0">금리·환율·관세·유가·전쟁처럼 ${market === "kr" ? "국장" : "미장"} 전체에 영향 줄 만한 뉴스 제목을 30분마다 자동으로 모아요 (GitHub 사정으로 더 늦을 때도 있어요). 주제 표시는 제목 낱말로 짐작한 거예요. 기사 원문을 꼭 확인하세요.</p></section>`;
+}
 
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.
 // 캔들 데이터가 있으면 캔들 차트, 없으면(예전 기록) 최근 1년 종가 선 그래프
@@ -4820,8 +4848,7 @@ $(".map-btn").addEventListener("click", () => {
 // 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
-  [HOME_OPEN, POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
-  saveHomeOpen();
+  [POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
   worldPicks.clear(); worldTop = null; worldTabsX = null; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
@@ -4836,6 +4863,7 @@ window.addEventListener("popstate", () => {
   const h = fromHash();
   if (h.s === "stock" && h.code) stockCode = h.code;
   if (h.s === "map") mapFocus = h.code || "";
+  if (h.s === "more" && h.code) moreKey = h.code;
   go(h.s, true);
 });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
