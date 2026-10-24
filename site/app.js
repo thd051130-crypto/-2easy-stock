@@ -521,6 +521,8 @@ function render() {
   }));
   app.querySelectorAll("[data-cal-all]").forEach((b) => b.addEventListener("click", () => {
     calAll = !calAll;
+    // 펼칠 땐 보던 화면 그대로 두고 아래로 줄이 늘어나요 (버튼을 따라가면 32줄 아래 끝으로 내려가 버려요)
+    if (calAll) lastTap = null;
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
