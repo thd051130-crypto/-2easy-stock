@@ -471,7 +471,10 @@ function render() {
   }));
   const keepY = (f) => () => { const y = window.scrollY; f(); render(); window.scrollTo(0, y); };
   app.querySelectorAll("[data-world]").forEach((b) => b.addEventListener("click", keepY(() => {
-    worldPick = worldPick === b.dataset.world ? null : b.dataset.world;
+    // 맨 위 한국·미국 그래프와 탭 쪽 그래프는 따로 열려요 (한쪽을 눌러도 다른 쪽이 접히지 않게)
+    const top = DATA.world.groups.some((g) => WORLD_FIXED.includes(g.name) && g.items.some((r) => `t:${r.sym}` === b.dataset.world));
+    if (top) worldTop = worldTop === b.dataset.world ? null : b.dataset.world;
+    else worldPick = worldPick === b.dataset.world ? null : b.dataset.world;
   })));
   app.querySelectorAll("[data-world-g]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldG = b.dataset.worldG;
@@ -485,9 +488,16 @@ function render() {
   drawWorldGraph();
   app.querySelectorAll("[data-world-tab]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldTab = b.dataset.worldTab;
-    worldPick = null;
+    worldPick = null;  // 맨 위 한국·미국 그래프(worldTop)는 열어 둔 채로
     try { localStorage.setItem("world_tab", worldTab); } catch (e) { /* 이번만 기억 */ }
   })));
+  // 탭 줄은 옆으로 밀어 둔 자리 그대로 (무엇을 눌러 다시 그려도 '주요' 쪽으로 돌아가지 않게)
+  const wtBar = $(".wt-tabs");
+  if (wtBar) {
+    const on = wtBar.querySelector('[aria-pressed="true"]');
+    wtBar.scrollLeft = worldTabsX != null ? worldTabsX : on ? on.offsetLeft - wtBar.offsetLeft - 8 : 0;
+    wtBar.addEventListener("scroll", () => { worldTabsX = wtBar.scrollLeft; }, { passive: true });
+  }
   if (screen === "home" && jumpSectors) {
     jumpSectors = false;
     const card = $("#sectors-card");
@@ -3295,9 +3305,10 @@ function bindSavings() {
 // 실전 첫 계좌 체크리스트: 판정표를 통과한 뒤 진짜 돈으로 넘어가는 순서. 1번은 판정표로 자동, 나머지는 눌러서 체크(이 폰에만 저장).
 // 세계 지수·환율 (world.py, 국장·미장 같이). 보기용이고 매매 규칙엔 안 써요.
 // 한눈에 보기 (사용자 2026-10-24): 묶음 탭 + 3칸 타일. 타일 색이 진할수록 많이 움직인 거예요. 누르면 아래에 그래프.
+// 한국·미국 지수는 탭과 상관없이 늘 맨 위에 (사용자 2026-10-24 "이전처럼 두되")
+const WORLD_FIXED = ["한국", "미국"];
 const WORLD_TABS = [
-  ["main", "주요", ["^KS11", "^KQ11", "^GSPC", "^IXIC", "KRW=X", "^TNX", "CL=F", "GC=F", "^VIX"]],
-  ["kr_us", "한국·미국", ["한국", "미국"]],
+  ["main", "주요", ["KRW=X", "^TNX", "US10Y2Y", "CL=F", "GC=F", "^VIX"]],
   ["asia_eu", "아시아·유럽", ["아시아", "유럽"]],
   ["fx", "환율", ["환율"]],
   ["rate", "금리", ["채권 금리"]],
@@ -3306,7 +3317,7 @@ const WORLD_TABS = [
 ];
 let worldTab = "main";
 try { worldTab = localStorage.getItem("world_tab") || "main"; } catch (e) { /* 처음 */ }
-if (!WORLD_TABS.some((t) => t[0] === worldTab)) worldTab = "main";
+if (!WORLD_TABS.some((t) => t[0] === worldTab)) worldTab = "main";  // 옛 '한국·미국' 탭은 주요로
 // 타일엔 짧은 이름 (그래프를 펼치면 원래 이름)
 const WORLD_SHORT = {
   "^SOX": "필라 반도체", "^N225": "닛케이225", "000001.SS": "상하이", "^HSI": "항셍", "^TWII": "대만 가권",
@@ -3333,19 +3344,19 @@ function worldTint(r, v) {
   return `background:color-mix(in srgb, var(${v > 0 ? "--up" : "--down"}) ${a}%, var(--surface-0))`;
 }
 // 줄을 누르면 바로 아래에 그 지수·환율 그래프가 펼쳐져요 (다시 누르면 접혀요). 지수는 차트 화면 캔들로도 갈 수 있어요
-let worldPick = null;
+let worldPick = null, worldTop = null, worldTabsX = null;
 const WORLD_G = [["m1", "1개월", 22], ["m3", "3개월", 66], ["m6", "6개월", 130], ["y1", "1년", 0]];
 let worldG = "m3";
 try { worldG = localStorage.getItem("world_g") || "m3"; } catch (e) { /* 처음 */ }
 if (!WORLD_G.some((p) => p[0] === worldG)) worldG = "m3";
-function worldTile(r) {
+function worldTile(r, cur = worldPick) {
   const [key] = WORLD_P.find((p) => p[0] === worldP);
-  const open = worldPick === `t:${r.sym}`, v = r[key];
+  const open = cur === `t:${r.sym}`, v = r[key];
   return `<button type="button" class="wt${open ? " on" : ""}" data-world="t:${esc(r.sym)}" aria-expanded="${open}" style="${worldTint(r, v)}"
     aria-label="${esc(r.name)} ${worldValue(r)} ${worldChg(r, v)}"><span class="wt-n">${esc(WORLD_SHORT[r.sym] || r.name)}</span>
     <b class="wt-v">${worldValue(r, true)}</b><span class="wt-c ${sign(v)}">${worldChg(r, v)}</span></button>`;
 }
-function worldGraph(r) {
+function worldGraph(r, id = "world-chart") {
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
   const c = n ? r.closes.slice(-n) : r.closes;
   const ch = c.length > 1 ? worldMove(r, c) : null;
@@ -3355,13 +3366,17 @@ function worldGraph(r) {
   return `<div class="world-graph"><div class="wg-head"><b>${esc(r.name)}</b><span class="muted">${worldValue(r)} · ${md(r.day)} 종가</span></div>
     <div class="period" role="group" aria-label="그래프 기간">${chips}</div>
     <p class="muted" style="margin:8px 0 4px">${ch == null ? "" : `이 기간 <b class="${sign(ch)}">${worldChg(r, ch)}</b> · `}최고 ${worldValue({ ...r, last: hi })} · 최저 ${worldValue({ ...r, last: lo })}</p>
-    <div class="chart" id="world-chart"></div>${toChart}</div>`;
+    <div class="chart" id="${id}"></div>${toChart}</div>`;
 }
 function drawWorldGraph() {
-  const el = $("#world-chart");
+  drawWorldChart("#world-chart-top", worldTop);
+  drawWorldChart("#world-chart", worldPick);
+}
+function drawWorldChart(sel, pick) {
+  const el = $(sel);
   const w = DATA && DATA.world;
   if (!el || !w) return;
-  const r = worldPick && w.groups.flatMap((g) => g.items).find((x) => x.sym === worldPick.slice(worldPick.indexOf(":") + 1));
+  const r = pick && w.groups.flatMap((g) => g.items).find((x) => x.sym === pick.slice(pick.indexOf(":") + 1));
   if (!r) return;
   const [, , n] = WORLD_G.find((p) => p[0] === worldG);
   const c = n ? r.closes.slice(-n) : r.closes;
@@ -3388,12 +3403,16 @@ function worldCard() {
     .map(([k, l]) => `<button type="button" data-world-tab="${k}" aria-pressed="${k === worldTab}">${l}</button>`).join("");
   const period = `<div class="period" role="group" aria-label="등락 기간">${WORLD_P.map(([k, l]) =>
     `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
+  const fixed = w.groups.filter((g) => WORLD_FIXED.includes(g.name)).flatMap((g) => g.items);
+  const pickedFixed = worldTop && fixed.find((r) => `t:${r.sym}` === worldTop);
   const picked = worldPick && items.find((r) => `t:${r.sym}` === worldPick);
-  const up = items.filter((r) => r[worldP] > 0).length, down = items.filter((r) => r[worldP] < 0).length;
+  const both = fixed.concat(items);
+  const up = both.filter((r) => r[worldP] > 0).length, down = both.filter((r) => r[worldP] < 0).length;
   return `<section class="card" id="world-card"><h2>세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
-    <div class="wt-tabs" role="group" aria-label="묶음 고르기">${tabs}</div>
     <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
-    <div class="wt-grid">${items.map(worldTile).join("")}</div>
+    ${fixed.length ? `<div class="wt-grid">${fixed.map((r) => worldTile(r, worldTop)).join("")}</div>${pickedFixed ? worldGraph(pickedFixed, "world-chart-top") : ""}` : ""}
+    <div class="wt-tabs" role="group" aria-label="묶음 고르기">${tabs}</div>
+    <div class="wt-grid">${items.map((r) => worldTile(r)).join("")}</div>
     ${picked ? worldGraph(picked) : ""}
     <p class="muted note" style="margin:10px 0 0">칸 색이 진할수록 ${label} 많이 움직인 거예요. 누르면 그래프가 열려요. 금리는 몇 %p 바뀌었는지, 장단기 금리 차가 마이너스면 '역전'(경기 침체 앞에 자주 나왔어요), VIX는 20을 넘으면 불안이 커진 거예요. 원/달러가 오르면 원화 약세예요. 미국 2년 금리·장단기 차는 FRED, 나머지는 야후 자료이고 나라마다 마감 시간이 달라 날짜가 다를 수 있어요.</p></section>`;
 }
@@ -4718,7 +4737,7 @@ $(".map-btn").addEventListener("click", () => {
 function resetFolds() {
   [HOME_OPEN, POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
   saveHomeOpen();
-  worldPick = null; polMore = false; polJump = null; calAll = false;
+  worldPick = null; worldTop = null; worldTabsX = null; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {

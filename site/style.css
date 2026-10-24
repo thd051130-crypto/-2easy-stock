@@ -824,6 +824,7 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .wt-tabs button[aria-pressed="true"] { background: var(--text-primary); border-color: var(--text-primary); color: var(--surface-1); }
 .wt-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 13px; }
 .wt-bar .up, .wt-bar .down { font-weight: 700; font-variant-numeric: tabular-nums; }
+.wt-grid + .wt-tabs, .world-graph + .wt-tabs { margin-top: 12px; }
 .wt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .wt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 9px 10px 8px; border: 0; border-radius: var(--radius-s);
   background: var(--surface-0); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
