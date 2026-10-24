@@ -120,8 +120,6 @@ class Bot:
         self.watch = watchlist.load_watch(paper)
         self.alerts = watchlist.load_alerts(paper)
         self.username = watchlist.bot_username(paper)
-        self.memos = commands.load_memos(paper)  # 내 판단 기록장 (commands.py)
-        self.memo_prices = commands.refresh_prices
         self.added = []  # 이번에 넣은 종목 (재무를 바로 받으려고)
         self.logged = 0  # 이번에 앱 메시지함에 남긴 알림 수
         self.saved = self.snapshot()
@@ -129,7 +127,7 @@ class Bot:
     # ------------------------------------------------------------ 기록
 
     def snapshot(self):
-        return json.dumps([self.watch, self.alerts, self.username, self.memos], ensure_ascii=False, sort_keys=True)
+        return json.dumps([self.watch, self.alerts, self.username], ensure_ascii=False, sort_keys=True)
 
     def changed(self):
         return self.snapshot() != self.saved
@@ -141,8 +139,6 @@ class Bot:
         watchlist.write(self.paper / "alerts.json", self.alerts)
         if self.username:
             watchlist.write(self.paper / "bot.json", dict(username=self.username))
-        if self.memos["items"] or (self.paper / "memos.json").exists():
-            watchlist.write(self.paper / "memos.json", self.memos)
         self.saved = self.snapshot()
         return True
 
@@ -189,7 +185,7 @@ class Bot:
         if kind == "help":
             return HELP
         if kind == "unknown":
-            reply = commands.handle(self, decode_start(text))  # 오늘·종목·메모
+            reply = commands.handle(self, decode_start(text))  # 오늘·종목
             if reply:
                 return reply
             return "그 말은 몰라서, 아래 명령만 알아들어요.\n\n" + HELP
@@ -420,12 +416,6 @@ def run(tg, chat_id, bot):
     for text in bot.check_alerts():
         tg.send(chat_id, text)
         bot.logged += bool(inbox.add_text(text, "bot"))
-    week = commands.report_week(bot.memos, bot.now())
-    if week:  # 금요일 저녁: 내 판단 주간 결산
-        text = commands.memo_report(bot.memos, refresh=bot.memo_prices)
-        tg.send(chat_id, text)
-        bot.logged += bool(inbox.add_text(text, "bot"))
-        bot.memos["last_report"] = week
     bot.save()
     return offset
 

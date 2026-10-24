@@ -37,6 +37,7 @@ WORKFLOWS = {
     "telegram-bot": ("텔레그램 봇", None),
     "pages": ("대시보드 배포", None),
     "fundamentals": ("재무·종목 목록", 1),
+    "weekly": ("주간 리포트", 1),
     "macro": ("경기 리포트", 5),
     "world": ("세계 지수·환율", 5),
     "all-stocks": ("전 종목 차트", 10),
