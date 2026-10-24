@@ -67,7 +67,7 @@ const fromHash = () => {
   if (SCREENS.includes(h.s) && ((h.s !== "stock" && h.s !== "more") || h.code)) {
     screen = h.s;
     if (h.s === "map") mapStart = h.code || "";
-    else if (h.s === "more") moreKey = h.code;
+    else if (h.s === "more") { moreKey = h.code; stockFrom = "home"; }  // 아래 메뉴는 '홈'에 불이 켜지게
     else stockCode = h.code;
   }
 }
@@ -191,35 +191,61 @@ function loadNews(url) {
     .then((x) => { if (x && x.updated) { NEWS = x; stashHot(x); } return x; }).catch(() => null);
 }
 // 🔥 핫 뉴스는 읽기(기사 누르기) 전까지 이 폰에 따로 남겨 둬요 (사용자 2026-10-24 "핫 뉴스는 따로, 읽기 전까지").
-// 서버는 7일까지만 갖고 있어서, 받은 핫 뉴스를 시장별로 여기 모아 둬요. 읽은 건 빼고, 30일 넘은 건 정리해요
-const HOT_KEEP_DAYS = 30, HOT_MAX = 40;
+// 서버는 7일까지만 갖고 있어서, 받은 핫 뉴스를 시장별로 여기 모아 둬요. 30일 넘은 건 정리해요.
+// 읽은 것도 바로 지우지 않고 '읽은 핫 뉴스' 접힌 칸에 7일 남겨서 다시 '안 읽음'으로 돌릴 수 있어요
+// (사용자 2026-10-24 "모두 읽음 잘못 눌렀는데 다 날아갔네")
+const HOT_KEEP_DAYS = 30, HOT_MAX = 40, HOT_READ_DAYS = 7;
 let HOT = { kr: [], us: [] };
 try { const h = JSON.parse(localStorage.getItem("hot_news") || "{}"); for (const m of ["kr", "us"]) if (Array.isArray(h[m])) HOT[m] = h[m]; } catch (e) { /* 처음 */ }
-let HOT_READ = new Set();
-try { HOT_READ = new Set(JSON.parse(localStorage.getItem("hot_read") || "[]")); } catch (e) { /* 처음 */ }
+let HOT_READ = new Map();  // id → 읽은 시각(ms)
+try {
+  const r = JSON.parse(localStorage.getItem("hot_read") || "[]");
+  // 예전 버전은 id 목록만 남겼어요 → 지금 읽은 걸로 쳐서 '읽은 핫 뉴스' 칸에 7일 보여요 (잘못 눌러 날아간 것 되살리기)
+  HOT_READ = new Map(Array.isArray(r) ? r.map((id) => [id, Date.now()]) : Object.entries(r));
+} catch (e) { /* 처음 */ }
 const hotId = (n) => n.link || n.title;
 function saveHot() {
+  const cut = Date.now() - HOT_KEEP_DAYS * 864e5;
+  for (const [id, t] of HOT_READ) if (t < cut) HOT_READ.delete(id);
   try {
     localStorage.setItem("hot_news", JSON.stringify(HOT));
-    localStorage.setItem("hot_read", JSON.stringify([...HOT_READ].slice(-300)));
+    localStorage.setItem("hot_read", JSON.stringify(Object.fromEntries(HOT_READ)));
   } catch (e) { /* 이번만 기억 */ }
 }
 function stashHot(x) {
-  const cut = Date.now() - HOT_KEEP_DAYS * 864e5;
+  const cut = Date.now() - HOT_KEEP_DAYS * 864e5, readCut = Date.now() - HOT_READ_DAYS * 864e5;
   for (const m of ["kr", "us"]) {
     const fresh = ((x.hot || {})[m] || []).filter((n) => n && n.title);
     // 같은 사건은 새로 받은 것으로 바꿔요 (핵심 낱말 2개 이상 겹치면 같은 사건, 서버와 같은 규칙)
     const same = (a, b) => (a.key || []).filter((w) => (b.key || []).includes(w)).length >= 2;
     const old = HOT[m].filter((o) => !fresh.some((n) => hotId(n) === hotId(o) || same(n, o)));
-    HOT[m] = [...fresh, ...old].filter((n) => Date.parse(n.at || n.since) > cut && !HOT_READ.has(hotId(n))).slice(0, HOT_MAX);
+    HOT[m] = [...fresh, ...old].filter((n) => Date.parse(n.at || n.since) > cut && !(HOT_READ.get(hotId(n)) < readCut)).slice(0, HOT_MAX);
   }
   saveHot();
 }
 const hotOf = (m) => HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
-function readHot(ids) {
-  ids.forEach((id) => HOT_READ.add(id));
-  for (const m of ["kr", "us"]) HOT[m] = HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
+const hotReadOf = (m) => HOT[m].filter((n) => HOT_READ.has(hotId(n))).sort((a, b) => HOT_READ.get(hotId(b)) - HOT_READ.get(hotId(a)));
+let hotUndo = null;  // 방금 읽음 처리한 id들 (되돌리기)
+let hotReadOpen = false;  // '읽은 핫 뉴스' 칸을 펼쳤는지 (다시 그려도 그대로)
+function readHot(ids, undo) {
+  const now = Date.now();
+  ids.forEach((id) => HOT_READ.set(id, now));
   saveHot();
+  if (undo) undoBar(ids);
+}
+function unreadHot(ids) { ids.forEach((id) => HOT_READ.delete(id)); saveHot(); }
+// 화면 아래에 잠깐 뜨는 '되돌리기' 줄 (화면 위에 떠서 칸 위치는 안 바뀌어요)
+function undoBar(ids) {
+  let bar = $(".undo-bar");
+  if (!bar) { bar = document.createElement("div"); bar.className = "undo-bar"; bar.setAttribute("role", "status"); document.body.appendChild(bar); }
+  hotUndo = ids;
+  bar.innerHTML = `<span>핫 뉴스 ${ids.length}건 읽음</span><button type="button">되돌리기</button>`;
+  bar.querySelector("button").addEventListener("click", () => {
+    if (hotUndo) unreadHot(hotUndo);
+    hotUndo = null; bar.remove(); render();
+  });
+  clearTimeout(undoBar.t);
+  undoBar.t = setTimeout(() => { hotUndo = null; bar.remove(); }, 6000);
 }
 
 async function load() {
@@ -480,8 +506,20 @@ function render() {
     const li = a.closest("li");
     if (li) li.classList.add("read");
   }));
-  app.querySelectorAll("[data-hot-ok]").forEach((b) => b.addEventListener("click", () => { readHot([b.dataset.hotOk]); render(); }));
-  app.querySelectorAll("[data-hot-all]").forEach((b) => b.addEventListener("click", () => { readHot(hotOf(market).map(hotId)); render(); }));
+  app.querySelectorAll("[data-hot-ok]").forEach((b) => b.addEventListener("click", () => { readHot([b.dataset.hotOk], true); holdHeight(); render(); }));
+  app.querySelectorAll(".hot-read-list").forEach((x) => x.addEventListener("toggle", () => { hotReadOpen = x.open; }));
+  app.querySelectorAll("[data-hot-undo]").forEach((b) => b.addEventListener("click", () => { unreadHot([b.dataset.hotUndo]); holdHeight(); render(); }));
+  // 모두 읽음: 실수로 누르지 않게 한 번 누르면 '한 번 더 누르면 모두 읽음'으로 바뀌고, 3초 안에 다시 눌러야 돼요
+  app.querySelectorAll("[data-hot-all]").forEach((b) => b.addEventListener("click", () => {
+    if (!b.classList.contains("armed")) {
+      b.classList.add("armed");
+      const t = b.querySelector(".hot-all-t");
+      t.textContent = "한 번 더 누르면 모두 읽음";
+      setTimeout(() => { b.classList.remove("armed"); t.textContent = "모두 읽음"; }, 3000);
+      return;
+    }
+    readHot(hotOf(market).map(hotId), true); holdHeight(); render();
+  }));
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
@@ -2240,20 +2278,23 @@ function newsLi(n) {
 const NEWS_HOURS = 24;
 const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m].filter((n) => Date.now() - Date.parse(n.at) < NEWS_HOURS * 36e5) : null);
 // 증시에 영향 줄 만한 사건 뉴스 (금리·환율·관세·유가·전쟁 등). 종목 하나하나 뉴스는 안 받아요 (사용자 2026-10-24)
-function hotLi(n) {
+function hotLi(n, read) {
   const id = esc(hotId(n));
-  const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener" data-hot-read="${id}">${esc(n.title)}</a>` : esc(n.title);
+  const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener"${read ? "" : ` data-hot-read="${id}"`}>${esc(n.title)}</a>` : esc(n.title);
   return `<li data-hot="${id}"><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
     <div class="meta">언론 ${n.sources || "여러"}곳 · ${n.since ? `처음 ${md(n.since.slice(0, 10))} ${hm(n.since)}` : ""}${n.at ? ` · 최근 기사 ${ago(n.at)}` : ""}</div></div>
-    <button type="button" class="hot-ok" data-hot-ok="${id}" aria-label="읽음으로 표시">읽음</button></li>`;
+    ${read ? `<button type="button" class="hot-ok" data-hot-undo="${id}" aria-label="안 읽음으로 되돌리기">안 읽음</button>`
+      : `<button type="button" class="hot-ok" data-hot-ok="${id}" aria-label="읽음으로 표시">읽음</button>`}</li>`;
 }
 function hotCard() {
-  const H = hotOf(market);
-  if (!H.length) return "";
-  return `<section class="card hot-card" id="hot-card"><h2>🔥 핫 뉴스 <small>안 읽은 ${H.length}건</small></h2>
-    <ul class="list">${H.map(hotLi).join("")}</ul>
-    ${H.length > 1 ? `<button type="button" class="more" data-hot-all>모두 읽음<span aria-hidden="true">✓</span></button>` : ""}
-    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 기사를 누르거나 '읽음'을 누를 때까지 여기 남아요.</p></section>`;
+  const H = hotOf(market), R = hotReadOf(market);
+  if (!H.length && !R.length) return "";
+  return `<section class="card hot-card${H.length ? "" : " all-read"}" id="hot-card"><h2>🔥 핫 뉴스 <small>안 읽은 ${H.length}건</small></h2>
+    ${H.length ? `<ul class="list">${H.map((n) => hotLi(n)).join("")}</ul>` : `<p class="empty">안 읽은 핫 뉴스가 없어요.</p>`}
+    ${H.length > 1 ? `<button type="button" class="more" data-hot-all><b class="hot-all-t">모두 읽음</b><span aria-hidden="true">✓</span></button>` : ""}
+    ${R.length ? `<details class="more-list hot-read-list"${hotReadOpen ? " open" : ""}><summary>읽은 핫 뉴스 ${R.length}건 <small>7일 동안 남아요</small></summary>
+      <ul class="list">${R.map((n) => hotLi(n, true)).join("")}</ul></details>` : ""}
+    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 기사를 누르거나 '읽음'을 누를 때까지 위에 남아요. 읽은 건 아래 '읽은 핫 뉴스'에서 '안 읽음'으로 되돌릴 수 있어요.</p></section>`;
 }
 function newsCard() {
   const N = newsOf(market);
@@ -4970,7 +5011,7 @@ $(".map-btn").addEventListener("click", () => {
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
   [POL_OPEN, SAV_OPEN, FOLD_OPEN].forEach((x) => x.clear());
-  worldPicks.clear(); worldTop = null; worldTabsX = null; polMore = false; polJump = null; calAll = false;
+  worldPicks.clear(); worldTop = null; hotReadOpen = false; worldTabsX = null; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {
