@@ -16,6 +16,12 @@ def test_parse_json_items():
     assert a["id"] == "market:37912" and a["broker"] == "신한투자증권" and a["date"] == "2026-10-23"
     assert a["summary"] == "KOSPI는 2.6% 하락\n:META(-7.0%) 약세\n:반대매매 진정"
     assert b["sector"] == "음식료" and b["analyst"] == "장지혜"
+    assert a["url"] == "https://stock.naver.com/research/daily/37912"
+
+
+def test_url_only_for_known_detail_pages():
+    [x] = reading.parse({"items": [{"nid": "5", "title": "t", "writeDate": "2026-10-23"}]}, "nowhere")
+    assert "url" not in x
 
 
 def test_summary_is_cut():

@@ -30,6 +30,7 @@ CATS = [  # (키, 이름, 네이버 묶음). 종목 리포트(company)는 '매�
 ]
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
            "Referer": "https://stock.naver.com/research"}
+DETAIL = {"market": "daily", "invest": "invest", "economy": "economy", "industry": "industry", "debenture": "debenture"}  # 원문 화면 주소 (2026-10 Actions에서 확인)
 PAGE = 20
 SUMMARY = 360  # 요약 글자 수 (증권사가 올린 첫머리만)
 KEEP_DAYS, KEEP_N = 30, 40
@@ -56,6 +57,8 @@ def parse(data, cat):
         body = text(it.get("content"))
         item = dict(id=f"{cat}:{it.get('nid')}", title=title, date=date, broker=it.get("brokerName") or "",
                     summary=body[:SUMMARY] + ("…" if len(body) > SUMMARY else ""))
+        if it.get("nid") and cat in DETAIL:
+            item["url"] = f"https://stock.naver.com/research/{DETAIL[cat]}/{it['nid']}"
         if it.get("analystName"):
             item["analyst"] = it["analystName"]
         if it.get("industryKoreanName"):

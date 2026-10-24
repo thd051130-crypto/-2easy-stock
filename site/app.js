@@ -2685,7 +2685,21 @@ function learnWhyCards(d) {
   const c = COPE.find((x) => x.key === situ);
   const todo = `<section class="card"><h2>🧭 이럴 때 어떻게? <small>${esc(c.title)}</small></h2>${copeBody(c)}
     <button type="button" class="more" data-learn-tab="cope">상황별 대처법 전부 보기<span aria-hidden="true">›</span></button></section>`;
-  return [head, learnNoteCard(), sus2, learnCaseCard(), secCard, todo];
+  return [head, learnNoteCard(), sus2, learnBrokerCard(), learnCaseCard(), secCard, todo];
+}
+// 증권사가 본 이유: 전문가 리포트 중 최근 시황·전략 리포트의 첫머리 (미장 탭은 미국 이야기만)
+function learnBrokerCard() {
+  const R = DATA.reading, items = (R && R.items) || {};
+  const usRe = /미국|뉴욕|미 증시|S&P|나스닥|다우|연준|FOMC|빅테크/;
+  const pick = [...(items.market || []), ...(items.invest || [])].filter((x) => x.summary && recent(x.date, 24 * 5) && (market === "kr" || usRe.test(x.title + x.summary)))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 3);
+  if (!pick.length) return "";
+  return `<section class="card" id="learn-broker"><h2>🏦 증권사가 본 이유 <small>최근 시황 리포트</small></h2>
+    ${pick.map((x) => `<div class="learn-rep-q"><div class="meta"><b>${esc(x.broker || "증권사")}</b> · ${md(x.date)} · ${esc(x.title)}</div>
+      <p class="learn-p">${esc((x.summary || "").split("\n").slice(0, 3).join(" ").slice(0, 200))}${(x.summary || "").length > 200 ? "…" : ""}</p>
+      ${/^https:\/\//.test(x.url || "") ? `<a class="more" href="${esc(x.url)}" target="_blank" rel="noopener">원문 보기<span aria-hidden="true">›</span></a>` : ""}</div>`).join("")}
+    <button type="button" class="more" data-learn-tab="read">리포트 전부 보기<span aria-hidden="true">›</span></button>
+    <p class="muted note" style="margin:10px 0 0">위 '원인 후보'는 숫자로 맞춰 본 거고, 이건 증권사 사람이 기사·수급까지 보고 쓴 설명이에요. 둘이 같은 이야기를 하면 더 믿을 만해요. 증권사마다 해석이 다를 수 있어요.</p></section>`;
 }
 
 // ── 움직이는 이유
@@ -2846,18 +2860,21 @@ function learnReadCards() {
   const all = cats.flatMap(([k, n]) => (items[k] || []).map((x) => ({ ...x, cat: n }))).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const list = readCat === "all" ? all : (items[readCat] || []).map((x) => ({ ...x, cat: (cats.find((c) => c[0] === readCat) || [])[1] }));
   const li = (x) => {
-    const url = /^https:\/\//.test(x.pdf || "") ? x.pdf : /^https:\/\//.test(x.link || "") ? x.link : "";
-    const t = url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title);
-    return `<li><div class="l"><div class="name news-t"><span class="badge">${esc(x.sector || x.cat || "")}</span> ${t}</div>
-      <div class="meta">${esc(x.broker || "증권사 미상")} · ${md(x.date)}${x.pdf ? " · PDF" : ""}</div></div></li>`;
+    const url = /^https:\/\//.test(x.url || "") ? x.url : "";
+    const open = LEARN_OPEN.has(`r:${x.id}`);
+    return `<details class="lesson learn-rep" data-learn-open="r:${esc(x.id || x.title)}"${open ? " open" : ""}><summary><span class="hm-t"><b>${esc(x.title)}</b>
+      <span class="lesson-one"><span class="badge">${esc(x.sector || x.cat || "")}</span> ${esc(x.broker || "증권사 미상")}${x.analyst ? ` ${esc(x.analyst)}` : ""} · ${md(x.date)}</span></span></summary>
+      <div class="lesson-body">${x.summary ? `<p class="learn-p learn-sum">${esc(x.summary)}</p>` : ""}
+        ${url ? `<a class="more" href="${esc(url)}" target="_blank" rel="noopener">원문 보기<span aria-hidden="true">›</span></a>` : ""}</div></details>`;
   };
   const chips = `<div class="chips">${[["all", "전체"], ...cats].map(([k, n]) => `<button type="button" data-read-cat="${k}" aria-pressed="${k === readCat}">${esc(n)}</button>`).join("")}</div>`;
   const body = !R ? `<p class="empty">리포트 목록을 아직 못 받았어요. 매일 장 마감 뒤 받아요.</p>`
-    : list.length ? `<ul class="list">${list.slice(0, 15).map(li).join("")}</ul>${list.length > 15 ? `<details class="more-list"${LEARN_OPEN.has(`read:${readCat}`) ? " open" : ""} data-learn-open="read:${readCat}"><summary>${list.length - 15}개 더 보기</summary><ul class="list">${list.slice(15).map(li).join("")}</ul></details>` : ""}`
+    : list.length ? `${list.slice(0, 12).map(li).join("")}${list.length > 12 ? `<details class="more-list"${LEARN_OPEN.has(`read:${readCat}`) ? " open" : ""} data-learn-open="read:${readCat}"><summary>${list.length - 12}개 더 보기</summary>${list.slice(12).map(li).join("")}</details>` : ""}`
     : `<p class="empty">이 묶음엔 최근 리포트가 없어요.</p>`;
   return [`<section class="card" id="learn-read"><h2>📑 증권사 무료 리포트 <small>${R ? `${ago(R.updated)} 받음 · 매일` : "매일 받아요"}</small></h2>
     ${chips}<div style="margin-top:12px">${body}</div>
-    <p class="muted note" style="margin:10px 0 0">${esc((R && R.source) || "네이버페이 증권 리서치")}에 증권사가 무료로 올린 리포트(PDF)예요. 제목을 누르면 원문이 열려요. 최근 30일 것만 남겨요. 리포트는 그 증권사의 전망·의견이라 사실과 구분해서 읽고, 목표주가는 낙관적인 경우가 많아요.</p></section>`,
+    ${R && /^https:\/\//.test(R.home || "") ? `<a class="more" href="${esc(R.home)}" target="_blank" rel="noopener">네이버 리서치에서 전체 보기<span aria-hidden="true">›</span></a>` : ""}
+    <p class="muted note" style="margin:10px 0 0">${esc((R && R.source) || "네이버페이 증권 리서치")}에 증권사가 무료로 올린 리포트예요. 누르면 증권사가 쓴 첫머리 요약이 펼쳐져요. 최근 30일 것만 남겨요. 리포트는 그 증권사의 전망·의견이라 사실과 구분해서 읽어요. 종목 매수·목표주가 리포트는 일부러 뺐어요.</p></section>`,
   `<section class="card"><h2>🧠 리포트 읽는 법 <small>질문 8개</small></h2><ol class="learn-chain">${READ_Q.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>
     <p class="learn-tip">💡 '확인된 사실'(지난 실적·발표된 숫자)과 '전망'(앞으로 이럴 것)과 '의견'(사라·팔라)을 따로 표시하며 읽으면 덜 휘둘려요.</p>
     ${termChips(["컨센서스", "목표주가", "가이던스", "밸류에이션"])}</section>`];
