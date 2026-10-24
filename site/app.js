@@ -2196,14 +2196,16 @@ function newsLi(n) {
   return `<li><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
     <div class="meta">${esc(n.source || "")}${n.at ? ` · ${md(n.at.slice(0, 10))} ${hm(n.at)} (${ago(n.at)})` : ""}</div></div></li>`;
 }
-const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m] : null);
+// 24시간 지난 기사는 화면에서도 빼요 (뉴스 작업이 한동안 못 돌아 예전 파일이 남아 있을 때)
+const NEWS_HOURS = 24;
+const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m].filter((n) => Date.now() - Date.parse(n.at) < NEWS_HOURS * 36e5) : null);
 // 증시에 영향 줄 만한 사건 뉴스 (금리·환율·관세·유가·전쟁 등). 종목 하나하나 뉴스는 안 받아요 (사용자 2026-10-24)
 function newsCard() {
   const N = newsOf(market);
   if (!N) return DATA.news_url ? `<section class="card"><h2>지금 뉴스</h2><p class="empty">뉴스를 아직 못 받았어요. 잠시 뒤 다시 열어 주세요.</p></section>` : "";
   return `<section class="card" id="news-card"><h2>지금 뉴스 <small>${ago(NEWS.updated)} 받음 · 30분마다</small></h2>
-    ${N.length ? `<ul class="list">${N.map(newsLi).join("")}</ul>` : `<p class="empty">최근 하루 큰 뉴스가 없어요.</p>`}
-    <p class="muted note" style="margin:10px 0 0">금리·환율·관세·유가·전쟁처럼 ${market === "kr" ? "국장" : "미장"} 전체에 영향 줄 만한 뉴스 제목을 30분마다 자동으로 모아요 (GitHub 사정으로 더 늦을 때도 있어요). 주제 표시는 제목 낱말로 짐작한 거예요. 기사 원문을 꼭 확인하세요.</p></section>`;
+    ${N.length ? `<ul class="list">${N.map(newsLi).join("")}</ul>` : `<p class="empty">최근 24시간 큰 뉴스가 없어요.</p>`}
+    <p class="muted note" style="margin:10px 0 0">금리·환율·관세·유가·전쟁처럼 ${market === "kr" ? "국장" : "미장"} 전체에 영향 줄 만한 뉴스 제목을 30분마다 새로 받아 바꿔요 (GitHub 사정으로 더 늦을 때도 있어요). 24시간 지난 기사는 빼요. 주제 표시는 제목 낱말로 짐작한 거예요. 기사 원문을 꼭 확인하세요.</p></section>`;
 }
 
 // 지수 추세: 고른 캔들 기간(일봉·주봉·월봉·년봉)으로 그려요.

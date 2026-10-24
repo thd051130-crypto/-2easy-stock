@@ -42,3 +42,12 @@ def test_topic():
     assert news.topic("corporate earnings beat") == "실적"  # corporate의 rate는 금리가 아니에요
     assert news.topic("삼성전자 신제품 공개") is None
     assert news.topic("American Express (AXP) stock trades down") is None  # trades는 무역이 아니에요
+
+
+def test_old_news_dropped():
+    now = dt.datetime(2026, 10, 24, 16, 0, tzinfo=news.KST)
+    items = [dict(title="새 것", at="2026-10-24T10:00+09:00"), dict(title="어제 아침", at="2026-10-23T15:00+09:00"),
+             dict(title="시각 없음", at=None)]
+    assert [x["title"] for x in news.fresh(items, now)] == ["새 것"]
+    out = news.build(fetch=lambda q, lang="ko", n=6: items, now=now)
+    assert [x["title"] for x in out["kr"]] == ["새 것"]

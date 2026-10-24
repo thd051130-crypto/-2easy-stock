@@ -30,7 +30,8 @@ MARKET_QUERIES = {
 }
 QUERY_N = 6     # 검색어마다 몇 개
 MARKET_N = 15   # 시장마다 남길 개수
-DAYS = 1        # 최근 며칠 기사
+DAYS = 1        # 최근 며칠 기사 (구글 검색 조건)
+MAX_HOURS = 24  # 이보다 오래된 기사는 빼요 (구글 조건이 가끔 더 오래된 것도 섞어서). 시각 없는 기사도 빼요
 # 제목 낱말 → 주제 (앞에 있는 것부터 봐요)
 TOPICS = [
     ("금리", r"금리|연준|Fed|FOMC|한은|기준금리|국채|채권|\brates?\b"),
@@ -101,11 +102,18 @@ def topic(title):
     return None
 
 
+def fresh(items, now, hours=MAX_HOURS):
+    """최근 hours시간 안 기사만."""
+    cut = (now - dt.timedelta(hours=hours)).isoformat(timespec="minutes")
+    return [x for x in items if x.get("at") and x["at"] >= cut]
+
+
 def build(fetch=fetch, now=None):
     now = now or dt.datetime.now(KST)
     with concurrent.futures.ThreadPoolExecutor(WORKERS) as pool:
         jobs = {m: [pool.submit(fetch, q, lang, QUERY_N) for q, lang in qs] for m, qs in MARKET_QUERIES.items()}
-    out = {m: [dict(x, topic=topic(x["title"])) for x in merge([f.result() for f in fs])] for m, fs in jobs.items()}
+    out = {m: [dict(x, topic=topic(x["title"])) for x in merge([fresh(f.result(), now) for f in fs])]
+           for m, fs in jobs.items()}
     return dict(updated=now.isoformat(timespec="minutes"), **out)
 
 
