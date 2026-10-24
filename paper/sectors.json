@@ -708,6 +708,10 @@
 "전력·유틸리티",
 "Electrical Equipment & Parts"
 ],
+"300720": [
+"화학·소재",
+"Building Materials"
+],
 "302440": [
 "바이오·헬스",
 "Biotechnology"
@@ -735,6 +739,10 @@
 "329180": [
 "조선·방산·기계",
 "Aerospace & Defense"
+],
+"330590": [
+"건설·부동산",
+"REIT - Retail"
 ],
 "336260": [
 "전력·유틸리티",
@@ -813,7 +821,7 @@
 "Security & Protection Services"
 ]
 },
-"updated": "2026-10-17T09:14+09:00",
+"updated": "2026-10-24T09:18+09:00",
 "us": {
 "AAPL": [
 "IT·전자",
@@ -862,6 +870,10 @@
 "AMGN": [
 "바이오·헬스",
 "Drug Manufacturers - General"
+],
+"AMT": [
+"건설·부동산",
+"REIT - Specialty"
 ],
 "AMZN": [
 "인터넷·게임·SW",
@@ -1035,6 +1047,10 @@
 "운송",
 "Railroads"
 ],
+"CTAS": [
+"조선·방산·기계",
+"Specialty Business Services"
+],
 "CVS": [
 "바이오·헬스",
 "Healthcare Plans"
@@ -1066,6 +1082,10 @@
 "DUK": [
 "전력·유틸리티",
 "Utilities - Regulated Electric"
+],
+"E": [
+"에너지·정유",
+"Oil & Gas Integrated"
 ],
 "ELV": [
 "바이오·헬스",
