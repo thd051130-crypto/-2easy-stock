@@ -496,6 +496,11 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .imap.focused .node.near .flow, .imap.focused .node.center .flow { opacity: 1; }
 .imap .node .pill { transition: transform .3s; transform: scale(var(--s, 1)); }  /* --s: 산업 크기(시가총액 합)에 따른 점 크기 */
 .imap .node.center .pill { transform: scale(calc(var(--s, 1) * 1.18)); }
+/* 확대 화면: 켜진 산업은 시총과 상관없이 같은 크기(--sf, 점 크기 평균)로. 작은 산업 글자도 읽혀요. 뒤 배경(흐린 점·원래 자리)은 시총 크기 그대로 */
+.imap.focused .node.near .pill { transform: scale(var(--sf, 1)); }
+.imap.focused .node.center .pill { transform: scale(calc(var(--sf, 1) * 1.18)); }
+.imap.focused .node.near.minor .pill text { fill-opacity: 1; }
+.imap.focused .node.near.minor .pill rect, .imap.focused .node.near.minor .pill circle { stroke-opacity: 1; opacity: 1; }
 .imap .node.center .pill rect { stroke-width: 2.2; }
 .imap .node.minor:not(.center) .pill text { fill-opacity: .5; }
 .imap .node.minor:not(.center) .pill rect { stroke-opacity: .5; }

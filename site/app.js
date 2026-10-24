@@ -1695,6 +1695,8 @@ function mapReady() {
     IMAP.lays[market] = IMAP.nodes.map((n) => ({ s: n.s, ox: n.ox, oy: n.oy }));
   }
   IMAP.lays[market].forEach((l, i) => Object.assign(IMAP.nodes[i], l, { x: l.ox, y: l.oy }));
+  // 확대 화면에선 켜진 산업을 다 같은 크기(점 크기 평균, 너무 작지 않게 0.95배 이상)로 그려서 작은 산업 글자도 잘 보여요 (사용자 2026-10-24)
+  IMAP.sf = Math.min(1.1, Math.max(0.95, IMAP.nodes.reduce((a, n) => a + n.s, 0) / IMAP.nodes.length));
   IMAP.layFor = market;
 }
 // 시가총액 글자: 국장 원, 미장 달러
@@ -1781,12 +1783,12 @@ function mapTargets(focus = mapFocus) {
   // 둘레 거리: 이어진 산업이 적으면 가깝게, 많을수록 조금씩 넓게 (지도 끝까지 퍼지면 선이 너무 길어요)
   const ry = Math.min(MAP_H / 2 - 36, (many ? 150 : 110) + nb.length * 9);
   const c = IMAP.nodes[IMAP.at.get(focus)];
-  const ch = (c.w * c.s * 1.18) / 2;  // 가운데 산업 반폭 (크게 그려요)
+  const ch = (c.w * IMAP.sf * 1.18) / 2;  // 가운데 산업 반폭 (크게 그려요)
   nb.forEach((x, i) => {
     const a = -Math.PI / 2 + (i / nb.length) * Math.PI * 2;
     const k = many && i % 2 ? 0.66 : 1;
     const node = IMAP.nodes[IMAP.at.get(x.name)];
-    const half = (node.w * node.s) / 2;
+    const half = (node.w * IMAP.sf) / 2;
     // 옆(왼쪽·오른쪽)에 오는 산업이 큰 가운데 산업과 겹치지 않게, 그래도 지도 밖으로는 안 나가게
     const rx = Math.min(MAP_W / 2 - half - 2, Math.max((MAP_W / 2 - half - 4) * (many ? 1 : 0.9), ch + half + 10));
     T[IMAP.at.get(x.name)] = { x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k, on: true, center: false };
@@ -1819,13 +1821,13 @@ function mapSvg() {
       <rect class="hit" x="${(-hw / 2).toFixed(1)}" y="${(-hh / 2).toFixed(1)}" width="${hw.toFixed(1)}" height="${hh.toFixed(1)}"/>
       <g class="pill" style="--s:${n.s.toFixed(3)}"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
       <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g>
-      <text class="flow ${sign(fv(f))}" y="${(13 * n.s * 1.18 + 11).toFixed(1)}">${f ? pct(fv(f)) : ""}</text></g>`;
+      <text class="flow ${sign(fv(f))}" y="${(13 * IMAP.sf * 1.18 + 11).toFixed(1)}">${f ? pct(fv(f)) : ""}</text></g>`;
   }).join("");
   // 원래 자리 표시: 확대하면 이어진 산업은 둘레로 옮겨 가요. 전체 지도에서 어디 있던 산업인지 보이게 원래 자리에 흐린 모양을 남겨요
   const ghosts = IMAP.nodes.map((n, i) => `<g class="ghost g-${n.group}" data-gh="${i}" transform="translate(${n.ox.toFixed(1)},${n.oy.toFixed(1)})">
       <g class="pill" style="--s:${n.s.toFixed(3)}"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
       <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g></g>`).join("");
-  return `<svg class="imap${mapFocus ? " focused" : ""}" viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="산업 연관 지도">
+  return `<svg class="imap${mapFocus ? " focused" : ""}" style="--sf:${IMAP.sf.toFixed(3)}" viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="산업 연관 지도">
     <defs><marker id="imap-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M1 1 9 5 1 9z"/></marker></defs>
     <g class="ghosts" aria-hidden="true">${ghosts}</g><g class="edges">${edges}</g><g class="nodes">${nodes}</g></svg>`;
