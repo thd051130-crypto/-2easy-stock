@@ -1734,9 +1734,16 @@ try { mapColor = localStorage.getItem("map_color") === "flow" ? "flow" : "group"
 let mapDays = 5;
 try { mapDays = localStorage.getItem("map_days") === "20" ? 20 : 5; } catch (e) { /* 기본값 */ }
 const fv = (f) => (f ? (mapDays === 20 ? f.r20 : f.r5) : null);
+// 강조 방식: "zoom" 누른 산업이 가운데로 오고 이어진 산업이 둘레로 모여요 / "spot" 모두 제자리에 두고
+// 누른 산업·이어진 산업·그 사이 선만 밝게, 나머지는 거의 안 보이게 (사용자 2026-10-24)
+let mapMode = "zoom";
+try { mapMode = localStorage.getItem("map_mode") === "spot" ? "spot" : "zoom"; } catch (e) { /* 기본값 */ }
 const MAP_W = 360, MAP_H = 660;  // 산업 44개 + 점 사이 빈 공간 넉넉히 (36개 땐 470)
 const MAP_ANCHOR = { tech: [92, 104], energy: [270, 128], industry: [180, 332], consumer: [96, 534], finance: [272, 552] };
 const MAP_MINOR = 0.8;
+// 제자리 방식은 선이 잘 보이게 점 사이를 더 넓게 퍼뜨린 지도 (세로로 길게, 사용자 2026-10-24 '테마를 더 넓게 퍼뜨려')
+const MAP_H_SPOT = 880, MAP_SPOT_S = 0.8;  // 제자리 방식은 점을 0.8배로 작게 (사용자 2026-10-24 '퍼뜨리니 너무 커 보여')
+const mapH = () => (mapMode === "spot" ? MAP_H_SPOT : MAP_H);
 const MAP_KIND = { s: "공급망", c: "같은 요인", n: "반대", h: "주가로 찾음" };
 function loadMap() {
   if (!imapLoading) {
@@ -1780,9 +1787,24 @@ function mapReady() {
     IMAP.lays[market] = IMAP.nodes.map((n) => ({ s: n.s, ox: n.ox, oy: n.oy }));
   }
   IMAP.lays[market].forEach((l, i) => Object.assign(IMAP.nodes[i], l, { x: l.ox, y: l.oy }));
+  mapShuffle(false);
+  if (mapMode === "spot") IMAP.nodes.forEach((n) => { n.x = n.sx; n.y = n.sy; });
   // 확대 화면에선 켜진 산업을 다 같은 크기(점 크기 평균, 너무 작지 않게 0.95배 이상)로 그려서 작은 산업 글자도 잘 보여요 (사용자 2026-10-24)
   IMAP.sf = Math.min(1.1, Math.max(0.95, IMAP.nodes.reduce((a, n) => a + n.s, 0) / IMAP.nodes.length));
   IMAP.layFor = market;
+}
+// 제자리 방식 자리: 테마를 무작위로 섞어 넓게 흩어 놓아요 (사용자 2026-10-24 '무작위로 섞어놔야 시각적으로 좋을 것').
+// 시장마다 한 번 섞어 두고, '제자리' 버튼을 다시 누르면 새로 섞어요
+function mapShuffle(fresh) {
+  IMAP.spot = IMAP.spot || {};
+  if (fresh || !IMAP.spot[market]) {
+    const keep = IMAP.nodes.map((n) => [n.x, n.y]);  // 지금 그려진 자리는 그대로 두고 (여기서 새 자리로 움직여요)
+    IMAP.nodes.forEach((n) => { n.s *= MAP_SPOT_S * 1.14; });  // 작게 그리는 크기로 자리 계산 (누른 산업 1.12배·물결만큼 여유)
+    mapLayout(IMAP, { spot: true, shuffle: true, h: MAP_H_SPOT, gap: 30 });
+    IMAP.spot[market] = IMAP.nodes.map((n) => [n.sx, n.sy]);
+    IMAP.nodes.forEach((n, i) => { [n.x, n.y] = keep[i]; n.s /= MAP_SPOT_S * 1.14; });
+  }
+  IMAP.spot[market].forEach(([x, y], i) => { IMAP.nodes[i].sx = x; IMAP.nodes[i].sy = y; });
 }
 // 시가총액 글자: 국장 원, 미장 달러
 function capText(v, m = market) {
@@ -1794,33 +1816,37 @@ function capText(v, m = market) {
 const textW = (s) => [...s].reduce((a, c) => a + (/[가-힣]/.test(c) ? 12 : /[A-Za-z0-9]/.test(c) ? 7.2 : 4), 0);
 
 // 전체 지도 자리: 묶음마다 중심으로 당기고, 이어진 산업끼리 당기고, 겹치면 밀어내요 (처음 한 번, 매번 같은 결과)
-function mapLayout(x) {
+function mapLayout(x, o = {}) {
   const N = x.nodes;
+  const MH = o.h || MAP_H, ky = MH / MAP_H, REST = o.rest || 100;
+  const anchor = (g) => { const a = MAP_ANCHOR[g]; return a ? [a[0], a[1] * ky] : [MAP_W / 2, MH / 2]; };
   const groupIdx = {};
   N.forEach((n) => {
     const k = (groupIdx[n.group] = (groupIdx[n.group] || 0) + 1);
     const total = N.filter((m) => m.group === n.group).length;
     const a = (k / total) * Math.PI * 2;
-    const [ax, ay] = MAP_ANCHOR[n.group] || [MAP_W / 2, MAP_H / 2];
-    n.x = ax + Math.cos(a) * 46; n.y = ay + Math.sin(a) * 34;
+    const [ax, ay] = anchor(n.group);
+    n.x = ax + Math.cos(a) * 46; n.y = ay + Math.sin(a) * 34 * ky;
+    // 섞기(제자리 방식): 묶음 상관없이 지도 아무 곳에서 출발해서 서로 밀어내기만 해요
+    if (o.shuffle) { n.x = Math.random() * MAP_W; n.y = Math.random() * MH; }
   });
   const E = x.links.map((l) => [x.at.get(l.a), x.at.get(l.b)]).filter(([a, b]) => a != null && b != null);
-  const H = 26, GAP = 14, ROUNDS = 600;  // GAP: 점 사이 최소 빈 공간 (빈 곳 누르기·두 손가락 벌리기 자리)
+  const H = 26, GAP = o.gap || 14, ROUNDS = 600;  // GAP: 점 사이 최소 빈 공간 (빈 곳 누르기·두 손가락 벌리기 자리)
   // 지도 밖으로 나간 점은 안으로 (밀어낸 뒤마다 해야 끝에 가장자리에서 겹치지 않아요)
   const clamp = () => N.forEach((n) => {
     n.x = Math.max(n.w * n.s / 2 + 2, Math.min(MAP_W - n.w * n.s / 2 - 2, n.x));
-    n.y = Math.max(H * n.s / 2 + 2, Math.min(MAP_H - H * n.s / 2 - 2, n.y));
+    n.y = Math.max(H * n.s / 2 + 2, Math.min(MH - H * n.s / 2 - 2, n.y));
   });
   for (let it = 0; it < ROUNDS; it++) {
     const cool = 1 - it / ROUNDS;
-    if (it < ROUNDS - 120) {
+    if (!o.shuffle && it < ROUNDS - 120) {
       for (const [a, b] of E) {
         const p = N[a], q = N[b], dx = q.x - p.x, dy = q.y - p.y, dist = Math.hypot(dx, dy) || 1;
-        const f = ((dist - 100) / dist) * 0.01 * cool;
+        const f = ((dist - REST) / dist) * 0.01 * cool;
         p.x += dx * f; p.y += dy * f; q.x -= dx * f; q.y -= dy * f;
       }
       N.forEach((n) => {
-        const [ax, ay] = MAP_ANCHOR[n.group] || [MAP_W / 2, MAP_H / 2];
+        const [ax, ay] = anchor(n.group);
         n.x += (ax - n.x) * 0.03 * cool; n.y += (ay - n.y) * 0.03 * cool;
       });
     }
@@ -1835,7 +1861,8 @@ function mapLayout(x) {
       clamp();
     }
   }
-  N.forEach((n) => { n.ox = n.x; n.oy = n.y; });
+  if (o.spot) N.forEach((n) => { n.sx = n.x; n.sy = n.y; });
+  else N.forEach((n) => { n.ox = n.x; n.oy = n.y; });
 }
 
 // 고른 산업과 이어진 산업 [{ name, kind, why, role, corr }]: 사람이 이은 선 + 이 시장에서 주가로 찾은 연결
@@ -1859,8 +1886,13 @@ function mapNeighbors(name) {
 }
 // 고른 산업은 가운데, 이어진 산업은 둘레(타원)에. 많으면 안쪽·바깥쪽 번갈아. 나머지는 제자리에서 흐리게.
 function mapTargets(focus = mapFocus) {
-  const T = IMAP.nodes.map((n) => ({ x: n.ox, y: n.oy, on: !focus, center: false }));
+  const T = IMAP.nodes.map((n) => (mapMode === "spot" ? { x: n.sx, y: n.sy, on: !focus, center: false } : { x: n.ox, y: n.oy, on: !focus, center: false }));
   if (!focus || !IMAP.at.has(focus)) return T;
+  if (mapMode === "spot") {
+    T[IMAP.at.get(focus)].on = T[IMAP.at.get(focus)].center = true;
+    mapNeighbors(focus).forEach((x) => { T[IMAP.at.get(x.name)].on = true; });
+    return T;
+  }
   const cx = MAP_W / 2, cy = MAP_H / 2;
   T[IMAP.at.get(focus)] = { x: cx, y: cy, on: true, center: true };
   const nb = mapNeighbors(focus);
@@ -1912,7 +1944,7 @@ function mapSvg() {
   const ghosts = IMAP.nodes.map((n, i) => `<g class="ghost g-${n.group}" data-gh="${i}" transform="translate(${n.ox.toFixed(1)},${n.oy.toFixed(1)})">
       <g class="pill" style="--s:${n.s.toFixed(3)}"><rect x="${-n.w / 2}" y="-13" width="${n.w}" height="26" rx="13"/>
       <circle cx="${-n.w / 2 + 11}" cy="0" r="4"/><text x="${7}" y="4.2">${esc(n.short)}</text></g></g>`).join("");
-  return `<svg class="imap${mapFocus ? " focused" : ""}" style="--sf:${IMAP.sf.toFixed(3)}" viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="산업 연관 지도">
+  return `<svg class="imap${mapFocus ? " focused" : ""}${mapMode === "spot" ? " spot" : ""}" style="--sf:${IMAP.sf.toFixed(3)}" viewBox="0 0 ${MAP_W} ${mapH()}" role="img" aria-label="산업 연관 지도">
     <defs><marker id="imap-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M1 1 9 5 1 9z"/></marker></defs>
     <g class="ghosts" aria-hidden="true">${ghosts}</g><g class="edges">${edges}</g><g class="nodes">${nodes}</g></svg>`;
@@ -1920,8 +1952,9 @@ function mapSvg() {
 
 // 점·선을 새 자리로 (0.45초). 동작 줄이기를 켰으면 바로.
 let mapAnim = 0;
-function placeMap(svg, animate) {
+function placeMap(svg, animate, slow = false) {
   const T = mapTargets();
+  const vb = svg.viewBox.baseVal, h0 = vb.height, h1 = mapH();  // 지도 높이도 점과 같이 늘어나거나 줄어요
   const N = IMAP.nodes;
   const from = N.map((n) => ({ x: n.x, y: n.y }));
   const hidden = (IMAP.hidden && IMAP.hidden[market]) || [];
@@ -1951,25 +1984,93 @@ function placeMap(svg, animate) {
     N.forEach((n, i) => {
       n.x = from[i].x + (T[i].x - from[i].x) * k;
       n.y = from[i].y + (T[i].y - from[i].y) * k;
-      svg.querySelector(`[data-n="${i}"]`).setAttribute("transform", `translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`);
     });
-    const line = (e, a, b) => {
-      const p = N[IMAP.at.get(a)], q = N[IMAP.at.get(b)];
-      if (!p || !q) return;
-      e.setAttribute("points", `${p.x.toFixed(1)},${p.y.toFixed(1)} ${((p.x + q.x) / 2).toFixed(1)},${((p.y + q.y) / 2).toFixed(1)} ${q.x.toFixed(1)},${q.y.toFixed(1)}`);
-    };
-    IMAP.links.forEach((l, i) => line(svg.querySelector(`[data-e="${i}"]`), l.a, l.b));
-    hidden.forEach(([a, b], i) => line(svg.querySelector(`[data-h="${i}"]`), a, b));
+    mapPaint(svg);
+    if (h0 !== h1) svg.setAttribute("viewBox", `0 0 ${MAP_W} ${(h0 + (h1 - h0) * k).toFixed(1)}`);
   };
   cancelAnimationFrame(mapAnim);
   if (!animate || calm()) { draw(1); return; }
-  const t0 = performance.now(), dur = 450;
+  // 강조 방식을 바꿀 땐 지도 전체가 퍼지거나 모이니 더 천천히, 천천히 시작해서 천천히 멈춰요
+  const t0 = performance.now(), dur = slow ? 2000 : 450;
+  const ease = slow ? (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2) : (t) => 1 - (1 - t) ** 3;
   const step = (now) => {
     const t = Math.min(1, (now - t0) / dur);
-    draw(1 - (1 - t) ** 3);
+    draw(ease(t));
     if (t < 1) mapAnim = requestAnimationFrame(step);
   };
   mapAnim = requestAnimationFrame(step);
+}
+
+// 점·선 그리기: 자리(n.x, n.y)에 물결 움직임을 더해요. 선 끝도 점을 따라가요
+function mapPaint(svg) {
+  const N = IMAP.nodes, t = performance.now() / 1000, a = MAP_WAVE.amp;
+  const P = N.map((n) => {
+    if (!a) return [n.x, n.y];
+    // 물결: 자리마다 출발이 조금씩 달라서 지도 위를 파도가 지나가듯 움직여요 (가로 2px, 세로 3px 안쪽)
+    const ph = (n.sx || n.ox) * 0.018 + (n.sy || n.oy) * 0.011;
+    return [n.x + a * 2 * Math.sin(t * 0.9 + ph * 1.3), n.y + a * 3 * Math.sin(t * 1.15 + ph)];
+  });
+  N.forEach((n, i) => svg.querySelector(`[data-n="${i}"]`).setAttribute("transform", `translate(${P[i][0].toFixed(1)},${P[i][1].toFixed(1)})`));
+  const line = (e, x, y) => {
+    const p = P[IMAP.at.get(x)], q = P[IMAP.at.get(y)];
+    if (!e || !p || !q) return;
+    e.setAttribute("points", `${p[0].toFixed(1)},${p[1].toFixed(1)} ${((p[0] + q[0]) / 2).toFixed(1)},${((p[1] + q[1]) / 2).toFixed(1)} ${q[0].toFixed(1)},${q[1].toFixed(1)}`);
+  };
+  IMAP.links.forEach((l, i) => line(svg.querySelector(`[data-e="${i}"]`), l.a, l.b));
+  ((IMAP.hidden && IMAP.hidden[market]) || []).forEach(([x, y], i) => line(svg.querySelector(`[data-h="${i}"]`), x, y));
+}
+// 제자리 방식에서 산업을 누르면 별자리를 그리듯 그 산업에서 선이 하나씩 뻗어 나가고, 선이 닿는 순간 그 산업이 켜져요.
+// 가까운 산업부터 차례로, 긴 선은 조금 더 천천히 (사용자 2026-10-24 '별자리 그리듯 퍼져나가게', 빠르기 0.8배)
+let mapStars = [];
+function mapConstellation(svg, name, wait = 0) {
+  mapStars.forEach((a) => a.cancel());
+  mapStars = [];
+  if (calm() || mapMode !== "spot" || !name || !IMAP.at.has(name)) return;
+  const c = IMAP.nodes[IMAP.at.get(name)];
+  const items = [];
+  const add = (e, a, b) => { if (e && (a === name || b === name)) items.push({ e, other: a === name ? b : a, fromEnd: b === name }); };
+  IMAP.links.forEach((l, i) => add(svg.querySelector(`[data-e="${i}"]`), l.a, l.b));
+  ((IMAP.hidden && IMAP.hidden[market]) || []).forEach(([a, b], i) => add(svg.querySelector(`[data-h="${i}"]`), a, b));
+  items.forEach((it) => {
+    const i = IMAP.at.get(it.other), o = IMAP.nodes[i];
+    it.d = o ? Math.hypot(o.sx - c.sx, o.sy - c.sy) : 0;
+    it.g = svg.querySelector(`[data-n="${i}"]`);
+  });
+  items.sort((a, b) => a.d - b.d);
+  const done = new Set();
+  items.forEach((it, k) => {
+    const L = it.e.getTotalLength() * 1.15 + 12;  // 물결로 선 길이가 조금 바뀌어도 끝까지 덮게
+    const delay = wait + 250 + k * 275, dur = 625 + it.d * 2;
+    it.e.style.strokeDasharray = `${L} ${L}`;
+    const mk = it.e.getAttribute("marker-mid");  // 화살표는 선이 다 그려진 뒤에
+    if (mk) it.e.removeAttribute("marker-mid");
+    const line = it.e.animate([{ strokeDashoffset: it.fromEnd ? -L : L }, { strokeDashoffset: 0 }],
+      { duration: dur, delay, easing: "cubic-bezier(.35,.1,.25,1)", fill: "backwards" });
+    line.onfinish = line.oncancel = () => {
+      it.e.style.strokeDasharray = "";
+      if (mk && it.e.classList.contains("lit") && !it.e.hasAttribute("marker-mid")) it.e.setAttribute("marker-mid", mk);
+    };
+    mapStars.push(line);
+    if (it.g && !done.has(it.g)) {
+      done.add(it.g);
+      mapStars.push(it.g.animate([{ opacity: 0.12 }, { opacity: 1 }], { duration: 625, delay: delay + dur * 0.85, easing: "ease-out", fill: "backwards" }));
+    }
+  });
+}
+// 제자리 방식에선 점들이 물결처럼 천천히 떠다녀요 (사용자 2026-10-24 '너무 정적이지 않게'). 방식을 바꾸면 서서히 멈추거나 시작해요.
+// 지도 화면을 떠나거나 동작 줄이기를 켰으면 안 움직여요
+const MAP_WAVE = { amp: 0, raf: 0 };
+function mapWave(svg) {
+  cancelAnimationFrame(MAP_WAVE.raf);
+  const tick = () => {
+    if (!svg.isConnected) { MAP_WAVE.amp = 0; return; }
+    const goal = mapMode === "spot" && !calm() ? 1 : 0;
+    MAP_WAVE.amp += (goal - MAP_WAVE.amp) * 0.04;
+    if (Math.abs(goal - MAP_WAVE.amp) < 0.01) MAP_WAVE.amp = goal;
+    if (!document.hidden) mapPaint(svg);
+    if (MAP_WAVE.amp || goal) MAP_WAVE.raf = requestAnimationFrame(tick);
+  };
+  MAP_WAVE.raf = requestAnimationFrame(tick);
 }
 
 function mapCard() {
@@ -1982,11 +2083,15 @@ function mapCard() {
   const minorNote = IMAP.nodes.some((n) => n.minor) ? `<span class="muted">${sized ? "흐린 점" : "작고 흐린 점"}: 큰 틀 밖 세부 테마</span>` : "";
   const colors = [["group", "묶음 색"], ["flow", "흐름 색"]].map(([k, label]) =>
     `<button type="button" data-mapcolor="${k}" aria-pressed="${mapColor === k}">${label}</button>`).join("");
+  const modes = [["zoom", "확대"], ["spot", "제자리"]].map(([k, label]) =>
+    `<button type="button" data-mapmode="${k}" aria-pressed="${mapMode === k}">${label}</button>`).join("");
   const days = [5, 20].map((d) => `<button type="button" data-mapdays="${d}" aria-pressed="${mapDays === d}">${d}일</button>`).join("");
   const has = !!(IMAP.flows && IMAP.flows[market]);
   return `<section class="card map-card">${head}
-    <p class="sub map-sub${mapFocus ? " focused" : ""}" id="map-sub"><span class="all">${MAP_SUB_ALL}</span><span class="foc">${MAP_SUB_FOCUS}</span></p>
-    <div class="map-tools"><div class="period" role="group" aria-label="점 색">${colors}</div>
+    <p class="sub map-sub${mapFocus ? " focused" : ""}${mapMode === "spot" ? " spot" : ""}" id="map-sub"><span class="all">${MAP_SUB_ALL}</span><span class="foc">${MAP_SUB_FOCUS}</span>
+      <span class="all spot">${MAP_SUB_SPOT_ALL}</span><span class="foc spot">${MAP_SUB_SPOT_FOCUS}</span></p>
+    <div class="map-tools"><div class="period" role="group" aria-label="강조 방식">${modes}</div>
+      <div class="period" role="group" aria-label="점 색">${colors}</div>
       <div class="period" role="group" aria-label="흐름 기간">${days}</div>
       <button type="button" class="map-all${mapFocus ? "" : " off"}" data-mapall>‹ 전체 보기</button></div>
     <div class="imap-wrap">${mapSvg()}</div>
@@ -2072,6 +2177,8 @@ function mapDetailCard() {
 let mapTrail = [];
 const MAP_SUB_ALL = "산업을 누르거나 두 손가락으로 벌리면 이어진 산업만 선으로 모아 보여 줘요.";
 const MAP_SUB_FOCUS = "가운데 산업에 이어진 산업만 모았어요. 둘레 산업을 누르거나 벌리면 그 산업으로, 빈 곳을 누르거나 오므리면 이전으로 가요.";
+const MAP_SUB_SPOT_ALL = "산업을 누르면 제자리에서 이어진 산업과 선만 밝게 보여 줘요. 나머지는 흐려져요.";
+const MAP_SUB_SPOT_FOCUS = "누른 산업과 이어진 산업만 밝혔어요. 다른 산업(흐린 것도)을 누르면 그 산업으로, 빈 곳을 누르면 이전으로 가요.";
 function openMap(name) {
   mapFocus = name || "";
   mapTrail = [];
@@ -2088,6 +2195,7 @@ function setMapFocus(name, back = false) {
   if (!svg) { render(); return; }
   svg.classList.toggle("focused", !!name);
   placeMap(svg, true);
+  mapConstellation(svg, name);
   // 위 설명·'전체 보기' 버튼은 자리를 그대로 차지한 채 글자만 바꿔요. 높이가 바뀌면 지도가 밀려서 화면이 움직여요 (사용자 2026-10-24)
   const sub = $("#map-sub");
   if (sub) sub.classList.toggle("focused", !!name);
@@ -2141,7 +2249,8 @@ function mapPreview(svg, from, focus, k) {
     n.y = from[i].y + (T[i].y - from[i].y) * k;
     const g = svg.querySelector(`[data-n="${i}"]`);
     g.setAttribute("transform", `translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`);
-    const a = from[i].dim ? 0.07 : 1, b = T[i].on ? 1 : 0.07;
+    const lo = mapMode === "spot" ? 0.12 : 0.07;  // 흐린 산업 진하기 (CSS .node.dim과 같게)
+    const a = from[i].dim ? lo : 1, b = T[i].on ? 1 : lo;
     g.style.transition = "none";
     g.style.opacity = (a + (b - a) * k).toFixed(3);
   });
@@ -2239,12 +2348,14 @@ function bindMap() {
   }
   if (mapFocus && !IMAP.at.has(mapFocus)) mapFocus = "";
   const svg = $(".imap");
+  MAP_WAVE.amp = 0;
   placeMap(svg, false);
+  mapWave(svg);
   svg.querySelectorAll("[data-n]").forEach((g) => {
     const pick = () => {
       if (svg.dataset.pinched) return;
       const name = IMAP.nodes[Number(g.dataset.n)].name;
-      if (mapFocus && g.classList.contains("dim")) return;  // 흐린 산업은 빈 곳처럼 (CSS로 터치를 안 받아요)
+      if (mapFocus && g.classList.contains("dim") && mapMode !== "spot") return;  // 확대 방식에선 흐린 산업은 빈 곳처럼 (CSS로 터치를 안 받아요)
       setMapFocus(name === mapFocus ? "" : name);
     };
     g.addEventListener("click", pick);
@@ -2252,12 +2363,28 @@ function bindMap() {
   });
   // 빈 곳(또는 흐린 산업)을 누르면 이전 산업으로, 처음 고른 산업이었으면 전체 보기로
   svg.addEventListener("click", (e) => {
-    if (svg.dataset.pinched || !mapFocus || e.target.closest("[data-n]:not(.dim)")) return;
+    if (svg.dataset.pinched || !mapFocus || e.target.closest(mapMode === "spot" ? "[data-n]" : "[data-n]:not(.dim)")) return;
     setMapFocus(mapTrail.pop() || "", true);
   });
   bindMapPinch(svg);
   const all = $("[data-mapall]");
   if (all) all.addEventListener("click", () => setMapFocus(""));
+  // 강조 방식 바꾸기: 다시 그리지 않고 지금 지도에서 점만 새 자리로 옮겨요 (화면 위치 그대로)
+  document.querySelectorAll("[data-mapmode]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.mapmode === "spot") mapShuffle(true);  // 누를 때마다 새로 섞어요
+    mapMode = b.dataset.mapmode === "spot" ? "spot" : "zoom";
+    try { localStorage.setItem("map_mode", mapMode); } catch (e) { /* 이번만 기억 */ }
+    document.querySelectorAll("[data-mapmode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mapmode === mapMode)));
+    svg.classList.toggle("spot", mapMode === "spot");
+    const sub = $("#map-sub");
+    if (sub) sub.classList.toggle("spot", mapMode === "spot");
+    svg.classList.add("moving");  // 점 크기도 퍼지는 동안 같이 천천히 바뀌어요
+    clearTimeout(svg.movingT);
+    svg.movingT = setTimeout(() => svg.classList.remove("moving"), 2100);
+    placeMap(svg, true, true);
+    mapWave(svg);  // 지도 위쪽은 그대로, 아래로만 길어지거나 짧아져요
+    mapConstellation(svg, mapFocus, 2000);  // 다 퍼진 뒤에 선을 그어요
+  }));
   document.querySelectorAll("[data-mapdays]").forEach((b) => b.addEventListener("click", () => {
     mapDays = Number(b.dataset.mapdays) === 20 ? 20 : 5;
     try { localStorage.setItem("map_days", String(mapDays)); } catch (e) { /* 이번만 기억 */ }
