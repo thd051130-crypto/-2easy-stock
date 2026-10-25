@@ -13,3 +13,4 @@ metadata:
 - 앱 도구 탭 두 번째 '포트폴리오 실험실'(PERF_TABS lab): 예시 5개(주식만·미국 주식만·주식6:채권4·올웨더 비슷·낙폭 작게), 자산별 −/+ 10%p(합 100이면 + 막힘), 매년 되돌리기/그냥 두기, 기간 전체/10년/5년. 결과: 최대 낙폭·회복 개월·연 수익률·가장 나빴던 해를 같은 기간 코스피200만(미장 탭은 S&P500만)과 비교, 로그 눈금 선 + 낙폭 면 그래프. 비율은 localStorage lab.
 - 같이 고침: report_desks.py 시장팀이 world.json 이름과 안 맞아 미국 10년 금리·VIX·WTI·금 줄이 빠져 있던 것, 금리는 %p로 표시.
 **How to apply:** 실험실은 사고팔기 판단이 아닌 과거 숫자 비교로 유지. 새 자산은 lab.py ASSETS에 추가. 관련 [[report-desks]], [[ui-no-jump-rule]].
+- 2026-10-25 사용자 "포트폴리오 실험실 etf도 추가해줘 검색기능도 만들고, 버튼 눌렀다고 화면 움직이게 하지 말고": 기본 자산 17개(+코스닥150·VEA·VWO·IWM·VNQ·LQD·TIP·SHY), lab.json에 fx(원/달러 월 변화 %). etf_monthly.py → paper/symbols/etfm/<kr|us>-<n>.json (kr 16·us 32 묶음, 묶음 = 코드 글자 번호 합 % 수, 앱 etfShard와 같아야 함), 국장 ETF 994·미장 4,379개 최근 20년, 2.6MB. 앱: '자산 고르기' 버튼(넣기/빼기) + ETF 검색(#lab-q, 6개, 넣음 ✓) 위, '내 비율' 줄(✕ 빼기) 아래 — 넣어도 위 칸 높이가 안 변해서 화면 고정. LAB.list·LAB.extra(localStorage lab).
