@@ -1044,3 +1044,21 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .lab-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .lab-col { display: grid; gap: 6px; min-width: 0; }
 .lab-who { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.lab-pick { margin-top: 6px; }
+.lab-pick button { font-size: 13px; min-height: 32px; padding: 4px 10px; }
+.lab-q { margin-top: 10px; }
+.lab-hint { margin: 8px 0 0; font-size: 13px; }
+.lab-hits { list-style: none; margin: 6px 0 0; padding: 0; }
+.lab-hits li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.lab-hits li:first-child { border-top: 0; }
+.lab-hits span { min-width: 0; }
+.lab-hits b { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lab-hits small { font-size: 12px; color: var(--text-muted); }
+.lab-hits button { flex-shrink: 0; font: inherit; font-size: 13px; font-weight: 600; min-height: 34px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface-1); color: var(--accent); }
+.lab-hits button[aria-pressed="true"] { background: var(--accent-bg); border-color: transparent; color: var(--accent-fg); }
+.lab-del { width: 30px; height: 30px; border-radius: 999px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; flex-shrink: 0; }
+.lab-row .lab-step { gap: 4px; }
+.lab-row .lab-step button:not(.lab-del) { width: 32px; height: 32px; font-size: 16px; }
+.lab-row .lab-step b { min-width: 36px; font-size: 14px; }
+.lab-row .lab-del { width: 26px; margin-left: 2px; }
+.lab-row .name { overflow-wrap: anywhere; }

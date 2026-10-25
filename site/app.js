@@ -5419,8 +5419,43 @@ const LAB_PRESETS = [
 ];
 const LAB_PERIODS = [["all", "전체"], ["10", "최근 10년"], ["5", "최근 5년"]];
 let LABD = null, labLoading = null;
-const LAB = { w: { ...LAB_PRESETS[2][2] }, reb: "y", per: "all" };
+// w: 키 → 비율(%), list: 화면에 줄로 보이는 자산 순서, extra: 검색해서 넣은 ETF (키 "kr:069500"·"us:SCHD" → { m, code, name })
+const LAB = { w: { ...LAB_PRESETS[2][2] }, list: null, extra: {}, reb: "y", per: "all" };
 try { Object.assign(LAB, JSON.parse(localStorage.getItem("lab") || "{}")); } catch (e) { /* 처음 */ }
+if (!Array.isArray(LAB.list)) LAB.list = Object.keys(LAB.w).filter((k) => LAB.w[k] > 0);
+if (!LAB.extra || typeof LAB.extra !== "object") LAB.extra = {};
+let labQuery = "";
+// 검색해서 넣는 ETF 월 수익률 (etf_monthly.py, symbols/etfm/<시장>-<묶음>.json). 묶음 번호는 etf_monthly.shard와 같아요
+const ETF_SHARDS = { kr: 16, us: 32 };
+const etfShard = (code, n) => [...code].reduce((a, c) => a + c.charCodeAt(0), 0) % n;
+const ETFM = {}, ETFD = {};  // 묶음 파일 Promise, 키 → 달 목록에 맞춘 원화 월 수익률 (없으면 null)
+function loadEtf(key) {
+  const x = LAB.extra[key];
+  if (!x || key in ETFD) return Promise.resolve();
+  const f = `${x.m}-${etfShard(x.code, ETF_SHARDS[x.m])}`;
+  ETFM[f] = ETFM[f] || fetch(`symbols/etfm/${f}.json`, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  return ETFM[f].then((d) => {
+    const v = d && d.s && d.s[x.code];
+    if (!v) { ETFD[key] = null; return; }
+    const [start, r] = v, M = LABD.months, mi = (ym) => Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7));
+    const out = M.map(() => null), base = mi(start) - mi(M[0]);  // r[k]는 start에서 k달 뒤 수익률
+    r.forEach((x2, k) => {
+      const i = base + k;
+      if (i < 0 || i >= M.length) return;
+      if (x.m === "us") { const fx = LABD.fx && LABD.fx[i]; out[i] = fx == null ? null : ((1 + x2 / 100) * (1 + fx / 100) - 1) * 100; }
+      else out[i] = x2;
+    });
+    const first = out.findIndex((v2) => v2 != null);
+    ETFD[key] = first < 0 ? null : { start: M[first], r: out };
+  });
+}
+// 키 → { k, name, note, start, r } (기본 자산 또는 검색해서 넣은 ETF). 아직 못 불러왔거나 자료가 없으면 null
+function labAsset(k) {
+  const a = LABD.assets.find((x) => x.k === k);
+  if (a) return a;
+  const x = LAB.extra[k], d = ETFD[k];
+  return x && d ? { k, name: x.name, note: `${x.m === "us" ? "🇺🇸 원화로 환산" : "🇰🇷"} · ${x.code}`, start: d.start, r: d.r, extra: true } : null;
+}
 function loadLab() {
   if (!labLoading) labLoading = fetch("symbols/lab.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
     .then((x) => { LABD = x || { months: [], assets: [] }; });
@@ -5430,7 +5465,7 @@ const saveLab = () => { try { localStorage.setItem("lab", JSON.stringify(LAB)); 
 const labSum = (w) => Object.values(w).reduce((a, b) => a + (b || 0), 0);
 // 비율 w(%)로 섞어 한 달씩 굴려요. reb: 매년 12월 말에 처음 비율로 되돌리기. 같은 기간 계산을 위해 시작 달을 받을 수 있어요
 function labRun(w, reb, from) {
-  const A = LABD.assets.filter((a) => (w[a.k] || 0) > 0), n = LABD.months.length, tot = labSum(w);
+  const A = Object.keys(w).filter((k) => w[k] > 0).map(labAsset).filter(Boolean), n = LABD.months.length, tot = A.reduce((a, x) => a + w[x.k], 0);
   if (!A.length || !tot) return null;
   let s = Math.max(...A.map((a) => a.r.findIndex((v) => v != null)));
   if (from != null) s = Math.max(s, from);
@@ -5491,11 +5526,22 @@ function labCard() {
   const pre = LAB_PRESETS.find(([, , w]) => JSON.stringify(Object.entries(w).sort()) === JSON.stringify(Object.entries(LAB.w).filter(([, v]) => v > 0).sort()));
   const presets = `<nav class="chips" aria-label="섞기 예시">${LAB_PRESETS.map(([k, label]) =>
     `<button type="button" data-lab-preset="${k}" aria-pressed="${!!pre && pre[0] === k}">${label}</button>`).join("")}</nav>`;
-  const rows = LABD.assets.map((a) => { const v = LAB.w[a.k] || 0;
+  const rows = LAB.list.map((k) => { const v = LAB.w[k] || 0, a = labAsset(k), x = LAB.extra[k];
+    if (!a) return x ? `<li class="lab-row"><div class="l"><div class="name">${esc(x.name)}</div><div class="meta">${k in ETFD ? "과거 월봉 자료가 없어서 계산에서 빠져요" : "불러오는 중이에요…"}</div></div>
+      <button type="button" class="lab-del" data-lab-del="${esc(k)}" aria-label="${esc(x.name)} 빼기">✕</button></li>` : "";
     return `<li class="lab-row"><div class="l"><div class="name">${esc(a.name)}</div><div class="meta">${esc(a.note)} · ${ym(a.start)}~</div>
         <div class="lab-bar"><i style="width:${Math.min(100, v)}%"></i></div></div>
       <div class="lab-step"><button type="button" data-lab-w="${a.k}" data-d="-10" aria-label="${esc(a.name)} 10%p 줄이기"${v ? "" : " disabled"}>−</button>
-        <b>${v}%</b><button type="button" data-lab-w="${a.k}" data-d="10" aria-label="${esc(a.name)} 10%p 늘리기"${tot >= 100 ? " disabled" : ""}>+</button></div></li>`; }).join("");
+        <b>${v}%</b><button type="button" data-lab-w="${a.k}" data-d="10" aria-label="${esc(a.name)} 10%p 늘리기"${tot >= 100 ? " disabled" : ""}>+</button>
+        <button type="button" class="lab-del" data-lab-del="${esc(a.k)}" aria-label="${esc(a.name)} 빼기">✕</button></div></li>`; }).join("")
+    || `<li><p class="empty">위에서 자산을 골라 넣어 주세요.</p></li>`;
+  // 자산 고르기: 기본 자산은 눌러서 넣고 빼는 버튼, 그 밖의 ETF는 이름으로 찾아 넣어요.
+  // 넣어도 이 칸 높이는 그대로라 화면이 안 밀려요 (줄은 아래 '내 비율'에 붙어요)
+  const pick = `<h3 class="sav-h">자산 고르기</h3><nav class="chips lab-pick" aria-label="기본 자산">${LABD.assets.map((x) =>
+    `<button type="button" data-lab-pick="${x.k}" aria-pressed="${LAB.list.includes(x.k)}">${esc(x.name)}</button>`).join("")}</nav>
+    <input id="lab-q" class="search lab-q" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="다른 ETF 찾기: 슈드, 나스닥100, 반도체, 국채…" aria-label="ETF 찾기" value="${esc(labQuery)}">
+    <div id="lab-results">${labResults()}</div>`;
   const sumLine = tot === 100 ? `<p class="muted lab-sum">합계 <b>100%</b></p>`
     : `<p class="caution lab-sum">합계 ${tot}%예요. ${tot ? "100%로 맞춰(비율대로 늘려) 계산했어요." : "비율을 넣어 주세요."}</p>`;
   const opts = `<div class="lab-opts"><nav class="chips" aria-label="되돌리기">${[["y", "매년 비율 되돌리기"], ["n", "그냥 두기"]].map(([k, l]) =>
@@ -5520,10 +5566,45 @@ function labCard() {
       <div class="lab-cols">${col(me, "내 섞기")}${sameAsBase ? "" : col(base, `${esc(baseA.name)}만`)}</div>${verdict}`;
   }
   return `<section class="card" id="lab-card">${head}
-    <p class="muted" style="margin:8px 0 0">예시를 고르거나 + − 로 비율을 바꾸면, 과거에 그렇게 섞어 뒀을 때 얼마나 떨어지고 얼마 만에 회복했는지 보여 줘요.</p>
-    ${presets}<ul class="list lab-list">${rows}</ul>${sumLine}${opts}${out}
+    <p class="muted" style="margin:8px 0 0">예시를 고르거나 자산을 넣고 + − 로 비율을 바꾸면, 과거에 그렇게 섞어 뒀을 때 얼마나 떨어지고 얼마 만에 회복했는지 보여 줘요.</p>
+    ${presets}${pick}<h3 class="sav-h">내 비율</h3><ul class="list lab-list">${rows}</ul>${sumLine}${opts}${out}
     <p class="muted note" style="margin:10px 0 0">야후 파이낸스 월말 수정 종가(분배금 다시 넣은 값)로 계산해요. 미국 자산은 그달 원/달러로 바꿔서, 위기 때 원화가 약해지면 원화 기준 낙폭이 줄어든 것까지 들어 있어요.
       세금·환전 수수료는 빼지 않았어요. 기간이 짧은 자산을 넣으면 그 자산이 상장한 달부터 계산해요. 과거 숫자일 뿐 앞으로를 보장하지 않아요.</p></section>`;
+}
+// 넣기·빼기: 넣을 땐 100%가 안 찼으면 남은 만큼(최대 10%), 다 찼으면 0%로 넣어요
+function labToggle(k) {
+  if (LAB.list.includes(k)) { LAB.list = LAB.list.filter((x) => x !== k); delete LAB.w[k]; }
+  else { LAB.list = [...LAB.list, k]; const left = 100 - LAB.list.reduce((a, x) => a + (LAB.w[x] || 0), 0); LAB.w = { ...LAB.w, [k]: Math.max(0, Math.min(10, left)) }; }
+  saveLab(); labRedraw();
+}
+// 검색 결과: ETF만, 국장·미장 섞어서 잘 맞는 순 6개. 기본 자산과 같은 ETF는 그 버튼으로 넣어요
+const LAB_SYM = () => Object.fromEntries((LABD ? LABD.assets : []).map((a) => [a.sym.replace(/\.K[SQ]$/, ""), a.k]));
+function labResults() {
+  const q = labQuery.trim();
+  if (!q) return "";
+  if (!SYM.kr || !SYM.us) return `<p class="muted lab-hint">종목 목록을 불러오는 중이에요…</p>`;
+  const qs = queryKeys(q), hits = [];
+  for (const m of ["kr", "us"]) (SYM[m] || []).forEach((e, i) => {
+    if (e.row[3] !== "e") return;
+    const sc = scoreOf(e.row, e.keys, qs);
+    if (sc != null) hits.push({ m, sc, i, row: e.row });
+  });
+  hits.sort((a, b) => a.sc - b.sc || (a.m === market ? 0 : 1) - (b.m === market ? 0 : 1) || a.i - b.i);
+  if (!hits.length) return `<p class="muted lab-hint">"${esc(q)}"에 맞는 ETF가 없어요.</p>`;
+  const same = LAB_SYM();
+  return `<ul class="lab-hits">${hits.slice(0, 6).map(({ m, row }) => {
+    const k = (m === "kr" && same[row[0]]) || (m === "us" && same[row[0]]) || `${m}:${row[0]}`, on = LAB.list.includes(k);
+    return `<li><span><b>${esc(row[1])}</b><small>${m === "kr" ? "🇰🇷" : "🇺🇸"} ${esc(row[0])}</small></span>
+      <button type="button" data-lab-add="${esc(k)}" data-m="${m}" data-code="${esc(row[0])}" data-name="${esc(row[1])}" aria-pressed="${on}">${on ? "넣음 ✓" : "+ 넣기"}</button></li>`;
+  }).join("")}</ul>`;
+}
+function bindLabResults(el) {
+  el.querySelectorAll("[data-lab-add]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.labAdd;
+    if (!LAB.list.includes(k) && !LABD.assets.some((a) => a.k === k)) LAB.extra[k] = { m: b.dataset.m, code: b.dataset.code, name: b.dataset.name };
+    if (LAB.extra[k] && !(k in ETFD)) { b.textContent = "불러오는 중…"; loadEtf(k).then(() => labToggle(k)); }
+    else labToggle(k);
+  }));
 }
 function labRedraw() {
   const card = $("#lab-card");
@@ -5536,11 +5617,24 @@ function bindLab() {
   if (!card) return;
   if (!LABD) { loadLab().then(() => { if (screen === "tools") labRedraw(); }); return; }
   card.querySelectorAll("[data-lab-preset]").forEach((b) => b.addEventListener("click", () => {
-    LAB.w = { ...LAB_PRESETS.find(([k]) => k === b.dataset.labPreset)[2] }; saveLab(); labRedraw();
+    LAB.w = { ...LAB_PRESETS.find(([k]) => k === b.dataset.labPreset)[2] }; LAB.list = Object.keys(LAB.w); saveLab(); labRedraw();
   }));
+  card.querySelectorAll("[data-lab-pick]").forEach((b) => b.addEventListener("click", () => labToggle(b.dataset.labPick)));
+  card.querySelectorAll("[data-lab-del]").forEach((b) => b.addEventListener("click", () => labToggle(b.dataset.labDel)));
+  const q = $("#lab-q", card), res = $("#lab-results", card);
+  if (q && res) {
+    const refresh = () => { res.innerHTML = labResults(); bindLabResults(res); };
+    q.addEventListener("input", () => { labQuery = q.value; refresh(); });
+    q.addEventListener("keydown", (e) => { if (e.key === "Enter") q.blur(); });
+    bindLabResults(res);
+    if (labQuery && (!SYM.kr || !SYM.us)) loadSymbols().then(() => { if ($("#lab-results")) refresh(); });
+    q.addEventListener("focus", () => { if (!SYM.kr || !SYM.us) loadSymbols().then(() => { if (labQuery && $("#lab-results")) refresh(); }); }, { once: true });
+  }
+  const todo = LAB.list.filter((k) => LAB.extra[k] && !(k in ETFD));
+  if (todo.length) Promise.all(todo.map(loadEtf)).then(() => { if (screen === "tools") { lastTap = null; labRedraw(); } });
   card.querySelectorAll("[data-lab-w]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.labW, v = Math.max(0, Math.min(100, (LAB.w[k] || 0) + Number(b.dataset.d)));
-    LAB.w = { ...LAB.w, [k]: v }; if (!v) delete LAB.w[k];
+    LAB.w = { ...LAB.w, [k]: v };
     saveLab(); labRedraw();
   }));
   card.querySelectorAll("[data-lab-reb]").forEach((b) => b.addEventListener("click", () => { LAB.reb = b.dataset.labReb; saveLab(); labRedraw(); }));
