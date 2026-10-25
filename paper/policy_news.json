@@ -1,5 +1,5 @@
 {
- "day": "2026-10-25",
+ "day": "2026-10-26",
  "items": {
   "us-fed": [
    {
@@ -17,16 +17,16 @@
   ],
   "kr-rate": [
    {
-    "title": "[속보] 한은, 기준금리 연 3.00% ‘매파적 동결’…11월 인상 가시화",
-    "source": "매일경제",
-    "date": "2026-10-22",
-    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE15V0pkYmY0alpfbkpmT3hZOUwycXRYOVhpUEhhcmdzMDJxc3RiOGs2NkZEYXUtLXZBSGdoNFAyRDQ4NE9WTW9vZUp6dnJDcGNLMlZSNg?oc=5"
-   },
-   {
     "title": "한국은행, ‘기준금리 3% 유지’ 전원일치 결정… “2회 인상 효과 점검 필요” - 조선비즈",
     "source": "Chosunbiz",
     "date": "2026-10-22",
     "link": "https://news.google.com/rss/articles/CBMihgFBVV95cUxPSGNhbmM2Wm5Ycm5yY25EajBrQzd5VGxySHVLd1p5ZmxIRVlhNHJia212d0VvU1FvQWd4SDkwU09iV1FVamhybjhObFFfcGl6RVFJd3Ewa1E4TWJuYXdSeHRnbS02RTZ2cDJtZ1JLVG83WWpJd0NoWFRvMnlxWGhxSTd3dXROZ9IBmgFBVV95cUxNT090ZjdPOEVleGdqd3dNZnFfT0tBLUxsMHRTQ0VGSk4yMWtmbktIYmh2dmJiRkxBTjZzMkxwd1pWN3NlQkxZWm00V3RWbTd1Q213OEZab0I5UlhHOHBMUTY4X1BWRmpZNm9IT2VjVTVxM0tlM0FhVEliMmN2c3cxUGhneHNwNk1JQkZka2dibU5YdjVWYUUzbm1B?oc=5"
+   },
+   {
+    "title": "한국은행, 기준금리 동결…연 3.0% 유지",
+    "source": "연합뉴스TV",
+    "date": "2026-10-22",
+    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE5icFg5NTNQd3ItMS1BOG5KODNtaEF4cmlqcnFnM0x4am9uaTgyZk90X2JLSmJiQkU5VUR4eVA1azMtakx2S29CSUcxdVpFNTVhMUlCYXpQMDdFdDlxRVh3cUFBSUpOX0k?oc=5"
    }
   ],
   "kr-us-deal": [
@@ -53,16 +53,16 @@
    {
     "title": "Hormuz Reopening Could be OPEC’s Undoing: Bousso",
     "source": "EnergyNow.com",
-    "date": "2026-10-23",
+    "date": "2026-10-24",
     "link": "https://news.google.com/rss/articles/CBMigwFBVV95cUxNNU1BTkRDTWgwMEJBYkYwNzZ2c2NyZHEtaldfdlZzNjdUbS0zZEFmWW9zYzZma1pFc1FtclZTUnZSYnhRd1FwZTRIYXgtcUpEQzBwM1MxY1pyek9ZOXBSbzF1dmYzNGdRMmphWlNqc2RqLTBSTWgyV0dZWTFhOGJJaE13aw?oc=5"
    }
   ],
   "world-us-china": [
    {
-    "title": "숫자가 올라가는 연출과 최종 표시, 머니 트레인 2 슬롯 화면 해설",
+    "title": "어떤 기능이 포함됐는지 확인하는 슬롯 무료체험 베스트 온라인 카지노슬롯보증 상세 페이지",
     "source": "Calgary Roughnecks",
-    "date": "2026-10-18",
-    "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPV1BVVWFvWUNMVllUVUlnMS1JWXctRmVTTnZJWGs2YnVGUlNXeWZzNjM5NDBSZmVza0RmWlJpcnBnZXFnemIxYTFGUjYwUmFuN0plYVhoZjQwU2xHcjkyOHNnRWVxUzR5blRQVHNSLXBvYVR3d3FVWmJGUFRXUUJ1ZU56NmMtaEYxRGRySU9XVnlNZE9kNVJFNzdNNHkzWFY2bFlFZjdIUzczelRFcFE?oc=5"
+    "date": "2026-10-20",
+    "link": "https://news.google.com/rss/articles/CBMinAFBVV95cUxON0hZRElyQmx5b21pcFhRU3FCRVFtSWJGRHdNSjlDMXNUZGFVbFNmWDBfc1FzUW92MHVnOVIzZUkyNTJvOVdQSjVjcTVmRkVybUZZb2JRdHAzTVRzOTFiNnhQWnR2eUVFc3VVNWxGN1dNNnpWUG5lbGZVcWI5TVVHdVZtWld4SnVQejBtYzJHb2RjVFhNalA5OHAxNUM?oc=5"
    },
    {
     "title": "US Grapples With China-Linked Critical Minerals Shortfall Left Unresolved By Trump-Xi Summit",
@@ -73,38 +73,38 @@
   ],
   "kr-budget-ai": [
    {
-    "title": "2027년 예산안, 왜 지금 성장에 투자해야 할까? - 영상 | 멀티미디어",
-    "source": "대한민국 정책브리핑",
-    "date": "2026-10-21",
-    "link": "https://news.google.com/rss/articles/CBMijAFBVV95cUxQWWFjOFFuS3NPbTc1aWxGRVBkZ3d3c1hkUDBpMUZMRVVuRWwyZ3dQSGxxajlyRzFKU2tfX3BHWlpINGQ1RTJrTlhHdkFRZUxLMnp4RlUtM1ZrY3p6S0J6eDlaLWMzRFhWY3hQbVU3V0t3TDZ6OHp3S2ZwbzNzN0Vsb29MU0NYbF9EQmZaQw?oc=5"
-   },
-   {
     "title": "전남광주 국비 5천억 추가 확보전…AI·반도체 예산 관건",
     "source": "폴리뉴스 Polinews",
     "date": "2026-10-22",
     "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTFBFQ25ZREEyanBsaEZhbWMxSF9sTXVYWTRqYjVjQTd5TUU5NWc0YzYzUkpaekdmbEVROTN0T2RVRmJONDJQWmREWnZCdUVYZEtrdktTZllSQXFaNHZBaFdnQlRFUUFvVlF3WjNFN1pB?oc=5"
+   },
+   {
+    "title": "전남광주통합특별시, 내년 국비 14조4000억원 확보 총력…국회 증액 추진",
+    "source": "매일일보",
+    "date": "2026-10-23",
+    "link": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE1waGNJcXpPd0tNQU1QVU9SMS1IN0xzclRBYlNWMy1aR2ZGazF2NDI3NTYzcWdna2xZM3RpSG90Y3lSM29aaWRtRHpmMmFDcHlocGkzMm5mR1VYS0F6ZF9HR1J2Q0U?oc=5"
    }
   ],
   "kr-buyback": [
+   {
+    "title": "자사주 소각하면 주주도 세제 혜택 받는다",
+    "source": "파이낸셜뉴스",
+    "date": "2026-10-25",
+    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFBLVklRUnBkaVktcVhVa3hUQlp6U3BTZkdSaV9nM2xseGVmd3l1WEUwcWtJRmc1MmVzQ0J3YmExQWRwV3llSmgzUTgwMG5ja05vSEVpRVJFZ3RXdw?oc=5"
+   },
    {
     "title": "주주환원 못 따라가는 세법…자사주 소각 늘렸더니 ‘고배당 특례’ 탈락 위기",
     "source": "주주경제신문",
     "date": "2026-10-19",
     "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTFB2eDJOT3FpS2ZReEpFNXR6XzhUcWltdHNsRWd4SG1Ha2hhWkl5OWt4WFBrcmFZSUp5TEhXR1E3ZG1wOVQyaVg1cDJwbkgxZU5rQ0V3Mlljc19zZmpNUjJlOG9HS0pEZHl0?oc=5"
-   },
-   {
-    "title": "보험사 자사주 소각 3조4491억원…미래에셋생명 1조원으로 최다",
-    "source": "CEO스코어데일리",
-    "date": "2026-10-19",
-    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE8tZGlTVjhvbXFVb2QxeFVGZUNGZWlkMXhORmh5Nm1HaER0eGxFWjdleDBhLUhLTVVQb25WYXpVWFk3WjMwZjgyOXYtTFJfOFBLdURocWVOa2tMZVBjQnJ6Q2dCMFFZbHVraW9z?oc=5"
    }
   ],
   "us-chip-tariff": [
    {
-    "title": "비슷한 보너스 이름을 구별하는 바카라 크리스탈 박물관 용어 안내",
-    "source": "Calgary Roughnecks",
+    "title": "美 통상압박…301조·232조 원산지 기준, 한미FTA와 다를 수 있다",
+    "source": "중기이코노미",
     "date": "2026-10-20",
-    "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxPb1Z5Vi1adjRTRjl3SW94b2V0YzZYcHlQa05GSE15WDBSY0VUV2dkLVJzTGp1bzJUTEtrSEVZZjBnWUNnd3JNdlZnVnE3N3pIaHJ6bkczZTB2OE5HZk1kTmdjTnpSejRwYUxkSTFjU29YRGQxcE5xdzNhMmlPa3c1QW9GZ3BGdHZmTnBYWjBBLUxUb3JEM2REZThyaHdZZFlpODNUdjBNMHJiOGM?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBEeVltckxMWjU1UkE3TldOTlBvdUU1NWo4MGhYaVdCWVJGLUp2Y2FqdWJwRUpYenNRV1JzdWpKd0FCX2dvbGk2T0lDbFdKZEpVMklyRy1ydXNBVVlraGZiQWdiNUlwemc3YlE?oc=5"
    },
    {
     "title": "Applying Semiconductor and Server Tariffs to Data Centers, Under Section 232 or Section 301, Would Now Cost the U.S. About $180 Billion a Year",
@@ -115,16 +115,16 @@
   ],
   "us-301": [
    {
-    "title": "'캐다나 상품 관세 50% 부과' 트럼프 행정부, 소송 직면",
-    "source": "더구루",
-    "date": "2026-10-21",
-    "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1mTktyZ3VvOGY3blI0V3A1ZXNobzRKa0ZmTzhDemhGbUI3LWU3QU9SNUVWY01FcDh4VC1vSzdMV2ttQ2RfOHJialdRSVVMbk01cEFfeUs2RTJVN09TUktrSnpuaw?oc=5"
+    "title": "美 통상압박…301조·232조 원산지 기준, 한미FTA와 다를 수 있다",
+    "source": "중기이코노미",
+    "date": "2026-10-20",
+    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBEeVltckxMWjU1UkE3TldOTlBvdUU1NWo4MGhYaVdCWVJGLUp2Y2FqdWJwRUpYenNRV1JzdWpKd0FCX2dvbGk2T0lDbFdKZEpVMklyRy1ydXNBVVlraGZiQWdiNUlwemc3YlE?oc=5"
    },
    {
-    "title": "How Duty Drawback Can Help Recover the Cost of Forced-Labor Tariffs",
-    "source": "Supply Chain Brain",
-    "date": "2026-10-21",
-    "link": "https://news.google.com/rss/articles/CBMiygFBVV95cUxQZ0xPU3kzRko1S2RUb3p0SG83MEpRSkRoanFuc2xweVhIeGNuUFVDM2IyN3BHY3BkdmVRZHBaU1RzQTNRTGJJVkdtZzFkYTJqV01EZTRxNVltRDJWVDd6UE15NzF5NmhWcUJBOFZGZ1pjWWpvcUlYMV9aQVVBSmxoeG9lRU1qcGpneS1RMVVjeWgzamlzX2MyX1lXemtIUjdwempPNzkyNkFvQzFadWtKd0d3SkxDRHlURHZqd2hUR0NxajJaRE5tOUhn?oc=5"
+    "title": "The link between forced labor, import bans, and tariffs | White Paper",
+    "source": "Hinrich Foundation",
+    "date": "2026-10-20",
+    "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxQQjIzQnZuOWdxU1g4UTlwaW9hTmZYa1JpODBJT245UXlpOVUzSVBaemNicjZYNkQtRjFLUGRBQWN5MFdvcUxHdnpUc2l5NTNPTzc5VTJpcTBLQmgtZFd0Vlg0eXhJcDZjSXBjalBDcmxiYnQ5LVEzZ2UzU1VpQTdOQ2lYcGNESk1lNW50OThRM1dsbEdOSC0yb3RLYjNXLXpNc003Zw?oc=5"
    }
   ],
   "us-pharma": [
@@ -157,29 +157,29 @@
   ],
   "kr-budget-future": [
    {
-    "title": "정부, 양자·우주 등 '7대 SEED 프로젝트' 전략 수립 본격화",
-    "source": "대한민국 정책브리핑",
-    "date": "2026-10-22",
-    "link": "https://news.google.com/rss/articles/CBMiigFBVV95cUxNaUR6RG5IUjlQcVZ5S1R2VGJpZ3I5WVdsSUl4ZUhhUGNwZjBjbXpxOVNfcG5TWXRWbjdpTlV0eU1FTVJfTE93c1h4SVprUWJFeUtMcWpCckJhZkl1Uld1NWp3SWVHVU1XbkkxMm1kZ19TYmxwcmRrcEswemczMXYzLVZyX2c1aFNJbnc?oc=5"
-   },
-   {
     "title": "“미래 먹거리 선점한다”…정부, 7대 국가 연구개발 전략 가동",
     "source": "용인신문",
     "date": "2026-10-23",
     "link": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE5WejdLOUk4R3dibjBqTzFneE5ZOG95M1VWcng4emlXYWtCTU5XRVB3dTdRZGt0NmMzMGZwcXREc3diMjl1Y09kY3RMbkp3c3hLYlBTODNNRGQ2aG9jZXQ3LVdhTEg?oc=5"
+   },
+   {
+    "title": "정부, 7대 SEED 이행전략 수립 착수…2027년 4조원 투자 계획",
+    "source": "https://www.diarypoint.com/",
+    "date": "2026-10-23",
+    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE05eGpRT1hwY05KOEtETnc3SXE3WkJLYTR6NzV6U3JFX2VFdkFVRzlxWGpqY1A5V2pMdWhaS1FPbndTblItZ3ZibVpUeTNrUmJmNGh6NG8xeGNSQnBBTDZ5OGVEWUNiOG5aWEJn?oc=5"
    }
   ],
   "world-boj": [
    {
-    "title": "전문가 83% “일본은행, 12월 금리 인상”｜Global Money Club",
-    "source": "중앙일보",
-    "date": "2026-10-21",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE15X2Z0Tkc3QUZqTDcwQUdfcmFBSWZiV1Z0UXFqc2h5bHpvdkl6Z1ppXy0xQk9UejR0WldSRDh6bk9hS1BFYkZGZEgzT19IMW9DSXBNNmloYlEzeU0?oc=5"
+    "title": "日, 10월 금리 동결할 듯…9월 소비자물가, 2.1% 상승(종합)",
+    "source": "연합뉴스",
+    "date": "2026-10-23",
+    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBySjVNM2VHNVBBeGV6TW9NVkRhY3R1N3pEQXVCc21fNmFxSHVwdFRiMUU2VWNZN0tSZkhtTV9zMjYxV201OXhkXzN5cFBteWpxUE5wZEFadC1YN1XSAWBBVV95cUxNN0dfVkFncGhsX0xqZW9XYVk0VEROS21uUEVNdUlDcE1hcllZbEh5c2VJeHgwdzFVM25nNzVkb29zcUZUY0Z3OFJPdUlCTjRRTTJWcGJKekJYWHVNMU1iN3I?oc=5"
    },
    {
     "title": "BOJ to raise rates to 1.50% in December, sticking to quarterly pace: Reuters poll",
     "source": "Reuters",
-    "date": "2026-10-20",
+    "date": "2026-10-23",
     "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxQM01keWQ2YlhOUEZEODRRcFlSQzBtYnREaldoaTh0ZkpYVTFtYVJrbURVMDVyaEFkSFFoU2hiRmtfYVlYLW83SHdVMHlNbW9aV19oR3I1OG5ERnAwOV9EdjU0NDRkRUxVSXg3R2hJZUpiTXdIeWVSNVlfc1U0bGRndHhFNlhtbXA4N2I4dUhabFRsZDFsRUZFNWNHTDc0cWJPTGJnbU01aTR5VjA?oc=5"
    }
   ]
