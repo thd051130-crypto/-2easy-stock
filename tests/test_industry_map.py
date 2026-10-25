@@ -7,7 +7,9 @@ import themes
 def test_every_theme_is_a_node_and_links_name_real_themes():
     names = {t["name"] for t in themes.THEMES}
     grouped = [n for _, _, ns in im.GROUPS for n in ns]
-    assert sorted(grouped) == sorted(names)
+    assert len(grouped) == len(set(grouped))
+    assert set(grouped) | im.SEARCH_ONLY == names and not set(grouped) & im.SEARCH_ONLY
+    names -= im.SEARCH_ONLY  # 선은 지도에 있는 산업끼리만
     pairs = set()
     for a, b, kind, why in im.LINKS:
         assert a in names and b in names and a != b
