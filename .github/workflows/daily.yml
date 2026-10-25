@@ -56,6 +56,13 @@ jobs:
         id: report
         continue-on-error: true
         run: python report_desks.py
+      # 투자 공부: 오늘 사례 일지 한 줄 + 증권사 무료 리포트 목록 (못 해도 위 기록은 저장해요)
+      - name: learn cases
+        continue-on-error: true
+        run: python learn_cases.py
+      - name: reading list
+        continue-on-error: true
+        run: python reading.py
       - name: commit paper log
         run: |
           git config user.name "github-actions[bot]"

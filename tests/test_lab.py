@@ -14,3 +14,4 @@ def test_build_converts_usd_and_skips_bad_fx():
     assert a["kospi"]["r"] == [10.0, -10.0, 0.0]
     assert a["sp500"]["r"] == [10.0, -10.0, 10.0]  # 원화 환산: 99×1000 → 99×1100
     assert a["schd"]["start"] == "2020-04" and a["schd"]["r"][:2] == [None, None]
+    assert out["fx"] == [0.0, 0.0, 10.0]

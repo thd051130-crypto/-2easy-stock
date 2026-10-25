@@ -6,7 +6,8 @@
 그래서 미국 자산 숫자엔 환율 효과가 들어 있어요 (위기 때 원화가 약해지면 원화 기준 낙폭이 줄어요).
 사고팔기 판단은 안 해요. 과거 숫자일 뿐 앞으로를 보장하지 않아요.
 
-한 자산: [키, 이름, 야후 기호, 통화, 설명]. 결과는 자산마다 월 수익률(%)을 달 목록에 맞춰 둬요 (상장 전 달은 null).
+한 자산: [키, 이름, 야후 기호, 통화, 설명]. 처음부터 고를 수 있는 자산이고, 다른 ETF는 앱에서 검색해 넣어요 (etf_monthly.py).
+결과는 자산마다 월 수익률(%)을 달 목록에 맞춰 둬요 (상장 전 달은 null).
 fundamentals 워크플로(매주 토요일)에서 돌려요. 못 받으면 지난번 파일을 그대로 둬요.
 
 사용법:
@@ -32,6 +33,14 @@ ASSETS = [
     ("uslong", "미국 장기 국채", "TLT", "usd", "TLT 20년+ (원화로 환산)"),
     ("gold", "금", "GLD", "usd", "GLD (원화로 환산)"),
     ("cash", "단기채(현금 대신)", "153130.KS", "krw", "KODEX 단기채권"),
+    ("kosdaq", "코스닥150", "229200.KS", "krw", "KODEX 코스닥150"),
+    ("dev", "선진국 주식", "VEA", "usd", "VEA 미국 밖 선진국 (원화로 환산)"),
+    ("em", "신흥국 주식", "VWO", "usd", "VWO (원화로 환산)"),
+    ("small", "미국 소형주", "IWM", "usd", "IWM 러셀2000 (원화로 환산)"),
+    ("reit", "미국 리츠", "VNQ", "usd", "VNQ (원화로 환산)"),
+    ("corp", "미국 회사채", "LQD", "usd", "LQD 우량 회사채 (원화로 환산)"),
+    ("tips", "미국 물가연동채", "TIP", "usd", "TIP (원화로 환산)"),
+    ("usshort", "미국 단기 국채", "SHY", "usd", "SHY 1~3년 (원화로 환산)"),
 ]
 
 
@@ -63,7 +72,10 @@ def build(closes):
         if start is None:
             continue
         assets.append(dict(k=key, name=name, sym=sym, cur=cur, note=note, start=start, r=vals))
-    return dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), months=months, assets=assets)
+    # 검색해서 넣는 미장 ETF(etf_monthly.py, 달러 그대로)를 앱이 원화로 바꿀 때 쓰는 원/달러 월 변화 (%)
+    fxr = fx.pct_change(fill_method=None).reindex(months)
+    fxs = [None if v != v else round(float(v) * 100, 3) for v in fxr]
+    return dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), months=months, assets=assets, fx=fxs)
 
 
 def main():

@@ -518,6 +518,27 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 .imap .ghost circle { fill: var(--gc); }
 .imap .ghost text { font-size: 12px; font-weight: 600; fill: var(--gc); text-anchor: middle; }
 .imap.focused .ghost.on { opacity: .42; }  /* 흐린 산업은 터치를 안 받아요: 겹친 진한 산업이 눌리고, 빈 곳 누르기(이전으로)로 처리 */
+/* 제자리 강조(.spot): 점은 안 움직이고 크기도 그대로. 누른 산업·이어진 산업·그 선만 밝고 나머지는 조금만 보여요.
+   흐린 산업도 눌러서 바로 그 산업으로 갈 수 있어요 */
+.imap.spot { max-height: none; }  /* 넓게 퍼뜨린 지도는 세로로 길어서 화면 높이에 안 맞추고 스크롤로 봐요 */
+.imap.spot .node .pill, .imap.focused.spot .node.near .pill { transform: scale(calc(var(--s, 1) * .8)); }
+.imap.focused.spot .node.center .pill { transform: scale(calc(var(--s, 1) * .8 * 1.12)); }
+.imap.spot .node .flow { font-size: 10px; }
+.imap.moving .node .pill { transition: transform 2s cubic-bezier(.65,0,.35,1); }
+.imap.focused.spot .node.dim { opacity: .12; pointer-events: auto; cursor: pointer; }
+.imap.focused.spot .node.near .flow { opacity: 0; }  /* 제자리라 가까운 산업끼리 숫자가 선을 가려요: 숫자는 누른 산업만 */
+.imap.focused.spot .ghost.on { opacity: 0; }
+/* 제자리 방식 꾸밈: 선이 별자리처럼 다 그려지면(app.js mapConstellation) 그 위로 점선이 흘러가요(공급망은 화살표 방향으로).
+   누른 산업·이어진 산업은 묶음 색이 살짝 배어요 */
+.imap.spot.focused .edge.lit { stroke-dasharray: 7 5; animation: imap-flow 1.1s linear infinite; }
+.imap.spot.focused .edge.lit.k-c, .imap.spot.focused .edge.lit.k-n { stroke-dasharray: 4 3; animation-name: imap-flow7; }
+.imap.spot.focused .edge.lit.k-h { stroke-dasharray: 1.5 3; animation-name: imap-flow45; }
+@keyframes imap-flow { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@keyframes imap-flow7 { from { stroke-dashoffset: 14; } to { stroke-dashoffset: 0; } }
+@keyframes imap-flow45 { from { stroke-dashoffset: 9; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .imap.spot.focused .edge.lit { animation: none; } }
+.imap.spot.focused .node.near .pill rect { fill: color-mix(in srgb, var(--gc) 10%, var(--surface-1)); }
+.imap.spot.focused .node.center .pill rect { fill: color-mix(in srgb, var(--gc) 16%, var(--surface-1)); }
 .imap .node:focus-visible .pill rect { stroke: var(--accent); stroke-width: 2.4; }
 .imap .node.heat .pill rect { stroke: var(--border); }
 .imap .node.heat.up.h1 .pill rect { fill: color-mix(in srgb, var(--up) 14%, var(--surface-1)); }
@@ -544,8 +565,9 @@ table.fin tbody th { text-align: left; color: var(--text-secondary); font-weight
 /* 지도 위 설명: 두 문장을 같은 자리에 겹쳐 두고 하나만 보여요. 높이는 긴 쪽에 맞춰져서 산업을 눌러도 지도가 안 밀려요 */
 .map-sub { display: grid; }
 .map-sub > span { grid-area: 1 / 1; }
-.map-sub .foc, .map-sub.focused .all { visibility: hidden; }
-.map-sub.focused .foc { visibility: visible; }
+.map-sub > span { visibility: hidden; }
+.map-sub:not(.spot):not(.focused) .all:not(.spot), .map-sub:not(.spot).focused .foc:not(.spot),
+.map-sub.spot:not(.focused) .all.spot, .map-sub.spot.focused .foc.spot { visibility: visible; }
 .map-size { display: flex; gap: 10px; align-items: center; margin: 8px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
 .map-size b { color: var(--text-primary); font-weight: 600; }
 .map-size .dots { display: inline-flex; align-items: center; gap: 3px; flex: none; }
@@ -1044,3 +1066,84 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .lab-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .lab-col { display: grid; gap: 6px; min-width: 0; }
 .lab-who { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.lab-pick { margin-top: 6px; }
+.lab-pick button { font-size: 13px; min-height: 32px; padding: 4px 10px; }
+.lab-q { margin-top: 10px; }
+.lab-hint { margin: 8px 0 0; font-size: 13px; }
+.lab-hits { list-style: none; margin: 6px 0 0; padding: 0; }
+.lab-hits li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.lab-hits li:first-child { border-top: 0; }
+.lab-hits span { min-width: 0; }
+.lab-hits b { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lab-hits small { font-size: 12px; color: var(--text-muted); }
+.lab-hits button { flex-shrink: 0; font: inherit; font-size: 13px; font-weight: 600; min-height: 34px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface-1); color: var(--accent); }
+.lab-hits button[aria-pressed="true"] { background: var(--accent-bg); border-color: transparent; color: var(--accent-fg); }
+.lab-del { width: 30px; height: 30px; border-radius: 999px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; flex-shrink: 0; }
+.lab-row .lab-step { gap: 4px; }
+.lab-row .lab-step button:not(.lab-del) { width: 32px; height: 32px; font-size: 16px; }
+.lab-row .lab-step b { min-width: 36px; font-size: 14px; }
+.lab-row .lab-del { width: 26px; margin-left: 2px; }
+.lab-row .name { overflow-wrap: anywhere; }
+/* 📚 투자 공부 (홈 더 보기 → #kr/more/learn) */
+.learn-head .learn-tabs { margin: 8px -18px -6px; padding: 4px 18px 0; }
+.learn-read { margin-top: 12px; }
+.learn-read li { margin: 5px 0; }
+.learn-today .stats { margin-top: 0; }
+.learn-today .stat small.bad { color: var(--wait-fg); font-weight: 600; }
+.learn-today .stat small.good { color: var(--good-fg); font-weight: 600; }
+.learn-sus { align-items: center; }
+.learn-sus .meta { margin-top: 2px; line-height: 1.45; }
+.learn-why1 { font-size: 13px; color: var(--text-secondary); line-height: 1.45; margin-top: 4px; }
+details.lesson { border-top: 1px solid var(--border); }
+.card h2 + details.lesson { border-top: 0; }
+details.lesson > summary { display: flex; align-items: center; gap: 12px; padding: 12px 0; list-style: none; cursor: pointer; }
+details.lesson > summary::-webkit-details-marker { display: none; }
+details.lesson > summary::after { content: "›"; font-size: 20px; line-height: 1; color: var(--text-muted); transition: transform .2s; }
+details.lesson[open] > summary::after { transform: rotate(90deg); }
+.lesson-one { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+.lesson-body { padding: 0 0 14px; }
+.learn-chain { margin: 0; padding-left: 22px; font-size: 14px; line-height: 1.55; color: var(--text-primary); }
+.learn-chain li { margin: 4px 0; }
+.learn-chain li::marker { color: var(--accent); font-weight: 700; }
+.learn-rules li { margin: 8px 0; color: var(--text-secondary); }
+.learn-rules b { color: var(--text-primary); }
+.learn-tip, .learn-ex, .learn-now { font-size: 13px; line-height: 1.5; border-radius: var(--radius-s); padding: 8px 10px; margin: 10px 0 0; }
+.learn-tip { background: var(--accent-bg); color: var(--text-primary); }
+.learn-ex { background: var(--surface-0); color: var(--text-secondary); }
+.learn-now { border: 1px solid var(--border); color: var(--text-secondary); }
+.learn-now b { color: var(--text-primary); margin-right: 4px; }
+.learn-gb { display: grid; gap: 6px; margin-top: 10px; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.learn-gb .badge { margin: 0 4px 0 0; }
+.learn-terms { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.learn-term { border: 1px solid var(--border); background: var(--surface-0); color: var(--text-secondary); font: inherit; font-size: 13px;
+  border-radius: 999px; padding: 5px 11px; min-height: 32px; cursor: pointer; }
+.learn-term::after { content: " ?"; color: var(--accent); font-weight: 700; }
+.learn-math { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.learn-group h3.brief-h { margin-top: 16px; }
+#learn-terms .search { margin-bottom: 4px; }
+.learn-tod { margin: 6px 0 2px; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.learn-case > summary { padding: 10px 0; }
+.learn-case-d { flex: none; width: 44px; font-size: 13px; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.learn-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.learn-tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); white-space: nowrap; }
+.learn-tag.strong { background: var(--wait-bg); color: var(--wait-fg); font-weight: 700; }
+details.learn-quiz { margin-top: 10px; border-radius: var(--radius-s); background: var(--surface-0); padding: 8px 10px; font-size: 13px; line-height: 1.5; }
+details.learn-quiz summary { cursor: pointer; color: var(--text-primary); list-style: none; }
+details.learn-quiz summary::-webkit-details-marker { display: none; }
+.learn-quiz-open { color: var(--accent); font-weight: 600; white-space: nowrap; }
+details.learn-quiz[open] .learn-quiz-open { display: none; }
+details.learn-quiz p { margin: 6px 0 0; color: var(--text-secondary); }
+.learn-tag.local { background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
+h3.learn-note-t { font-size: 15px; font-weight: 700; margin: 0 0 8px; line-height: 1.4; }
+.learn-p { font-size: 14px; line-height: 1.65; color: var(--text-secondary); margin: 0 0 10px; }
+button.learn-tag { border: 0; font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }
+.learn-rep > summary { padding: 11px 0; }
+.learn-rep .hm-t > b { font-size: 14px; font-weight: 600; line-height: 1.45; }
+.learn-rep .lesson-one .badge { margin: 0 2px 0 0; }
+.learn-sum { white-space: pre-line; font-size: 13px; }
+a.more { text-decoration: none; }
+.learn-rep-q { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.learn-rep-q:last-of-type { border-bottom: 0; }
+.learn-rep-q .learn-p { margin: 4px 0 0; }
+/* 선 그래프가 그려지는 동안엔 원래 나타나기(흐려졌다 켜짐)를 빼요 */
+.drawing .sav-line, .drawing .sav-area { animation: none; }
