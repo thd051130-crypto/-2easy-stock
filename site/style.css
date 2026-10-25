@@ -866,6 +866,17 @@ button.hm:active .hm-t > b { color: var(--accent); }
 .hot-card.folded .hot-fold { margin-bottom: 0; }
 .hot-peek { display: none; margin: 0; font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hot-card.folded .hot-peek { display: block; }
+.list li.hot-grp { display: block; }
+.hot-grp-d > summary { font-size: inherit; line-height: inherit; padding: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; list-style: none; cursor: pointer; }
+.hot-grp-d > summary::-webkit-details-marker { display: none; }
+.hot-grp-d > summary .name { color: var(--text-primary); }
+.hot-grp-n { flex: none; font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; }
+.hot-grp-n::after { content: " ▾"; }
+.hot-grp-d[open] .hot-grp-n::after { content: " ▴"; }
+.hot-grp-n .fold-less, .hot-grp-d[open] .hot-grp-n .fold-more { display: none; }
+.hot-grp-d[open] .hot-grp-n .fold-less { display: inline; }
+.hot-grp-d > .list { margin: 10px 0 0 4px; padding-left: 12px; border-left: 2px solid var(--border); }
+.hot-grp-d > .list li:first-child { padding-top: 4px; }
 .hot-card [data-hot-all].armed { background: var(--wait-bg); color: var(--wait-fg); }
 .hot-all-t { font-weight: 600; }
 .undo-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 30;

@@ -647,6 +647,10 @@ function render() {
     card.classList.toggle("folded", hotFold);
     b.setAttribute("aria-expanded", String(!hotFold));
   }));
+  app.querySelectorAll(".hot-grp-d").forEach((x) => {
+    x.querySelector("summary").addEventListener("click", () => { if (x.open) holdHeight(); });  // 접을 때 화면이 위로 당겨지지 않게
+    x.addEventListener("toggle", () => { if (x.open) HOT_GRP_OPEN.add(x.dataset.hotGrp); else HOT_GRP_OPEN.delete(x.dataset.hotGrp); });
+  });
   app.querySelectorAll(".hot-read-list").forEach((x) => x.addEventListener("toggle", () => { hotReadOpen = x.open; }));
   app.querySelectorAll("[data-hot-undo]").forEach((b) => b.addEventListener("click", () => { unreadHot([b.dataset.hotUndo]); holdHeight(); render(); }));
   // 모두 읽음: 실수로 누르지 않게 한 번 누르면 '한 번 더 누르면 모두 읽음'으로 바뀌고, 3초 안에 다시 눌러야 돼요
@@ -2640,6 +2644,26 @@ function hotLi(n, read) {
     ${read ? `<button type="button" class="hot-ok" data-hot-undo="${id}" aria-label="안 읽음으로 되돌리기">안 읽음</button>`
       : `<button type="button" class="hot-ok" data-hot-ok="${id}" aria-label="읽음으로 표시">읽음</button>`}</li>`;
 }
+// 같은 주제 핫 뉴스는 한 줄로 묶고, 누르면 펼쳐요 (사용자 2026-10-25 "겹치는 주제 있으면 하나로 합쳐서 접기기능처럼 공간확보").
+// 주제가 없거나 그 주제가 1건이면 그대로 한 줄. 묶음 자리는 그 주제의 가장 앞 기사 자리예요
+const HOT_GRP_OPEN = new Set();  // 펼친 주제 (아래 메뉴를 누르면 접혀요)
+function hotGroups(H) {
+  const out = [], at = new Map();
+  for (const n of H) {
+    const k = n.topic || "";
+    if (k && at.has(k)) out[at.get(k)].push(n);
+    else { if (k) at.set(k, out.length); out.push([n]); }
+  }
+  return out;
+}
+function hotGrpLi(g) {
+  const k = esc(g[0].topic), src = g.reduce((a, n) => a + (n.sources || 0), 0);
+  return `<li class="hot-grp"><details class="hot-grp-d" data-hot-grp="${k}"${HOT_GRP_OPEN.has(g[0].topic) ? " open" : ""}>
+    <summary><div class="l"><div class="name news-t"><span class="badge">${k}</span> ${esc(g[0].title)}</div>
+      <div class="meta">같은 주제 ${g.length}건${src ? ` · 언론 ${src}곳` : ""}${g[0].at ? ` · 최근 기사 ${ago(g[0].at)}` : ""}</div></div>
+      <span class="hot-grp-n"><span class="fold-more">${g.length}건</span><span class="fold-less">접기</span></span></summary>
+    <ul class="list">${g.map((n) => hotLi(n)).join("")}</ul></details></li>`;
+}
 function hotCard() {
   const H = hotOf(market), R = hotReadOf(market);
   if (!H.length && !R.length) return "";
@@ -2648,11 +2672,11 @@ function hotCard() {
       <span class="hot-h-t">🔥 핫 뉴스 <small>안 읽은 ${H.length}건</small></span><span class="hot-fold-t"><span class="fold-less">접기</span><span class="fold-more">펼치기</span></span></button></h2>
     ${H.length ? `<p class="hot-peek">${esc(H[0].title)}</p>` : ""}
     <div class="hot-body" id="hot-body">
-    ${H.length ? `<ul class="list">${H.map((n) => hotLi(n)).join("")}</ul>` : `<p class="empty">안 읽은 핫 뉴스가 없어요.</p>`}
+    ${H.length ? `<ul class="list">${hotGroups(H).map((g) => (g.length > 1 ? hotGrpLi(g) : hotLi(g[0]))).join("")}</ul>` : `<p class="empty">안 읽은 핫 뉴스가 없어요.</p>`}
     ${H.length > 1 ? `<button type="button" class="more" data-hot-all><b class="hot-all-t">모두 읽음</b><span aria-hidden="true">✓</span></button>` : ""}
     ${R.length ? `<details class="more-list hot-read-list"${hotReadOpen ? " open" : ""}><summary>읽은 핫 뉴스 ${R.length}건 <small>7일 동안 남아요</small></summary>
       <ul class="list">${R.map((n) => hotLi(n, true)).join("")}</ul></details>` : ""}
-    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 기사를 누르거나 '읽음'을 누를 때까지 위에 남아요. 읽은 건 아래 '읽은 핫 뉴스'에서 '안 읽음'으로 되돌릴 수 있어요. 제목을 누르면 칸을 접어요.</p></div></section>`;
+    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 같은 주제는 한 줄로 묶고, 누르면 펼쳐요. 기사를 누르거나 '읽음'을 누를 때까지 위에 남아요. 읽은 건 아래 '읽은 핫 뉴스'에서 '안 읽음'으로 되돌릴 수 있어요. 제목을 누르면 칸을 접어요.</p></div></section>`;
 }
 function newsCard() {
   const N = newsOf(market);
@@ -5973,7 +5997,7 @@ $(".map-btn").addEventListener("click", () => {
 // 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
-  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN].forEach((x) => x.clear());
+  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN].forEach((x) => x.clear());
   worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
 }
