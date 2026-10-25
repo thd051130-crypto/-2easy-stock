@@ -287,6 +287,9 @@ const hotOf = (m) => HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
 const hotReadOf = (m) => HOT[m].filter((n) => HOT_READ.has(hotId(n))).sort((a, b) => HOT_READ.get(hotId(b)) - HOT_READ.get(hotId(a)));
 let hotUndo = null;  // 방금 읽음 처리한 id들 (되돌리기)
 let hotReadOpen = false;  // '읽은 핫 뉴스' 칸을 펼쳤는지 (다시 그려도 그대로)
+// 핫 뉴스 칸 전체 접기 (사용자 2026-10-25 "핫 이슈 접기 기능 넣어줘"). 고른 설정이라 이 폰에 기억하고, 아래 메뉴를 눌러도 그대로예요
+let hotFold = false;
+try { hotFold = localStorage.getItem("hot_fold") === "1"; } catch (e) { /* 처음 */ }
 function readHot(ids, undo) {
   const now = Date.now();
   ids.forEach((id) => HOT_READ.set(id, now));
@@ -635,6 +638,15 @@ function render() {
     if (li) li.classList.add("read");
   }));
   app.querySelectorAll("[data-hot-ok]").forEach((b) => b.addEventListener("click", () => { readHot([b.dataset.hotOk], true); holdHeight(); render(); }));
+  // 접기·펼치기는 제목 아래만 바뀌어서 다시 그리지 않아요 (누른 제목 줄은 제자리)
+  app.querySelectorAll("[data-hot-fold]").forEach((b) => b.addEventListener("click", () => {
+    hotFold = !hotFold;
+    if (hotFold) holdHeight();  // 접기 전에 높이를 붙잡아요 (짧은 화면에서 접으면 스크롤이 위로 당겨져서)
+    try { localStorage.setItem("hot_fold", hotFold ? "1" : "0"); } catch (e) { /* 이번만 기억 */ }
+    const card = b.closest(".hot-card");
+    card.classList.toggle("folded", hotFold);
+    b.setAttribute("aria-expanded", String(!hotFold));
+  }));
   app.querySelectorAll(".hot-read-list").forEach((x) => x.addEventListener("toggle", () => { hotReadOpen = x.open; }));
   app.querySelectorAll("[data-hot-undo]").forEach((b) => b.addEventListener("click", () => { unreadHot([b.dataset.hotUndo]); holdHeight(); render(); }));
   // 모두 읽음: 실수로 누르지 않게 한 번 누르면 '한 번 더 누르면 모두 읽음'으로 바뀌고, 3초 안에 다시 눌러야 돼요
@@ -2631,12 +2643,16 @@ function hotLi(n, read) {
 function hotCard() {
   const H = hotOf(market), R = hotReadOf(market);
   if (!H.length && !R.length) return "";
-  return `<section class="card hot-card${H.length ? "" : " all-read"}" id="hot-card"><h2>🔥 핫 뉴스 <small>안 읽은 ${H.length}건</small></h2>
+  return `<section class="card hot-card${H.length ? "" : " all-read"}${hotFold ? " folded" : ""}" id="hot-card">
+    <h2 class="hot-h"><button type="button" class="hot-fold" data-hot-fold aria-expanded="${!hotFold}" aria-controls="hot-body">
+      <span class="hot-h-t">🔥 핫 뉴스 <small>안 읽은 ${H.length}건</small></span><span class="hot-fold-t"><span class="fold-less">접기</span><span class="fold-more">펼치기</span></span></button></h2>
+    ${H.length ? `<p class="hot-peek">${esc(H[0].title)}</p>` : ""}
+    <div class="hot-body" id="hot-body">
     ${H.length ? `<ul class="list">${H.map((n) => hotLi(n)).join("")}</ul>` : `<p class="empty">안 읽은 핫 뉴스가 없어요.</p>`}
     ${H.length > 1 ? `<button type="button" class="more" data-hot-all><b class="hot-all-t">모두 읽음</b><span aria-hidden="true">✓</span></button>` : ""}
     ${R.length ? `<details class="more-list hot-read-list"${hotReadOpen ? " open" : ""}><summary>읽은 핫 뉴스 ${R.length}건 <small>7일 동안 남아요</small></summary>
       <ul class="list">${R.map((n) => hotLi(n, true)).join("")}</ul></details>` : ""}
-    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 기사를 누르거나 '읽음'을 누를 때까지 위에 남아요. 읽은 건 아래 '읽은 핫 뉴스'에서 '안 읽음'으로 되돌릴 수 있어요.</p></section>`;
+    <p class="muted note" style="margin:10px 0 0">여러 언론이 같이 다루는 사건이에요. 기사를 누르거나 '읽음'을 누를 때까지 위에 남아요. 읽은 건 아래 '읽은 핫 뉴스'에서 '안 읽음'으로 되돌릴 수 있어요. 제목을 누르면 칸을 접어요.</p></div></section>`;
 }
 function newsCard() {
   const N = newsOf(market);

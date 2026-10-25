@@ -10,6 +10,7 @@ metadata:
 - dashboard.py가 data.json에 news_url(raw.githubusercontent.com/<repo>/live/news.json, CORS 허용) 넣음. app.js loadNews(): data.json과 같이 받고 2.5초만 기다림, 늦으면 홈 줄 요약만 paintNews().
 - 오래된 기사 (2026-10-24 사용자 "너무 오래된 것들?"): 매번 덮어써서 안 쌓임. news.py fresh()가 24시간(MAX_HOURS) 지난·시각 없는 기사 빼고, 앱 newsOf()도 지금 기준 24시간 지난 건 숨김 (작업이 멈춰 예전 파일이 남을 때) (PR #104).
 - 🔥 핫 뉴스 (2026-10-24 사용자 "핫 뉴스들은 따로 빼놔야", "읽기 전까지", PR #104): news.py hot()이 같은 사건(제목 핵심 낱말 words() 2개 이상이 묶음 첫 기사와 겹침)을 다룬 언론 3곳 이상이면 핫, news.json hot:{kr,us}에 sources·key·since. keep_hot()이 지난 파일(워크플로가 live 브랜치에서 prev.json)의 핫을 마지막 기사 7일까지 이어 감. 앱은 localStorage hot_news·hot_read로 읽기(기사 누르기·'읽음'·'모두 읽음') 전까지 남김(30일·40개 한도). 지금 뉴스 화면 맨 위 빨간 테두리 칸, 홈 줄 요약 '🔥 N건'. 사용자 "모두 읽음 잘못 눌렀는데 다 날아갔네" → (PR #105) 읽은 것도 지우지 않고 hot_read {id: 읽은 시각}으로 '읽은 핫 뉴스' 접힌 칸에 7일, '안 읽음'으로 되돌리기. '모두 읽음'은 두 번 눌러야(3초), 읽음 뒤 6초 '되돌리기' 줄(.undo-bar, 화면 위에 떠서 칸 안 밀림). 예전 목록 형식 hot_read는 지금 읽은 걸로 옮겨 날아간 것 되살림.
+- 핫 뉴스 칸 접기 (2026-10-25 사용자 "핫 이슈 접기 기능 넣어줘", 검수 대기): 제목 줄 버튼(data-hot-fold) '접기▴/펼치기▾', 접으면 첫 제목 한 줄만. localStorage hot_fold로 기억, 고른 설정이라 resetFolds()에 안 넣음. 다시 그리지 않고 class만 바꿈, 접기 전 holdHeight().
 - 앱: 홈 '더 보기' 맨 위 📰 지금 뉴스 → 누르면 #kr/more/news 화면.
 - 이 클라우드 환경에선 news.google.com 막힘 → Actions에서만 확인 가능.
 **Why:** 사용자는 장중에도 증시 큰 소식을 보고 싶어 함. 진짜 실시간 시세는 증권사 API 필요(계좌 없음, 키움 IP 보류).
