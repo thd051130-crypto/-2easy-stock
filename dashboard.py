@@ -4,6 +4,7 @@
 paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없음).
   - daily.json : 매일 시세 자료 (많이 움직인 종목·업종·지수 캔들·관심종목 시세, daily.py)
   - paper/report.json : 오늘의 리포트 (리포트 부서, report_desks.py)
+  - paper/weekly.json : 주간 리포트 (토요일 아침, weekly.py)
   - paper/learn_cases.json, reading.json : 투자 공부 사례 일지·증권사 무료 리포트 목록 (learn_cases.py, reading.py)
   - paper/learn_notes.json : 투자 공부 '공부 노트' (평일 장 마감 뒤 한 편씩 손으로 더해요, 새 용어는 용어집에)
   - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
@@ -34,7 +35,6 @@ import os
 import pathlib
 import shutil
 
-import commands
 import flows
 import inbox
 import industry_map
@@ -86,8 +86,8 @@ def build(paper_dir):
                 bot=watchlist.bot_username(paper_dir), health=read_json(paper_dir / "health.json"),
                 macro=read_json(paper_dir / "macro.json"), policies=policies.payload(paper_dir),
                 calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), events=read_json(paper_dir / "events.json"),
-                world=read_json(paper_dir / "world.json"), memos=commands.summary(paper_dir),
-                report=read_json(paper_dir / "report.json"),
+                world=read_json(paper_dir / "world.json"),
+                report=read_json(paper_dir / "report.json"), weekly=read_json(paper_dir / "weekly.json"),
                 # 투자 공부: 날마다 쌓는 사례 일지(learn_cases.py)와 증권사 무료 리포트 목록(reading.py)
                 learn_cases=read_json(paper_dir / "learn_cases.json"), reading=read_json(paper_dir / "reading.json"),
                 learn_notes=(read_json(paper_dir / "learn_notes.json") or {}).get("notes"),

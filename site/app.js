@@ -464,7 +464,7 @@ const VIEWS = {
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
   // 맨 위 얇은 지수 바는 세계 지수가 돌아가며 보이고, 누르면 세계 지수 화면(한 겹 위)이 열려요 (사용자 2026-10-24)
   home: (d) => [worldTicker(), bigEventsCard(), marketStatusCard(), worldHomeCard(), homeMoreCard(d), homeReportCard()],
-  report: (d) => reportCards(d),
+  report: (d) => [rpTabsBar(), ...(rpTabNow() === "week" ? weeklyCards() : reportCards(d))],
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
   tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
@@ -601,6 +601,8 @@ function render() {
   }));
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
+  app.querySelectorAll("[data-rp-week]").forEach((b) => b.addEventListener("click", () => { rpTab = "week"; go("report"); }));
+  if (screen === "report") bindRpTabs();
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "tools") {
     keepRow($(".perf-tabs", app), "tools");
@@ -609,7 +611,7 @@ function render() {
       try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
       render();
     }));
-    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d);
+    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab();
     if (!RET[market]) loadReturns().then(() => { if (screen === "tools") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
   }
   app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {
@@ -1356,7 +1358,7 @@ function homeReportCard() {
     ${goalLine()}${healthLine()}</section>`;
   return `<section class="card"><h2>📰 오늘의 리포트 <small>${reportDay()} 기준</small></h2>
     <ul class="brief brief-top">${(r.headline || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-    ${goalLine()}${healthLine()}${more("report", "리포트 자세히 보기")}</section>`;
+    ${goalLine()}${healthLine()}${more("report", "리포트 자세히 보기")}${weeklyLine()}</section>`;
 }
 function rpSection(icon, title, sub, rows) {
   return rows.length ? `<section class="card"><h2>${icon} ${title} <small>${sub}</small></h2><ul class="brief">${rows.map((x) => `<li>${x}</li>`).join("")}</ul></section>` : "";
@@ -1370,7 +1372,7 @@ function reportCards(d) {
     <ul class="brief brief-top">${(r.headline || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
     <details class="brief-more"><summary>자료가 팀 사이로 넘어간 흐름</summary>
       <ol class="rp-chain">${(r.chain || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ol></details></section>`;
-  const facts = (m.facts || []).map((f) => `<b>${esc(f.name)}</b> ${f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}
+  const facts = (m.facts || []).map((f) => f.kind === "rate" ? `<b>${esc(f.name)}</b> ${f.last.toFixed(2)}% <small class="muted">${f.d1 > 0 ? "+" : ""}${(f.d1 || 0).toFixed(2)}%p · 1달 ${f.m1 == null ? "-" : `${f.m1 > 0 ? "+" : ""}${f.m1.toFixed(2)}%p`}</small>` : `<b>${esc(f.name)}</b> ${f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}
     ${rpChg(f.d1, 2)} <small class="muted">1달 ${pct(f.m1)}</small>`);
   if (tone) facts.unshift(`${flag} ${market === "kr" ? "국장" : "미장"} 분위기 ${rpTone(tone.tone)} <small class="muted">${esc(tone.index)} 1주 ${pct(tone.w1)} · 1달 ${pct(tone.m1)}</small>`);
   if (m.regime) facts.push(`경기 판정 <b>${esc(m.regime)}</b> <small class="muted">경고 ${esc(m.macro_score)}</small>`);
@@ -1396,6 +1398,89 @@ function reportCards(d) {
     `<section class="card"><p class="muted" style="margin:0">✍️ 5. 편집팀이 위 네 팀 자료를 묶어 맨 위 요약을 만들어요. 공개 자료로 만든 참고용 리포트예요.
       사고팔기 판단은 안 해요. 위 국장·미장 탭으로 업종·종목을 바꿔 봐요.</p>
       <button type="button" class="more" data-more="learn">📚 리포트에 나온 말과 원인 공부하기<span aria-hidden="true">›</span></button></section>`];
+}
+// 주간 리포트 (weekly.py, paper/weekly.json): 토요일 아침 한 주를 한 장으로. 리포트 화면 맨 위 '오늘·주간' 버튼으로 바꿔 봐요.
+// 주말·월요일엔 새 주간 리포트가 있으면 처음부터 주간을 보여 줘요 (사용자 2026-10-24 '주간리포트로 하고')
+let rpTab = null;
+function weeklyFresh() {
+  const w = DATA.weekly;
+  if (!w || !w.day) return false;
+  const age = (Date.now() - new Date(`${w.day}T09:00:00+09:00`).getTime()) / 864e5;
+  return age >= 0 && age < 3;
+}
+function rpTabNow() {
+  if (!DATA.weekly) return "day";
+  if (rpTab) return rpTab;
+  return weeklyFresh() || !DATA.report ? "week" : "day";
+}
+function rpTabsBar() {
+  if (!DATA.weekly) return "";
+  const cur = rpTabNow();
+  return `<nav class="chips rp-tabs" aria-label="리포트 고르기">${[["day", "📰 오늘의 리포트"], ["week", "🗞 주간 리포트"]].map(([k, label]) =>
+    `<button type="button" data-rp-tab="${k}" aria-pressed="${k === cur}">${label}</button>`).join("")}</nav>`;
+}
+const wkDay = (day) => { const d = new Date(`${day.slice(0, 10)}T12:00:00Z`); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}(${"일월화수목금토"[d.getUTCDay()]})`; };
+const wkRange = (w) => (w && w.week ? `${md(w.week[0])}~${md(w.week[1])}` : "");
+function weeklyLine() {
+  const w = DATA.weekly;
+  return w && weeklyFresh() ? `<button type="button" class="more" data-rp-week>🗞 주간 리포트 보기 <small class="muted">${wkRange(w)}</small><span aria-hidden="true">›</span></button>` : "";
+}
+function weeklyCards() {
+  const w = DATA.weekly;
+  if (!w) return [`<section class="card"><p class="empty">아직 주간 리포트가 없어요. 토요일 아침에 만들어요.</p></section>`];
+  const flag = REPORT_FLAG[market], ix = w.index || {}, sec = (w.sectors || {})[market];
+  const ev = w.events || {}, nx = w.next || {};
+  const facts = ix.facts || [], fact = (n) => facts.find((f) => f.name === n);
+  const big = ["코스피", "코스닥", "S&P500", "나스닥"].map(fact).filter(Boolean);
+  const chip = (v, d = 1) => `<span class="wk-pill ${sign(v)}">${pct(v, d)}</span>`;
+  // 1. 한눈에: 큰 지수 네 개 1주 등락 + 요일별 막대 + 세 줄 요약
+  const tiles = big.map((f) => `<div class="wk-tile ${sign(f.w1)}"><span>${esc(f.name)}</span><b>${pct(f.w1)}</b>
+    <small>${(f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })} · 1달 ${pct(f.m1)}</small></div>`).join("");
+  const dm = (ix.days || {})[market];
+  const peak = dm && dm.days.length ? Math.max(...dm.days.map(([, v]) => Math.abs(v)), 0.005) : 1;
+  const days = dm && dm.days.length ? `<p class="wk-sub">${flag} ${esc(dm.index)} 요일별</p><div class="wk-days" role="img" aria-label="${esc(dm.index)} 요일별 등락">${dm.days.map(([d, v]) =>
+    `<div class="wk-day"><div class="wk-col"><i class="${sign(v)}" style="height:${(Math.abs(v) / peak * 100).toFixed(0)}%;${v < 0 ? "top:50%" : "bottom:50%"}"></i></div><b class="${sign(v)}">${pct(v)}</b><span>${esc(d)}</span></div>`).join("")}</div>` : "";
+  const icons = ["🏭", "🗓", "⚡"];  // 첫 줄(지수)은 위 타일과 같아서 빼요
+  const head = `<section class="card wk-hero"><h2>🗞 주간 리포트 <small>${wkRange(w)}</small></h2>
+    <div class="wk-tiles">${tiles}</div>${days}
+    <ul class="wk-sum">${(w.headline || []).filter((x) => !x.startsWith("이번 주:")).map((x, i) => `<li><span aria-hidden="true">${icons[i] || "•"}</span><p>${esc(x)}</p></li>`).join("")}</ul></section>`;
+  // 2. 나머지 지표: 두 줄 격자
+  const rest = facts.filter((f) => !big.includes(f)).map((f) => {
+    const val = f.kind === "rate" ? `${f.last.toFixed(2)}%` : f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+    const chg = f.kind === "rate" ? `<span class="wk-pill ${sign(f.w1)}">${f.w1 == null ? "-" : `${f.w1 > 0 ? "+" : ""}${f.w1.toFixed(2)}%p`}</span>` : chip(f.w1);
+    return `<div class="wk-cell"><span>${esc(f.name.replace(/ \(.+\)$/, ""))}</span><b>${val}</b>${chg}</div>`;
+  }).join("");
+  const restCard = rest ? `<section class="card"><h2>🌏 다른 지표 <small>1주 등락</small></h2><div class="wk-grid">${rest}</div></section>` : "";
+  // 3. 업종: 0을 가운데 둔 막대
+  const rows = sec ? [...sec.up, ...sec.down.slice().reverse()] : [];
+  const top = Math.max(...rows.map((x) => Math.abs(x.r5 || 0)), 0.01);
+  const secCard = rows.length ? `<section class="card"><h2>🏭 이번 주 업종 <small>${flag} 5일 상위·하위</small></h2>
+    <ul class="wk-bars">${rows.map((x, i) => `${i === sec.up.length ? `<li class="wk-gap" aria-hidden="true"></li>` : ""}<li><div class="wk-bl"><b>${esc(x.name)}</b><small>${esc((x.r5 >= 0 ? x.best : x.worst) || "")}</small></div>
+      <div class="wk-track"><i class="${sign(x.r5)}" style="width:${(Math.abs(x.r5) / top * 50).toFixed(1)}%"></i></div><b class="wk-bv ${sign(x.r5)}">${pct(x.r5)}</b></li>`).join("")}</ul></section>` : "";
+  // 5. 사건: 시간 줄
+  const tl = [...(ev.shocks || []).slice(0, 5).map((s) => ({ t: s.at, h: `⚡ <b>${esc(s.label)}</b> 급변 ${chip(s.move)}`, sub: s.news })),
+    ...(ev.done || []).slice(0, 8).map((e) => ({ t: e.date, h: `${e.flag || ""} <b>${esc(e.title)}</b>${e.actual ? ` 실제 ${esc(e.actual)}` : ""}`, sub: e.forecast ? `예상 ${e.forecast}` : "" }))]
+    .sort((a, b) => (a.t < b.t ? -1 : 1));
+  const reg = ev.regime ? `<p class="wk-reg">🌡️ 경기 판정 <b>${esc(ev.regime)}</b>${ev.prev_regime && ev.prev_regime !== ev.regime ? ` <span class="badge bad">${esc(ev.prev_regime)}에서 바뀜</span>` : ` <span class="badge">그대로</span>`}${(ev.warns || []).length ? `<br><small class="muted">⚠️ ${esc(ev.warns.join(", "))}</small>` : ""}</p>` : "";
+  const evCard = `<section class="card"><h2>⚡ 이번 주 사건 <small>지수 급변·발표 결과</small></h2>
+    ${tl.length ? `<ol class="wk-tl">${tl.map((x) => `<li><time>${wkDay(x.t)}${x.t.length > 10 ? `<br>${esc(x.t.slice(11, 16))}` : ""}</time><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ol>` : `<p class="empty">큰 사건 없음</p>`}${reg}</section>`;
+  // 6. 다음 주: 요일별 묶음 + 종류 표시
+  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"] };
+  const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
+    ...(nx.cal || []).map((c) => ({ d: c.date, k: c.kind, h: `${REPORT_FLAG[c.market] || ""} ${esc(c.title)}`, sub: c.note || "" })),
+    ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => ({ d: c.date, k: "earn", h: `${esc(c.title.replace(/ 실적 발표$/, ""))}${c.mine ? " ⭐" : ""}`, sub: "" }))];
+  const byDay = {};
+  items.forEach((x) => (byDay[x.d] = byDay[x.d] || []).push(x));
+  const nxCard = `<section class="card"><h2>🗓 다음 주 일정 <small>${nx.start ? `${wkDay(nx.start)}~${wkDay(nx.end)}` : ""}</small></h2>
+    ${items.length ? Object.keys(byDay).sort().map((d) => `<div class="wk-dayg"><p class="wk-dh">${wkDay(d)}</p><ul>${byDay[d].map((x) =>
+      `<li><span class="badge ${TAG[x.k] ? TAG[x.k][1] : ""}">${TAG[x.k] ? TAG[x.k][0] : "일정"}</span><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ul></div>`).join("")
+    : `<p class="empty">아직 잡힌 큰 일정 없음</p>`}</section>`;
+  return [head, secCard, evCard, nxCard, restCard,
+    `<section class="card"><p class="muted" style="margin:0">토요일 아침에 한 주를 묶어 텔레그램으로도 보내요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.
+      위 국장·미장 탭으로 업종을 바꿔 봐요.</p></section>`];
+}
+function bindRpTabs() {
+  $("#app").querySelectorAll("[data-rp-tab]").forEach((b) => b.addEventListener("click", () => { rpTab = b.dataset.rpTab; render(); }));
 }
 function briefCard() {
   return homeReportCard();
@@ -2262,10 +2347,10 @@ function bindMap() {
 // 도구 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 적립식 계산기, 고른 건 이 폰에 기억해요
 const PERF_TABS = [
   ["sav", "적립식 계산기", () => [savingsCard()]],
+  ["lab", "포트폴리오 실험실", () => [labCard()]],
   ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
   ["stress", "폭락 대비", (d) => [stressCard(d)]],
   ["goal", "목표", () => [goalCard()]],
-  ["memo", "메모·점검", () => [memoCard(), healthCard()]],
 ];
 let perfTabKey = "sav";
 try { perfTabKey = localStorage.getItem("tools_tab") || "sav"; } catch (e) { /* 처음 */ }
@@ -3642,7 +3727,7 @@ function indHelp() {
   return `<ul class="help">${items.join("")}<li>보조지표는 지금 보는 캔들로 계산해요. 주봉이면 20주 평균, 14주 RSI예요.</li></ul>`;
 }
 
-// ---------------------------------------------------------------- 내 자산 합계·실전 전환·ETF·메모·점검
+// ---------------------------------------------------------------- 주간 점검 한 줄
 
 // 지난 주간 점검에서 문제가 있었으면 홈에 한 줄
 function healthLine() {
@@ -4921,32 +5006,6 @@ function quietVolumeCard(d) {
       조용히 사 모으는 중인지 팔아 넘기는 중인지는 숫자만으론 몰라요. 참고용이고 매매 규칙은 안 바꿔요.</p></section>`;
 }
 
-// 내 판단 기록장 (텔레그램 '메모 삼성전자 산다')
-function memoCard() {
-  const m = DATA.memos;
-  if (!m) {
-    return `<section class="card"><h2>내 판단 기록장</h2><p class="empty">텔레그램 봇에 '메모 삼성전자 산다 (이유)'처럼 보내면 20거래일 뒤 맞혔는지 여기서 보여 줘요.</p></section>`;
-  }
-  const s = m.score;
-  const head = s ? `<div class="stats">
-      <div class="stat"><span>맞힌 비율</span><b>${Math.round(s.hit * 100)}%</b></div>
-      <div class="stat"><span>'산다' 평균</span><b class="${sign(s.buy_avg)}">${s.buy_avg == null ? "-" : pct(s.buy_avg)}</b></div>
-      <div class="stat"><span>'안 산다' 평균</span><b class="${sign(s.skip_avg)}">${s.skip_avg == null ? "-" : pct(s.skip_avg)}</b></div>
-    </div>` : `<p class="muted">아직 20거래일 지난 판단이 없어요.</p>`;
-  const items = m.recent.map((x) => `<li><div class="l"><div class="name">${esc(x.name)} ${x.view > 0 ? "산다" : "안 산다"}</div>
-      <div class="meta">${md(x.date)} · ${money(x.market, x.price)}${x.note ? ` · ${esc(x.note)}` : ""}</div></div>
-      <div class="r ${x.ret == null ? "" : sign(x.ret)}">${x.ret == null ? "-" : pct(x.ret)}</div></li>`).join("");
-  return `<section class="card"><h2>내 판단 기록장 <small>${m.count}개</small></h2>${head}<ul class="list" style="margin-top:12px">${items}</ul></section>`;
-}
-
-function healthCard() {
-  const h = DATA.health;
-  if (!h) return "";
-  const rows = h.workflows.map((w) => `<li><div class="l"><div class="name">${w.ok ? "✅" : "⚠️"} ${esc(w.label)}</div>
-      <div class="meta">성공 ${w.success}회${w.expected ? `/${w.expected}회 예정` : ""}${w.failure ? ` · 실패 ${w.failure}회` : ""}${w.github_skipped ? ` · GitHub 사정으로 못 돈 것 ${w.github_skipped}회` : ""}</div></div></li>`).join("");
-  return `<section class="card"><h2>자동 실행 점검 <small>${md(h.checked.slice(0, 10))} 기준 지난 7일</small></h2><ul class="list">${rows}</ul></section>`;
-}
-
 // ---------------------------------------------------------------- 종목 화면 (차트 + 재무제표)
 // 자료는 종목마다 stocks/<시장>/<코드>.json (배포 때 stock_pages.py가 만듦). 처음 열 때 받아서 앱을 닫을 때까지 기억해요.
 const STOCK_FRAMES = FRAMES;  // 상장일부터 받은 일봉이라 년봉까지 봐요
@@ -6019,6 +6078,146 @@ function goalLine() {
   if (!left || left.days < 0) return "";
   const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, GOAL.now / GOAL.target) * 100)}%` : "";
   return `<p class="muted" style="margin:10px 0 0">🎯 ${esc(goalTitle())}까지 <b>D-${left.days}</b>${prog}</p>`;
+}
+
+// ---------------------------------------------------------------- 포트폴리오 실험실
+// ETF를 섞으면 과거에 얼마나 떨어졌나 (lab.py, symbols/lab.json 월말 수정 종가, 미국 자산은 원화로 환산).
+// 비율을 바꾸면 폰에서 바로 다시 계산해요. 비율은 이 폰에만 저장. 사고팔기 판단은 안 해요 (사용자 2026-10-24 '포트폴리오 실험실 만들자')
+const LAB_PRESETS = [
+  ["stock", "주식만", { kospi: 100 }],
+  ["us", "미국 주식만", { sp500: 100 }],
+  ["6040", "주식 6 : 채권 4", { kospi: 30, sp500: 30, krbond: 20, usmid: 20 }],
+  ["aw", "올웨더 비슷", { sp500: 30, uslong: 40, usmid: 15, gold: 15 }],
+  ["calm", "낙폭 작게", { sp500: 20, krbond: 20, gold: 20, cash: 40 }],
+];
+const LAB_PERIODS = [["all", "전체"], ["10", "최근 10년"], ["5", "최근 5년"]];
+let LABD = null, labLoading = null;
+const LAB = { w: { ...LAB_PRESETS[2][2] }, reb: "y", per: "all" };
+try { Object.assign(LAB, JSON.parse(localStorage.getItem("lab") || "{}")); } catch (e) { /* 처음 */ }
+function loadLab() {
+  if (!labLoading) labLoading = fetch("symbols/lab.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    .then((x) => { LABD = x || { months: [], assets: [] }; });
+  return labLoading;
+}
+const saveLab = () => { try { localStorage.setItem("lab", JSON.stringify(LAB)); } catch (e) { /* 이번만 */ } };
+const labSum = (w) => Object.values(w).reduce((a, b) => a + (b || 0), 0);
+// 비율 w(%)로 섞어 한 달씩 굴려요. reb: 매년 12월 말에 처음 비율로 되돌리기. 같은 기간 계산을 위해 시작 달을 받을 수 있어요
+function labRun(w, reb, from) {
+  const A = LABD.assets.filter((a) => (w[a.k] || 0) > 0), n = LABD.months.length, tot = labSum(w);
+  if (!A.length || !tot) return null;
+  let s = Math.max(...A.map((a) => a.r.findIndex((v) => v != null)));
+  if (from != null) s = Math.max(s, from);
+  if (s < 1 || s >= n) return null;
+  let h = A.map((a) => w[a.k] / tot), v = 1, peak = 1, peakI = s - 1, mdd = 0, ddFrom = s - 1, ddTo = s - 1, under = 0, longest = 0, rec = null;
+  const val = [1], dd = [0];
+  for (let i = s; i < n; i++) {
+    h = h.map((x, k) => x * (1 + (A[k].r[i] || 0) / 100));
+    v = h.reduce((a, b) => a + b, 0);
+    if (v >= peak) { peak = v; peakI = i; under = 0; } else { under++; longest = Math.max(longest, under); }
+    const d = v / peak - 1;
+    if (d < mdd) { mdd = d; ddFrom = peakI; ddTo = i; }
+    val.push(v); dd.push(d);
+    if (reb === "y" && LABD.months[i].endsWith("-12")) h = A.map((a) => v * w[a.k] / tot);
+  }
+  // 가장 크게 떨어졌던 때에서 원래 높이로 돌아오기까지
+  for (let i = ddTo; i < n; i++) if (val[i - s + 1] >= val[ddFrom - s + 1]) { rec = i - ddFrom; break; }
+  const years = (n - s) / 12;
+  const yr = {};
+  LABD.months.slice(s - 1).forEach((m, k) => { const y = m.slice(0, 4); yr[y] = yr[y] || [val[k], val[k]]; yr[y][1] = val[k]; });
+  let worstY = null;
+  Object.entries(yr).forEach(([y, [a, b]], k, all) => {  // 그 해 첫 값은 전년 말 값
+    const start = k ? all[k - 1][1][1] : a, r = b / start - 1;
+    if (k && (!worstY || r < worstY.r)) worstY = { y, r, part: k === all.length - 1 };
+  });
+  return { s, val, dd, cagr: Math.pow(v, 1 / years) - 1, mdd, ddFrom, ddTo, rec, longest, worstY, end: v, years };
+}
+const ym = (m) => `${m.slice(0, 4)}.${m.slice(5, 7)}`;
+function labPath(arr, lo, hi, W, H) {
+  const n = arr.length - 1 || 1;
+  return arr.map((v, i) => `${i ? "L" : "M"}${(i / n * W).toFixed(1)},${(H - (v - lo) / (hi - lo || 1) * H).toFixed(1)}`).join("");
+}
+function labChart(me, base, months) {
+  const W = 320, H = 120, D = 56;
+  const all = [...me.val, ...(base ? base.val : [])].map((v) => Math.log(v));
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const lg = (a) => a.map((v) => Math.log(v));
+  const dlo = Math.min(me.mdd, base ? base.mdd : 0);
+  const area = (a) => `${labPath(a, dlo, 0, W, D)}L${W},0L0,0Z`;
+  const first = months[0], last = months[months.length - 1];
+  return `<div class="lab-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="내 섞기와 비교 대상의 자산 흐름 (로그 눈금)">
+      ${base ? `<path class="lab-base" d="${labPath(lg(base.val), lo, hi, W, H)}"/>` : ""}<path class="lab-me" d="${labPath(lg(me.val), lo, hi, W, H)}"/></svg>
+    <p class="lab-cap">떨어진 폭 (고점 대비)</p>
+    <svg viewBox="0 0 ${W} ${D}" preserveAspectRatio="none" role="img" aria-label="고점 대비 떨어진 폭">
+      ${base ? `<path class="lab-dd-base" d="${area(base.dd)}"/>` : ""}<path class="lab-dd-me" d="${area(me.dd)}"/></svg>
+    <div class="lab-x"><span>${ym(first)}</span><span>${ym(last)}</span></div></div>`;
+}
+function labCard() {
+  const head = `<h2>포트폴리오 실험실 <small>섞으면 덜 떨어질까</small></h2>`;
+  if (!LABD) return `<section class="card" id="lab-card">${head}<p class="muted">과거 자료를 불러오는 중이에요…</p></section>`;
+  if (!LABD.assets.length) return `<section class="card" id="lab-card">${head}<p class="empty">아직 자료가 없어요. 토요일 아침에 받아 와요.</p></section>`;
+  const tot = labSum(LAB.w), n = LABD.months.length;
+  const from = LAB.per === "all" ? null : n - 1 - Number(LAB.per) * 12;
+  const me = labRun(LAB.w, LAB.reb, from);
+  const baseK = market === "us" ? "sp500" : "kospi", baseA = LABD.assets.find((a) => a.k === baseK);
+  const base = me && baseA ? labRun({ [baseK]: 100 }, "n", me.s) : null;
+  const sameAsBase = Object.keys(LAB.w).filter((k) => LAB.w[k] > 0).join() === baseK;
+  const pre = LAB_PRESETS.find(([, , w]) => JSON.stringify(Object.entries(w).sort()) === JSON.stringify(Object.entries(LAB.w).filter(([, v]) => v > 0).sort()));
+  const presets = `<nav class="chips" aria-label="섞기 예시">${LAB_PRESETS.map(([k, label]) =>
+    `<button type="button" data-lab-preset="${k}" aria-pressed="${!!pre && pre[0] === k}">${label}</button>`).join("")}</nav>`;
+  const rows = LABD.assets.map((a) => { const v = LAB.w[a.k] || 0;
+    return `<li class="lab-row"><div class="l"><div class="name">${esc(a.name)}</div><div class="meta">${esc(a.note)} · ${ym(a.start)}~</div>
+        <div class="lab-bar"><i style="width:${Math.min(100, v)}%"></i></div></div>
+      <div class="lab-step"><button type="button" data-lab-w="${a.k}" data-d="-10" aria-label="${esc(a.name)} 10%p 줄이기"${v ? "" : " disabled"}>−</button>
+        <b>${v}%</b><button type="button" data-lab-w="${a.k}" data-d="10" aria-label="${esc(a.name)} 10%p 늘리기"${tot >= 100 ? " disabled" : ""}>+</button></div></li>`; }).join("");
+  const sumLine = tot === 100 ? `<p class="muted lab-sum">합계 <b>100%</b></p>`
+    : `<p class="caution lab-sum">합계 ${tot}%예요. ${tot ? "100%로 맞춰(비율대로 늘려) 계산했어요." : "비율을 넣어 주세요."}</p>`;
+  const opts = `<div class="lab-opts"><nav class="chips" aria-label="되돌리기">${[["y", "매년 비율 되돌리기"], ["n", "그냥 두기"]].map(([k, l]) =>
+      `<button type="button" data-lab-reb="${k}" aria-pressed="${LAB.reb === k}">${l}</button>`).join("")}</nav>
+    <nav class="chips" aria-label="기간">${LAB_PERIODS.map(([k, l]) => `<button type="button" data-lab-per="${k}" aria-pressed="${LAB.per === k}">${l}</button>`).join("")}</nav></div>`;
+  let out = "";
+  if (me) {
+    const months = LABD.months.slice(me.s - 1);
+    const won = (v) => `${man(v * 1000)}원`;
+    const col = (r, label) => r ? `<div class="lab-col"><p class="lab-who">${label}</p>
+      <div class="stat"><span>가장 크게 떨어진 폭</span><b class="${r.mdd < -0.2 ? "down" : ""}">${pct(r.mdd)}</b><small>${ym(LABD.months[r.ddFrom])}→${ym(LABD.months[r.ddTo])}</small></div>
+      <div class="stat"><span>다시 회복까지</span><b>${r.rec == null ? "아직" : `${r.rec}개월`}</b><small>가장 길게 물린 ${r.longest}개월</small></div>
+      <div class="stat"><span>연 수익률</span><b class="${sign(r.cagr)}">${pct(r.cagr)}</b><small>1,000만 원 → ${won(r.end)}</small></div>
+      <div class="stat"><span>가장 나빴던 해</span><b class="${r.worstY ? sign(r.worstY.r) : ""}">${r.worstY ? pct(r.worstY.r) : "-"}</b><small>${r.worstY ? `${r.worstY.y}년${r.worstY.part ? " (올해 지금까지)" : ""}` : ""}</small></div></div>` : "";
+    const verdict = !base || sameAsBase ? "" : me.mdd > base.mdd + 0.03
+      ? `<p class="good-line">✅ ${esc(baseA.name)}만 들고 있을 때보다 가장 크게 떨어진 폭이 ${Math.round((me.mdd - base.mdd) * 100)}%p 작아요${me.cagr < base.cagr ? `. 대신 연 수익률은 ${((base.cagr - me.cagr) * 100).toFixed(1)}%p 낮아요` : ""}.</p>`
+      : me.mdd < base.mdd - 0.03 ? `<p class="caution">⚠️ ${esc(baseA.name)}만 들고 있을 때보다 더 크게 떨어졌어요.</p>`
+        : `<p class="muted">${esc(baseA.name)}만 들고 있을 때와 떨어진 폭이 비슷해요.</p>`;
+    out = `<p class="muted lab-period">${ym(months[0])}~${ym(months[months.length - 1])} (${me.years.toFixed(1)}년) · 원화 기준 · 분배금 다시 넣음</p>
+      ${labChart(me, sameAsBase ? null : base, months)}
+      <div class="legend" style="margin:6px 0 0"><span class="key"><i class="sw" style="background:var(--accent)"></i>내 섞기</span>${base && !sameAsBase ? `<span class="key"><i class="sw" style="background:var(--text-muted)"></i>${esc(baseA.name)}만</span>` : ""}</div>
+      <div class="lab-cols">${col(me, "내 섞기")}${sameAsBase ? "" : col(base, `${esc(baseA.name)}만`)}</div>${verdict}`;
+  }
+  return `<section class="card" id="lab-card">${head}
+    <p class="muted" style="margin:8px 0 0">예시를 고르거나 + − 로 비율을 바꾸면, 과거에 그렇게 섞어 뒀을 때 얼마나 떨어지고 얼마 만에 회복했는지 보여 줘요.</p>
+    ${presets}<ul class="list lab-list">${rows}</ul>${sumLine}${opts}${out}
+    <p class="muted note" style="margin:10px 0 0">야후 파이낸스 월말 수정 종가(분배금 다시 넣은 값)로 계산해요. 미국 자산은 그달 원/달러로 바꿔서, 위기 때 원화가 약해지면 원화 기준 낙폭이 줄어든 것까지 들어 있어요.
+      세금·환전 수수료는 빼지 않았어요. 기간이 짧은 자산을 넣으면 그 자산이 상장한 달부터 계산해요. 과거 숫자일 뿐 앞으로를 보장하지 않아요.</p></section>`;
+}
+function labRedraw() {
+  const card = $("#lab-card");
+  if (!card) return;
+  holdHeight(); card.outerHTML = labCard();
+  bindLab(); keepTap();
+}
+function bindLab() {
+  const card = $("#lab-card");
+  if (!card) return;
+  if (!LABD) { loadLab().then(() => { if (screen === "tools") labRedraw(); }); return; }
+  card.querySelectorAll("[data-lab-preset]").forEach((b) => b.addEventListener("click", () => {
+    LAB.w = { ...LAB_PRESETS.find(([k]) => k === b.dataset.labPreset)[2] }; saveLab(); labRedraw();
+  }));
+  card.querySelectorAll("[data-lab-w]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.labW, v = Math.max(0, Math.min(100, (LAB.w[k] || 0) + Number(b.dataset.d)));
+    LAB.w = { ...LAB.w, [k]: v }; if (!v) delete LAB.w[k];
+    saveLab(); labRedraw();
+  }));
+  card.querySelectorAll("[data-lab-reb]").forEach((b) => b.addEventListener("click", () => { LAB.reb = b.dataset.labReb; saveLab(); labRedraw(); }));
+  card.querySelectorAll("[data-lab-per]").forEach((b) => b.addEventListener("click", () => { LAB.per = b.dataset.labPer; saveLab(); labRedraw(); }));
 }
 
 // ---------------------------------------------------------------- 수익률 달력

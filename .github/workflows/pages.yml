@@ -7,7 +7,7 @@ name: pages
 
 on:
   workflow_run:
-    workflows: [daily, fundamentals, macro, world, all-stocks]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
+    workflows: [daily, weekly, fundamentals, macro, world, all-stocks]  # 봇 커밋은 push 이벤트를 안 일으켜서 끝나는 걸 봐요
     types: [completed]
   push:
     branches: [main]

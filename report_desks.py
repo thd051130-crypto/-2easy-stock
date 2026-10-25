@@ -91,7 +91,7 @@ def market_desk(world, macro):
         s = index_score(it)
         out["markets"][mk] = dict(tone=tone_of(s), score=s, index=name, d1=it and it.get("d1"),
                                   w1=it and it.get("w1"), m1=it and it.get("m1"))
-    for name in ("코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "원/달러", "미국 10년 금리", "VIX", "WTI", "금"):
+    for name in ("코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "원/달러", "미국 10년 국채 금리", "VIX 공포 지수", "WTI 유가", "금 (온스)"):
         it = items.get(name)
         if it:
             out["facts"].append(dict(name=name, last=it.get("last"), kind=it.get("kind"), d1=it.get("d1"), m1=it.get("m1")))
@@ -226,6 +226,8 @@ def stock_desk(sectors, signals, flows, funds, per_sector=2):
 # ---------------------------------------------------------------- 5. 편집팀
 
 def fact_text(f):
+    if f["kind"] == "rate":  # 금리는 등락률 대신 %p (world.py)
+        return f"{f['name']} {f['last']:.2f}% ({f['d1']:+.2f}%p, 1달 {f['m1']:+.2f}%p)" if f.get("m1") is not None else f"{f['name']} {f['last']:.2f}%"
     if f["kind"] == "krw":
         val = f"{f['last']:,.0f}원"
     else:

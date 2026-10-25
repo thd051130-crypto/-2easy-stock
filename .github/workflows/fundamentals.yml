@@ -37,6 +37,8 @@ jobs:
         continue-on-error: true
       - run: python returns.py  # 적립식 계산기용 종목별 10년 수익률·배당률·최대 낙폭 (전 종목 월봉, 30분쯤)
         continue-on-error: true
+      - run: python lab.py  # 포트폴리오 실험실용 ETF 9개 월봉 (paper/symbols/lab.json)
+        continue-on-error: true
       - name: commit
         run: |
           git config user.name "github-actions[bot]"

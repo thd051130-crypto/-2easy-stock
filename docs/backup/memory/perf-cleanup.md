@@ -14,3 +14,5 @@ metadata:
 **How to apply:** 성과 화면에 새 칸은 맞는 묶음에 넣거나 PERF_TABS에 새 묶음 추가. 다른 화면에서 성과의 특정 칸으로 보내려면 perfTabKey를 먼저 바꾸기. 미리보기 /mnt/project-files/perf-tabs-preview/. 관련 [[home-cleanup-pr64]], [[phone-dashboard]], [[calendar-split-pr72]].
 
 2026-10-24: 이 기능은 없앴어요 → [[report-desks]].
+
+2026-10-24: 도구 탭 '메모·점검'(memoCard 내 판단 기록장 + healthCard 자동 실행 점검) 없앰. 도구 탭은 적립식 계산기·수익률 달력·폭락 대비·목표. 주간 점검 문제는 리포트 칸 healthLine 한 줄로만 보임. 저장된 tools_tab='memo'는 첫 탭으로 돌아감.
