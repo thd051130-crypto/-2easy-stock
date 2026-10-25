@@ -1044,3 +1044,5 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .lab-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .lab-col { display: grid; gap: 6px; min-width: 0; }
 .lab-who { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+/* 선 그래프가 그려지는 동안엔 원래 나타나기(흐려졌다 켜짐)를 빼요 */
+.drawing .sav-line, .drawing .sav-area { animation: none; }
