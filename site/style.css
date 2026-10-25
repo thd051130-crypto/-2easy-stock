@@ -853,6 +853,19 @@ button.hm:active .hm-t > b { color: var(--accent); }
 .hot-card li.read { opacity: .45; }
 .hot-card.all-read { border-color: var(--border); }
 .hot-read-list li { opacity: .7; }
+.card h2.hot-h { display: block; margin: 0; }
+.hot-fold { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; min-height: 40px; margin: -6px 0 6px; padding: 0;
+  background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.hot-h-t small { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: 4px; }
+.hot-fold-t { flex: none; font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; }
+.hot-fold-t::after { content: " ▴"; }
+.hot-fold-t .fold-more, .hot-card.folded .hot-fold-t .fold-less { display: none; }
+.hot-card.folded .hot-fold-t .fold-more { display: inline; }
+.hot-card.folded .hot-fold-t::after { content: " ▾"; }
+.hot-card.folded .hot-body { display: none; }
+.hot-card.folded .hot-fold { margin-bottom: 0; }
+.hot-peek { display: none; margin: 0; font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hot-card.folded .hot-peek { display: block; }
 .hot-card [data-hot-all].armed { background: var(--wait-bg); color: var(--wait-fg); }
 .hot-all-t { font-weight: 600; }
 .undo-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 30;
