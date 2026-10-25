@@ -1123,3 +1123,5 @@ a.more { text-decoration: none; }
 .learn-rep-q { padding: 10px 0; border-bottom: 1px solid var(--border); }
 .learn-rep-q:last-of-type { border-bottom: 0; }
 .learn-rep-q .learn-p { margin: 4px 0 0; }
+/* 선 그래프가 그려지는 동안엔 원래 나타나기(흐려졌다 켜짐)를 빼요 */
+.drawing .sav-line, .drawing .sav-area { animation: none; }

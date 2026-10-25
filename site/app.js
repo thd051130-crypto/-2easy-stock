@@ -416,6 +416,55 @@ function back() {
 // ---------------------------------------------------------------- 움직임 (화면 전환, 숫자 올라가기, 새 신호 반짝임)
 // 폰 설정에서 '동작 줄이기'(prefers-reduced-motion)를 켰으면 전부 꺼요.
 const calm = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+// 선 그래프 그리기 (사용자 2026-10-25 "버튼 눌러서 그래프 바뀔 때마다 그려지는 모습, 속도는 산업지도랑 똑같이"):
+// 버튼을 누르고 바로 그린 선 그래프는 선이 왼쪽에서 오른쪽으로 그려져요. 산업 지도 별자리 선과 같은 속도
+// (625ms + 선 길이 1px당 2ms)·움직임(cubic-bezier(.35,.1,.25,1))이고, 끝 점·금액 딱지는 선이 85% 왔을 때 켜져요.
+// 밀기·확대·화면 크기 바뀜·자료 받아서 다시 그릴 때는 그대로예요. 아래 메뉴로 화면만 옮길 때도 그대로.
+let drawTap = 0;
+document.addEventListener("click", (e) => {
+  const t = e.target.closest && e.target.closest("button, label, summary, [role=button], [data-sym]");
+  if (t && !t.closest(".nav")) drawTap = performance.now();
+}, true);
+// 이 칸(el)이 방금 누른 버튼 때문에 다시 그려지는 거면 true (한 번 누를 때 한 번만)
+function drawSoon(el) {
+  if (!el || calm() || !drawTap || performance.now() - drawTap > 1500 || el._drawTap === drawTap) return false;
+  el._drawTap = drawTap;
+  return true;
+}
+const drawEase = (() => {  // cubic-bezier(.35,.1,.25,1)
+  const [x1, y1, x2, y2] = [0.35, 0.1, 0.25, 1];
+  const bz = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+  return (x) => { let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (bz(t, x1, x2) < x) lo = t; else hi = t; } return bz(t, y1, y2); };
+})();
+// svg 안 sel 선들을 x0부터 w 폭만큼 왼쪽에서 오른쪽으로 드러내요. late는 다 그려질 때쯤 켜지는 것(끝 점·딱지).
+// px는 화면에서 선 길이 (viewBox를 늘려 그리는 그래프는 화면 폭)
+function drawIn(svg, { x0 = 0, w, sel, late = "", px = w }) {
+  if (!svg) return;
+  const lines = svg.querySelectorAll(sel);
+  if (!lines.length) return;
+  const ns = "http://www.w3.org/2000/svg", id = `dw${Math.random().toString(36).slice(2, 8)}`;
+  const cp = document.createElementNS(ns, "clipPath"), r = document.createElementNS(ns, "rect");
+  cp.id = id; cp.setAttribute("clipPathUnits", "userSpaceOnUse");
+  const vb = svg.viewBox.baseVal, H = (vb && vb.height) || 1000;
+  r.setAttribute("x", x0 - 4); r.setAttribute("y", -H); r.setAttribute("height", H * 3); r.setAttribute("width", 0);
+  cp.appendChild(r);
+  let defs = svg.querySelector("defs");
+  if (!defs) { defs = document.createElementNS(ns, "defs"); svg.prepend(defs); }
+  defs.appendChild(cp);
+  lines.forEach((l) => l.setAttribute("clip-path", `url(#${id})`));
+  svg.classList.add("drawing");
+  const dur = 625 + px * 2, t0 = performance.now();
+  const lateEls = late ? [...svg.querySelectorAll(late)] : [];
+  lateEls.forEach((e) => e.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 625, delay: dur * 0.85, easing: "ease-out", fill: "backwards" }));
+  const step = (now) => {
+    if (!svg.isConnected) return;
+    const f = Math.min(1, (now - t0) / dur);
+    r.setAttribute("width", (w + 8) * drawEase(f));
+    if (f < 1) requestAnimationFrame(step);
+    else { lines.forEach((l) => l.removeAttribute("clip-path")); cp.remove(); svg.classList.remove("drawing"); }
+  };
+  requestAnimationFrame(step);
+}
 // 다음 render()에서 쓸 화면 전환: rise(앱을 열 때 카드가 차례로), fade(아래 버튼), push(종목·검색 열기),
 // pop(뒤로), swap(국장·미장 바꾸기). 별표·지표 버튼처럼 같은 화면을 다시 그릴 때는 비어 있어서 안 움직여요.
 let motion = "rise";
@@ -3417,7 +3466,7 @@ function compareChart(el, f, list, show, reset, onRange) {
   }
   const v = VIEW[key];
   let W = 0, pad, iw, ih, cw, start, base = [], Yp, from = 0;
-  const draw = () => {
+  const draw = (anim) => {
     W = Math.max(el.clientWidth, 260);
     pad = { l: 6, r: 62, t: 22, b: 22 };
     iw = W - pad.l - pad.r;
@@ -3499,8 +3548,8 @@ function compareChart(el, f, list, show, reset, onRange) {
       return { j, r: s.c[i] / base[j] - 1, y: Math.min(pad.t + ih - 9, Math.max(pad.t + 9, Y(s.c[i] / base[j]))) };
     }).filter(Boolean).sort((a, b) => a.y - b.y);
     for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 18) ends[k].y = ends[k - 1].y + 18;
-    const tags = ends.map((e) => `<rect x="${pad.l + iw + 1}" y="${e.y - 9}" width="${pad.r - 2}" height="18" rx="3" fill="${list[e.j].color}"/>
-      <text class="tag-text" x="${pad.l + iw + 6}" y="${e.y + 4}">${esc(cmpPct(e.r))}</text>`).join("");
+    const tags = ends.map((e) => `<rect class="cmp-end" x="${pad.l + iw + 1}" y="${e.y - 9}" width="${pad.r - 2}" height="18" rx="3" fill="${list[e.j].color}"/>
+      <text class="tag-text cmp-end" x="${pad.l + iw + 6}" y="${e.y + 4}">${esc(cmpPct(e.r))}</text>`).join("");
     const zero = `<line class="zero" x1="${pad.l}" x2="${pad.l + iw}" y1="${Y(1)}" y2="${Y(1)}"/>`
       // 늦게 상장한 게 있으면 같이 출발한 칸에 세로 점선
       + (from > start ? `<line class="zero" x1="${X(from)}" x2="${X(from)}" y1="${pad.t}" y2="${pad.t + ih}"/>
@@ -3511,10 +3560,11 @@ function compareChart(el, f, list, show, reset, onRange) {
     const clip = `cc-${key}`;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.name).join(", "))} 비교 차트">
       <defs><clipPath id="${clip}"><rect x="${pad.l}" y="${pad.t - 2}" width="${iw}" height="${ih + 4}"/></clipPath></defs>
-      ${grid}${zero}<g clip-path="url(#${clip})">${lines}</g>
+      ${grid}${zero}<g class="cmp-lines" clip-path="url(#${clip})">${lines}</g>
       <line class="cross" x1="${picked ? X(v.pick) : 0}" x2="${picked ? X(v.pick) : 0}" y1="${pad.t}" y2="${pad.t + ih}"${picked ? "" : ' style="display:none"'}/>
       ${tags}${xl}${logY ? `<text class="pane-label" x="${pad.l + iw + 6}" y="${pad.t - 8}">로그 눈금</text>` : ""}</svg>
       <div class="tip" style="display:none"></div>`;
+    if (anim && cmpLine) drawIn($("svg", el), { x0: pad.l, w: iw, sel: ".cmp-lines > *", late: ".cmp-end" });
     const best = ends.slice().sort((a, b) => b.r - a.r)[0];
     onRange(`${esc(frameLabel(f, start, "axis"))} ~ ${esc(frameLabel(f, endI, "axis"))} (${Math.round(v.count)}${UNIT[f.frame]})`
       + (from > start ? ` · 다 같이 있는 ${esc(frameLabel(f, from, f.frame === "w" ? "axis" : "full"))}부터 비교` : "")
@@ -3541,7 +3591,7 @@ function compareChart(el, f, list, show, reset, onRange) {
     return y >= top - HIT_PX && y <= bot + HIT_PX;
   });
   chartGestures(el, v, () => ({ start, cw, pad, W, hit }), draw, showTip);
-  draw();
+  draw(drawSoon(el));
   el._draw = draw;
   if (!el._ro) {
     let w = el.clientWidth;
@@ -4115,7 +4165,7 @@ function drawSavings() {
   const sumOf = (f) => run.list[0].r[f].map((_, i) => run.list.reduce((a, x) => a + x.r[f][i], 0));
   const paidS = run.plan ? sumOf("paidSeries") : run.list[0].r.paidSeries;
   const list = run.plan && run.list.length > 1 ? [...run.list, { p: { name: "합계" }, color: "var(--text-primary)", total: true, r: { series: sumOf("series") } }] : run.list;
-  const draw = () => {
+  const draw = (anim) => {
     const W = Math.max(el.clientWidth, 260), H = 230;
     const pad = { l: 8, r: 82, t: 14, b: 24 };
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
@@ -4143,13 +4193,13 @@ function drawSavings() {
     const paidLine = `<path class="sav-paid" d="${pts(paidS).map(([a, b], i) => `${i ? "L" : "M"}${a.toFixed(1)},${b.toFixed(1)}`).join("")}"/>`;
     // 끝 점 + 값 알약 (겹치면 벌려요)
     // 종목이 많으면 금액 알약은 큰 순서로 6개까지만 (점은 다 찍어요). 아래로 넘치면 위로 밀어 올려요
-    const dots = list.map((s) => `<circle cx="${x(n - 1)}" cy="${y(s.r.series[n - 1])}" r="3.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="1.5"/>`).join("");
+    const dots = list.map((s) => `<circle class="sav-end" cx="${x(n - 1)}" cy="${y(s.r.series[n - 1])}" r="3.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="1.5"/>`).join("");
     const ends = list.map((s) => ({ s, v: s.r.series[n - 1], y: y(s.r.series[n - 1]) - 9 })).sort((a, b) => b.v - a.v).slice(0, 6).sort((a, b) => a.y - b.y);
     for (let k = 0; k < ends.length; k++) ends[k].y = Math.max(k ? ends[k - 1].y + 20 : 0, ends[k].y);
     for (let k = ends.length - 1; k >= 0; k--) ends[k].y = Math.min(k < ends.length - 1 ? ends[k + 1].y - 20 : pad.t + ih - 18, ends[k].y);
     const short = (v) => savWon(v).replace(/원$/, "");
     const pills = ends.map((e) => { const t = short(e.v), w = Math.min(pad.r - 8, t.length * 7 + 12), px = pad.l + iw + 6;
-      return `<g transform="translate(${px},${e.y.toFixed(1)})"><rect width="${w}" height="18" rx="9" fill="${e.s.color}"/>
+      return `<g class="sav-end" transform="translate(${px},${e.y.toFixed(1)})"><rect width="${w}" height="18" rx="9" fill="${e.s.color}"/>
         <text x="${w / 2}" y="13" text-anchor="middle" class="sav-pill"${e.s.total ? ' style="fill:var(--surface-1)"' : ""}>${esc(t)}</text></g>`; }).join("") + dots;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(list.map((s) => s.p.name).join(", "))} 적립 잔고 차트">
       <defs>${grads}</defs>${grid}<line class="sav-base" x1="${pad.l}" x2="${pad.l + iw}" y1="${base}" y2="${base}"/>
@@ -4158,6 +4208,7 @@ function drawSavings() {
         ${list.map((s) => `<circle r="5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2"/>`).join("")}</g>
       <rect x="${pad.l}" y="0" width="${iw}" height="${H}" fill="transparent"/></svg><div class="tip" style="display:none"></div>`;
     const svg = $("svg", el), g = $(".hover", el), tip = $(".tip", el);
+    if (anim) drawIn(svg, { x0: pad.l, w: iw, sel: ".sav-area, .sav-paid, .sav-line", late: ".sav-end" });
     const show = (ev) => {
       const r = svg.getBoundingClientRect();
       const px = ((ev.clientX - r.left) / r.width) * W;
@@ -4178,7 +4229,7 @@ function drawSavings() {
     svg.addEventListener("pointerdown", show);
     svg.addEventListener("pointerleave", hide);
   };
-  draw();
+  draw(drawSoon(el));
   let w = el.clientWidth;
   const ro = new ResizeObserver(() => {
     if (!el.isConnected) { ro.disconnect(); return; }
@@ -5687,7 +5738,7 @@ function chartGestures(el, v, geo, draw, showTip) {
 // 선 차트 (SVG). 같은 단위 시리즈만 한 축에 그려요. 손가락으로 좌우로 밀면 그날 값이 보여요.
 function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2).replace(/-/g, ".") }) {
   if (!el) return;
-  const draw = () => {
+  const draw = (anim) => {
     const W = Math.max(el.clientWidth, 260);
     const H = tall ? Math.round(Math.max(300, window.innerHeight * 0.55)) : 190;  // 크게: 화면 높이의 55%
     const pad = { l: 48, r: 54, t: 8, b: 22 };
@@ -5725,16 +5776,17 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
       return { s, v: s.values[i], y: Math.min(bottom, Math.max(top, yy)), arrow };
     }).filter(Boolean).sort((a, b) => a.y - b.y);
     for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 13) ends[k].y = ends[k - 1].y + 13;
-    const labels = ends.map((e) => `<text x="${pad.l + iw + 6}" y="${e.y + 4}" style="fill:var(--text-secondary)">${e.arrow}${esc(fmt(e.v))}</text>`).join("");
+    const labels = ends.map((e) => `<text class="lc-end" x="${pad.l + iw + 6}" y="${e.y + 4}" style="fill:var(--text-secondary)">${e.arrow}${esc(fmt(e.v))}</text>`).join("");
     const zl = zero ? `<line class="zero" x1="${pad.l}" x2="${pad.l + iw}" y1="${y(0)}" y2="${y(0)}"/>` : "";
     const clip = `clip${Math.random().toString(36).slice(2, 8)}`;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(series.map((s) => s.name).join(", "))} 차트">
       <defs><clipPath id="${clip}"><rect x="${pad.l - 4}" y="${pad.t}" width="${iw + 8}" height="${ih}"/></clipPath></defs>
-      ${grid}${zl}<g clip-path="url(#${clip})">${paths}</g>${labels}${xl}
+      ${grid}${zl}<g class="lc-lines" clip-path="url(#${clip})">${paths}</g>${labels}${xl}
       <g class="hover" style="display:none"><line class="cross" y1="${pad.t}" y2="${pad.t + ih}"/>
         ${series.map((s) => `<circle r="4.5" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2"/>`).join("")}</g>
       <rect x="${pad.l}" y="0" width="${iw}" height="${H}" fill="transparent"/></svg><div class="tip" style="display:none"></div>`;
     const svg = $("svg", el), g = $(".hover", el), tip = $(".tip", el);
+    if (anim) drawIn(svg, { x0: pad.l, w: iw, sel: ".lc-lines > *", late: ".lc-end" });
     const show = (ev) => {
       const r = svg.getBoundingClientRect();
       const px = ((ev.clientX - r.left) / r.width) * W;
@@ -5758,7 +5810,7 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
     svg.addEventListener("pointerdown", show);
     svg.addEventListener("pointerleave", hide);
   };
-  draw();
+  draw(drawSoon(el));
   let w = el.clientWidth;
   const ro = new ResizeObserver(() => {
     if (!el.isConnected) { ro.disconnect(); return; }  // 화면을 바꿔 사라진 차트
@@ -6289,6 +6341,8 @@ function bindLab() {
   const card = $("#lab-card");
   if (!card) return;
   if (!LABD) { loadLab().then(() => { if (screen === "tools") labRedraw(); }); return; }
+  const lc = $(".lab-chart", card);
+  if (drawSoon(lc)) lc.querySelectorAll("svg").forEach((svg) => drawIn(svg, { w: svg.viewBox.baseVal.width, sel: "path", px: svg.clientWidth }));
   card.querySelectorAll("[data-lab-preset]").forEach((b) => b.addEventListener("click", () => {
     LAB.w = { ...LAB_PRESETS.find(([k]) => k === b.dataset.labPreset)[2] }; LAB.list = Object.keys(LAB.w); saveLab(); labRedraw();
   }));
