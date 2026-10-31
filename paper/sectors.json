@@ -496,6 +496,10 @@
 "바이오·헬스",
 "Biotechnology"
 ],
+"069620": [
+"바이오·헬스",
+"Drug Manufacturers - Specialty & Generic"
+],
 "069960": [
 "소비재·유통",
 "Department Stores"
@@ -704,6 +708,10 @@
 "건설·부동산",
 "Engineering & Construction"
 ],
+"298020": [
+"지주·기타",
+"Textile Manufacturing"
+],
 "298040": [
 "전력·유틸리티",
 "Electrical Equipment & Parts"
@@ -821,7 +829,7 @@
 "Security & Protection Services"
 ]
 },
-"updated": "2026-10-24T09:18+09:00",
+"updated": "2026-10-31T09:31+09:00",
 "us": {
 "AAPL": [
 "IT·전자",
@@ -954,6 +962,10 @@
 "BMY": [
 "바이오·헬스",
 "Drug Manufacturers - General"
+],
+"BN": [
+"금융",
+"Asset Management"
 ],
 "BNS": [
 "금융",
@@ -1439,6 +1451,10 @@
 "인터넷·게임·SW",
 "Software - Application"
 ],
+"REGN": [
+"바이오·헬스",
+"Biotechnology"
+],
 "RIO": [
 "화학·소재",
 "Other Industrial Metals & Mining"
@@ -1602,6 +1618,10 @@
 "UNP": [
 "운송",
 "Railroads"
+],
+"UPS": [
+"운송",
+"Integrated Freight & Logistics"
 ],
 "USB": [
 "금융",
