@@ -1,31 +1,31 @@
 {
- "checked": "2026-10-25T10:28+09:00",
+ "checked": "2026-11-01T10:55+09:00",
  "ok": false,
  "workflows": [
   {
    "workflow": "daily",
    "label": "매일 시세·오늘의 리포트",
-   "success": 0,
+   "success": 10,
    "failure": 0,
-   "expected": 1,
+   "expected": 10,
    "github_skipped": 0,
-   "ok": false,
+   "ok": true,
    "last_failure": null
   },
   {
    "workflow": "telegram-bot",
    "label": "텔레그램 봇",
-   "success": 308,
-   "failure": 1,
+   "success": 89,
+   "failure": 0,
    "expected": null,
    "github_skipped": 0,
-   "ok": false,
-   "last_failure": "2026-10-25T01:11:12Z"
+   "ok": true,
+   "last_failure": null
   },
   {
    "workflow": "pages",
    "label": "대시보드 배포",
-   "success": 66,
+   "success": 53,
    "failure": 0,
    "expected": null,
    "github_skipped": 0,
@@ -45,9 +45,9 @@
   {
    "workflow": "weekly",
    "label": "주간 리포트",
-   "success": 0,
+   "success": 1,
    "failure": 0,
-   "expected": null,
+   "expected": 1,
    "github_skipped": 0,
    "ok": true,
    "last_failure": null
@@ -65,7 +65,7 @@
   {
    "workflow": "world",
    "label": "세계 지수·환율",
-   "success": 17,
+   "success": 10,
    "failure": 0,
    "expected": 5,
    "github_skipped": 0,
@@ -85,7 +85,7 @@
   {
    "workflow": "disclosures",
    "label": "공시 알림",
-   "success": 60,
+   "success": 25,
    "failure": 0,
    "expected": null,
    "github_skipped": 0,
@@ -95,12 +95,12 @@
   {
    "workflow": "news",
    "label": "장중 뉴스",
-   "success": 39,
-   "failure": 0,
+   "success": 79,
+   "failure": 1,
    "expected": null,
    "github_skipped": 0,
-   "ok": true,
-   "last_failure": null
+   "ok": false,
+   "last_failure": "2026-10-26T11:20:07Z"
   }
  ]
 }
