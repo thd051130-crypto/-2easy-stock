@@ -1,12 +1,12 @@
 {
- "day": "2026-10-31",
+ "day": "2026-11-01",
  "items": {
   "us-fed": [
    {
-    "title": "美 연준, 기준금리 3.75~4.00% 동결…추가 인상 속도 조절",
-    "source": "중앙일보",
+    "title": "엘 에리언 \"연준, 금리 동결 전망…워시, 매파적 발언 예상\"",
+    "source": "연합인포맥스",
     "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBHZEtyVWU0anhfTG1kWmZsbG5FUC1abVlsek1zMlRGMHRRbDJWTjVsc2t4SEt1a1YwazNleHh1MS1xU1RmdXExSzZaU2xvSDU2dm8tUk1R?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9kbFFEVUhrY2V6ZVZWdjBjTEFWa0pkZWE5T3drU0x0Q2hwNWdqYkFGVXhpSzlXY1FvQTNlSW42Z29hVU5VUldLMjRrVVUxWkN6MjJ3TFprdUZTVnI4TS1NMTJOa09oX2hCYlA2TWd1TkbSAXRBVV95cUxOWU04UEt6STdMMDBibkw1ZmhxQUJZTnhkUzJ4Q1YtR0hTckh2Zk1JQk9pbmVBb1pEMFlzT0JGd2psQi0wWkJ1WE84MTlSb3RLMGhIU0hlWjAweG52N1hEeTl1TmNXMTVtNnpndmVLMmVJLXhLcA?oc=5"
    },
    {
     "title": "Fed to hit pause on rate hikes, but maybe not for long",
@@ -17,16 +17,16 @@
   ],
   "kr-rate": [
    {
-    "title": "한국은행, 기준금리 3% 유지…물가 불안에 인상 여지 남겨둬",
-    "source": "농민신문",
-    "date": "2026-10-24",
-    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE5vNW9lZnltS3lNdjdUYXpQQktYbGszajV0R0hnU0NTdEo0eFA4UnFfeS1ISXVteFY2Q2NRQ3dRNlRxUUpnSWFUa19sdUpFRmZBd0NkX0VjbDc3dw?oc=5"
-   },
-   {
     "title": "Market Comment : 백투백 인상 후 숨고르기, 11월 기준금리 인상 재개 전망 | KB의 생각",
     "source": "KB Think",
     "date": "2026-10-25",
     "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE5MSU5oTW5wOU9zMDlLcXJoSUV1Y1RxZEM3MTdWT1lHczNwQzBhNUpSSkdjMWlNVTJYOHp6clFCaDlqZHR1ZmZpQkNhbnlXd213YlBSZFpJdXNPZ01xWGtqY0hmVQ?oc=5"
+   },
+   {
+    "title": "[경제 오딧세이]한국은행, 기준금리 동결...11월의 선택은?",
+    "source": "BBS",
+    "date": "2026-10-28",
+    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBUMmY1NERtZnRUdmVvZjVrZFJsT0lSZlVUX2hhZUVPUmRzbFpLclhNU1ljNjlIR2RYYnNYb0xydzBzVXN6dHdZWXRsb0JITWZRbTlJbER2UUZlN3RJMUpaTFJJaHFjYmNEVlpV?oc=5"
    }
   ],
   "kr-us-deal": [
@@ -96,7 +96,7 @@
     "title": "자사주 소각 대신 '현물배당' 택한 CJ대한통운, 주주에 114만 주 쏜다",
     "source": "팝콘뉴스",
     "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5pV2F2RjhZTy1tNDBYdkpnbmFKRFlib0FoRExZZGNkdWZ2VnptLUxJbEZ0eTVTcnJhUHFaRU5PT3RBYXNVMDVIUHRsbDkwc1Y5M2RrZU9zNUZaS0kzaDRIWUNVNHQwQzFidzVBSEQtc0J6UdIBckFVX3lxTE5pV2F2RjhZTy1tNDBYdkpnbmFKRFlib0FoRExZZGNkdWZ2VnptLUxJbEZ0eTVTcnJhUHFaRU5PT3RBYXNVMDVIUHRsbDkwc1Y5M2RrZU9zNUZaS0kzaDRIWUNVNHQwQzFidzVBSEQtc0J6UQ?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTFA5TWhwZXZHeFM0azJWYzNfaFVYT3Ffa1owaC1SeEhHdUtwSnhFbmZ3bkNTSDNaaWFia3o1Q29ZbjJmajJoYVlaNVR4TFR4QzBTSS1fdEFtZFBlLVZQNTNZeVZKbFQyVzR6YVR4SFpB0gFyQVVfeXFMTmlXYXZGOFlPLW00MFh2SmduYUpEWWJvQWhETFlkY2R1ZnZWem0tTElsRnR5NVNycmFQcVpFTk9PdEFhc1UwNUhQdGxsOTBzVjkzZGtlT3M1RlpLSTNoNEhZQ1U0dDBDMWJ3NUFIRC1zQnpR?oc=5"
    }
   ],
   "us-chip-tariff": [
