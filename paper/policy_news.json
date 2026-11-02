@@ -1,12 +1,12 @@
 {
- "day": "2026-11-01",
+ "day": "2026-11-02",
  "items": {
   "us-fed": [
    {
-    "title": "엘 에리언 \"연준, 금리 동결 전망…워시, 매파적 발언 예상\"",
-    "source": "연합인포맥스",
+    "title": "美 연준, 기준금리 3.75~4.00% 동결…추가 인상 속도 조절",
+    "source": "중앙일보",
     "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9kbFFEVUhrY2V6ZVZWdjBjTEFWa0pkZWE5T3drU0x0Q2hwNWdqYkFGVXhpSzlXY1FvQTNlSW42Z29hVU5VUldLMjRrVVUxWkN6MjJ3TFprdUZTVnI4TS1NMTJOa09oX2hCYlA2TWd1TkbSAXRBVV95cUxOWU04UEt6STdMMDBibkw1ZmhxQUJZTnhkUzJ4Q1YtR0hTckh2Zk1JQk9pbmVBb1pEMFlzT0JGd2psQi0wWkJ1WE84MTlSb3RLMGhIU0hlWjAweG52N1hEeTl1TmNXMTVtNnpndmVLMmVJLXhLcA?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBHZEtyVWU0anhfTG1kWmZsbG5FUC1abVlsek1zMlRGMHRRbDJWTjVsc2t4SEt1a1YwazNleHh1MS1xU1RmdXExSzZaU2xvSDU2dm8tUk1R?oc=5"
    },
    {
     "title": "Fed to hit pause on rate hikes, but maybe not for long",
@@ -17,30 +17,30 @@
   ],
   "kr-rate": [
    {
-    "title": "Market Comment : 백투백 인상 후 숨고르기, 11월 기준금리 인상 재개 전망 | KB의 생각",
-    "source": "KB Think",
-    "date": "2026-10-25",
-    "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE5MSU5oTW5wOU9zMDlLcXJoSUV1Y1RxZEM3MTdWT1lHczNwQzBhNUpSSkdjMWlNVTJYOHp6clFCaDlqZHR1ZmZpQkNhbnlXd213YlBSZFpJdXNPZ01xWGtqY0hmVQ?oc=5"
-   },
-   {
     "title": "[경제 오딧세이]한국은행, 기준금리 동결...11월의 선택은?",
-    "source": "BBS",
+    "source": "BBS불교방송",
     "date": "2026-10-28",
     "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBUMmY1NERtZnRUdmVvZjVrZFJsT0lSZlVUX2hhZUVPUmRzbFpLclhNU1ljNjlIR2RYYnNYb0xydzBzVXN6dHdZWXRsb0JITWZRbTlJbER2UUZlN3RJMUpaTFJJaHFjYmNEVlpV?oc=5"
+   },
+   {
+    "title": "[시사플랫폼] “한국은행, 금리를 어느 정도 속도로 올릴 지 고민할 것”",
+    "source": "KBS 뉴스",
+    "date": "2026-10-27",
+    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE95SXY0LUIweGt1TUVlUTBZRFV0TVAxNGNPZzhLWml6RHd5NjZLMUJtbDR6MFlJaDl3UFdCYUNnZGlsbHJ5QjRCdmV0SkZBZ3ZkSFlNYk1kMzdXb1U?oc=5"
    }
   ],
   "kr-us-deal": [
+   {
+    "title": "한화, 美 해군 함정 건조 사업 첫 수주…‘마스가’ 본격화",
+    "source": "시사저널",
+    "date": "2026-11-02",
+    "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTE90SkZfU2Q3Wi1wcWoyaHBJZllBbmF0ejhlMTM5eGItQUtuVkE2SGJIVk05RlZfRldkTFhBQUFWbGxWM0x2OVRKajRqRE5jV05GMFRNNnpWTlhlNmt0ZHpZaklwcUJOUzdTWkZrVm8yVdIBc0FVX3lxTE9wZlRzNVJpOW51Mk9XYmJmd1FsdUpjb0FRRENkWHp3bDFzbHVjWHRMRzFwd3NQcjd5aDJTQm10YkNRZjg2RjZfell1amVjYnQyMW92eHJtT0JhUmhpZlIzRWVTOVNDb2FVUlJ2ZmdraUNJVmM?oc=5"
+   },
    {
     "title": "AI는 동맹으로, 조선은 현지로…2026 재계의 두 갈래 승부수",
     "source": "피플투데이",
     "date": "2026-10-26",
     "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTE8ySnByM3RUVG5xSmRrQkRJQzRzUVhrMGJuVU1JOXNzRnNEUVktaktpa1AyVzZJNWh1N1cwUVZmckYyZWtwWWZBNVRsaXpEdVU0RFliM1JiQWRjb1FyblhQYzFKdF9jTVMzMHhTWlpFWQ?oc=5"
-   },
-   {
-    "title": "현대차, 투자 1.8조 축소하고 판매 목표 16만대 줄여",
-    "source": "조선일보",
-    "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMif0FVX3lxTFB0bTctbTJNWG5JMV9CVjNWeHd0Z1VtMTktNXlLNGRYOE1vdmM0MTFWM2hOVW1HYWcwNnJiUFA4TElieUlXNmlUenNQLTh6anYwa1E2UXAwM3Z5UE5YY25HWlJrb1Ywd2hnVTd1dkpJTjBhSXFTZi1Ld1pUWGJ3ZTA?oc=5"
    }
   ],
   "world-oil": [
@@ -79,10 +79,10 @@
     "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFBCOVVDb0EwNk9EOFRiTml2QXlkOTZtQ3EwSktFam9zcmZNcXpjMG1vNGROWDZpckRCX00taGlsVlBJai1EeVVvaVNLbWswSHpYN2I4N3k0TTZiUQ?oc=5"
    },
    {
-    "title": "구미시, 방산·AI 국비 확보 총력…2027년 예산 반영 요청",
-    "source": "경북일보",
-    "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTFBDd2ZOSjg5aEN0Y1V3d0h2R0tlWWJRZV9pclFaNUE2aEZEeklsdjlmaWFxUGg4emh2Vi1KNk1feHY0Z2szQXhidmdaY2Q2SHVPZU95YlBreWItbHphWmp2OFkxZERrM2YwSDBwTFVkdw?oc=5"
+    "title": "[속보] 李대통령, 2일 국회서 2027년도 예산안 시정연설",
+    "source": "KBC광주방송",
+    "date": "2026-11-01",
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE1PU3dLMnVZUWlUSU9URWc0NFFGdXFFNTVGVVdBZWdXOFgtXzR4Y3huWUN4RE5ZQlNDOWN1Y28tSXZzQ285dEhjdHpQUGJKVElBOXFsT3RvZW02ZVBiM3dRVQ?oc=5"
    }
   ],
   "kr-buyback": [
@@ -93,10 +93,10 @@
     "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE44OFFhcnItUDdlNUhvUWNSaXA4eC1vcUhKOFh1MVJwUUFpdDA2ZGEtbHlFbXQ2Z0xiMDFTS1k2RDh5TC0tRzlVb01jYUhKX2pNLS01TTRRVnNsVHd3OTc0?oc=5"
    },
    {
-    "title": "자사주 소각 대신 '현물배당' 택한 CJ대한통운, 주주에 114만 주 쏜다",
-    "source": "팝콘뉴스",
+    "title": "내년 자사주 소각 수혜株…미래에셋·HD현대·포스코 '주목'",
+    "source": "뉴스핌",
     "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTFA5TWhwZXZHeFM0azJWYzNfaFVYT3Ffa1owaC1SeEhHdUtwSnhFbmZ3bkNTSDNaaWFia3o1Q29ZbjJmajJoYVlaNVR4TFR4QzBTSS1fdEFtZFBlLVZQNTNZeVZKbFQyVzR6YVR4SFpB0gFyQVVfeXFMTmlXYXZGOFlPLW00MFh2SmduYUpEWWJvQWhETFlkY2R1ZnZWem0tTElsRnR5NVNycmFQcVpFTk9PdEFhc1UwNUhQdGxsOTBzVjkzZGtlT3M1RlpLSTNoNEhZQ1U0dDBDMWJ3NUFIRC1zQnpR?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTFBkY0JrY3IzQmRwRlpta2pva3lHVTRTZUJUWHUxNExlZzYzZFpYZXBneEY3aVB0QWdYQzhnVTZlRXRWc0Ixek9CTy1rTlV3dDRoRFRfY3BWV1FRMVJJ?oc=5"
    }
   ],
   "us-chip-tariff": [
@@ -107,18 +107,18 @@
     "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE9NT3VfWnhGNWxXMWI4eFB3ZVllYnI0elJSOVozVWFOUHlMTW03d1NoSktzakNLaVZZQzIyV0lBTnFFc0ZRS2phWVNWbEtLY3V2MTF6OQ?oc=5"
    },
    {
-    "title": "Supreme Court Strikes Down IEEPA Tariffs | Semiconductor Impact",
-    "source": "TechInsights",
-    "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMimwFBVV95cUxQc1c4TWU1ZFpCaVpuZlAwckZ6T0p0dk0zZTBWR0RfWDVWbFhCdmRGR1RQRG9EeFFGallwcERWUmpLaWUwaENIT1d3T3Zsd2RYRy0zd0FELW5aVHZMUHZpU1pOQUxmMVVUTlN1a1piRjlVQ29ZbFZVMWxxYl9lUk1JVzBfTl9lUFZjYU5HTGlGQjBjUkV3UXFqTE1pNA?oc=5"
+    "title": "Understanding Trump's tariff reversals",
+    "source": "Peterson Institute for International Economics",
+    "date": "2026-10-27",
+    "link": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPVHQ5ZHJrMHNTSU14WVQ1UTB2LW82d2JHQlRibVV3U2VmTWpGZW9LcmFxaVdYalhuVWRUT040SzgxYjFmRHhyd1NfNDd1VGtRZWZvSTdGNXktY3Y2U3U5VHRPd0YxX0R6TzVRY3JVZVlsSjItdDNZbW5HWHhtRFJlM0xoZ2ZZVk01VjNSM3h3ZVM1dw?oc=5"
    }
   ],
   "us-301": [
    {
-    "title": "Korean Customs Newsletter (10월호, 2026)",
-    "source": "Deloitte",
-    "date": "2026-10-30",
-    "link": "https://news.google.com/rss/articles/CBMikAFBVV95cUxQR09RcGs4QU1PZUxhaGV0ZDk1dWZkNENwTGw5YThQUFg0S2wzQ1V4cFdHV0pkbXpVQUpZVzFibEdGcHhpLWJ1cW8tOEhFZGk3ZmNjYmFSY2NwbW5yMFE4OHBBVHp0SjhFRVhkajZ6ZjdEb1k2Y19VclFBU0hlMXVUeDRmZ2FObmdTY2NpSVFnM1c?oc=5"
+    "title": "[동맹의 청구서 ②] 아직 패 다 안 꺼낸 美…다음 카드는?",
+    "source": "MTN 머니투데이방송",
+    "date": "2026-11-02",
+    "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE80ajJFR1lUaDJ1RWhSM0o0bkRjRDRVdHFpblBkQTBPdnJ4NHJaOE5nOTJVQUV1Mm9IRm1hZXJrMEpFM3NXT3R2Wk1ReE85Uml1OHB2cldjR3ZzQ3hUNU5J?oc=5"
    },
    {
     "title": "Can the courts end Trump's illegal tariffs?",
@@ -138,7 +138,7 @@
     "title": "Drug Pricing in Germany in the Crosshairs of the United States",
     "source": "Stiftung Wissenschaft und Politik (SWP)",
     "date": "2026-10-30",
-    "link": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQWkR3RUdjbDlRREJldEstTzZlTHloeXZDMXg0ZUFxLVVMbGx4YlZnb1EyMHc5ZlNZSFEtNVJVT1NDSU9LRERHUHRrSDRnU1A0MEJySFRBZWRtb0U1Sk9QQmxyQm9kSnQwb1FuMVpSYVh0ZExoYWVGb3pXbEh0VDNLcmFDSW51MWJPSGJ4c25sZzRRX18tVnJjSHZNYWdNbjJWSjlkNG9RQQ?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiowFBVV95cUxNbHh5S0x5Vm9OY1ZEYS0zcmFsSzBOamlpOFNIdnAwbE9POTdnaklzc2ktbjQ3dlRUbkZHak9FXzc2NFFIWFd6R1J5TW9XT1RlZ2pGaTA0N0xmbVFUQzBiZTRIRGFPOTdWZWlsYWJ3SkpWWkpXLWhTanFxZ0VSdFVvSUpkUjN0bmx1ZWNzX1ZZU3E4S0RlSThEUXJMTWM4YlV6aDhV?oc=5"
    }
   ],
   "kr-dividend-tax": [
@@ -161,6 +161,12 @@
     "source": "문화일보",
     "date": "2026-10-28",
     "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE5pRUN0SDVYQkhSbmhMcy1wY0oyTGxZQ2t2bFpHSDJ6V0JaRWR4dUYydTdoWW5jR3VrUXhQOUJRdjIwN1gtMXNWMHdGeVNIM3ZL?oc=5"
+   },
+   {
+    "title": "'40조' 역대 최대 R&D 예산안 써낸 정부…최상위 AI·7대 SEED 심사받는다 - 머니투데이",
+    "source": "머니투데이",
+    "date": "2026-11-01",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE5GRDJFRGNvQVJmdHAzam5YTTNyMmRYNFpFbWpHRnhwS1FhdEtCYWZ5Ri1CejZPdUFJVGFEVUVhdGpHN283YW10Y0FuMXZtcE5wT29RR0NNbFFqUzZEVUlFaHdneFlrUlowaWM5M9IBbEFVX3lxTE5GRDJFRGNvQVJmdHAzam5YTTNyMmRYNFpFbWpHRnhwS1FhdEtCYWZ5Ri1CejZPdUFJVGFEVUVhdGpHN283YW10Y0FuMXZtcE5wT29RR0NNbFFqUzZEVUlFaHdneFlrUlowaWM5Mw?oc=5"
    }
   ],
   "world-boj": [
@@ -173,7 +179,7 @@
    {
     "title": "BOJ declares victory in hitting price target, signals near-term hikes",
     "source": "Reuters",
-    "date": "2026-10-29",
+    "date": "2026-10-30",
     "link": "https://news.google.com/rss/articles/CBMingFBVV95cUxQU2NkbUJhYUg5ekRVRnhPRTNXcTRRekd0RU92a1RJcWhMSDNNZUVMcEJueEl6UWlaaTBYd1VrVmlPVlJrNkNHRXZZRkhDM1NtTFM1Z1E1QUF0b2VZR1N0QTFfYi1XNkNDZDB0b3lLN3hYeUZuWWszcURrbVBNcWlzYmNTeGRTazEzNUtJNnFZR1M3UTdTRExvMi1vWVZ5dw?oc=5"
    }
   ]
