@@ -1,46 +1,46 @@
 {
- "day": "2026-11-04",
+ "day": "2026-11-05",
  "items": {
   "us-fed": [
    {
-    "title": "美 연준, 기준금리 3.75~4.00% 동결…추가 인상 속도 조절",
-    "source": "중앙일보",
-    "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBHZEtyVWU0anhfTG1kWmZsbG5FUC1abVlsek1zMlRGMHRRbDJWTjVsc2t4SEt1a1YwazNleHh1MS1xU1RmdXExSzZaU2xvSDU2dm8tUk1R?oc=5"
+    "title": "\"연준, 기준금리 내년말 6.75%까지 인상해야 물가 목표 달성\"",
+    "source": "연합인포맥스",
+    "date": "2026-11-03",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBVdlJrX2JjU2huNTcxRWcxZUk3eVNsSVpFQzdsOTk3MDR2cWgyM1V3a0dGV21PLU1LQjdESkpQR2tuc2czSkZWRGswbkIzQ2RndC1JSzlIYUxwMjBkRVl2VzJZYXFFZmZKajRfOEpINnM?oc=5"
    },
    {
-    "title": "Federal Funds Rate History 1990 to 2026",
-    "source": "Forbes",
-    "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTFBsNEtLYjBNb05hZjBmRkV5NDctYTNrTTF1a0FwQzlpdG42Y3ROZmNVdmROTHRMbTBobHFhTnBzUVVDZEwxdGk5cm9HRWlWMTBCYk5EM0doODFNNnFPb0JfRDR1VVFwSzlsYnV0MUVfeldlTGpw?oc=5"
+    "title": "Fed officials make case for rate hikes amid ongoing inflation concerns",
+    "source": "Reuters",
+    "date": "2026-10-30",
+    "link": "https://news.google.com/rss/articles/CBMikAFBVV95cUxObTlSSnpPaC0yUGM0aTNCb3h0cUVRejBTRjg0SXVnT0MwSXNMSzBVS1NFSEpUaGxtOUpzSkZmQlRKWjFWQ2UtNEp2RUgzcWwyMEN3clpKaU1acDlRUGFhS21BTEpWQjdSVURWZjRJd19Tc19pbVVHeWYwUEZLdUlka0x6M1p5WDRMVkVjRmlLTWU?oc=5"
    }
   ],
   "kr-rate": [
    {
-    "title": "[경제 오딧세이]한국은행, 기준금리 동결...11월의 선택은?",
-    "source": "BBS불교방송",
-    "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBUMmY1NERtZnRUdmVvZjVrZFJsT0lSZlVUX2hhZUVPUmRzbFpLclhNU1ljNjlIR2RYYnNYb0xydzBzVXN6dHdZWXRsb0JITWZRbTlJbER2UUZlN3RJMUpaTFJJaHFjYmNEVlpV?oc=5"
+    "title": "내년 첫 기준금리 결정은 1월 14일…미·일 보다 먼저 새해 첫 판단",
+    "source": "이데일리",
+    "date": "2026-10-29",
+    "link": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQYnF0Tk1Nd3FCcXZkSnNBa3IzNUtHM09NengwbW5uY3dGbHo5ODRtdUVGUkh0V1BuU1dMZ3QxcDM0MnV1QXBrTl9WaGpBYmRzeG51RmZZZ3dRZ2hCUzU5RTVRVW91SEVkV21YYWZacmNXcndRUjR0ekMzQXBBRHFKSA?oc=5"
    },
    {
-    "title": "美 금리 동결에도 한은 또 '호미' 꺼내나…11월 인상에 무게",
-    "source": "연합뉴스",
-    "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE1XMng5azhmRGQzVk9ndzZYaVB3cU1RZTFLbW5ZRWRpbm1HTGlnM2FHZGV3UzNxUmtpdm9lcDJqRUtjRDdydG15clZEQ01yZG5WZ0tNZWlJLU9vZknSAWBBVV95cUxQbXk5VEhReU9YdDZGM2Y1TUdoZEswZWlrV2k0R2luc20yTG4yMml0OW1RWDd0a1N3dmo0TzBybjVXdDhJcks5MmVfLUlPVUtWbFV1VmxyOTB4TWNlQjE5anQ?oc=5"
+    "title": "[속보] 일본은행, 기준금리 동결…연 1.25% 유지",
+    "source": "한국경제",
+    "date": "2026-10-30",
+    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFB3eUdFUDhiRGlvMGJPNGxVeFVDUzgwVXFNT3ZvWTJfMlE3OFJIekt2dkdDYWVWdm85R2lfSlhUaGo0T1hzcHVYZHV3elpIbzJ1bXhxQUU2RkJQUQ?oc=5"
    }
   ],
   "kr-us-deal": [
    {
-    "title": "한화, 美 해군 함정 건조 사업 첫 수주…‘마스가’ 본격화",
-    "source": "시사저널",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTE90SkZfU2Q3Wi1wcWoyaHBJZllBbmF0ejhlMTM5eGItQUtuVkE2SGJIVk05RlZfRldkTFhBQUFWbGxWM0x2OVRKajRqRE5jV05GMFRNNnpWTlhlNmt0ZHpZaklwcUJOUzdTWkZrVm8yVdIBc0FVX3lxTE9wZlRzNVJpOW51Mk9XYmJmd1FsdUpjb0FRRENkWHp3bDFzbHVjWHRMRzFwd3NQcjd5aDJTQm10YkNRZjg2RjZfell1amVjYnQyMW92eHJtT0JhUmhpZlIzRWVTOVNDb2FVUlJ2ZmdraUNJVmM?oc=5"
+    "title": "트럼프, 선거 뺨맞고 한국에 화풀이?…“대미투자 압박 세질듯”",
+    "source": "중앙일보",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE1fOV8tODdmWTNveVRFSktrdkJYemlWTmZmb2ZBV0tsV0h6ZW5NanZMMDBKaG9wbEs4ZU5XemRvaXFIbWxRSmt4UXQ1UVp1cXBYWDM2bWR3?oc=5"
    },
    {
-    "title": "K-조선, 美 군함 첫 수주…마스가 성과 본격화 [비즈360]",
-    "source": "헤럴드경제",
-    "date": "2026-11-01",
-    "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE84OXM3R3RTMVM1MXVkU1NYQmdDa1ZDaHNpOHdRRng4R3VmYWFKdDRFbWdBVFk4eTUtQVM5MzZOTlVMMGhJTF9oMVN4ZGtCUVhRTVNUVXZ3?oc=5"
+    "title": "미 민주 의회 장악...대미 투자 바뀌나",
+    "source": "중소기업신문",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Ka0s0Znc2Z01KdTNIbGRwZEgyYTRMUEN6bnFaWXFLZnFCamF3dWxjNjhBYzNSUkQycnNiWTdqb1FjcENlX1lObjBRMm0yTC13Nk9nSDljc1NqMC1fMmR0aUJjSnRwWDVSckE5dg?oc=5"
    }
   ],
   "world-oil": [
@@ -73,16 +73,16 @@
   ],
   "kr-budget-ai": [
    {
+    "title": "이 대통령 \"2027년 예산안은 성장확산 예산…'모두의 성장' 대전환\"",
+    "source": "대한민국 정책브리핑",
+    "date": "2026-11-02",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE9JbzEyZ1VJSXA2VDRsX3RiRUx2Vi1VTXl2cm9YbVBIQmNfWm9RNVQtcldKR2hZWXpIN1dSRV85ZFl3UjRtOUdiQ0lKdFhkdklEdVVtS3R1YjViY3dJUzdDNkwwUlNhMG9MbjRwcA?oc=5"
+   },
+   {
     "title": "정부, 2027년 예산안 820조 9천억 원 편성…AI·반도체에 21조 3천억 원 투입",
     "source": "산업일보",
     "date": "2026-11-02",
     "link": "https://news.google.com/rss/articles/CBMiREFVX3lxTE5MSkc2Ml91TTdkZzd0MVhQa2RJU2VDc202Z2tMNFVrNmw2a0ctcWRIaEJUMkxMQmFBQlFQbDRxdE5DaEMx?oc=5"
-   },
-   {
-    "title": "이재명 대통령 \"2027년 예산은 성장확산 예산\"…820조 시대, AI·반도체·지방에 투자 집중",
-    "source": "https://www.thedailyeconomy.kr/",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE1fZWQ0bG1DVXU0aU5wcHRZdHhjdjh1bkc5U0VxVWtSQXhidl9JbGxWR3p1S3RqZVVfd3hyNUt4U2oyZThkRFZDT3lTZTNpUnNSVnFUS0dvS0F0bFBZUGpjY21Ebm85bUJ1d3NoRWt3SWE?oc=5"
    }
   ],
   "kr-buyback": [
@@ -93,10 +93,10 @@
     "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE44OFFhcnItUDdlNUhvUWNSaXA4eC1vcUhKOFh1MVJwUUFpdDA2ZGEtbHlFbXQ2Z0xiMDFTS1k2RDh5TC0tRzlVb01jYUhKX2pNLS01TTRRVnNsVHd3OTc0?oc=5"
    },
    {
-    "title": "에스원 ‘자사주 소각’ 결단이 시사하는 것",
-    "source": "한겨레",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE91c1NBYjBSOU9SSDZYbF9aMDBkUl9tNUI3Zk51Tk4wcGF6V0pDLXhiNDFFa0pCaEk0cVdxT010dkx2SzVRaE5rY1RLWkloZ3hMdlZ4cGpBcVVsREtrNkRWQnZDVFlvazQ?oc=5"
+    "title": "내년 자사주 소각 수혜株…미래에셋·HD현대·포스코 '주목'",
+    "source": "뉴스핌",
+    "date": "2026-10-29",
+    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTFBkY0JrY3IzQmRwRlpta2pva3lHVTRTZUJUWHUxNExlZzYzZFpYZXBneEY3aVB0QWdYQzhnVTZlRXRWc0Ixek9CTy1rTlV3dDRoRFRfY3BWV1FRMVJJ?oc=5"
    }
   ],
   "us-chip-tariff": [
@@ -121,10 +121,10 @@
     "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE80ajJFR1lUaDJ1RWhSM0o0bkRjRDRVdHFpblBkQTBPdnJ4NHJaOE5nOTJVQUV1Mm9IRm1hZXJrMEpFM3NXT3R2Wk1ReE85Uml1OHB2cldjR3ZzQ3hUNU5J?oc=5"
    },
    {
-    "title": "Section 301 Investigations Up as Congress Eyes Trade Authority",
-    "source": "Legis1",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMid0FVX3lxTE5yTW5rZnFES0wyaWhVMk81UjU3VWVDTThHTGhwUGRqUEROb2VZaTkzNnJPbTg1VUxNX3huLTBwZmswY1A4akQ0cV9mdWNpaERlYlZBNjNua05nNlg5dTFueVhzS2twZkktV1RjcHpSR3ZseUhHR29J?oc=5"
+    "title": "U.S. Section 301 Forced Labour Findings: Implications for Canadian Trade and the Emerging Legislative Response",
+    "source": "Blake, Cassels & Graydon LLP",
+    "date": "2026-10-30",
+    "link": "https://news.google.com/rss/articles/CBMiywFBVV95cUxNSktFY1BiSDNFUjN4cGF6dF9NZHVCLWIxVHhQblRkX05vN0s0Zm5QNFRFY2FHbGJBSkYtMnk1SzhUUk5XaTJNZzY0TURjRUJpbVozQmstbjR6UFpvOFMxT1BCUkpNcEg3UU1yTmEtVWdTeGE0V2pfNTlfNlJ0MGFKSjZPT1ZvcldTTnRrcGVMajZTSE9KT1VXSDAtOWdsM3huY1o0eUIwSUFLaS10cDlpcnIyUEgzYmVNaVRBTlBaSU92MGdwYkQtZU9SWQ?oc=5"
    }
   ],
   "us-pharma": [
@@ -157,16 +157,16 @@
   ],
   "kr-budget-future": [
    {
-    "title": "다음 타자는 ‘SMR·양자칩’… 첨단과학 미래씨앗 뿌린다[창간 35주년 특집]",
-    "source": "문화일보",
-    "date": "2026-10-28",
-    "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE5pRUN0SDVYQkhSbmhMcy1wY0oyTGxZQ2t2bFpHSDJ6V0JaRWR4dUYydTdoWW5jR3VrUXhQOUJRdjIwN1gtMXNWMHdGeVNIM3ZL?oc=5"
+    "title": "\"AI·지방·청년에 쏟아 붓는다\"… 李 \"역대 최대 820조 '대전환 예산' \"",
+    "source": "그린포스트코리아",
+    "date": "2026-11-02",
+    "link": "https://news.google.com/rss/articles/CBMidkFVX3lxTE9jUTE4NmJuVzl3akp4RDcya3NVY1ZJbGY5Y0o4SUhFOHVmM00zUVBMNEVyelduWVJvaThxWGhJRnZLUzNNWXFqczhvMGZDaGw3Uk9Sa2lVUWYwVGpxYmlCVHZzUzBQbDFwZUMyZFBzeGdiSnVIOGfSAXpBVV95cUxQZ3lUejRxTU9IWmVNYjdXaXdMcW05NElUbS1IMl8zUzU1NDl0RFVyeTRXbmlSb2JiTzVaYXo3bExlM2taNWNOa294alA4dDhXUUdpLXR2aHVvbnFDLXJudDZoRlhBN0VmZ093ZWxfVjRXSURwTGpQb2hGdw?oc=5"
    },
    {
-    "title": "'40조' 역대 최대 R&D 예산안 써낸 정부…최상위 AI·7대 SEED 심사받는다 - 머니투데이",
+    "title": "李대통령 \"AI에 21.3조 투자\"…국방예산 73.3조·R&D 역대 최대 - 머니투데이",
     "source": "머니투데이",
-    "date": "2026-11-01",
-    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE5GRDJFRGNvQVJmdHAzam5YTTNyMmRYNFpFbWpHRnhwS1FhdEtCYWZ5Ri1CejZPdUFJVGFEVUVhdGpHN283YW10Y0FuMXZtcE5wT29RR0NNbFFqUzZEVUlFaHdneFlrUlowaWM5M9IBbEFVX3lxTE5GRDJFRGNvQVJmdHAzam5YTTNyMmRYNFpFbWpHRnhwS1FhdEtCYWZ5Ri1CejZPdUFJVGFEVUVhdGpHN283YW10Y0FuMXZtcE5wT29RR0NNbFFqUzZEVUlFaHdneFlrUlowaWM5Mw?oc=5"
+    "date": "2026-11-02",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5zUHpUZnI1dFFkdlFiM3ZseTBIQ1ZIa29pY1VIMHVtdVJLcGVRc0k0R2ctV05OSENheXdjYXJJYU9WTldaNEZiaWI4aDJTMkxwUEhpYlNFUC1aUWs3VHM5NzU1OFFVaUV2d0xPMDFwcl92QdIBckFVX3lxTE5zUHpUZnI1dFFkdlFiM3ZseTBIQ1ZIa29pY1VIMHVtdVJLcGVRc0k0R2ctV05OSENheXdjYXJJYU9WTldaNEZiaWI4aDJTMkxwUEhpYlNFUC1aUWs3VHM5NzU1OFFVaUV2d0xPMDFwcl92QQ?oc=5"
    }
   ],
   "world-boj": [
