@@ -4643,7 +4643,10 @@ function worldHomeCard() {
   if (!fixed.length) return "";
   const pickedFixed = worldTop && fixed.find((r) => `t:${r.sym}` === worldTop);
   const up = fixed.filter((r) => r[worldP] > 0).length, down = fixed.filter((r) => r[worldP] < 0).length;
-  return `<section class="card" id="world-card"><h2>한국·미국 지수 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
+  // 장 종료 기준: 나라마다 마지막으로 장이 끝난 날의 종가예요 (장중 값은 안 써요, 사용자 2026-11-06)
+  const closeDay = w.groups.filter((g) => WORLD_FIXED.includes(g.name) && g.items.length)
+    .map((g) => `${esc(g.name)} ${md(g.items[0].day)}`).join(" · ");
+  return `<section class="card" id="world-card"><h2>한국·미국 지수 <small>${closeDay} 종가 기준</small></h2>
     <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
     <div class="wt-grid">${fixed.map((r) => worldTile(r, worldTop)).join("")}</div>${pickedFixed ? worldGraph(pickedFixed, "world-chart-top") : ""}
     <button type="button" class="more" data-go="world">세계 지수·환율 전체 보기<span aria-hidden="true">›</span></button></section>`;
@@ -4674,7 +4677,7 @@ function worldCard() {
     `<button type="button" data-world-p="${k}" aria-pressed="${k === worldP}">${l}</button>`).join("")}</div>`;
   const up = items.filter((r) => r[worldP] > 0).length, down = items.filter((r) => r[worldP] < 0).length;
   return `<section class="card" id="world-card"><button type="button" class="back" data-back>‹ 뒤로</button>
-    <h2 class="stock-name">세계 지수·환율 <small>${md(w.updated)} ${esc(w.updated.slice(11, 16))} 기준</small></h2>
+    <h2 class="stock-name">세계 지수·환율 <small>장 끝난 종가 기준</small></h2>
     <div class="wt-tabs" role="group" aria-label="묶음 고르기">${tabs}</div>
     <div class="wt-bar">${period}<span class="muted">${label} <span class="up">▲${up}</span> <span class="down">▼${down}</span></span></div>
     <div class="wr-list">${items.map(worldRow).join("")}</div>
