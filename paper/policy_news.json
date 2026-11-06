@@ -1,12 +1,12 @@
 {
- "day": "2026-11-05",
+ "day": "2026-11-06",
  "items": {
   "us-fed": [
    {
-    "title": "\"연준, 기준금리 내년말 6.75%까지 인상해야 물가 목표 달성\"",
-    "source": "연합인포맥스",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBVdlJrX2JjU2huNTcxRWcxZUk3eVNsSVpFQzdsOTk3MDR2cWgyM1V3a0dGV21PLU1LQjdESkpQR2tuc2czSkZWRGswbkIzQ2RndC1JSzlIYUxwMjBkRVl2VzJZYXFFZmZKajRfOEpINnM?oc=5"
+    "title": "\"미국도 금리인상 불씨\"…한은 11월 선택은",
+    "source": "엠에스투데이",
+    "date": "2026-10-30",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBDRV9xVUQ3YThPbFFMN3RQRmVRMGhSX3VBYmJGcmNncXY2cnpZeC1Va2N1TExtVjlRYm43aFJvcjhaMFphZVNGRVZWcTByc0xhN0hPempGR1BQZkdJcUZ5QUtfT19EempIaTAwbtIBcEFVX3lxTE1NWUdLRXlGLWN5SHRBSUlhVjJjcFZnQnMzaE05V2lQekF2TTJ5WHNnOGhyX3RmbFppamlaVDZLcmJfcmU5WW5HT1QwSk9GQk9URTVrdjUzelppRENQSGtSNDFfbXllVXVBd3lRS3lRNEY?oc=5"
    },
    {
     "title": "Fed officials make case for rate hikes amid ongoing inflation concerns",
@@ -17,16 +17,16 @@
   ],
   "kr-rate": [
    {
-    "title": "내년 첫 기준금리 결정은 1월 14일…미·일 보다 먼저 새해 첫 판단",
-    "source": "이데일리",
-    "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMigAFBVV95cUxQYnF0Tk1Nd3FCcXZkSnNBa3IzNUtHM09NengwbW5uY3dGbHo5ODRtdUVGUkh0V1BuU1dMZ3QxcDM0MnV1QXBrTl9WaGpBYmRzeG51RmZZZ3dRZ2hCUzU5RTVRVW91SEVkV21YYWZacmNXcndRUjR0ekMzQXBBRHFKSA?oc=5"
-   },
-   {
     "title": "[속보] 일본은행, 기준금리 동결…연 1.25% 유지",
     "source": "한국경제",
     "date": "2026-10-30",
     "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFB3eUdFUDhiRGlvMGJPNGxVeFVDUzgwVXFNT3ZvWTJfMlE3OFJIekt2dkdDYWVWdm85R2lfSlhUaGo0T1hzcHVYZHV3elpIbzJ1bXhxQUU2RkJQUQ?oc=5"
+   },
+   {
+    "title": "물가 2.8%·성장률 1.0%…한국은행, 11월 기준금리 3.25% ↑가능",
+    "source": "OBC 뉴스",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBWaUtucWV5VlUyd1NTWk1JeFpwblhDYjZSSFpQclpuVFpIV2c0ZHBydlcyVHZjVy0zTnU4WkkwakNGTkRhZ0VZaXJLdTJXc2FfazJsdGdMY1B2QWZSR285OXNzTDFmZlZpOFE?oc=5"
    }
   ],
   "kr-us-deal": [
@@ -37,7 +37,7 @@
     "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE1fOV8tODdmWTNveVRFSktrdkJYemlWTmZmb2ZBV0tsV0h6ZW5NanZMMDBKaG9wbEs4ZU5XemRvaXFIbWxRSmt4UXQ1UVp1cXBYWDM2bWR3?oc=5"
    },
    {
-    "title": "미 민주 의회 장악...대미 투자 바뀌나",
+    "title": "美민주 의회 장악…대미 투자 바뀌나",
     "source": "중소기업신문",
     "date": "2026-11-04",
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Ka0s0Znc2Z01KdTNIbGRwZEgyYTRMUEN6bnFaWXFLZnFCamF3dWxjNjhBYzNSUkQycnNiWTdqb1FjcENlX1lObjBRMm0yTC13Nk9nSDljc1NqMC1fMmR0aUJjSnRwWDVSckE5dg?oc=5"
@@ -93,24 +93,24 @@
     "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE44OFFhcnItUDdlNUhvUWNSaXA4eC1vcUhKOFh1MVJwUUFpdDA2ZGEtbHlFbXQ2Z0xiMDFTS1k2RDh5TC0tRzlVb01jYUhKX2pNLS01TTRRVnNsVHd3OTc0?oc=5"
    },
    {
-    "title": "내년 자사주 소각 수혜株…미래에셋·HD현대·포스코 '주목'",
-    "source": "뉴스핌",
-    "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTFBkY0JrY3IzQmRwRlpta2pva3lHVTRTZUJUWHUxNExlZzYzZFpYZXBneEY3aVB0QWdYQzhnVTZlRXRWc0Ixek9CTy1rTlV3dDRoRFRfY3BWV1FRMVJJ?oc=5"
+    "title": "에스원 ‘자사주 소각’ 결단이 시사하는 것 [이나예의 인사이드 ESG]",
+    "source": "한겨레",
+    "date": "2026-11-03",
+    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE91c1NBYjBSOU9SSDZYbF9aMDBkUl9tNUI3Zk51Tk4wcGF6V0pDLXhiNDFFa0pCaEk0cVdxT010dkx2SzVRaE5rY1RLWkloZ3hMdlZ4cGpBcVVsREtrNkRWQnZDVFlvazQ?oc=5"
    }
   ],
   "us-chip-tariff": [
    {
-    "title": "미국 중간선거, 한국의 관세·반도체·안보를 흔들까…3,500억 달러 대미투자 합의의 향방",
-    "source": "시사프리즘",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTFA5Njdnci1iQ01XNDY0cjFMV3cxTGV6Y0ZfbkdPUXcxdWFPYlBkMlVLQ1dibjB2cWUtNjhvbEJpUThPb0NvQXRXNjNuNHFpdTd3dExpNFFWVzlaYlZEZU9Xbm5EeFE2NzhB?oc=5"
+    "title": "미 의회권력 바뀌어도 관세장벽 그대로…K기업, 조선·반도체서 돌파구",
+    "source": "재외동포신문",
+    "date": "2026-11-05",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE56blFXZGc4R2lidnVrM3NPWFNWeFVFVFdDVEJzOEpKeS0zaTQ3VlAzeWF1aFNhdWI2bmZrU0N3NkphV3JkaElIQXFLS3hpQk1pWllvUTF2eG5FOThrVDA0amUwRXRKNHJrbUk5aA?oc=5"
    },
    {
     "title": "Trump opts for trade talks over tariffs for robotics, industrial machinery",
-    "source": "Supply Chain Dive",
-    "date": "2026-10-29",
-    "link": "https://news.google.com/rss/articles/CBMiugFBVV95cUxPaHpUMzRMSUxsTkxuWkl1eWZPVlZURlI2QTVaY2xqZE1yLUp5X2hqZXZnM0VodXIyV3JrOENGUzd3dWRJcmRyX2tiSUxMY3otZmhfaU1ELXMxSDVrQW9DM01Ta0xEODExejVmaFlSWEJDYXh6X2VwZ0JWdWNTWUYxRFdmMlpadU1EQnFCRlMxaDJMTHZlbmUzRUh4QVFGSm50dzJuWTluTXFPNHVaRDhFaFNLWnBhN2RvWWc?oc=5"
+    "source": "WardsAuto",
+    "date": "2026-10-30",
+    "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQcnN4b2VHVi1CeXFsTHBlbjNFYWc2SlgzTmU3cFhYU3ktXzlzMlNvZjJtVVJ6T25NODhSRTNNVmRKU3lIZ3U5S2czNjRKUUp2YjFDaFZ6Z0Iwb1dPLWRBQXJGVlFFYTRGSk5WWVRHNHlYRXJ0ckZtYU1qWHlVNGNZUTZzN0xEYWpNWWMydzB0aThUYW9EbUUzeHRYVlJqSFFMTTMxQ2lUdG9vY0dOYzZCcWZn?oc=5"
    }
   ],
   "us-301": [
@@ -129,10 +129,10 @@
   ],
   "us-pharma": [
    {
-    "title": "美 중간선거 D-2…트럼프 의약품 관세 향방에 국내 업계도 촉각",
-    "source": "동아일보",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMic0FVX3lxTE8zN2xXNTNWRGI2V2ZzYV9uemhySnZrSGpBUS1CUUs5SGxPSnllNkJQdngxdW91NFBUQ05kWjlxZkJjVVBZV3RndUstSEJxTXhsUkVIcVA3M3VxcVZzbGlDN3RCNmIzVjFWc3o2OWhSMk9NVG_SAWZBVV95cUxNb1ZSdkljRFFvRW1MZng4SzBEekNpbHFTZXVVLS01bGZCUmJZTTByelFVcW1aNGNWQmp6V3hsTTBsSldSN3hXaW50UHNRYzd4ZXBmVV9XdFd6UVlvMEoza0FJWXFrQ3c?oc=5"
+    "title": "美 중간선거 민주당 압승…국내 의약품 관세 영향은 제한적",
+    "source": "뉴스1",
+    "date": "2026-11-05",
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5PcUo4emt3SGc5RXpRelJIU3ZvNGZGb1pCSEtabFVvMTg3blBMelNkaE43cHl5ck5uRWpGWDF6emtWR1dxMkNHOC1tcWdLanVOcDBrcUNHd2lzVi1lcENVWg?oc=5"
    },
    {
     "title": "Drug Pricing in Germany in the Crosshairs of the United States",
@@ -149,32 +149,19 @@
     "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE1pbDA0a2NLUHMyaXlEQ0FHUWFWbzBHMmdzc0pEOEY0MlZNaVI0LUlKS0ZFUi1zaWsybTNBMVNUWk5jZlJCZ0p5cU1BMjdvcGlHeThyZWRvb2NiNWlLRE9zU0tjYmYwNWPSAWtBVV95cUxNak1wN1QzNy1ZcnQxOGhUU1UyUXVKMU1PU3lQSlppQy1NNlZVdi1qWnZPMnlGdGppQmZYeVc0V1dqRjFLamlCOTlRVngyWk43VUtMeDBfd0xOWGZtdUpUS0hoZmdYWXVWdXNPOA?oc=5"
    },
    {
-    "title": "“고배당 너머 배당성장 찾는다”…대신증권, 투자전략 웹세미나 개최",
-    "source": "팝콘뉴스",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE42LVVHaS1LbWFPWTl1d285VHNwdFpvRzF3MmpGd2hxbTlLS25VbGdhN3N0SVREa3RiTHAwNTNQbl9Hbm9rTWlyR1M5RTN6UmhJdkJnM1NIczNodjZ0REVXcW5Zb3laODZDdXo3Z09n0gFyQVVfeXFMTlV6eWZuWkZPVmgyQVdpcTFGLU10OEdPOTFDR29CR3hEZUIxZGktWEpua3RhQjh0ZmdBTkdXVUtRZTRTaEZEMXFybHVmQzZlMXMwZ0NSN0F2OVVqb1dCaFhmdDNyQlI0RWhPYTRILWJmcDJn?oc=5"
+    "title": "대신증권, MTS서 배당금·예상 수익 한 눈에 확인",
+    "source": "뉴스핌",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE9RSEo0RmJEV1p1eUJKYURfWGw5NEhoOWhWX2w1S3NDV1ZONGFQNjNMbVRfRml6ZDFjcjE1UkNUUnh2cnJiZ2h4RDBKb2NiWG10dW5yRlBDay1aVUdj?oc=5"
    }
   ],
-  "kr-budget-future": [
-   {
-    "title": "\"AI·지방·청년에 쏟아 붓는다\"… 李 \"역대 최대 820조 '대전환 예산' \"",
-    "source": "그린포스트코리아",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMidkFVX3lxTE9jUTE4NmJuVzl3akp4RDcya3NVY1ZJbGY5Y0o4SUhFOHVmM00zUVBMNEVyelduWVJvaThxWGhJRnZLUzNNWXFqczhvMGZDaGw3Uk9Sa2lVUWYwVGpxYmlCVHZzUzBQbDFwZUMyZFBzeGdiSnVIOGfSAXpBVV95cUxQZ3lUejRxTU9IWmVNYjdXaXdMcW05NElUbS1IMl8zUzU1NDl0RFVyeTRXbmlSb2JiTzVaYXo3bExlM2taNWNOa294alA4dDhXUUdpLXR2aHVvbnFDLXJudDZoRlhBN0VmZ093ZWxfVjRXSURwTGpQb2hGdw?oc=5"
-   },
-   {
-    "title": "李대통령 \"AI에 21.3조 투자\"…국방예산 73.3조·R&D 역대 최대 - 머니투데이",
-    "source": "머니투데이",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5zUHpUZnI1dFFkdlFiM3ZseTBIQ1ZIa29pY1VIMHVtdVJLcGVRc0k0R2ctV05OSENheXdjYXJJYU9WTldaNEZiaWI4aDJTMkxwUEhpYlNFUC1aUWs3VHM5NzU1OFFVaUV2d0xPMDFwcl92QdIBckFVX3lxTE5zUHpUZnI1dFFkdlFiM3ZseTBIQ1ZIa29pY1VIMHVtdVJLcGVRc0k0R2ctV05OSENheXdjYXJJYU9WTldaNEZiaWI4aDJTMkxwUEhpYlNFUC1aUWs3VHM5NzU1OFFVaUV2d0xPMDFwcl92QQ?oc=5"
-   }
-  ],
+  "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "일본은행, 기준금리 1.25% 유지…'물가 목표 2% 달성' 판단",
-    "source": "연합뉴스",
+    "title": "\"물가 목표 2% 도달\"...일본은행, 기준금리 '동결'",
+    "source": "YTN",
     "date": "2026-10-30",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE9WQ0pPazAzVVZVRXJEZWN1c0NfaFhsbWNvMS1KSmk4X0lFQlVwMXZ2eF9SVUZTRExNd0tGVmJydjF2ejlVcWlXVzUwRjRuamZNQzR3T0FrbHlTNFnSAWBBVV95cUxQWnIycFd6ei1RTTZDMGo5US13NzM4TERLS0FfdDRqUm1IMEpGOEVSUDJEVDJrZVFISUZQWWRZRklhV1g4eW1ydDhybWRhRy1QclJNWld3VU9UNmFsNDVseXY?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE1sRndGYkdIVlBxelVyNzhTU01xZkZVZEFzeEYzcGxFVGtNU3B3X2YzUE8zTElIRnJOcVRyaDhxbXFGQ1RrYVVQYWZoRXpOTl85V2VzLXk0b1VsNE0tM0E?oc=5"
    },
    {
     "title": "BOJ declares victory in hitting price target, signals near-term hikes",
