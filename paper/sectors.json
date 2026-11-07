@@ -1,5 +1,9 @@
 {
 "kr": {
+"000080": [
+"소비재·유통",
+"Beverages - Wineries & Distilleries"
+],
 "000100": [
 "바이오·헬스",
 "Drug Manufacturers - Specialty & Generic"
@@ -167,6 +171,10 @@
 "006040": [
 "소비재·유통",
 "Packaged Foods"
+],
+"006120": [
+"에너지·정유",
+"Oil & Gas Refining & Marketing"
 ],
 "006260": [
 "전력·유틸리티",
@@ -829,7 +837,7 @@
 "Security & Protection Services"
 ]
 },
-"updated": "2026-10-31T09:31+09:00",
+"updated": "2026-11-07T12:50+09:00",
 "us": {
 "AAPL": [
 "IT·전자",
@@ -1239,6 +1247,10 @@
 "금융",
 "Banks - Diversified"
 ],
+"KKR": [
+"금융",
+"Asset Management"
+],
 "KLAC": [
 "반도체",
 "Semiconductor Equipment & Materials"
@@ -1286,6 +1298,10 @@
 "MCK": [
 "바이오·헬스",
 "Medical Distribution"
+],
+"MCO": [
+"금융",
+"Financial Data & Stock Exchanges"
 ],
 "MDT": [
 "바이오·헬스",
@@ -1450,6 +1466,10 @@
 "QH": [
 "인터넷·게임·SW",
 "Software - Application"
+],
+"RCL": [
+"소비재·유통",
+"Travel Services"
 ],
 "REGN": [
 "바이오·헬스",
