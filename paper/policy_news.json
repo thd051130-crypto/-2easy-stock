@@ -1,5 +1,5 @@
 {
- "day": "2026-11-07",
+ "day": "2026-11-08",
  "items": {
   "us-fed": [
    {
@@ -87,16 +87,16 @@
   ],
   "kr-buyback": [
    {
-    "title": "에스원 ‘자사주 소각’ 결단이 시사하는 것 [이나예의 인사이드 ESG]",
-    "source": "한겨레",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE91c1NBYjBSOU9SSDZYbF9aMDBkUl9tNUI3Zk51Tk4wcGF6V0pDLXhiNDFFa0pCaEk0cVdxT010dkx2SzVRaE5rY1RLWkloZ3hMdlZ4cGpBcVVsREtrNkRWQnZDVFlvazQ?oc=5"
-   },
-   {
     "title": "'저평가 낙인' 통할까…기업들 자사주 소각하고 구조재편 잰걸음",
     "source": "매일경제 마켓",
     "date": "2026-11-01",
     "link": "https://news.google.com/rss/articles/CBMiUkFVX3lxTFBRUlpKRDVFdEVuX1dMSGtfeGxXT0hqY2dFS1RVZF9hQnJlMDlZQUlTNXhyY3otNXpfbGlaX05rU1NYNGtaOTdsTVdwWXNxUFlsTnc?oc=5"
+   },
+   {
+    "title": "에스원 ‘자사주 소각’ 결단이 시사하는 것 [이나예의 인사이드 ESG]",
+    "source": "한겨레",
+    "date": "2026-11-03",
+    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE91c1NBYjBSOU9SSDZYbF9aMDBkUl9tNUI3Zk51Tk4wcGF6V0pDLXhiNDFFa0pCaEk0cVdxT010dkx2SzVRaE5rY1RLWkloZ3hMdlZ4cGpBcVVsREtrNkRWQnZDVFlvazQ?oc=5"
    }
   ],
   "us-chip-tariff": [
@@ -121,10 +121,10 @@
     "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE80ajJFR1lUaDJ1RWhSM0o0bkRjRDRVdHFpblBkQTBPdnJ4NHJaOE5nOTJVQUV1Mm9IRm1hZXJrMEpFM3NXT3R2Wk1ReE85Uml1OHB2cldjR3ZzQ3hUNU5J?oc=5"
    },
    {
-    "title": "Trump 2.0 tariff tracker",
-    "source": "Trade Compliance Resource Hub",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMihgFBVV95cUxPa2gzSUR0akxHRUtoVmoyMmxEUmpWN1lkTk9vT1FMcVhaQ1BOVDhEMEFLeWtMVWFlSmV0S2x5Sk5xeFVsdmFSMWdWMXpvZWtlanV4T25qamNfV2pianZ4WkIwSmgxd3ZabjFmZGkxUFRXWUI0SjIybGMwdjM5Y2xHSHp2bG1Rdw?oc=5"
+    "title": "After the Midterm Rout, Can Trump Change Course Without Giving Up Tariffs?",
+    "source": "Carnegie Endowment for International Peace",
+    "date": "2026-11-06",
+    "link": "https://news.google.com/rss/articles/CBMiigFBVV95cUxNTTlPWVM2SzF4RmJ1Ry1oX2NOMWc0MGJQREpBLTE5OEZ2RnVDT2JtZFZXR1JYWDRka19hUWkzTWJCR1ZrNVQ3R0RTUEFOcDJVSXJnWE54YjFlOUR6RkVUWTNiYWJweWsxQUI2TmpGWTdFZmtOc1VnVllRdWM1ajlhbjg5UXkxZ3Vid3c?oc=5"
    }
   ],
   "us-pharma": [
@@ -143,25 +143,25 @@
   ],
   "kr-dividend-tax": [
    {
-    "title": "최영우·이민원 SOOP 대표, 고배당기업 요건 맞춘 배당 추진",
-    "source": "CEO저널",
-    "date": "2026-10-31",
-    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE1pbDA0a2NLUHMyaXlEQ0FHUWFWbzBHMmdzc0pEOEY0MlZNaVI0LUlKS0ZFUi1zaWsybTNBMVNUWk5jZlJCZ0p5cU1BMjdvcGlHeThyZWRvb2NiNWlLRE9zU0tjYmYwNWPSAWtBVV95cUxNak1wN1QzNy1ZcnQxOGhUU1UyUXVKMU1PU3lQSlppQy1NNlZVdi1qWnZPMnlGdGppQmZYeVc0V1dqRjFLamlCOTlRVngyWk43VUtMeDBfd0xOWGZtdUpUS0hoZmdYWXVWdXNPOA?oc=5"
-   },
-   {
     "title": "대신증권, MTS서 배당금·예상 수익 한 눈에 확인",
     "source": "뉴스핌",
     "date": "2026-11-04",
     "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE9RSEo0RmJEV1p1eUJKYURfWGw5NEhoOWhWX2w1S3NDV1ZONGFQNjNMbVRfRml6ZDFjcjE1UkNUUnh2cnJiZ2h4RDBKb2NiWG10dW5yRlBDay1aVUdj?oc=5"
+   },
+   {
+    "title": "대신증권, 13일 ‘배당투자 오디세이’ 라이브 세미나 진행",
+    "source": "마켓인",
+    "date": "2026-11-03",
+    "link": "https://news.google.com/rss/articles/CBMic0FVX3lxTE1ETWF6b3dVMERuQVllTWVuVzdUUGlZTU1uY3M0RHE3Nmd4ZjEwWnAwbHV1RzA2VHBhNndoM2V1bUYyRGJjVnJwN3gwaXhxYmFBOUhGQXM2ZDh2SER3Vk1VTHotb1pIVklJVjRlMTRDMlEyVW8?oc=5"
    }
   ],
   "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "13년 만에 '물가 2%' 닿은 일본은행…금리는 1.25% 동결, \"달성 선언은 없다\"",
-    "source": "녹색경제신문",
-    "date": "2026-10-31",
-    "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE00Y2h4bjlpYmFBbld6d2t5QmUyQnRabDdzNkRhMTlrTlpEbkNnM2MxbFlMajZRcTNLYi1DcHJKdDNSTTJpZ05fZkVjX1BNTVRPMzFuaHNHbWtsZm9BdEN4ZUMwVDNNLXky?oc=5"
+    "title": "\"일본은행, 연말 추가 금리인상 전망…엔화 강세는 제한적\"",
+    "source": "뉴스투데이",
+    "date": "2026-11-02",
+    "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9vWkZpa0hmNi1XZ1RFQnpYcTZYU29fSXZ0RUxDNEVZX1JmZldpa3h4eE1DSXdwXzdHUE9ZVjJiOEpmTjh6VFAwWTVyZDRMcEFGRWZiM3JnQ1F6cnBCWUE?oc=5"
    },
    {
     "title": "BOJ locks in December hike, but neutral-rate uncertainty muddies outlook",
