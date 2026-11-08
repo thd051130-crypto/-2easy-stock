@@ -1246,8 +1246,10 @@ a.more { text-decoration: none; }
 .ast-tree .root .t1 { fill: var(--accent-fg); }
 .ast-tree.grow .ast-ln { stroke-dasharray: 1; stroke-dashoffset: 1; animation: ast-draw .45s ease-out forwards; animation-delay: calc(.12s + var(--k) * .4s); }
 .ast-tree.grow .ast-node { opacity: 0; animation: ast-in .3s ease-out forwards; }
-.ast-tree.grow .acct { animation-delay: .4s; }
-.ast-tree.grow .stock { animation-delay: .8s; }
+.ast-tree.grow .brk { animation-delay: .4s; }
+.ast-tree.grow .acct { animation-delay: .8s; }
+.ast-tree.grow .stock { animation-delay: 1.2s; }
+.ast-tree .brk rect { fill: var(--surface-1); stroke: var(--accent); stroke-dasharray: 3 2; }
 @keyframes ast-draw { to { stroke-dashoffset: 0; } }
 @keyframes ast-in { to { opacity: 1; } }
 .ast-clear { margin-top: 14px; padding: 0 12px 0 8px; font-size: 13px; color: var(--text-muted); }
@@ -1304,3 +1306,31 @@ a.more { text-decoration: none; }
 .ast-cash .alert-input input { font-size: 15px; padding: 8px 0; }
 .ast-tree .stock.cash circle { fill: var(--text-muted); }
 .ast-tree .stock.cash .t1 { fill: var(--text-secondary); }
+/* 자산 기록 3단계: 증권사 → 계좌 → 종목 (2026-11-08) */
+.ast-brk { margin-top: 12px; border-left: 3px solid var(--accent); padding-left: 10px; }
+.ast-bh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ast-bh b { font-size: 15px; }
+.ast-brk .ast-grp { margin-top: 8px; }
+.ast-to { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.ast-to > span { flex: none; }
+.ast-to select { flex: 1; min-width: 0; min-height: 44px; border: 1.5px solid var(--accent); border-radius: var(--radius-s); background: var(--accent-bg); color: var(--accent-fg); font: inherit; font-size: 15px; font-weight: 700; padding: 0 10px; }
+.ast-bedit { margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-s); }
+.ast-bedit .ast-bname { font-weight: 700; }
+.ast-bedit input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary); font: inherit; font-size: 15px; padding: 8px 10px; }
+.ast-alist .ast-new { margin-top: 0; width: 100%; }
+.ast-tree-i { flex: none; color: var(--text-muted); padding-left: 4px; }
+.ast-btn-s { padding: 0 10px; min-height: 36px; font-size: 13px; }
+.ast-bnew b { font-size: 14px; }
+.ast-alist li > form { flex: 1; min-width: 0; }
+.ast-alist { grid-template-columns: minmax(0, 1fr); }
+.ast-alist li { min-width: 0; }
+.ast-rh select { max-width: 132px; }
+.ast-qty { list-style: none; margin: 8px 0 0; padding: 4px 12px; background: var(--surface-0); border-radius: var(--radius-s); }
+.ast-qty li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); }
+.ast-qty li:first-child { border-top: 0; }
+.ast-qty .l { min-width: 0; display: grid; }
+.ast-qty .l b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ast-qty .l small { font-size: 11px; color: var(--text-muted); }
+.ast-qty .r { flex: none; text-align: right; display: grid; font-variant-numeric: tabular-nums; }
+.ast-qty .r b { font-size: 14px; }
+.ast-qty .r small { font-size: 12px; color: var(--text-secondary); }
