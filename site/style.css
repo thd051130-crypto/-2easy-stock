@@ -1342,3 +1342,7 @@ details.ast-brk > summary small { flex: 1; text-align: right; font-variant-numer
 .ast-fold { flex: none; width: 8px; height: 8px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s; }
 details.ast-brk[open] .ast-fold { transform: rotate(-135deg) translate(-2px, -2px); }
 details.ast-brk:not([open]) { border-left-color: var(--border); }
+.ast-mix-n { min-width: 0; display: grid; }
+.ast-mix-n b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ast-mix-n small { font-size: 11px; color: var(--text-muted); }
+.ast-mix-t > span:last-child { flex: none; }

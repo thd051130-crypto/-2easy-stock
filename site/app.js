@@ -6439,7 +6439,7 @@ function astChartHtml(y) {
   const tabs = `<div class="period ast-mode" role="group" aria-label="그래프 보기"><button type="button" data-ast-mode="trend" aria-pressed="${astMode === "trend"}">추이</button><button type="button" data-ast-mode="mix" aria-pressed="${astMode === "mix"}">구성</button></div>`;
   const top = `<div class="ast-ch-top"><div><small>${esc(cfg.title)}</small><b class="${cfg.sign ? astCls(head) : ""}">${astFmt(k, head)}</b><span class="muted">${sub}</span></div>
     <div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span><span><i class="l"></i>${cfg.line}</span></div></div>`;
-  if (astMode === "mix") return `<div class="ast-chart">${top}${astMix(sel.ym)}${tabs}</div>`;
+  if (astMode === "mix") return `<div class="ast-chart">${top}${k === "div" ? astDivMix(sel.ym) : astMix(sel.ym)}${tabs}</div>`;
   const n = pts.length, W = 340, H = 172, L = 6, Rr = 6, T = 16, B = 24, iw = W - L - Rr, ih = H - T - B;
   // 막대와 선은 같은 눈금 (현금 비중 %만 따로 0~100%)
   const vals = has.flatMap((p) => (cfg.pct ? [p.bar] : [p.bar, p.line]));
@@ -6469,6 +6469,16 @@ function astChartHtml(y) {
   const base = `<line class="ast-gl z" x1="${L}" x2="${W - Rr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
   return `<div class="ast-chart">${top}
     <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대와 ${esc(cfg.line)} 선 그래프">${base}${bars}${line}</svg>${tabs}</div>`;
+}
+// 배당 구성: 고른 달에 어느 종목(어느 증권사·계좌)에서 얼마 받았는지 (사용자 2026-11-08)
+function astDivMix(ym) {
+  const x = AST.months[ym], s = astSum(ym);
+  if (!x || !s.div) return `<p class="muted" style="margin:12px 0 0">${+ym.slice(5)}월엔 받은 배당이 없어요.</p>`;
+  const rows = x.items.filter((i) => +i.div > 0).sort((p, q) => q.div - p.div);
+  return `<ul class="ast-mix">${rows.map((i) => `<li><div class="ast-mix-t"><span class="ast-mix-n"><b>${esc(i.name)}</b><small>${esc(astLabel(i.acct))}</small></span>
+    <span>${astWon(+i.div)} · ${Math.round((i.div / s.div) * 100)}%</span></div>
+    <div class="ast-mix-bar"><i style="width:${((i.div / s.div) * 100).toFixed(1)}%"></i></div></li>`).join("")}</ul>
+    <p class="muted ast-mix-leg">${+ym.slice(5)}월 배당 ${rows.length}건 · 합계 ${astWon(s.div)}</p>`;
 }
 // 구성: 고른 달의 계좌별 총자산(투자금+예수금) 비중 막대
 function astMix(ym) {
