@@ -7,7 +7,7 @@ metadata:
 ---
 
 2026-11-08 사용자 "내 금융자산의 성장과정을 기록할 수 있는 칸… 월별로 업데이트, 월 달력 → 누르면 확대해서 메모, 전월 대비 몇 주·투자금 등락, 배당, 종목 풀네임 자동, 계좌별로 사다리타기처럼 분류. 일단 만들어봐".
-- 위치: 도구 탭 맨 앞 '자산 기록' (PERF_TABS 키 asset). 코드 site/app.js `assetCard()`·`bindAsset()`, CSS `.ast-*`. 브랜치 claude/project-thread-qjmvqi (검수 전, PR 없음).
+- 위치: 도구 탭 맨 앞 '자산 기록' (PERF_TABS 키 asset). 코드 site/app.js `assetCard()`·`bindAsset()`, CSS `.ast-*`. 브랜치 claude/project-thread-qjmvqi, PR #122 머지(2026-11-08 20:12 KST).
 - 저장: localStorage 'assets' = { accts:[계좌 이름], months:{"YYYY-MM":{memo, items:[{id,acct,m,code,name,qty,cost(원),div(원)}]}}, year }. 서버 저장 없음(GitHub Pages라서). 달력 아래 '백업 · 다른 폰으로 옮기기'에서 JSON 복사·불러오기.
 - 비교 기준 = 그 달 앞에서 종목을 적은 마지막 달(빈 달 건너뜀), 같은 계좌의 같은 종목끼리. 빈 달엔 '지난 기록 종목 그대로 가져오기'(배당은 0으로).
 - 해석한 것: '투자금' = 산 돈(매입금액, 원). 현재 평가금액·수익률은 아직 없음(시세 자동 계산은 다음 후보). '사다리' = 내 자산 → 계좌 → 종목 꺾인 선 SVG, 처음 열 때 선이 그려지는 모션.
@@ -16,4 +16,6 @@ metadata:
 - 3차(같은 날, 사용자가 자산 앱 그래프 사진 참고로 줌): 그래프 위 큰 금액(고른 달), 초록 둥근 막대 + 흰 점 선, 눈금 없음, 최근 12달(해 넘어도, 앞 빈 달 빼고 최소 6칸), 아래 '추이|구성'(구성 = 고른 달 계좌별 투자금·예수금 비중 막대).
 - 사용자 2026-11-08 "증감그래프 색깔 빼, 심리를 지켜야해" → 자산 기록 안의 늘고 줄음은 빨강·파랑 없이 같은 색(astCls가 빈 값). 자기 자산 기록엔 등락 색을 쓰지 말 것.
 - 사용자 2026-11-08 "화면 고정은 내가 확인할게" → 이 기능은 화면 고정 자동 점검 생략해도 됨.
-- 미리보기 /mnt/project-files/asset-record-preview/. 관련 [[goal-card]], [[design-system]].
+- 4차(같은 날, 사용자 "증권사 - 증권사별 계좌 - 종목 순으로"): accts = [{id, broker, name}], items.acct·cash 키 = 계좌 id. 옛 글자 계좌는 이름을 id로, 증권사 '내 증권사'로 옮김. '증권사·계좌 추가·이름 바꾸기'(form submit), 종목 넣기 '어느 계좌에?' 선택 상자, 사다리 그림 4단(내 자산→증권사→계좌→종목). 펼친 달 요약은 '주 수 합계' 대신 종목 수 + 종목별 주 수 증감 목록(사용자 "전체 주식 수가 아니라 종목별로").
+- 증권사 칸 접기(사용자 "화면이 너무 길어"): details.ast-brk, 기본 접힘, 펼친 증권사는 localStorage ast_bopen(AST_BOPEN), 종목 넣으면 그 증권사 펼침, resetFolds()에서 비움. #123에 같이 넣음.
+- 미리보기 /mnt/project-files/asset-record-preview/ (3단계는 3level/). 관련 [[goal-card]], [[design-system]].
