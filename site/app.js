@@ -676,7 +676,7 @@ function render() {
       try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
       render();
     }));
-    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab();
+    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab(); bindAsset();
     if (!RET[market]) loadReturns().then(() => { if (screen === "tools") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
   }
   app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {
@@ -2538,6 +2538,7 @@ function bindMap() {
 
 // 도구 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 적립식 계산기, 고른 건 이 폰에 기억해요
 const PERF_TABS = [
+  ["asset", "자산 기록", () => [assetCard()]],
   ["sav", "적립식 계산기", () => [savingsCard()]],
   ["lab", "포트폴리오 실험실", () => [labCard()]],
   ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
@@ -6300,6 +6301,501 @@ function goalLine() {
   if (!left || left.days < 0) return "";
   const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, GOAL.now / GOAL.target) * 100)}%` : "";
   return `<p class="muted" style="margin:10px 0 0">🎯 ${esc(goalTitle())}까지 <b>D-${left.days}</b>${prog}</p>`;
+}
+
+// ---------------------------------------------------------------- 자산 기록
+// 달마다 내 금융자산(계좌 → 종목·주 수·투자금·받은 배당)과 메모를 적어 두고, 지난 기록과 비교해요.
+// 이 폰에만 저장해요 (localStorage 'assets'). 백업 글자를 복사해 두면 다른 폰에서도 다시 넣을 수 있어요 (사용자 2026-11-08)
+// months["2026-11"] = { memo, items: [{ id, acct, m, code, name, qty, cost(원), div(원) }], cash: { 계좌 이름: 예수금(원) } }
+const AST = { accts: ["일반 계좌"], months: {}, year: new Date().getFullYear() };
+try { Object.assign(AST, JSON.parse(localStorage.getItem("assets") || "{}")); } catch (e) { /* 처음 */ }
+const astFix = () => {
+  if (!Array.isArray(AST.accts) || !AST.accts.length) AST.accts = ["일반 계좌"];
+  if (!AST.months || typeof AST.months !== "object") AST.months = {};
+  Object.values(AST.months).forEach((x) => { if (!Array.isArray(x.items)) x.items = []; if (typeof x.memo !== "string") x.memo = ""; if (!x.cash || typeof x.cash !== "object") x.cash = {}; });
+  if (!Number.isFinite(+AST.year)) AST.year = new Date().getFullYear();
+};
+astFix();
+const AST_PRESET = ["ISA", "연금저축", "IRP", "CMA", "해외 계좌"];
+let astOpen = null, astQuery = "", astTo = AST.accts[0], astAnim = false, astChart = null, astTip = null;
+const astSave = () => { try { localStorage.setItem("assets", JSON.stringify(AST)); } catch (e) { /* 이번만 */ } };
+const ymOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const ymNow = () => ymOf(new Date());
+const ymName = (ym) => { const [y, m] = ym.split("-").map(Number); return `${y}년 ${m}월`; };
+const astCashOf = (x) => (x && x.cash ? Object.values(x.cash).reduce((a, v) => a + (+v || 0), 0) : 0);
+const astFilled = (ym) => { const x = AST.months[ym]; return !!(x && (x.items.length || astCashOf(x) > 0)); };
+// 그 달보다 앞에서 종목을 적은 마지막 달 (빈 달은 건너뛰어요)
+const astPrevYm = (ym) => Object.keys(AST.months).filter((k) => k < ym && astFilled(k)).sort().pop() || null;
+const astSum = (ym) => {
+  const x = AST.months[ym], items = x ? x.items : [];
+  const cost = items.reduce((a, i) => a + (+i.cost || 0), 0), cash = astCashOf(x);
+  return { cost, cash, total: cost + cash, qty: items.reduce((a, i) => a + (+i.qty || 0), 0),
+    div: items.reduce((a, i) => a + (+i.div || 0), 0), n: items.length };
+};
+const astKey = (i) => `${i.acct}|${i.m}:${i.code}`;
+const astWon = (x) => `${Math.round(x).toLocaleString("ko-KR")}원`;
+const astQty = (x) => `${(+x).toLocaleString("ko-KR", { maximumFractionDigits: 4 })}주`;
+const astSign = (x) => (x > 0 ? "+" : x < 0 ? "-" : "±");
+// 자산 기록의 늘고 줄음은 빨강·파랑 없이 같은 색으로 (사용자 2026-11-08 "색깔 빼, 심리를 지켜야 해")
+const astCls = () => "";
+const astMan = (x) => (Math.abs(x) < 1e4 ? astWon(x) : savWon(x));  // 만 원 넘으면 만원 단위로 줄여서
+const astDivW = (x) => (x < 1e6 ? astWon(x) : savWon(x));  // 배당은 작아서 100만 원 아래는 원 단위 그대로
+const astWonD = (x) => `${astSign(x)}${astMan(Math.abs(x))}`;
+const astQtyD = (x) => `${astSign(x)}${astQty(Math.abs(x))}`;
+const astNum = (v) => { const x = parseFloat(String(v).replace(/[,\s원주]/g, "")); return Number.isFinite(x) && x >= 0 ? Math.min(x, 1e13) : 0; };
+const astId = () => Math.random().toString(36).slice(2, 9);
+
+function assetCard() {
+  return `<section class="card" id="ast-card"><h2 class="goal-h"><span>월별 자산 기록</span>
+    <span class="goal-h-r"><small>이 폰에만 저장</small></span></h2>${astOpen ? astDetail(astOpen) : astGrid()}</section>`;
+}
+
+// 달력: 1~12월 칸마다 그 달 투자금, 지난 기록 대비, 받은 배당. 아래 막대는 올해 가장 많은 달 대비 높이
+function astGrid() {
+  const y = +AST.year, now = ymNow();
+  const yms = Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, "0")}`);
+  const max = Math.max(1, ...yms.map((k) => astSum(k).total));
+  const cells = yms.map((ym) => {
+    const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null, has = astFilled(ym);
+    const memo = AST.months[ym] && AST.months[ym].memo.trim();
+    const d = has && ps ? s.total - ps.total : null;
+    return `<button type="button" class="ast-cell${ym === now ? " now" : ""}${has ? " has" : ""}" data-ast-m="${ym}" ${ym > now ? "disabled" : ""}>
+      <span class="ast-mn">${+ym.slice(5)}월${memo ? `<i class="ast-dot" aria-label="메모 있음"></i>` : ""}</span>
+      ${has ? `<b>${savWon(s.total)}</b>${d != null ? `<small class="${astCls(d)}">${d ? astWonD(d) : "그대로"}</small>` : `<small class="muted">첫 기록</small>`}
+        ${s.div ? `<small class="ast-div">배당 ${astDivW(s.div)}</small>` : ""}`
+        : `<small class="muted">${ym > now ? "" : memo ? "메모만" : "＋ 적기"}</small>`}
+      ${has ? `<i class="ast-bar" style="width:${Math.max(6, (s.total / max) * 100)}%"></i>` : ""}</button>`;
+  }).join("");
+  // 올해 요약: 첫 기록 → 마지막 기록, 올해 받은 배당 합계
+  const done = yms.filter(astFilled), first = done[0], last = done[done.length - 1];
+  const divY = yms.reduce((a, k) => a + astSum(k).div, 0);
+  const base = first ? astPrevYm(first) : null;  // 작년 마지막 기록이 있으면 그걸 출발점으로
+  const from = base ? astSum(base).total : first ? astSum(first).total : 0, to = last ? astSum(last).total : 0;
+  const ls = last ? astSum(last) : null;
+  // 4칸은 누르면 아래에 그 그래프가 열려요 (다시 누르면 닫혀요)
+  const tile = (k, label, val, cls = "") => `<button type="button" class="ast-tile" data-ast-chart="${k}" aria-pressed="${astChart === k}">
+      <small>${label}</small><b class="${cls}">${val}</b><span class="ast-tile-g" aria-hidden="true">${astChart === k ? "그래프 닫기 ▴" : "그래프 ▾"}</span></button>`;
+  const sum = done.length ? `<div class="sav-hero ast-hero">
+      ${tile("total", `${+last.slice(5)}월 총자산`, savWon(to))}
+      ${tile("chg", `${base ? `작년 ${+base.slice(5)}월` : `${+first.slice(5)}월`}보다`, astWonD(to - from), astCls(to - from))}
+      ${tile("div", `${y}년 받은 배당`, astDivW(divY))}
+      ${tile("cash", `${+last.slice(5)}월 예수금`, savWon(ls.cash))}</div>
+      ${astChart ? `<div id="ast-chart">${astChartHtml(y)}</div>` : ""}` : "";
+  return `<div class="ast-year"><button type="button" class="ast-nav" data-ast-y="-1" aria-label="작년">‹</button><b>${y}년</b>
+      <button type="button" class="ast-nav" data-ast-y="1" aria-label="다음 해" ${y >= new Date().getFullYear() ? "disabled" : ""}>›</button></div>
+    ${sum}<div class="ast-grid">${cells}</div>
+    <p class="muted note" style="margin:10px 0 0">달을 누르면 크게 열려요. 총자산 = 투자금(산 돈) + 예수금. 위 4칸을 누르면 달마다 그래프가 나와요.</p>
+    <details class="sav-mine ast-backup"><summary>백업 · 다른 폰으로 옮기기</summary>
+      <p class="muted" style="margin:6px 0 0;font-size:12px">기록은 이 폰 브라우저에만 있어요. 가끔 아래 글자를 복사해 메모장이나 나에게 보내기로 저장해 두세요. 붙여 넣고 '불러오기'를 누르면 그대로 돌아와요.</p>
+      <textarea id="ast-json" rows="3" spellcheck="false" aria-label="백업 글자"></textarea>
+      <div class="ast-new"><button type="button" class="ast-btn" data-ast-export>복사</button><button type="button" class="ast-btn" data-ast-import>불러오기</button><span class="muted" id="ast-bk-msg" style="font-size:12px"></span></div></details>`;
+}
+
+// 위 4칸 그래프 (사용자가 보내 준 자산 앱 그래프 참고, 2026-11-08): 위에 큰 금액, 굵은 둥근 막대 + 흰 점 선, 눈금 없이 깔끔하게.
+// 최근 12달(해를 넘어도), 앞쪽 빈 달은 빼고 최소 6칸. 막대를 누르면 그 달 숫자로 바뀌어요. 아래 '추이 | 구성' 버튼
+const AST_CHART = {
+  total: { title: "총자산", bar: "투자금", line: "총자산" },
+  chg: { title: "그 달 늘어난 돈", bar: "그 달 증감", line: "쌓인 증감" },
+  div: { title: "그 달 받은 배당", bar: "배당", line: "쌓인 배당" },
+  cash: { title: "예수금", bar: "예수금", line: "현금 비중", pct: true },
+};
+let astMode = "trend";
+function astSeries(y, k) {
+  const end = String(y) === ymNow().slice(0, 4) ? ymNow() : `${y}-12`;
+  const yms = Array.from({ length: 12 }, (_, i) => ymAdd(end, i - 11));
+  let acc = 0, accD = 0;
+  const pts = yms.map((ym) => {
+    if (!astFilled(ym)) return { ym, bar: null, line: null };
+    const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
+    if (k === "total") return { ym, bar: s.cost, line: s.total, s };
+    if (k === "chg") { const d = ps ? s.total - ps.total : 0; acc += d; return { ym, bar: d, line: acc, s }; }
+    if (k === "div") { accD += s.div; return { ym, bar: s.div, line: accD, s }; }
+    return { ym, bar: s.cash, line: s.total ? (s.cash / s.total) * 100 : 0, s };
+  });
+  const first = pts.findIndex((p) => p.bar != null);
+  return first < 0 ? [] : pts.slice(Math.max(0, Math.min(first, 6)));
+}
+const astFmt = (k, v) => (k === "div" ? astDivW(v) : k === "chg" ? `${v > 0 ? "+" : v < 0 ? "-" : ""}${astWon(Math.abs(v))}` : astWon(v));
+function astChartHtml(y) {
+  const k = astChart, cfg = AST_CHART[k], pts = astSeries(y, k), has = pts.filter((p) => p.bar != null);
+  if (!has.length) return "";
+  const sel = has.find((p) => p.ym === astTip) || has[has.length - 1];
+  const head = k === "total" ? sel.line : sel.bar;
+  const sub = `${+sel.ym.slice(5)}월 · ${k === "total" ? cfg.bar : cfg.line} ${k === "total" ? savWon(sel.bar) : cfg.pct ? `${Math.round(sel.line)}%` : k === "chg" ? astWonD(sel.line) : astMan(sel.line)}`;
+  const tabs = `<div class="period ast-mode" role="group" aria-label="그래프 보기"><button type="button" data-ast-mode="trend" aria-pressed="${astMode === "trend"}">추이</button><button type="button" data-ast-mode="mix" aria-pressed="${astMode === "mix"}">구성</button></div>`;
+  const top = `<div class="ast-ch-top"><div><small>${esc(cfg.title)}</small><b class="${cfg.sign ? astCls(head) : ""}">${astFmt(k, head)}</b><span class="muted">${sub}</span></div>
+    <div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span><span><i class="l"></i>${cfg.line}</span></div></div>`;
+  if (astMode === "mix") return `<div class="ast-chart">${top}${astMix(sel.ym)}${tabs}</div>`;
+  const n = pts.length, W = 340, H = 172, L = 6, Rr = 6, T = 16, B = 24, iw = W - L - Rr, ih = H - T - B;
+  // 막대와 선은 같은 눈금 (현금 비중 %만 따로 0~100%)
+  const vals = has.flatMap((p) => (cfg.pct ? [p.bar] : [p.bar, p.line]));
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  if (hi === lo) hi = lo + 1;
+  hi += (hi - lo) * 0.06;
+  const Y = (v) => T + ih - ((v - lo) / (hi - lo)) * ih, Yp = (v) => T + ih - (v / 100) * ih * 0.94;
+  const cw = iw / n, X = (i) => L + cw * i + cw / 2, bw = Math.min(30, cw * 0.62);
+  const every = n > 8 ? 3 : n > 6 ? 2 : 1, lastI = pts.length - 1;
+  const bars = pts.map((p, i) => {
+    const on = p.ym === sel.ym;
+    const lab = (i - lastI) % every === 0 || on ? `<text class="ast-ax${on ? " on" : ""}" x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${+p.ym.slice(5)}월</text>` : "";
+    const hit = `<rect class="ast-hit" data-ast-tip="${p.ym}" x="${(L + cw * i).toFixed(1)}" y="0" width="${cw.toFixed(1)}" height="${H}"/>`;
+    if (p.bar == null) return lab + hit;
+    const y0 = Y(0), y1 = Y(p.bar), h = Math.max(2, Math.abs(y1 - y0)), r = Math.min(bw / 2, 6, h / 2);
+    const x0 = X(i) - bw / 2, up = p.bar >= 0, yt = up ? y0 - h : y0;
+    // 끝만 둥근 막대 (바닥 쪽은 반듯하게)
+    const d = up ? `M${x0} ${y0}V${yt + r}Q${x0} ${yt} ${x0 + r} ${yt}H${x0 + bw - r}Q${x0 + bw} ${yt} ${x0 + bw} ${yt + r}V${y0}Z`
+      : `M${x0} ${y0}V${yt + h - r}Q${x0} ${yt + h} ${x0 + r} ${yt + h}H${x0 + bw - r}Q${x0 + bw} ${yt + h} ${x0 + bw} ${yt + h - r}V${y0}Z`;
+    const cls = up ? "" : " neg";
+    return `${lab}<path class="ast-b${cls}${on ? " on" : ""}" d="${d}"/>${hit}`;
+  }).join("");
+  const Ly = cfg.pct ? Yp : Y;
+  const lp = pts.map((p, i) => (p.line == null ? null : { x: X(i), y: Ly(p.line), on: p.ym === sel.ym })).filter(Boolean);
+  const line = `<path class="ast-cl" d="${lp.map((q, j) => `${j ? "L" : "M"}${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join("")}"/>`
+    + lp.map((q) => `<circle class="ast-cd${q.on ? " on" : ""}" cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${q.on ? 5.5 : 4}"/>`).join("");
+  const base = `<line class="ast-gl z" x1="${L}" x2="${W - Rr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+  return `<div class="ast-chart">${top}
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대와 ${esc(cfg.line)} 선 그래프">${base}${bars}${line}</svg>${tabs}</div>`;
+}
+// 구성: 고른 달의 계좌별 총자산(투자금+예수금) 비중 막대
+function astMix(ym) {
+  const x = AST.months[ym], s = astSum(ym);
+  if (!x || !s.total) return `<p class="muted">그 달 기록이 없어요.</p>`;
+  const rows = AST.accts.concat(x.items.map((i) => i.acct)).filter((a, k, all) => all.indexOf(a) === k).map((a) => {
+    const cost = x.items.filter((i) => i.acct === a).reduce((v, i) => v + (+i.cost || 0), 0), cash = x.cash ? +x.cash[a] || 0 : 0;
+    return { a, cost, cash, t: cost + cash };
+  }).filter((r) => r.t > 0).sort((p, q) => q.t - p.t);
+  return `<ul class="ast-mix">${rows.map((r) => `<li><div class="ast-mix-t"><b>${esc(r.a)}</b><span>${savWon(r.t)} · ${Math.round((r.t / s.total) * 100)}%</span></div>
+    <div class="ast-mix-bar"><i style="width:${((r.cost / s.total) * 100).toFixed(1)}%"></i><i class="c" style="width:${((r.cash / s.total) * 100).toFixed(1)}%"></i></div></li>`).join("")}</ul>
+    <p class="muted ast-mix-leg"><i></i>투자금 <i class="c"></i>예수금 · ${+ym.slice(5)}월 기준</p>`;
+}
+
+// 펼친 달: 요약 → 메모 → 계좌별 종목 → 종목 넣기 → 사다리 그림
+function astDetail(ym) {
+  const x = AST.months[ym] || { memo: "", items: [] };
+  const p = astPrevYm(ym), now = ymNow();
+  const accts = AST.accts.map((a) => `<button type="button" data-ast-to="${esc(a)}" aria-pressed="${a === astTo}">${esc(a)}</button>`).join("");
+  const preset = AST_PRESET.filter((a) => !AST.accts.includes(a)).map((a) => `<button type="button" class="ast-add-a" data-ast-new="${esc(a)}">＋ ${esc(a)}</button>`).join("");
+  const copy = !astFilled(ym) && p ? `<button type="button" class="more ast-copy" data-ast-copy>📋 ${esc(ymName(p))} 종목·예수금 그대로 가져오기<span aria-hidden="true">›</span></button>` : "";
+  return `<div class="ast-detail${astAnim && !calm() ? " zoom" : ""}" id="ast-detail">
+    <div class="ast-dh"><button type="button" class="back" data-ast-close>‹ 달력</button>
+      <span class="ast-dm"><button type="button" class="ast-nav" data-ast-step="-1" aria-label="지난달">‹</button><b>${esc(ymName(ym))}</b>
+      <button type="button" class="ast-nav" data-ast-step="1" aria-label="다음 달" ${ym >= now ? "disabled" : ""}>›</button></span></div>
+    <div id="ast-sum">${astSumHtml(ym)}</div>
+    <label class="ast-memo"><span class="muted">메모</span><textarea data-ast-memo rows="3" maxlength="2000" placeholder="이번 달 있었던 일, 산 이유, 다음 달 계획…">${esc(x.memo)}</textarea></label>
+    <h3 class="sav-h">계좌별 예수금·종목 <small class="muted">${x.items.length}종목</small></h3>
+    ${copy}
+    <div id="ast-rows">${astRows(ym)}</div>
+    <h3 class="sav-h">종목 넣기</h3>
+    <p class="muted" style="margin:6px 0 0;font-size:12px">넣을 계좌</p>
+    <div class="chips ast-accts" role="group" aria-label="넣을 계좌" style="margin-top:4px">${accts}</div>
+    <input id="ast-q" class="search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="종목 이름 일부만 (예: 삼전, 슈드, 코덱스 200)" aria-label="기록할 종목 검색" value="${esc(astQuery)}" style="margin-top:8px">
+    <div id="ast-res">${astResults(ym)}</div>
+    <details class="sav-mine ast-acct-edit"><summary>계좌 추가·이름 바꾸기</summary>
+      <div class="chips" style="margin-top:6px">${preset}</div>
+      <div class="ast-new"><input id="ast-new-a" class="search" type="text" maxlength="20" placeholder="새 계좌 이름 (예: 키움 일반)" aria-label="새 계좌 이름">
+        <button type="button" class="ast-btn" data-ast-new-go>추가</button></div>
+      <ul class="ast-alist">${AST.accts.map((a, i) => `<li><input type="text" maxlength="20" value="${esc(a)}" data-ast-rename="${i}" aria-label="계좌 이름">
+        ${AST.accts.length > 1 ? `<button type="button" class="ast-x" data-ast-drop="${i}" aria-label="${esc(a)} 계좌 빼기">×</button>` : ""}</li>`).join("")}</ul>
+      <p class="muted" style="margin:6px 0 0;font-size:12px">계좌를 빼면 그 계좌 종목·예수금은 첫 번째 계좌로 옮겨져요.</p></details>
+    <h3 class="sav-h">계좌 → 종목 나눠 보기 <small class="muted">총자산 비중</small></h3>
+    <div id="ast-tree">${astTree(ym)}</div>
+    <button type="button" class="goal-reset ast-clear" data-ast-clear ${astFilled(ym) || x.memo ? "" : "hidden"}>${RESET_ICON}<span class="t0">이 달 기록 지우기</span><span>한 번 더 누르면 지워요</span></button>
+  </div>`;
+}
+
+// 요약 4칸: 총 투자금·예수금·주 수 합계(지난 기록 대비), 이번 달 받은 배당. 아래 한 줄은 총자산과 비교 기준
+function astSumHtml(ym) {
+  const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
+  const vs = (d, f) => (ps ? `<small class="${astCls(d)}">${d ? f(d) : "그대로"}</small>` : `<small class="muted">첫 기록</small>`);
+  const pn = p ? `${p.slice(0, 4) !== ym.slice(0, 4) ? `${p.slice(2, 4)}년 ` : ""}${+p.slice(5)}월` : "";
+  return `<div class="sav-hero ast-hero">
+    <div><small>총 투자금</small><b>${savWon(s.cost)}</b>${vs(s.cost - (ps ? ps.cost : 0), astWonD)}</div>
+    <div><small>예수금</small><b>${savWon(s.cash)}</b>${vs(s.cash - (ps ? ps.cash : 0), astWonD)}</div>
+    <div><small>주 수 합계</small><b>${astQty(s.qty)}</b>${vs(s.qty - (ps ? ps.qty : 0), astQtyD)}</div>
+    <div><small>이번 달 배당</small><b>${astDivW(s.div)}</b>${s.div ? "" : `<small class="muted">없음</small>`}</div></div>
+    <p class="ast-total">총자산 <b>${savWon(s.total)}</b>${ps ? ` <span class="${astCls(s.total - ps.total)}">${s.total - ps.total ? astWonD(s.total - ps.total) : "그대로"}</span> <small class="muted">· ${pn} 기록과 비교</small>` : ` <small class="muted">· 첫 기록</small>`}</p>`;
+}
+
+// 지난 기록과 비교: 같은 계좌의 같은 종목끼리
+function astDelta(ym, it) {
+  const p = astPrevYm(ym);
+  if (!p) return "";
+  const was = AST.months[p].items.find((j) => astKey(j) === astKey(it));
+  if (!was) return `<span class="ast-tag new">새로 담음</span>`;
+  const dq = (+it.qty || 0) - (+was.qty || 0), dc = (+it.cost || 0) - (+was.cost || 0);
+  if (!dq && !dc) return `<span class="ast-tag">지난 기록 그대로</span>`;
+  return `<span class="ast-tag ${astCls(dq || dc)}">${dq ? astQtyD(dq) : "주 수 그대로"} · 투자금 ${dc ? astWonD(dc) : "그대로"}</span>`;
+}
+function astRows(ym) {
+  const x = AST.months[ym] || { items: [] };
+  const p = astPrevYm(ym);
+  const gone = p ? AST.months[p].items.filter((j) => !x.items.some((i) => astKey(i) === astKey(j))) : [];
+  const accts = AST.accts.concat(x.items.map((i) => i.acct).filter((a) => !AST.accts.includes(a))).filter((a, k, all) => all.indexOf(a) === k);
+  const groups = accts.map((a) => {
+    const its = x.items.filter((i) => i.acct === a);
+    const tot = its.reduce((s, i) => s + (+i.cost || 0), 0), cash = x.cash ? +x.cash[a] || 0 : 0;
+    return `<div class="ast-grp"><div class="ast-gh"><b>${esc(a)}</b><small class="muted">${its.length ? `${its.length}종목 · ${savWon(tot)}` : "종목 없음"}</small></div>
+      <label class="ast-cash"><span>예수금</span><span class="alert-input"><input data-ast-cash="${esc(a)}" type="text" inputmode="decimal" value="${cash ? cash.toLocaleString("ko-KR") : ""}" placeholder="0"><span>원</span></span></label>
+      ${its.map((it) => {
+        const inp = (k, label, unit) => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-ast-f="${k}" type="text" inputmode="decimal" value="${+it[k] ? (+it[k]).toLocaleString("ko-KR", { maximumFractionDigits: 4 }) : ""}" placeholder="0"><span>${unit}</span></span></label>`;
+        const sel = `<select data-ast-acct aria-label="계좌 옮기기">${accts.map((b) => `<option ${b === it.acct ? "selected" : ""}>${esc(b)}</option>`).join("")}</select>`;
+        return `<div class="ast-row" data-ast-id="${it.id}"><div class="ast-rh"><span class="l"><b>${esc(it.name)}</b>
+          <small class="muted">${esc(it.code)} · ${esc(MK_NAME[it.m] || "")}</small></span>${sel}
+          <button type="button" class="ast-x" data-ast-del aria-label="${esc(it.name)} 빼기">×</button></div>
+          <div class="sav-grid ast-in3">${inp("qty", "주 수", "주")}${inp("cost", "투자금", "원")}${inp("div", "받은 배당", "원")}</div>
+          <div class="ast-delta">${astDelta(ym, it)}</div></div>`;
+      }).join("")}</div>`;
+  }).join("");
+  const goneH = gone.length ? `<div class="ast-gone"><small class="muted">${esc(ymName(p))}엔 있었는데 이번 달엔 없어요</small>
+    ${gone.map((j) => `<span class="ast-tag">${esc(j.acct)} · ${esc(j.name)} ${astQty(+j.qty || 0)}</span>`).join("")}</div>` : "";
+  return groups + goneH + (x.items.length ? "" : `<p class="muted" style="margin:8px 0 0">아래에서 종목을 찾아 넣어 보세요.</p>`);
+}
+// 종목 검색 (검색 화면과 같은 너그러운 검색). 누르면 고른 계좌에 풀네임으로 들어가요
+function astResults(ym) {
+  const q = astQuery.trim();
+  if (!q) return "";
+  if (!SYM.kr || !SYM.us) return `<p class="muted" style="margin:8px 0 0">종목 목록 불러오는 중…</p>`;
+  const qs = queryKeys(q), hits = [];
+  for (const m of ["kr", "us"]) (SYM[m] || []).forEach((e, i) => { const sc = scoreOf(e.row, e.keys, qs); if (sc != null) hits.push({ m, sc, i, row: e.row }); });
+  hits.sort((a, b) => a.sc - b.sc || (a.m === market ? 0 : 1) - (b.m === market ? 0 : 1) || a.i - b.i);
+  if (!hits.length) return `<p class="muted" style="margin:8px 0 0">'${esc(q)}'에 맞는 종목이 없어요.</p>`;
+  const x = AST.months[ym] || { items: [] };
+  return `<ul class="sav-res">${hits.slice(0, 6).map(({ m, row }) => {
+    const on = x.items.some((i) => i.acct === astTo && i.m === m && i.code === row[0]);
+    return `<li><button type="button" data-ast-add="${m}:${esc(row[0])}" aria-pressed="${on}"><span class="l"><b>${esc(row[1])}</b>
+      <small>${esc(row[0])} · ${esc(kindName(m, row))}</small></span><span class="add">${on ? "✓" : "+"}</span></button></li>`;
+  }).join("")}</ul>`;
+}
+
+// 사다리 그림: 왼쪽 '내 자산' → 가운데 계좌 → 오른쪽 종목. 꺾인 선으로 갈라지고, 선 굵기·글자는 투자금 비중
+function astTree(ym) {
+  const x = AST.months[ym] || { items: [], cash: {} };
+  if (!astFilled(ym)) return `<p class="muted" style="margin:6px 0 0">종목이나 예수금을 넣으면 계좌에서 종목으로 갈라지는 그림이 나와요.</p>`;
+  // 예수금은 그 계좌의 마지막 가지로 (이름 '예수금', 회색 점)
+  const accts = AST.accts.concat(x.items.map((i) => i.acct)).filter((a, k, all) => all.indexOf(a) === k)
+    .map((a) => {
+      const its = x.items.filter((i) => i.acct === a).sort((p, q) => (+q.cost || 0) - (+p.cost || 0));
+      const c = x.cash ? +x.cash[a] || 0 : 0;
+      if (c > 0) its.push({ name: "예수금", cost: c, cash: true });
+      return { a, its };
+    }).filter((g) => g.its.length);
+  const total = astSum(ym).total || 1;
+  const RH = 34, GAP = 12, W = 358, X1 = 70, X2 = 92, X3 = 170, X4 = 190;
+  let y = 6;
+  accts.forEach((g) => { g.ys = g.its.map(() => { const v = y + RH / 2; y += RH; return v; }); g.y = (g.ys[0] + g.ys[g.ys.length - 1]) / 2; y += GAP; });
+  const H = y - GAP + 6, rootY = (accts[0].y + accts[accts.length - 1].y) / 2;
+  const share = (v) => `${Math.round((v / total) * 100)}%`;
+  const short = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  const sw = (v) => (1.5 + 3.5 * Math.sqrt(v / total)).toFixed(1);
+  let lines = "", boxes = "";
+  const ln = (d, w, k) => `<path class="ast-ln" d="${d}" stroke-width="${w}" pathLength="1" style="--k:${k}"/>`;
+  accts.forEach((g, gi) => {
+    const gc = g.its.reduce((s, i) => s + (+i.cost || 0), 0);
+    lines += ln(`M${X1} ${rootY}H${(X1 + X2) / 2}V${g.y}H${X2}`, sw(gc), 0);
+    g.its.forEach((it, j) => { lines += ln(`M${X3} ${g.y}H${(X3 + X4) / 2}V${g.ys[j]}H${X4}`, sw(+it.cost || 0), 1); });
+    boxes += `<g class="ast-node acct" style="--k:${gi}"><rect x="${X2}" y="${g.y - 15}" width="${X3 - X2}" height="30" rx="8"/>
+      <text x="${(X2 + X3) / 2}" y="${g.y - 2}" text-anchor="middle" class="t1">${esc(short(g.a, 6))}</text>
+      <text x="${(X2 + X3) / 2}" y="${g.y + 10}" text-anchor="middle" class="t2">${esc(savWon(gc))} · ${share(gc)}</text></g>`;
+    g.its.forEach((it, j) => {
+      const yy = g.ys[j];
+      boxes += `<g class="ast-node stock${it.cash ? " cash" : ""}" style="--k:${gi}"><circle cx="${X4 + 4}" cy="${yy}" r="3.5"/>
+        <text x="${X4 + 12}" y="${yy - 2}" class="t1">${esc(short(it.name, 14))}</text>
+        <text x="${X4 + 12}" y="${yy + 10}" class="t2">${it.cash ? "" : `${astQty(+it.qty || 0)} · `}${esc(savWon(+it.cost || 0))} · ${share(+it.cost || 0)}</text></g>`;
+    });
+  });
+  boxes += `<g class="ast-node root"><rect x="2" y="${rootY - 17}" width="${X1 - 2}" height="34" rx="9"/>
+    <text x="${(X1 + 2) / 2}" y="${rootY - 3}" text-anchor="middle" class="t1">내 자산</text>
+    <text x="${(X1 + 2) / 2}" y="${rootY + 10}" text-anchor="middle" class="t2">${esc(savWon(total))}</text></g>`;
+  return `<svg class="ast-tree${astAnim && !calm() ? " grow" : ""}" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="계좌별 종목 나눠 보기">${lines}${boxes}</svg>`;
+}
+
+function bindAsset() {
+  const card = $("#ast-card");
+  if (!card) return;
+  const redraw = (anim) => {  // 칸만 다시 그려요. 누른 버튼은 제자리 (화면 그대로 규칙)
+    astAnim = !!anim;
+    holdHeight();
+    const c = $("#ast-card");
+    c.outerHTML = assetCard();
+    astAnim = false;
+    bindAsset();
+    keepTap();
+  };
+  const month = (ym) => AST.months[ym] || (AST.months[ym] = { memo: "", items: [], cash: {} });
+  // 달력 화면: 위 4칸을 누르면 그래프 열기·닫기, 그래프 막대를 누르면 그 달 숫자
+  card.querySelectorAll("[data-ast-chart]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.astChart;
+    astChart = astChart === k ? null : k;
+    astTip = null;
+    redraw();
+    const svg = $("#ast-chart svg");
+    if (svg && !calm()) {
+      drawIn(svg, { x0: 6, w: 328, sel: ".ast-cl", late: ".ast-cd", px: svg.getBoundingClientRect().width });
+      svg.querySelectorAll(".ast-b").forEach((r, i) => r.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 420, delay: i * 35, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }));
+    }
+  }));
+  // 막대 누르기·추이/구성: 그래프 칸만 다시 그려요 (높이가 바뀌는 구성은 누른 버튼 제자리)
+  const ch = $("#ast-chart");
+  if (ch) ch.addEventListener("click", (e) => {
+    const h = e.target.closest("[data-ast-tip]"), m = e.target.closest("[data-ast-mode]");
+    if (!h && !m) return;
+    if (h) astTip = h.dataset.astTip;
+    if (m) { if (astMode === m.dataset.astMode) return; astMode = m.dataset.astMode; holdHeight(); }
+    ch.innerHTML = astChartHtml(+AST.year);
+    if (m) keepTap();
+  });
+  card.querySelectorAll("[data-ast-y]").forEach((b) => b.addEventListener("click", () => { AST.year = +AST.year + +b.dataset.astY; astTip = null; astSave(); redraw(); }));
+  card.querySelectorAll("[data-ast-m]").forEach((b) => b.addEventListener("click", () => {
+    const r = b.getBoundingClientRect(), cr = card.getBoundingClientRect();
+    astOpen = b.dataset.astM; astQuery = "";
+    if (!AST.accts.includes(astTo)) astTo = AST.accts[0];
+    lastTap = null;
+    redraw(true);
+    // 누른 달 칸 자리에서 커지는 것처럼 보여요
+    const det = $("#ast-detail");
+    if (det) det.style.transformOrigin = `${r.left - cr.left + r.width / 2}px ${r.top - cr.top + r.height / 2}px`;
+    // 카드 맨 위가 화면 위로 지나가 있으면 펼친 달 맨 위가 보이게만 내려 줘요 (화면을 바꾸는 버튼이라 예외)
+    const top = $("#ast-card").getBoundingClientRect().top;
+    if (top < 56) window.scrollBy({ top: top - 64, behavior: calm() ? "auto" : "smooth" });
+  }));
+  const bj = $("#ast-json"), bm = $("#ast-bk-msg");
+  const bk = card.querySelector(".ast-backup");
+  if (bk) bk.addEventListener("toggle", () => { if (bk.open && !bj.value) bj.value = JSON.stringify({ app: "easystock-assets", v: 1, ...AST }); });
+  const ex = card.querySelector("[data-ast-export]");
+  if (ex) ex.addEventListener("click", () => {
+    bj.value = JSON.stringify({ app: "easystock-assets", v: 1, ...AST });
+    bj.select();
+    const ok = () => { bm.textContent = "복사했어요"; }, no = () => { try { document.execCommand("copy"); ok(); } catch (e) { bm.textContent = "글자를 길게 눌러 복사해 주세요"; } };
+    if (navigator.clipboard) navigator.clipboard.writeText(bj.value).then(ok, no); else no();
+  });
+  const im = card.querySelector("[data-ast-import]");
+  if (im) im.addEventListener("click", () => {
+    let x = null;
+    try { x = JSON.parse(bj.value); } catch (e) { /* 아래에서 안내 */ }
+    if (!x || x.app !== "easystock-assets" || typeof x.months !== "object") { bm.textContent = "백업 글자가 아니에요"; return; }
+    if (!im.classList.contains("armed")) { im.classList.add("armed"); im.textContent = "한 번 더 누르면 덮어써요"; setTimeout(() => { im.classList.remove("armed"); im.textContent = "불러오기"; }, 3000); return; }
+    AST.accts = x.accts; AST.months = x.months; AST.year = x.year; astFix(); astSave();
+    astTo = AST.accts[0]; lastTap = null; redraw();
+  });
+  if (!astOpen) return;
+  const ym = astOpen;
+  // 펼친 달 화면
+  card.querySelector("[data-ast-close]").addEventListener("click", () => { AST.year = +ym.slice(0, 4); astOpen = null; astSave(); lastTap = null; redraw(); });
+  card.querySelectorAll("[data-ast-step]").forEach((b) => b.addEventListener("click", () => { astOpen = ymAdd(ym, +b.dataset.astStep); redraw(); }));
+  const memo = card.querySelector("[data-ast-memo]");
+  memo.addEventListener("input", () => { month(ym).memo = memo.value; astSave(); });
+  const live = () => {  // 입력하는 동안엔 요약·그림·비교만 바꿔요 (키보드가 안 닫혀요)
+    const s = $("#ast-sum"); if (s) s.innerHTML = astSumHtml(ym);
+    const t = $("#ast-tree"); if (t) t.innerHTML = astTree(ym);
+    card.querySelectorAll(".ast-row").forEach((r) => { const it = month(ym).items.find((i) => i.id === r.dataset.astId), d = $(".ast-delta", r); if (it && d) d.innerHTML = astDelta(ym, it); });
+    const gh = card.querySelectorAll(".ast-grp");
+    gh.forEach((g) => { const a = $(".ast-gh b", g).textContent, its = month(ym).items.filter((i) => i.acct === a); $(".ast-gh small", g).textContent = its.length ? `${its.length}종목 · ${savWon(its.reduce((v, i) => v + (+i.cost || 0), 0))}` : "종목 없음"; });
+    const cl = card.querySelector("[data-ast-clear]"); if (cl) cl.hidden = !astFilled(ym) && !month(ym).memo;
+  };
+  const rows = $("#ast-rows");
+  rows.addEventListener("input", (e) => {
+    const c = e.target.closest("[data-ast-cash]");
+    if (c) { const mo = month(ym); mo.cash[c.dataset.astCash] = astNum(c.value); astSave(); live(); return; }
+    const f = e.target.closest("[data-ast-f]");
+    if (!f) return;
+    const it = month(ym).items.find((i) => i.id === f.closest(".ast-row").dataset.astId);
+    if (!it) return;
+    it[f.dataset.astF] = astNum(f.value);
+    astSave(); live();
+  });
+  rows.addEventListener("focusout", (e) => {  // 다 쓰고 나면 1,234,000처럼 쉼표를 붙여 보여 줘요
+    const f = e.target.closest("[data-ast-f], [data-ast-cash]");
+    if (f) { const v = astNum(f.value); f.value = v ? v.toLocaleString("ko-KR", { maximumFractionDigits: 4 }) : ""; }
+  });
+  rows.addEventListener("change", (e) => {
+    const s = e.target.closest("[data-ast-acct]");
+    if (!s) return;
+    const it = month(ym).items.find((i) => i.id === s.closest(".ast-row").dataset.astId);
+    if (it) { it.acct = s.value; astSave(); redraw(); }
+  });
+  rows.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-ast-del]");
+    if (!b) return;
+    const id = b.closest(".ast-row").dataset.astId, m = month(ym);
+    m.items = m.items.filter((i) => i.id !== id);
+    astSave(); redraw();
+  });
+  const cp = card.querySelector("[data-ast-copy]");
+  if (cp) cp.addEventListener("click", () => {  // 지난 기록 종목·주 수·투자금을 그대로 (배당은 달마다 달라서 비워요)
+    const p = astPrevYm(ym);
+    month(ym).items = AST.months[p].items.map((i) => ({ ...i, id: astId(), div: 0 }));
+    month(ym).cash = { ...(AST.months[p].cash || {}) };
+    astSave(); lastTap = null; redraw();
+  });
+  card.querySelectorAll("[data-ast-to]").forEach((b) => b.addEventListener("click", () => {
+    astTo = b.dataset.astTo;
+    card.querySelectorAll("[data-ast-to]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    const r = $("#ast-res"); if (r) r.innerHTML = astResults(ym);
+  }));
+  const q = $("#ast-q"), res = $("#ast-res");
+  const refresh = () => { res.innerHTML = astResults(ym); };
+  q.addEventListener("input", () => { astQuery = q.value; refresh(); });
+  q.addEventListener("focus", () => { if (!SYM.kr || !SYM.us) loadSymbols().then(() => { if (astQuery && res.isConnected) refresh(); }); }, { once: true });
+  if (astQuery && (!SYM.kr || !SYM.us)) loadSymbols().then(() => { if (res.isConnected) refresh(); });
+  res.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-ast-add]");
+    if (!b) return;
+    const [m, code] = [b.dataset.astAdd.slice(0, 2), b.dataset.astAdd.slice(3)];
+    const mo = month(ym), had = mo.items.find((i) => i.acct === astTo && i.m === m && i.code === code);
+    if (had) mo.items = mo.items.filter((i) => i !== had);  // 다시 누르면 빼요
+    else {
+      const e2 = (SYM[m] || []).find((x) => x.row[0] === code);
+      mo.items.push({ id: astId(), acct: astTo, m, code, name: e2 ? e2.row[1] : code, qty: 0, cost: 0, div: 0 });
+    }
+    astSave();
+    // 넣은 종목 칸·요약·그림만 다시 그리고 검색창은 그대로 (위 칸이 늘어난 만큼 누른 버튼 자리에 맞춰요)
+    holdHeight();
+    rows.innerHTML = astRows(ym);
+    live(); refresh();
+    const cl = card.querySelector("[data-ast-clear]"); if (cl) cl.hidden = !astFilled(ym) && !mo.memo;
+    keepTap();
+  });
+  // 계좌 추가·이름 바꾸기·빼기
+  const addAcct = (name) => {
+    name = String(name || "").trim().slice(0, 20);
+    if (!name || AST.accts.includes(name)) return;
+    AST.accts.push(name); astTo = name; astSave(); redraw();
+    const d = $(".ast-acct-edit"); if (d) d.open = true;
+  };
+  card.querySelectorAll("[data-ast-new]").forEach((b) => b.addEventListener("click", () => addAcct(b.dataset.astNew)));
+  const na = $("#ast-new-a");
+  card.querySelector("[data-ast-new-go]").addEventListener("click", () => addAcct(na.value));
+  na.addEventListener("keydown", (e) => { if (e.key === "Enter") addAcct(na.value); });
+  card.querySelectorAll("[data-ast-rename]").forEach((i) => i.addEventListener("change", () => {
+    const k = +i.dataset.astRename, old = AST.accts[k], nw = i.value.trim().slice(0, 20);
+    if (!nw || AST.accts.includes(nw)) { i.value = old; return; }
+    AST.accts[k] = nw;
+    Object.values(AST.months).forEach((mo) => {
+      mo.items.forEach((it) => { if (it.acct === old) it.acct = nw; });
+      if (mo.cash && old in mo.cash) { mo.cash[nw] = mo.cash[old]; delete mo.cash[old]; }
+    });
+    if (astTo === old) astTo = nw;
+    astSave(); redraw();
+    const d = $(".ast-acct-edit"); if (d) d.open = true;
+  }));
+  card.querySelectorAll("[data-ast-drop]").forEach((b) => b.addEventListener("click", () => {
+    const k = +b.dataset.astDrop, old = AST.accts[k];
+    AST.accts.splice(k, 1);
+    Object.values(AST.months).forEach((mo) => {
+      mo.items.forEach((it) => { if (it.acct === old) it.acct = AST.accts[0]; });
+      if (mo.cash && old in mo.cash) { mo.cash[AST.accts[0]] = (+mo.cash[AST.accts[0]] || 0) + (+mo.cash[old] || 0); delete mo.cash[old]; }
+    });
+    if (astTo === old) astTo = AST.accts[0];
+    astSave(); redraw();
+    const d = $(".ast-acct-edit"); if (d) d.open = true;
+  }));
+  // 이 달 지우기: 한 번 누르면 '한 번 더 누르면…', 3초 안에 다시
+  const cl = card.querySelector("[data-ast-clear]");
+  cl.addEventListener("click", () => {
+    if (!cl.classList.contains("armed")) { cl.classList.add("armed"); setTimeout(() => cl.classList.remove("armed"), 3000); return; }
+    delete AST.months[ym]; astSave(); lastTap = null; redraw();
+  });
 }
 
 // ---------------------------------------------------------------- 포트폴리오 실험실
