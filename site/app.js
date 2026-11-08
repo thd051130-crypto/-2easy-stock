@@ -6004,6 +6004,7 @@ function resetFolds() {
   [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN].forEach((x) => x.clear());
   worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
+  AST_BOPEN.clear(); astEditOpen = false; try { localStorage.removeItem("ast_bopen"); } catch (e) { /* 이번만 */ }
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {
   resetFolds();
@@ -6484,6 +6485,10 @@ function astMix(ym) {
 
 // 증권사·계좌 관리: 증권사마다 이름·계좌 목록·계좌 더하기, 맨 아래 증권사 더하기. 입력칸은 form이라 폰 키보드 '완료'·엔터로도 돼요
 let astEditOpen = false;
+// 증권사 칸 접기·펼치기 (사용자 2026-11-08 '화면이 너무 길어'). 처음엔 다 접혀 있고, 펼친 증권사는 이 폰에 기억해요
+const AST_BOPEN = new Set();
+try { JSON.parse(localStorage.getItem("ast_bopen") || "[]").forEach((b) => AST_BOPEN.add(b)); } catch (e) { /* 처음 */ }
+const astBSave = () => { try { localStorage.setItem("ast_bopen", JSON.stringify([...AST_BOPEN])); } catch (e) { /* 이번만 */ } };
 function astAcctEdit() {
   const brokers = astBrokers();
   return brokers.map((b, bi) => {
@@ -6589,7 +6594,9 @@ function astRows(ym) {
     const list = ids.filter((a) => (astA(a) ? astA(a).broker : "(옛 계좌)") === b);
     if (!list.length) return "";
     const t = list.reduce((v, a) => v + x.items.filter((i) => i.acct === a).reduce((u, i) => u + (+i.cost || 0), 0) + (x.cash ? +x.cash[a] || 0 : 0), 0);
-    return `<div class="ast-brk"><div class="ast-bh"><b>🏦 ${esc(b)}</b><small class="muted">계좌 ${list.length}개 · ${savWon(t)}</small></div>${list.map(grp).join("")}</div>`;
+    const n = x.items.filter((i) => list.includes(i.acct)).length;
+    return `<details class="ast-brk" data-ast-bk="${esc(b)}" ${AST_BOPEN.has(b) ? "open" : ""}><summary class="ast-bh"><b>🏦 ${esc(b)}</b>
+      <small class="muted">계좌 ${list.length}개 · ${n}종목 · ${savWon(t)}</small><span class="ast-fold" aria-hidden="true"></span></summary>${list.map(grp).join("")}</details>`;
   }).join("");
   const goneH = gone.length ? `<div class="ast-gone"><small class="muted">${esc(ymName(p))}엔 있었는데 이번 달엔 없어요</small>
     ${gone.map((j) => `<span class="ast-tag">${esc(astLabel(j.acct))} · ${esc(j.name)} ${astQty(+j.qty || 0)}</span>`).join("")}</div>` : "";
@@ -6747,6 +6754,12 @@ function bindAsset() {
     const cl = card.querySelector("[data-ast-clear]"); if (cl) cl.hidden = !astFilled(ym) && !month(ym).memo;
   };
   const rows = $("#ast-rows");
+  rows.addEventListener("toggle", (e) => {  // toggle은 위로 안 올라와서 capture로 받아요
+    const d = e.target.closest && e.target.closest("details[data-ast-bk]");
+    if (!d || d !== e.target) return;
+    if (d.open) AST_BOPEN.add(d.dataset.astBk); else AST_BOPEN.delete(d.dataset.astBk);
+    astBSave();
+  }, true);
   rows.addEventListener("input", (e) => {
     const c = e.target.closest("[data-ast-cash]");
     if (c) { const mo = month(ym); mo.cash[c.dataset.astCash] = astNum(c.value); astSave(); live(); return; }
@@ -6797,6 +6810,7 @@ function bindAsset() {
     else {
       const e2 = (SYM[m] || []).find((x) => x.row[0] === code);
       mo.items.push({ id: astId(), acct: astTo, m, code, name: e2 ? e2.row[1] : code, qty: 0, cost: 0, div: 0 });
+      if (astA(astTo)) { AST_BOPEN.add(astA(astTo).broker); astBSave(); }  // 넣은 종목이 보이게 그 증권사는 펼쳐요
     }
     astSave();
     // 넣은 종목 칸·요약·그림만 다시 그리고 검색창은 그대로 (위 칸이 늘어난 만큼 누른 버튼 자리에 맞춰요)
