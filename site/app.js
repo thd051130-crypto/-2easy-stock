@@ -6306,28 +6306,30 @@ function goalLine() {
 // ---------------------------------------------------------------- 자산 기록
 // 달마다 내 금융자산(계좌 → 종목·주 수·투자금·받은 배당)과 메모를 적어 두고, 지난 기록과 비교해요.
 // 이 폰에만 저장해요 (localStorage 'assets'). 백업 글자를 복사해 두면 다른 폰에서도 다시 넣을 수 있어요 (사용자 2026-11-08)
-// months["2026-11"] = { memo, items: [{ id, acct, m, code, name, qty, cost(원), div(원) }] }
+// months["2026-11"] = { memo, items: [{ id, acct, m, code, name, qty, cost(원), div(원) }], cash: { 계좌 이름: 예수금(원) } }
 const AST = { accts: ["일반 계좌"], months: {}, year: new Date().getFullYear() };
 try { Object.assign(AST, JSON.parse(localStorage.getItem("assets") || "{}")); } catch (e) { /* 처음 */ }
 const astFix = () => {
   if (!Array.isArray(AST.accts) || !AST.accts.length) AST.accts = ["일반 계좌"];
   if (!AST.months || typeof AST.months !== "object") AST.months = {};
-  Object.values(AST.months).forEach((x) => { if (!Array.isArray(x.items)) x.items = []; if (typeof x.memo !== "string") x.memo = ""; });
+  Object.values(AST.months).forEach((x) => { if (!Array.isArray(x.items)) x.items = []; if (typeof x.memo !== "string") x.memo = ""; if (!x.cash || typeof x.cash !== "object") x.cash = {}; });
   if (!Number.isFinite(+AST.year)) AST.year = new Date().getFullYear();
 };
 astFix();
 const AST_PRESET = ["ISA", "연금저축", "IRP", "CMA", "해외 계좌"];
-let astOpen = null, astQuery = "", astTo = AST.accts[0], astAnim = false;
+let astOpen = null, astQuery = "", astTo = AST.accts[0], astAnim = false, astChart = null, astTip = null;
 const astSave = () => { try { localStorage.setItem("assets", JSON.stringify(AST)); } catch (e) { /* 이번만 */ } };
 const ymOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 const ymNow = () => ymOf(new Date());
 const ymName = (ym) => { const [y, m] = ym.split("-").map(Number); return `${y}년 ${m}월`; };
-const astFilled = (ym) => { const x = AST.months[ym]; return !!(x && x.items.length); };
+const astCashOf = (x) => (x && x.cash ? Object.values(x.cash).reduce((a, v) => a + (+v || 0), 0) : 0);
+const astFilled = (ym) => { const x = AST.months[ym]; return !!(x && (x.items.length || astCashOf(x) > 0)); };
 // 그 달보다 앞에서 종목을 적은 마지막 달 (빈 달은 건너뛰어요)
 const astPrevYm = (ym) => Object.keys(AST.months).filter((k) => k < ym && astFilled(k)).sort().pop() || null;
 const astSum = (ym) => {
-  const items = (AST.months[ym] || { items: [] }).items;
-  return { cost: items.reduce((a, i) => a + (+i.cost || 0), 0), qty: items.reduce((a, i) => a + (+i.qty || 0), 0),
+  const x = AST.months[ym], items = x ? x.items : [];
+  const cost = items.reduce((a, i) => a + (+i.cost || 0), 0), cash = astCashOf(x);
+  return { cost, cash, total: cost + cash, qty: items.reduce((a, i) => a + (+i.qty || 0), 0),
     div: items.reduce((a, i) => a + (+i.div || 0), 0), n: items.length };
 };
 const astKey = (i) => `${i.acct}|${i.m}:${i.code}`;
@@ -6351,36 +6353,104 @@ function assetCard() {
 function astGrid() {
   const y = +AST.year, now = ymNow();
   const yms = Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, "0")}`);
-  const max = Math.max(1, ...yms.map((k) => astSum(k).cost));
+  const max = Math.max(1, ...yms.map((k) => astSum(k).total));
   const cells = yms.map((ym) => {
     const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null, has = astFilled(ym);
     const memo = AST.months[ym] && AST.months[ym].memo.trim();
-    const d = has && ps ? s.cost - ps.cost : null;
+    const d = has && ps ? s.total - ps.total : null;
     return `<button type="button" class="ast-cell${ym === now ? " now" : ""}${has ? " has" : ""}" data-ast-m="${ym}" ${ym > now ? "disabled" : ""}>
       <span class="ast-mn">${+ym.slice(5)}월${memo ? `<i class="ast-dot" aria-label="메모 있음"></i>` : ""}</span>
-      ${has ? `<b>${savWon(s.cost)}</b>${d != null ? `<small class="${astCls(d)}">${d ? astWonD(d) : "그대로"}</small>` : `<small class="muted">첫 기록</small>`}
+      ${has ? `<b>${savWon(s.total)}</b>${d != null ? `<small class="${astCls(d)}">${d ? astWonD(d) : "그대로"}</small>` : `<small class="muted">첫 기록</small>`}
         ${s.div ? `<small class="ast-div">배당 ${astDivW(s.div)}</small>` : ""}`
         : `<small class="muted">${ym > now ? "" : memo ? "메모만" : "＋ 적기"}</small>`}
-      ${has ? `<i class="ast-bar" style="width:${Math.max(6, (s.cost / max) * 100)}%"></i>` : ""}</button>`;
+      ${has ? `<i class="ast-bar" style="width:${Math.max(6, (s.total / max) * 100)}%"></i>` : ""}</button>`;
   }).join("");
   // 올해 요약: 첫 기록 → 마지막 기록, 올해 받은 배당 합계
   const done = yms.filter(astFilled), first = done[0], last = done[done.length - 1];
   const divY = yms.reduce((a, k) => a + astSum(k).div, 0);
   const base = first ? astPrevYm(first) : null;  // 작년 마지막 기록이 있으면 그걸 출발점으로
-  const from = base ? astSum(base).cost : first ? astSum(first).cost : 0, to = last ? astSum(last).cost : 0;
+  const from = base ? astSum(base).total : first ? astSum(first).total : 0, to = last ? astSum(last).total : 0;
+  const ls = last ? astSum(last) : null;
+  // 4칸은 누르면 아래에 그 그래프가 열려요 (다시 누르면 닫혀요)
+  const tile = (k, label, val, cls = "") => `<button type="button" class="ast-tile" data-ast-chart="${k}" aria-pressed="${astChart === k}">
+      <small>${label}</small><b class="${cls}">${val}</b><span class="ast-tile-g" aria-hidden="true">${astChart === k ? "그래프 닫기 ▴" : "그래프 ▾"}</span></button>`;
   const sum = done.length ? `<div class="sav-hero ast-hero">
-      <div><small>${+last.slice(5)}월 투자금</small><b>${savWon(to)}</b></div>
-      <div><small>${base ? `작년 ${+base.slice(5)}월` : `${+first.slice(5)}월`}보다</small><b class="${astCls(to - from)}">${astWonD(to - from)}</b></div>
-      <div><small>${y}년 받은 배당</small><b>${astDivW(divY)}</b></div>
-      <div><small>적은 달</small><b>${done.length}개월</b></div></div>` : "";
+      ${tile("total", `${+last.slice(5)}월 총자산`, savWon(to))}
+      ${tile("chg", `${base ? `작년 ${+base.slice(5)}월` : `${+first.slice(5)}월`}보다`, astWonD(to - from), astCls(to - from))}
+      ${tile("div", `${y}년 받은 배당`, astDivW(divY))}
+      ${tile("cash", `${+last.slice(5)}월 예수금`, savWon(ls.cash))}</div>
+      ${astChart ? `<div id="ast-chart">${astChartHtml(y)}</div>` : ""}` : "";
   return `<div class="ast-year"><button type="button" class="ast-nav" data-ast-y="-1" aria-label="작년">‹</button><b>${y}년</b>
       <button type="button" class="ast-nav" data-ast-y="1" aria-label="다음 해" ${y >= new Date().getFullYear() ? "disabled" : ""}>›</button></div>
     ${sum}<div class="ast-grid">${cells}</div>
-    <p class="muted note" style="margin:10px 0 0">달을 누르면 크게 열려요. 종목·주 수·투자금(산 돈)·그 달 받은 배당을 적으면 지난 기록과 비교해 줘요.</p>
+    <p class="muted note" style="margin:10px 0 0">달을 누르면 크게 열려요. 총자산 = 투자금(산 돈) + 예수금. 위 4칸을 누르면 달마다 그래프가 나와요.</p>
     <details class="sav-mine ast-backup"><summary>백업 · 다른 폰으로 옮기기</summary>
       <p class="muted" style="margin:6px 0 0;font-size:12px">기록은 이 폰 브라우저에만 있어요. 가끔 아래 글자를 복사해 메모장이나 나에게 보내기로 저장해 두세요. 붙여 넣고 '불러오기'를 누르면 그대로 돌아와요.</p>
       <textarea id="ast-json" rows="3" spellcheck="false" aria-label="백업 글자"></textarea>
       <div class="ast-new"><button type="button" class="ast-btn" data-ast-export>복사</button><button type="button" class="ast-btn" data-ast-import>불러오기</button><span class="muted" id="ast-bk-msg" style="font-size:12px"></span></div></details>`;
+}
+
+// 위 4칸 그래프: 막대 + 그 위 선. 한 해 12달, 적은 달만 (빈 달은 막대 없음, 선은 이어서)
+const AST_CHART = {
+  total: { bar: "투자금", line: "총자산 (투자금+예수금)", v: (s) => [s.cost, s.total] },
+  chg: { bar: "지난 기록보다 늘어난 돈", line: "올해 쌓인 증감", sign: true },
+  div: { bar: "그 달 받은 배당", line: "올해 쌓인 배당" },
+  cash: { bar: "예수금", line: "현금 비중 (오른쪽 %)", pct: true },
+};
+const astAxis = (v) => { const a = Math.abs(v), s = v < 0 ? "-" : ""; return a >= 1e8 ? `${s}${+(a / 1e8).toFixed(1)}억` : a >= 1e4 ? `${s}${Math.round(a / 1e4).toLocaleString("ko-KR")}만` : `${s}${Math.round(a).toLocaleString("ko-KR")}`; };
+function astSeries(y, k) {
+  const yms = Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, "0")}`);
+  let acc = 0, accD = 0;
+  return yms.map((ym) => {
+    if (!astFilled(ym)) return { ym, bar: null, line: null };
+    const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
+    if (k === "total") return { ym, bar: s.cost, line: s.total };
+    if (k === "chg") { const d = ps ? s.total - ps.total : 0; acc += d; return { ym, bar: d, line: acc }; }
+    if (k === "div") { accD += s.div; return { ym, bar: s.div, line: accD }; }
+    return { ym, bar: s.cash, line: s.total ? (s.cash / s.total) * 100 : 0 };
+  });
+}
+function astChartHtml(y) {
+  const k = astChart, cfg = AST_CHART[k], all = astSeries(y, k), has = all.filter((p) => p.bar != null);
+  if (!has.length) return "";
+  // 빈 앞달은 빼서 막대를 크게: 첫 기록 달부터 이번 달(지난해면 12월)까지, 최소 6칸
+  const endI = String(y) === ymNow().slice(0, 4) ? +ymNow().slice(5) - 1 : 11;
+  const startI = Math.max(0, Math.min(all.indexOf(has[0]), endI - 5));
+  const pts = all.slice(startI, endI + 1), n = pts.length;
+  const W = 340, H = 196, L = 44, Rr = cfg.pct ? 30 : 8, T = 12, B = 22, iw = W - L - Rr, ih = H - T - B;
+  const vals = has.flatMap((p) => (cfg.pct ? [p.bar] : [p.bar, p.line]));
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const nice = (v) => { if (v <= 0) return 0; const p = 10 ** Math.floor(Math.log10(v)), f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; };
+  hi = nice(hi) || 1; lo = lo < 0 ? -nice(-lo) : 0;
+  const Y = (v) => T + ih - ((v - lo) / (hi - lo)) * ih;
+  const Yp = (v) => T + ih - (v / 100) * ih;
+  const cw = iw / n, X = (i) => L + cw * i + cw / 2, bw = Math.min(26, cw * 0.56);
+  const ticks = [lo < 0 ? lo : null, 0, hi * 0.5, hi].filter((v) => v != null);
+  let g = ticks.map((v) => `<line class="ast-gl${v === 0 ? " z" : ""}" x1="${L}" x2="${W - Rr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/>
+    <text class="ast-ax" x="${L - 5}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${astAxis(v)}</text>`).join("");
+  if (cfg.pct) g += [0, 50, 100].map((v) => `<text class="ast-ax" x="${W - Rr + 5}" y="${(Yp(v) + 3.5).toFixed(1)}">${v}%</text>`).join("");
+  const now = ymNow();
+  const bars = pts.map((p, i) => {
+    const lab = `<text class="ast-ax${p.ym === now ? " now" : ""}" x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${+p.ym.slice(5)}월</text>`;
+    const hit = `<rect class="ast-hit" data-ast-tip="${p.ym}" x="${(L + cw * i).toFixed(1)}" y="${T}" width="${cw.toFixed(1)}" height="${ih}"/>`;
+    if (p.bar == null) return lab;
+    const y0 = Y(0), y1 = Y(p.bar), cls = cfg.sign ? (p.bar >= 0 ? " up" : " down") : "";
+    return `${lab}<rect class="ast-b${cls}${astTip === p.ym ? " on" : ""}" x="${(X(i) - bw / 2).toFixed(1)}" y="${Math.min(y0, y1).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(y1 - y0)).toFixed(1)}" rx="3"/>${hit}`;
+  }).join("");
+  const Ly = cfg.pct ? Yp : Y;
+  const lp = pts.map((p, i) => (p.line == null ? null : [X(i), Ly(p.line)])).filter(Boolean);
+  const line = `<path class="ast-cl" d="${lp.map(([x, yy], j) => `${j ? "L" : "M"}${x.toFixed(1)} ${yy.toFixed(1)}`).join("")}"/>`
+    + lp.map(([x, yy]) => `<circle class="ast-cd" cx="${x.toFixed(1)}" cy="${yy.toFixed(1)}" r="3.2"/>`).join("");
+  const tipYm = astTip && has.some((p) => p.ym === astTip) ? astTip : has[has.length - 1].ym;
+  return `<div class="ast-chart"><div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span><span><i class="l"></i>${cfg.line}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대와 ${esc(cfg.line)} 선 그래프">${g}${bars}${line}</svg>
+    <p class="ast-tipline" id="ast-tip">${astTipText(y, tipYm)}</p></div>`;
+}
+function astTipText(y, ym) {
+  const k = astChart, cfg = AST_CHART[k], p = astSeries(y, k).find((q) => q.ym === ym);
+  if (!p || p.bar == null) return "";
+  const f = (v) => (k === "div" ? astDivW(v) : k === "chg" ? astWonD(v) : savWon(v));
+  return `<b>${+ym.slice(5)}월</b> · ${cfg.bar} <b class="${cfg.sign ? astCls(p.bar) : ""}">${f(p.bar)}</b> · ${cfg.line.replace(/ \(.*\)$/, "")} <b>${cfg.pct ? `${Math.round(p.line)}%` : f(p.line)}</b>`;
 }
 
 // 펼친 달: 요약 → 메모 → 계좌별 종목 → 종목 넣기 → 사다리 그림
@@ -6389,14 +6459,14 @@ function astDetail(ym) {
   const p = astPrevYm(ym), now = ymNow();
   const accts = AST.accts.map((a) => `<button type="button" data-ast-to="${esc(a)}" aria-pressed="${a === astTo}">${esc(a)}</button>`).join("");
   const preset = AST_PRESET.filter((a) => !AST.accts.includes(a)).map((a) => `<button type="button" class="ast-add-a" data-ast-new="${esc(a)}">＋ ${esc(a)}</button>`).join("");
-  const copy = !x.items.length && p ? `<button type="button" class="more ast-copy" data-ast-copy>📋 ${esc(ymName(p))} 종목 그대로 가져오기<span aria-hidden="true">›</span></button>` : "";
+  const copy = !astFilled(ym) && p ? `<button type="button" class="more ast-copy" data-ast-copy>📋 ${esc(ymName(p))} 종목·예수금 그대로 가져오기<span aria-hidden="true">›</span></button>` : "";
   return `<div class="ast-detail${astAnim && !calm() ? " zoom" : ""}" id="ast-detail">
     <div class="ast-dh"><button type="button" class="back" data-ast-close>‹ 달력</button>
       <span class="ast-dm"><button type="button" class="ast-nav" data-ast-step="-1" aria-label="지난달">‹</button><b>${esc(ymName(ym))}</b>
       <button type="button" class="ast-nav" data-ast-step="1" aria-label="다음 달" ${ym >= now ? "disabled" : ""}>›</button></span></div>
     <div id="ast-sum">${astSumHtml(ym)}</div>
     <label class="ast-memo"><span class="muted">메모</span><textarea data-ast-memo rows="3" maxlength="2000" placeholder="이번 달 있었던 일, 산 이유, 다음 달 계획…">${esc(x.memo)}</textarea></label>
-    <h3 class="sav-h">계좌별 종목 <small class="muted">${x.items.length}개</small></h3>
+    <h3 class="sav-h">계좌별 예수금·종목 <small class="muted">${x.items.length}종목</small></h3>
     ${copy}
     <div id="ast-rows">${astRows(ym)}</div>
     <h3 class="sav-h">종목 넣기</h3>
@@ -6411,22 +6481,24 @@ function astDetail(ym) {
         <button type="button" class="ast-btn" data-ast-new-go>추가</button></div>
       <ul class="ast-alist">${AST.accts.map((a, i) => `<li><input type="text" maxlength="20" value="${esc(a)}" data-ast-rename="${i}" aria-label="계좌 이름">
         ${AST.accts.length > 1 ? `<button type="button" class="ast-x" data-ast-drop="${i}" aria-label="${esc(a)} 계좌 빼기">×</button>` : ""}</li>`).join("")}</ul>
-      <p class="muted" style="margin:6px 0 0;font-size:12px">계좌를 빼면 그 계좌 종목은 첫 번째 계좌로 옮겨져요.</p></details>
-    <h3 class="sav-h">계좌 → 종목 나눠 보기 <small class="muted">투자금 비중</small></h3>
+      <p class="muted" style="margin:6px 0 0;font-size:12px">계좌를 빼면 그 계좌 종목·예수금은 첫 번째 계좌로 옮겨져요.</p></details>
+    <h3 class="sav-h">계좌 → 종목 나눠 보기 <small class="muted">총자산 비중</small></h3>
     <div id="ast-tree">${astTree(ym)}</div>
     <button type="button" class="goal-reset ast-clear" data-ast-clear ${astFilled(ym) || x.memo ? "" : "hidden"}>${RESET_ICON}<span class="t0">이 달 기록 지우기</span><span>한 번 더 누르면 지워요</span></button>
   </div>`;
 }
 
-// 요약 3칸: 총 투자금(지난 기록 대비), 주 수 합계(대비), 이번 달 받은 배당
+// 요약 4칸: 총 투자금·예수금·주 수 합계(지난 기록 대비), 이번 달 받은 배당. 아래 한 줄은 총자산과 비교 기준
 function astSumHtml(ym) {
   const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
   const vs = (d, f) => (ps ? `<small class="${astCls(d)}">${d ? f(d) : "그대로"}</small>` : `<small class="muted">첫 기록</small>`);
+  const pn = p ? `${p.slice(0, 4) !== ym.slice(0, 4) ? `${p.slice(2, 4)}년 ` : ""}${+p.slice(5)}월` : "";
   return `<div class="sav-hero ast-hero">
     <div><small>총 투자금</small><b>${savWon(s.cost)}</b>${vs(s.cost - (ps ? ps.cost : 0), astWonD)}</div>
+    <div><small>예수금</small><b>${savWon(s.cash)}</b>${vs(s.cash - (ps ? ps.cash : 0), astWonD)}</div>
     <div><small>주 수 합계</small><b>${astQty(s.qty)}</b>${vs(s.qty - (ps ? ps.qty : 0), astQtyD)}</div>
-    <div><small>이번 달 배당</small><b>${astDivW(s.div)}</b>${s.div ? "" : `<small class="muted">없음</small>`}</div>
-    <div><small>비교 기준</small><b>${p ? `${p.slice(0, 4) !== ym.slice(0, 4) ? `${p.slice(2, 4)}년 ` : ""}${+p.slice(5)}월` : "-"}</b><small class="muted">${p ? "지난 기록" : "앞 기록 없음"}</small></div></div>`;
+    <div><small>이번 달 배당</small><b>${astDivW(s.div)}</b>${s.div ? "" : `<small class="muted">없음</small>`}</div></div>
+    <p class="ast-total">총자산 <b>${savWon(s.total)}</b>${ps ? ` <span class="${astCls(s.total - ps.total)}">${s.total - ps.total ? astWonD(s.total - ps.total) : "그대로"}</span> <small class="muted">· ${pn} 기록과 비교</small>` : ` <small class="muted">· 첫 기록</small>`}</p>`;
 }
 
 // 지난 기록과 비교: 같은 계좌의 같은 종목끼리
@@ -6443,13 +6515,12 @@ function astRows(ym) {
   const x = AST.months[ym] || { items: [] };
   const p = astPrevYm(ym);
   const gone = p ? AST.months[p].items.filter((j) => !x.items.some((i) => astKey(i) === astKey(j))) : [];
-  if (!x.items.length && !gone.length) return `<p class="empty" style="margin:8px 0 0">아직 적은 종목이 없어요. 아래에서 종목을 찾아 넣어 보세요.</p>`;
   const accts = AST.accts.concat(x.items.map((i) => i.acct).filter((a) => !AST.accts.includes(a))).filter((a, k, all) => all.indexOf(a) === k);
   const groups = accts.map((a) => {
     const its = x.items.filter((i) => i.acct === a);
-    if (!its.length) return "";
-    const tot = its.reduce((s, i) => s + (+i.cost || 0), 0);
-    return `<div class="ast-grp"><div class="ast-gh"><b>${esc(a)}</b><small class="muted">${its.length}종목 · ${savWon(tot)}</small></div>
+    const tot = its.reduce((s, i) => s + (+i.cost || 0), 0), cash = x.cash ? +x.cash[a] || 0 : 0;
+    return `<div class="ast-grp"><div class="ast-gh"><b>${esc(a)}</b><small class="muted">${its.length ? `${its.length}종목 · ${savWon(tot)}` : "종목 없음"}</small></div>
+      <label class="ast-cash"><span>예수금</span><span class="alert-input"><input data-ast-cash="${esc(a)}" type="text" inputmode="decimal" value="${cash ? cash.toLocaleString("ko-KR") : ""}" placeholder="0"><span>원</span></span></label>
       ${its.map((it) => {
         const inp = (k, label, unit) => `<label class="sav-in"><span>${label}</span><span class="alert-input"><input data-ast-f="${k}" type="text" inputmode="decimal" value="${+it[k] ? (+it[k]).toLocaleString("ko-KR", { maximumFractionDigits: 4 }) : ""}" placeholder="0"><span>${unit}</span></span></label>`;
         const sel = `<select data-ast-acct aria-label="계좌 옮기기">${accts.map((b) => `<option ${b === it.acct ? "selected" : ""}>${esc(b)}</option>`).join("")}</select>`;
@@ -6462,7 +6533,7 @@ function astRows(ym) {
   }).join("");
   const goneH = gone.length ? `<div class="ast-gone"><small class="muted">${esc(ymName(p))}엔 있었는데 이번 달엔 없어요</small>
     ${gone.map((j) => `<span class="ast-tag down">${esc(j.acct)} · ${esc(j.name)} ${astQty(+j.qty || 0)}</span>`).join("")}</div>` : "";
-  return groups + goneH;
+  return groups + goneH + (x.items.length ? "" : `<p class="muted" style="margin:8px 0 0">아래에서 종목을 찾아 넣어 보세요.</p>`);
 }
 // 종목 검색 (검색 화면과 같은 너그러운 검색). 누르면 고른 계좌에 풀네임으로 들어가요
 function astResults(ym) {
@@ -6483,11 +6554,17 @@ function astResults(ym) {
 
 // 사다리 그림: 왼쪽 '내 자산' → 가운데 계좌 → 오른쪽 종목. 꺾인 선으로 갈라지고, 선 굵기·글자는 투자금 비중
 function astTree(ym) {
-  const x = AST.months[ym] || { items: [] };
-  if (!x.items.length) return `<p class="muted" style="margin:6px 0 0">종목을 넣으면 계좌에서 종목으로 갈라지는 그림이 나와요.</p>`;
+  const x = AST.months[ym] || { items: [], cash: {} };
+  if (!astFilled(ym)) return `<p class="muted" style="margin:6px 0 0">종목이나 예수금을 넣으면 계좌에서 종목으로 갈라지는 그림이 나와요.</p>`;
+  // 예수금은 그 계좌의 마지막 가지로 (이름 '예수금', 회색 점)
   const accts = AST.accts.concat(x.items.map((i) => i.acct)).filter((a, k, all) => all.indexOf(a) === k)
-    .map((a) => ({ a, its: x.items.filter((i) => i.acct === a).sort((p, q) => (+q.cost || 0) - (+p.cost || 0)) })).filter((g) => g.its.length);
-  const total = x.items.reduce((s, i) => s + (+i.cost || 0), 0) || 1;
+    .map((a) => {
+      const its = x.items.filter((i) => i.acct === a).sort((p, q) => (+q.cost || 0) - (+p.cost || 0));
+      const c = x.cash ? +x.cash[a] || 0 : 0;
+      if (c > 0) its.push({ name: "예수금", cost: c, cash: true });
+      return { a, its };
+    }).filter((g) => g.its.length);
+  const total = astSum(ym).total || 1;
   const RH = 34, GAP = 12, W = 358, X1 = 70, X2 = 92, X3 = 170, X4 = 190;
   let y = 6;
   accts.forEach((g) => { g.ys = g.its.map(() => { const v = y + RH / 2; y += RH; return v; }); g.y = (g.ys[0] + g.ys[g.ys.length - 1]) / 2; y += GAP; });
@@ -6506,9 +6583,9 @@ function astTree(ym) {
       <text x="${(X2 + X3) / 2}" y="${g.y + 10}" text-anchor="middle" class="t2">${esc(savWon(gc))} · ${share(gc)}</text></g>`;
     g.its.forEach((it, j) => {
       const yy = g.ys[j];
-      boxes += `<g class="ast-node stock" style="--k:${gi}"><circle cx="${X4 + 4}" cy="${yy}" r="3.5"/>
+      boxes += `<g class="ast-node stock${it.cash ? " cash" : ""}" style="--k:${gi}"><circle cx="${X4 + 4}" cy="${yy}" r="3.5"/>
         <text x="${X4 + 12}" y="${yy - 2}" class="t1">${esc(short(it.name, 14))}</text>
-        <text x="${X4 + 12}" y="${yy + 10}" class="t2">${astQty(+it.qty || 0)} · ${esc(savWon(+it.cost || 0))} · ${share(+it.cost || 0)}</text></g>`;
+        <text x="${X4 + 12}" y="${yy + 10}" class="t2">${it.cash ? "" : `${astQty(+it.qty || 0)} · `}${esc(savWon(+it.cost || 0))} · ${share(+it.cost || 0)}</text></g>`;
     });
   });
   boxes += `<g class="ast-node root"><rect x="2" y="${rootY - 17}" width="${X1 - 2}" height="34" rx="9"/>
@@ -6529,9 +6606,30 @@ function bindAsset() {
     bindAsset();
     keepTap();
   };
-  const month = (ym) => AST.months[ym] || (AST.months[ym] = { memo: "", items: [] });
-  // 달력 화면
-  card.querySelectorAll("[data-ast-y]").forEach((b) => b.addEventListener("click", () => { AST.year = +AST.year + +b.dataset.astY; astSave(); redraw(); }));
+  const month = (ym) => AST.months[ym] || (AST.months[ym] = { memo: "", items: [], cash: {} });
+  // 달력 화면: 위 4칸을 누르면 그래프 열기·닫기, 그래프 막대를 누르면 그 달 숫자
+  card.querySelectorAll("[data-ast-chart]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.astChart;
+    astChart = astChart === k ? null : k;
+    astTip = null;
+    redraw();
+    const svg = $("#ast-chart svg");
+    if (svg && !calm()) {
+      drawIn(svg, { x0: 44, w: 300, sel: ".ast-cl", late: ".ast-cd", px: svg.getBoundingClientRect().width * 0.88 });
+      svg.querySelectorAll(".ast-b").forEach((r, i) => r.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 420, delay: i * 35, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }));
+    }
+  }));
+  const ch = $("#ast-chart");
+  if (ch) ch.addEventListener("click", (e) => {
+    const h = e.target.closest("[data-ast-tip]");
+    if (!h) return;
+    astTip = h.dataset.astTip;
+    ch.querySelectorAll(".ast-b").forEach((r) => r.classList.remove("on"));
+    const bar = h.previousElementSibling;
+    if (bar && bar.classList.contains("ast-b")) bar.classList.add("on");
+    const t = $("#ast-tip"); if (t) t.innerHTML = astTipText(+AST.year, astTip);
+  });
+  card.querySelectorAll("[data-ast-y]").forEach((b) => b.addEventListener("click", () => { AST.year = +AST.year + +b.dataset.astY; astTip = null; astSave(); redraw(); }));
   card.querySelectorAll("[data-ast-m]").forEach((b) => b.addEventListener("click", () => {
     const r = b.getBoundingClientRect(), cr = card.getBoundingClientRect();
     astOpen = b.dataset.astM; astQuery = "";
@@ -6576,10 +6674,13 @@ function bindAsset() {
     const t = $("#ast-tree"); if (t) t.innerHTML = astTree(ym);
     card.querySelectorAll(".ast-row").forEach((r) => { const it = month(ym).items.find((i) => i.id === r.dataset.astId), d = $(".ast-delta", r); if (it && d) d.innerHTML = astDelta(ym, it); });
     const gh = card.querySelectorAll(".ast-grp");
-    gh.forEach((g) => { const a = $(".ast-gh b", g).textContent, its = month(ym).items.filter((i) => i.acct === a); $(".ast-gh small", g).textContent = `${its.length}종목 · ${savWon(its.reduce((v, i) => v + (+i.cost || 0), 0))}`; });
+    gh.forEach((g) => { const a = $(".ast-gh b", g).textContent, its = month(ym).items.filter((i) => i.acct === a); $(".ast-gh small", g).textContent = its.length ? `${its.length}종목 · ${savWon(its.reduce((v, i) => v + (+i.cost || 0), 0))}` : "종목 없음"; });
+    const cl = card.querySelector("[data-ast-clear]"); if (cl) cl.hidden = !astFilled(ym) && !month(ym).memo;
   };
   const rows = $("#ast-rows");
   rows.addEventListener("input", (e) => {
+    const c = e.target.closest("[data-ast-cash]");
+    if (c) { const mo = month(ym); mo.cash[c.dataset.astCash] = astNum(c.value); astSave(); live(); return; }
     const f = e.target.closest("[data-ast-f]");
     if (!f) return;
     const it = month(ym).items.find((i) => i.id === f.closest(".ast-row").dataset.astId);
@@ -6588,7 +6689,7 @@ function bindAsset() {
     astSave(); live();
   });
   rows.addEventListener("focusout", (e) => {  // 다 쓰고 나면 1,234,000처럼 쉼표를 붙여 보여 줘요
-    const f = e.target.closest("[data-ast-f]");
+    const f = e.target.closest("[data-ast-f], [data-ast-cash]");
     if (f) { const v = astNum(f.value); f.value = v ? v.toLocaleString("ko-KR", { maximumFractionDigits: 4 }) : ""; }
   });
   rows.addEventListener("change", (e) => {
@@ -6608,6 +6709,7 @@ function bindAsset() {
   if (cp) cp.addEventListener("click", () => {  // 지난 기록 종목·주 수·투자금을 그대로 (배당은 달마다 달라서 비워요)
     const p = astPrevYm(ym);
     month(ym).items = AST.months[p].items.map((i) => ({ ...i, id: astId(), div: 0 }));
+    month(ym).cash = { ...(AST.months[p].cash || {}) };
     astSave(); lastTap = null; redraw();
   });
   card.querySelectorAll("[data-ast-to]").forEach((b) => b.addEventListener("click", () => {
@@ -6653,7 +6755,10 @@ function bindAsset() {
     const k = +i.dataset.astRename, old = AST.accts[k], nw = i.value.trim().slice(0, 20);
     if (!nw || AST.accts.includes(nw)) { i.value = old; return; }
     AST.accts[k] = nw;
-    Object.values(AST.months).forEach((mo) => mo.items.forEach((it) => { if (it.acct === old) it.acct = nw; }));
+    Object.values(AST.months).forEach((mo) => {
+      mo.items.forEach((it) => { if (it.acct === old) it.acct = nw; });
+      if (mo.cash && old in mo.cash) { mo.cash[nw] = mo.cash[old]; delete mo.cash[old]; }
+    });
     if (astTo === old) astTo = nw;
     astSave(); redraw();
     const d = $(".ast-acct-edit"); if (d) d.open = true;
@@ -6661,7 +6766,10 @@ function bindAsset() {
   card.querySelectorAll("[data-ast-drop]").forEach((b) => b.addEventListener("click", () => {
     const k = +b.dataset.astDrop, old = AST.accts[k];
     AST.accts.splice(k, 1);
-    Object.values(AST.months).forEach((mo) => mo.items.forEach((it) => { if (it.acct === old) it.acct = AST.accts[0]; }));
+    Object.values(AST.months).forEach((mo) => {
+      mo.items.forEach((it) => { if (it.acct === old) it.acct = AST.accts[0]; });
+      if (mo.cash && old in mo.cash) { mo.cash[AST.accts[0]] = (+mo.cash[AST.accts[0]] || 0) + (+mo.cash[old] || 0); delete mo.cash[old]; }
+    });
     if (astTo === old) astTo = AST.accts[0];
     astSave(); redraw();
     const d = $(".ast-acct-edit"); if (d) d.open = true;

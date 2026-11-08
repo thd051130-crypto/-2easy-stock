@@ -1253,3 +1253,38 @@ a.more { text-decoration: none; }
 .ast-clear { margin-top: 14px; padding: 0 12px 0 8px; font-size: 13px; color: var(--text-muted); }
 .ast-clear > span.t0 { display: inline; }
 .ast-clear.armed > span.t0 { display: none; }
+/* 자산 기록 2차: 위 4칸 그래프·예수금 (2026-11-08) */
+.ast-tile { display: block; text-align: left; border: 1px solid transparent; background: var(--surface-0); border-radius: var(--radius-s); padding: 10px 12px; min-width: 0; color: inherit; font: inherit; cursor: pointer; }
+.ast-tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); }
+.ast-tile small { display: block; font-size: 12px; color: var(--text-muted); }
+.ast-tile b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.ast-tile b.up { color: var(--up); } .ast-tile b.down { color: var(--down); }
+.ast-tile-g { display: block; font-size: 11px; color: var(--accent-fg); margin-top: 3px; }
+.ast-chart { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 10px 8px 6px; }
+.ast-leg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-secondary); padding: 0 4px 4px; }
+.ast-leg span { display: inline-flex; align-items: center; gap: 5px; }
+.ast-leg i.b { width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 45%, var(--surface-1)); }
+.ast-leg i.b.sign { background: linear-gradient(90deg, var(--up) 50%, var(--down) 50%); opacity: .7; }
+.ast-leg i.l { width: 16px; height: 0; border-top: 2.5px solid var(--series-2); border-radius: 2px; }
+.ast-chart svg { display: block; overflow: visible; }
+.ast-gl { stroke: var(--grid); stroke-width: 1; }
+.ast-gl.z { stroke: var(--border); }
+.ast-ax { font-family: var(--font); font-size: 10px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ast-ax.now { fill: var(--accent-fg); font-weight: 700; }
+.ast-b { fill: color-mix(in srgb, var(--accent) 45%, var(--surface-1)); transform-box: fill-box; transform-origin: 50% 100%; }
+.ast-b.up { fill: color-mix(in srgb, var(--up) 65%, var(--surface-1)); }
+.ast-b.down { fill: color-mix(in srgb, var(--down) 65%, var(--surface-1)); transform-origin: 50% 0; }
+.ast-b.on { fill: var(--accent); } .ast-b.up.on { fill: var(--up); } .ast-b.down.on { fill: var(--down); }
+.ast-hit { fill: transparent; cursor: pointer; }
+.ast-cl { fill: none; stroke: var(--series-2); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.ast-cd { fill: var(--surface-1); stroke: var(--series-2); stroke-width: 2; pointer-events: none; }
+.ast-tipline { margin: 6px 4px 2px; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; min-height: 20px; }
+.ast-tipline b.up { color: var(--up); } .ast-tipline b.down { color: var(--down); }
+.ast-total { margin: 8px 2px 0; font-size: 14px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ast-total b { color: var(--text-primary); font-size: 16px; }
+.ast-cash { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.ast-cash > span:first-child { flex: none; width: 52px; }
+.ast-cash .alert-input { padding: 0 10px; }
+.ast-cash .alert-input input { font-size: 15px; padding: 8px 0; }
+.ast-tree .stock.cash circle { fill: var(--text-muted); }
+.ast-tree .stock.cash .t1 { fill: var(--text-secondary); }
