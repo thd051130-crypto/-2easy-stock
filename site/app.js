@@ -6336,7 +6336,8 @@ const astKey = (i) => `${i.acct}|${i.m}:${i.code}`;
 const astWon = (x) => `${Math.round(x).toLocaleString("ko-KR")}원`;
 const astQty = (x) => `${(+x).toLocaleString("ko-KR", { maximumFractionDigits: 4 })}주`;
 const astSign = (x) => (x > 0 ? "+" : x < 0 ? "-" : "±");
-const astCls = (x) => (x > 0 ? "up" : x < 0 ? "down" : "");
+// 자산 기록의 늘고 줄음은 빨강·파랑 없이 같은 색으로 (사용자 2026-11-08 "색깔 빼, 심리를 지켜야 해")
+const astCls = () => "";
 const astMan = (x) => (Math.abs(x) < 1e4 ? astWon(x) : savWon(x));  // 만 원 넘으면 만원 단위로 줄여서
 const astDivW = (x) => (x < 1e6 ? astWon(x) : savWon(x));  // 배당은 작아서 100만 원 아래는 원 단위 그대로
 const astWonD = (x) => `${astSign(x)}${astMan(Math.abs(x))}`;
@@ -6394,7 +6395,7 @@ function astGrid() {
 // 최근 12달(해를 넘어도), 앞쪽 빈 달은 빼고 최소 6칸. 막대를 누르면 그 달 숫자로 바뀌어요. 아래 '추이 | 구성' 버튼
 const AST_CHART = {
   total: { title: "총자산", bar: "투자금", line: "총자산" },
-  chg: { title: "그 달 늘어난 돈", bar: "그 달 증감", line: "쌓인 증감", sign: true },
+  chg: { title: "그 달 늘어난 돈", bar: "그 달 증감", line: "쌓인 증감" },
   div: { title: "그 달 받은 배당", bar: "배당", line: "쌓인 배당" },
   cash: { title: "예수금", bar: "예수금", line: "현금 비중", pct: true },
 };
@@ -6444,7 +6445,7 @@ function astChartHtml(y) {
     // 끝만 둥근 막대 (바닥 쪽은 반듯하게)
     const d = up ? `M${x0} ${y0}V${yt + r}Q${x0} ${yt} ${x0 + r} ${yt}H${x0 + bw - r}Q${x0 + bw} ${yt} ${x0 + bw} ${yt + r}V${y0}Z`
       : `M${x0} ${y0}V${yt + h - r}Q${x0} ${yt + h} ${x0 + r} ${yt + h}H${x0 + bw - r}Q${x0 + bw} ${yt + h} ${x0 + bw} ${yt + h - r}V${y0}Z`;
-    const cls = cfg.sign ? (up ? " up" : " down") : "";
+    const cls = up ? "" : " neg";
     return `${lab}<path class="ast-b${cls}${on ? " on" : ""}" d="${d}"/>${hit}`;
   }).join("");
   const Ly = cfg.pct ? Yp : Y;
@@ -6547,7 +6548,7 @@ function astRows(ym) {
       }).join("")}</div>`;
   }).join("");
   const goneH = gone.length ? `<div class="ast-gone"><small class="muted">${esc(ymName(p))}엔 있었는데 이번 달엔 없어요</small>
-    ${gone.map((j) => `<span class="ast-tag down">${esc(j.acct)} · ${esc(j.name)} ${astQty(+j.qty || 0)}</span>`).join("")}</div>` : "";
+    ${gone.map((j) => `<span class="ast-tag">${esc(j.acct)} · ${esc(j.name)} ${astQty(+j.qty || 0)}</span>`).join("")}</div>` : "";
   return groups + goneH + (x.items.length ? "" : `<p class="muted" style="margin:8px 0 0">아래에서 종목을 찾아 넣어 보세요.</p>`);
 }
 // 종목 검색 (검색 화면과 같은 너그러운 검색). 누르면 고른 계좌에 풀네임으로 들어가요

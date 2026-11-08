@@ -1280,7 +1280,7 @@ a.more { text-decoration: none; }
 .ast-b { fill: color-mix(in srgb, var(--ast-g) 72%, var(--surface-1)); transform-box: fill-box; transform-origin: 50% 100%; }
 .ast-b.on { fill: var(--ast-g); }
 .ast-b.up { fill: color-mix(in srgb, var(--up) 60%, var(--surface-1)); } .ast-b.up.on { fill: var(--up); }
-.ast-b.down { fill: color-mix(in srgb, var(--down) 60%, var(--surface-1)); transform-origin: 50% 0; } .ast-b.down.on { fill: var(--down); }
+.ast-b.neg { transform-origin: 50% 0; }
 .ast-hit { fill: transparent; cursor: pointer; }
 .ast-cl { fill: none; stroke: var(--ast-gl); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
 .ast-cd { fill: var(--surface-1); stroke: var(--ast-gl); stroke-width: 2.5; pointer-events: none; }
