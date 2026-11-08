@@ -6390,67 +6390,82 @@ function astGrid() {
       <div class="ast-new"><button type="button" class="ast-btn" data-ast-export>복사</button><button type="button" class="ast-btn" data-ast-import>불러오기</button><span class="muted" id="ast-bk-msg" style="font-size:12px"></span></div></details>`;
 }
 
-// 위 4칸 그래프: 막대 + 그 위 선. 한 해 12달, 적은 달만 (빈 달은 막대 없음, 선은 이어서)
+// 위 4칸 그래프 (사용자가 보내 준 자산 앱 그래프 참고, 2026-11-08): 위에 큰 금액, 굵은 둥근 막대 + 흰 점 선, 눈금 없이 깔끔하게.
+// 최근 12달(해를 넘어도), 앞쪽 빈 달은 빼고 최소 6칸. 막대를 누르면 그 달 숫자로 바뀌어요. 아래 '추이 | 구성' 버튼
 const AST_CHART = {
-  total: { bar: "투자금", line: "총자산 (투자금+예수금)", v: (s) => [s.cost, s.total] },
-  chg: { bar: "지난 기록보다 늘어난 돈", line: "올해 쌓인 증감", sign: true },
-  div: { bar: "그 달 받은 배당", line: "올해 쌓인 배당" },
-  cash: { bar: "예수금", line: "현금 비중 (오른쪽 %)", pct: true },
+  total: { title: "총자산", bar: "투자금", line: "총자산" },
+  chg: { title: "그 달 늘어난 돈", bar: "그 달 증감", line: "쌓인 증감", sign: true },
+  div: { title: "그 달 받은 배당", bar: "배당", line: "쌓인 배당" },
+  cash: { title: "예수금", bar: "예수금", line: "현금 비중", pct: true },
 };
-const astAxis = (v) => { const a = Math.abs(v), s = v < 0 ? "-" : ""; return a >= 1e8 ? `${s}${+(a / 1e8).toFixed(1)}억` : a >= 1e4 ? `${s}${Math.round(a / 1e4).toLocaleString("ko-KR")}만` : `${s}${Math.round(a).toLocaleString("ko-KR")}`; };
+let astMode = "trend";
 function astSeries(y, k) {
-  const yms = Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, "0")}`);
+  const end = String(y) === ymNow().slice(0, 4) ? ymNow() : `${y}-12`;
+  const yms = Array.from({ length: 12 }, (_, i) => ymAdd(end, i - 11));
   let acc = 0, accD = 0;
-  return yms.map((ym) => {
+  const pts = yms.map((ym) => {
     if (!astFilled(ym)) return { ym, bar: null, line: null };
     const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
-    if (k === "total") return { ym, bar: s.cost, line: s.total };
-    if (k === "chg") { const d = ps ? s.total - ps.total : 0; acc += d; return { ym, bar: d, line: acc }; }
-    if (k === "div") { accD += s.div; return { ym, bar: s.div, line: accD }; }
-    return { ym, bar: s.cash, line: s.total ? (s.cash / s.total) * 100 : 0 };
+    if (k === "total") return { ym, bar: s.cost, line: s.total, s };
+    if (k === "chg") { const d = ps ? s.total - ps.total : 0; acc += d; return { ym, bar: d, line: acc, s }; }
+    if (k === "div") { accD += s.div; return { ym, bar: s.div, line: accD, s }; }
+    return { ym, bar: s.cash, line: s.total ? (s.cash / s.total) * 100 : 0, s };
   });
+  const first = pts.findIndex((p) => p.bar != null);
+  return first < 0 ? [] : pts.slice(Math.max(0, Math.min(first, 6)));
 }
+const astFmt = (k, v) => (k === "div" ? astDivW(v) : k === "chg" ? `${v > 0 ? "+" : v < 0 ? "-" : ""}${astWon(Math.abs(v))}` : astWon(v));
 function astChartHtml(y) {
-  const k = astChart, cfg = AST_CHART[k], all = astSeries(y, k), has = all.filter((p) => p.bar != null);
+  const k = astChart, cfg = AST_CHART[k], pts = astSeries(y, k), has = pts.filter((p) => p.bar != null);
   if (!has.length) return "";
-  // 빈 앞달은 빼서 막대를 크게: 첫 기록 달부터 이번 달(지난해면 12월)까지, 최소 6칸
-  const endI = String(y) === ymNow().slice(0, 4) ? +ymNow().slice(5) - 1 : 11;
-  const startI = Math.max(0, Math.min(all.indexOf(has[0]), endI - 5));
-  const pts = all.slice(startI, endI + 1), n = pts.length;
-  const W = 340, H = 196, L = 44, Rr = cfg.pct ? 30 : 8, T = 12, B = 22, iw = W - L - Rr, ih = H - T - B;
+  const sel = has.find((p) => p.ym === astTip) || has[has.length - 1];
+  const head = k === "total" ? sel.line : sel.bar;
+  const sub = `${+sel.ym.slice(5)}월 · ${k === "total" ? cfg.bar : cfg.line} ${k === "total" ? savWon(sel.bar) : cfg.pct ? `${Math.round(sel.line)}%` : k === "chg" ? astWonD(sel.line) : astMan(sel.line)}`;
+  const tabs = `<div class="period ast-mode" role="group" aria-label="그래프 보기"><button type="button" data-ast-mode="trend" aria-pressed="${astMode === "trend"}">추이</button><button type="button" data-ast-mode="mix" aria-pressed="${astMode === "mix"}">구성</button></div>`;
+  const top = `<div class="ast-ch-top"><div><small>${esc(cfg.title)}</small><b class="${cfg.sign ? astCls(head) : ""}">${astFmt(k, head)}</b><span class="muted">${sub}</span></div>
+    <div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span><span><i class="l"></i>${cfg.line}</span></div></div>`;
+  if (astMode === "mix") return `<div class="ast-chart">${top}${astMix(sel.ym)}${tabs}</div>`;
+  const n = pts.length, W = 340, H = 172, L = 6, Rr = 6, T = 16, B = 24, iw = W - L - Rr, ih = H - T - B;
+  // 막대와 선은 같은 눈금 (현금 비중 %만 따로 0~100%)
   const vals = has.flatMap((p) => (cfg.pct ? [p.bar] : [p.bar, p.line]));
   let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
-  const nice = (v) => { if (v <= 0) return 0; const p = 10 ** Math.floor(Math.log10(v)), f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; };
-  hi = nice(hi) || 1; lo = lo < 0 ? -nice(-lo) : 0;
-  const Y = (v) => T + ih - ((v - lo) / (hi - lo)) * ih;
-  const Yp = (v) => T + ih - (v / 100) * ih;
-  const cw = iw / n, X = (i) => L + cw * i + cw / 2, bw = Math.min(26, cw * 0.56);
-  const ticks = [lo < 0 ? lo : null, 0, hi * 0.5, hi].filter((v) => v != null);
-  let g = ticks.map((v) => `<line class="ast-gl${v === 0 ? " z" : ""}" x1="${L}" x2="${W - Rr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/>
-    <text class="ast-ax" x="${L - 5}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${astAxis(v)}</text>`).join("");
-  if (cfg.pct) g += [0, 50, 100].map((v) => `<text class="ast-ax" x="${W - Rr + 5}" y="${(Yp(v) + 3.5).toFixed(1)}">${v}%</text>`).join("");
-  const now = ymNow();
+  if (hi === lo) hi = lo + 1;
+  hi += (hi - lo) * 0.06;
+  const Y = (v) => T + ih - ((v - lo) / (hi - lo)) * ih, Yp = (v) => T + ih - (v / 100) * ih * 0.94;
+  const cw = iw / n, X = (i) => L + cw * i + cw / 2, bw = Math.min(30, cw * 0.62);
+  const every = n > 8 ? 3 : n > 6 ? 2 : 1, lastI = pts.length - 1;
   const bars = pts.map((p, i) => {
-    const lab = `<text class="ast-ax${p.ym === now ? " now" : ""}" x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${+p.ym.slice(5)}월</text>`;
-    const hit = `<rect class="ast-hit" data-ast-tip="${p.ym}" x="${(L + cw * i).toFixed(1)}" y="${T}" width="${cw.toFixed(1)}" height="${ih}"/>`;
-    if (p.bar == null) return lab;
-    const y0 = Y(0), y1 = Y(p.bar), cls = cfg.sign ? (p.bar >= 0 ? " up" : " down") : "";
-    return `${lab}<rect class="ast-b${cls}${astTip === p.ym ? " on" : ""}" x="${(X(i) - bw / 2).toFixed(1)}" y="${Math.min(y0, y1).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(y1 - y0)).toFixed(1)}" rx="3"/>${hit}`;
+    const on = p.ym === sel.ym;
+    const lab = (i - lastI) % every === 0 || on ? `<text class="ast-ax${on ? " on" : ""}" x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${+p.ym.slice(5)}월</text>` : "";
+    const hit = `<rect class="ast-hit" data-ast-tip="${p.ym}" x="${(L + cw * i).toFixed(1)}" y="0" width="${cw.toFixed(1)}" height="${H}"/>`;
+    if (p.bar == null) return lab + hit;
+    const y0 = Y(0), y1 = Y(p.bar), h = Math.max(2, Math.abs(y1 - y0)), r = Math.min(bw / 2, 6, h / 2);
+    const x0 = X(i) - bw / 2, up = p.bar >= 0, yt = up ? y0 - h : y0;
+    // 끝만 둥근 막대 (바닥 쪽은 반듯하게)
+    const d = up ? `M${x0} ${y0}V${yt + r}Q${x0} ${yt} ${x0 + r} ${yt}H${x0 + bw - r}Q${x0 + bw} ${yt} ${x0 + bw} ${yt + r}V${y0}Z`
+      : `M${x0} ${y0}V${yt + h - r}Q${x0} ${yt + h} ${x0 + r} ${yt + h}H${x0 + bw - r}Q${x0 + bw} ${yt + h} ${x0 + bw} ${yt + h - r}V${y0}Z`;
+    const cls = cfg.sign ? (up ? " up" : " down") : "";
+    return `${lab}<path class="ast-b${cls}${on ? " on" : ""}" d="${d}"/>${hit}`;
   }).join("");
   const Ly = cfg.pct ? Yp : Y;
-  const lp = pts.map((p, i) => (p.line == null ? null : [X(i), Ly(p.line)])).filter(Boolean);
-  const line = `<path class="ast-cl" d="${lp.map(([x, yy], j) => `${j ? "L" : "M"}${x.toFixed(1)} ${yy.toFixed(1)}`).join("")}"/>`
-    + lp.map(([x, yy]) => `<circle class="ast-cd" cx="${x.toFixed(1)}" cy="${yy.toFixed(1)}" r="3.2"/>`).join("");
-  const tipYm = astTip && has.some((p) => p.ym === astTip) ? astTip : has[has.length - 1].ym;
-  return `<div class="ast-chart"><div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span><span><i class="l"></i>${cfg.line}</span></div>
-    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대와 ${esc(cfg.line)} 선 그래프">${g}${bars}${line}</svg>
-    <p class="ast-tipline" id="ast-tip">${astTipText(y, tipYm)}</p></div>`;
+  const lp = pts.map((p, i) => (p.line == null ? null : { x: X(i), y: Ly(p.line), on: p.ym === sel.ym })).filter(Boolean);
+  const line = `<path class="ast-cl" d="${lp.map((q, j) => `${j ? "L" : "M"}${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join("")}"/>`
+    + lp.map((q) => `<circle class="ast-cd${q.on ? " on" : ""}" cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${q.on ? 5.5 : 4}"/>`).join("");
+  const base = `<line class="ast-gl z" x1="${L}" x2="${W - Rr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+  return `<div class="ast-chart">${top}
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대와 ${esc(cfg.line)} 선 그래프">${base}${bars}${line}</svg>${tabs}</div>`;
 }
-function astTipText(y, ym) {
-  const k = astChart, cfg = AST_CHART[k], p = astSeries(y, k).find((q) => q.ym === ym);
-  if (!p || p.bar == null) return "";
-  const f = (v) => (k === "div" ? astDivW(v) : k === "chg" ? astWonD(v) : savWon(v));
-  return `<b>${+ym.slice(5)}월</b> · ${cfg.bar} <b class="${cfg.sign ? astCls(p.bar) : ""}">${f(p.bar)}</b> · ${cfg.line.replace(/ \(.*\)$/, "")} <b>${cfg.pct ? `${Math.round(p.line)}%` : f(p.line)}</b>`;
+// 구성: 고른 달의 계좌별 총자산(투자금+예수금) 비중 막대
+function astMix(ym) {
+  const x = AST.months[ym], s = astSum(ym);
+  if (!x || !s.total) return `<p class="muted">그 달 기록이 없어요.</p>`;
+  const rows = AST.accts.concat(x.items.map((i) => i.acct)).filter((a, k, all) => all.indexOf(a) === k).map((a) => {
+    const cost = x.items.filter((i) => i.acct === a).reduce((v, i) => v + (+i.cost || 0), 0), cash = x.cash ? +x.cash[a] || 0 : 0;
+    return { a, cost, cash, t: cost + cash };
+  }).filter((r) => r.t > 0).sort((p, q) => q.t - p.t);
+  return `<ul class="ast-mix">${rows.map((r) => `<li><div class="ast-mix-t"><b>${esc(r.a)}</b><span>${savWon(r.t)} · ${Math.round((r.t / s.total) * 100)}%</span></div>
+    <div class="ast-mix-bar"><i style="width:${((r.cost / s.total) * 100).toFixed(1)}%"></i><i class="c" style="width:${((r.cash / s.total) * 100).toFixed(1)}%"></i></div></li>`).join("")}</ul>
+    <p class="muted ast-mix-leg"><i></i>투자금 <i class="c"></i>예수금 · ${+ym.slice(5)}월 기준</p>`;
 }
 
 // 펼친 달: 요약 → 메모 → 계좌별 종목 → 종목 넣기 → 사다리 그림
@@ -6615,19 +6630,19 @@ function bindAsset() {
     redraw();
     const svg = $("#ast-chart svg");
     if (svg && !calm()) {
-      drawIn(svg, { x0: 44, w: 300, sel: ".ast-cl", late: ".ast-cd", px: svg.getBoundingClientRect().width * 0.88 });
+      drawIn(svg, { x0: 6, w: 328, sel: ".ast-cl", late: ".ast-cd", px: svg.getBoundingClientRect().width });
       svg.querySelectorAll(".ast-b").forEach((r, i) => r.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 420, delay: i * 35, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }));
     }
   }));
+  // 막대 누르기·추이/구성: 그래프 칸만 다시 그려요 (높이가 바뀌는 구성은 누른 버튼 제자리)
   const ch = $("#ast-chart");
   if (ch) ch.addEventListener("click", (e) => {
-    const h = e.target.closest("[data-ast-tip]");
-    if (!h) return;
-    astTip = h.dataset.astTip;
-    ch.querySelectorAll(".ast-b").forEach((r) => r.classList.remove("on"));
-    const bar = h.previousElementSibling;
-    if (bar && bar.classList.contains("ast-b")) bar.classList.add("on");
-    const t = $("#ast-tip"); if (t) t.innerHTML = astTipText(+AST.year, astTip);
+    const h = e.target.closest("[data-ast-tip]"), m = e.target.closest("[data-ast-mode]");
+    if (!h && !m) return;
+    if (h) astTip = h.dataset.astTip;
+    if (m) { if (astMode === m.dataset.astMode) return; astMode = m.dataset.astMode; holdHeight(); }
+    ch.innerHTML = astChartHtml(+AST.year);
+    if (m) keepTap();
   });
   card.querySelectorAll("[data-ast-y]").forEach((b) => b.addEventListener("click", () => { AST.year = +AST.year + +b.dataset.astY; astTip = null; astSave(); redraw(); }));
   card.querySelectorAll("[data-ast-m]").forEach((b) => b.addEventListener("click", () => {

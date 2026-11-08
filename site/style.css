@@ -1260,26 +1260,42 @@ a.more { text-decoration: none; }
 .ast-tile b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-top: 2px; }
 .ast-tile b.up { color: var(--up); } .ast-tile b.down { color: var(--down); }
 .ast-tile-g { display: block; font-size: 11px; color: var(--accent-fg); margin-top: 3px; }
-.ast-chart { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 10px 8px 6px; }
-.ast-leg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-secondary); padding: 0 4px 4px; }
+.ast-chart { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 14px 12px 12px; --ast-g: var(--series-3); --ast-gl: color-mix(in srgb, var(--series-3) 78%, var(--text-primary)); }
+.ast-ch-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ast-ch-top > div:first-child { min-width: 0; }
+.ast-ch-top small { display: block; font-size: 12px; color: var(--text-muted); }
+.ast-ch-top b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; margin-top: 2px; }
+.ast-ch-top b.up { color: var(--up); } .ast-ch-top b.down { color: var(--down); }
+.ast-ch-top .muted { display: block; font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.ast-leg { display: grid; gap: 3px; font-size: 11px; color: var(--text-muted); flex: none; padding-top: 2px; }
 .ast-leg span { display: inline-flex; align-items: center; gap: 5px; }
-.ast-leg i.b { width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 45%, var(--surface-1)); }
-.ast-leg i.b.sign { background: linear-gradient(90deg, var(--up) 50%, var(--down) 50%); opacity: .7; }
-.ast-leg i.l { width: 16px; height: 0; border-top: 2.5px solid var(--series-2); border-radius: 2px; }
-.ast-chart svg { display: block; overflow: visible; }
+.ast-leg i.b { width: 9px; height: 9px; border-radius: 2px; background: var(--ast-g); }
+.ast-leg i.b.sign { background: linear-gradient(90deg, var(--up) 50%, var(--down) 50%); }
+.ast-leg i.l { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ast-gl); background: var(--surface-1); box-sizing: border-box; }
+.ast-chart svg { display: block; overflow: visible; margin-top: 10px; }
 .ast-gl { stroke: var(--grid); stroke-width: 1; }
 .ast-gl.z { stroke: var(--border); }
-.ast-ax { font-family: var(--font); font-size: 10px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
-.ast-ax.now { fill: var(--accent-fg); font-weight: 700; }
-.ast-b { fill: color-mix(in srgb, var(--accent) 45%, var(--surface-1)); transform-box: fill-box; transform-origin: 50% 100%; }
-.ast-b.up { fill: color-mix(in srgb, var(--up) 65%, var(--surface-1)); }
-.ast-b.down { fill: color-mix(in srgb, var(--down) 65%, var(--surface-1)); transform-origin: 50% 0; }
-.ast-b.on { fill: var(--accent); } .ast-b.up.on { fill: var(--up); } .ast-b.down.on { fill: var(--down); }
+.ast-ax { font-family: var(--font); font-size: 10.5px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ast-ax.on { fill: var(--ast-gl); font-weight: 800; }
+.ast-b { fill: color-mix(in srgb, var(--ast-g) 72%, var(--surface-1)); transform-box: fill-box; transform-origin: 50% 100%; }
+.ast-b.on { fill: var(--ast-g); }
+.ast-b.up { fill: color-mix(in srgb, var(--up) 60%, var(--surface-1)); } .ast-b.up.on { fill: var(--up); }
+.ast-b.down { fill: color-mix(in srgb, var(--down) 60%, var(--surface-1)); transform-origin: 50% 0; } .ast-b.down.on { fill: var(--down); }
 .ast-hit { fill: transparent; cursor: pointer; }
-.ast-cl { fill: none; stroke: var(--series-2); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
-.ast-cd { fill: var(--surface-1); stroke: var(--series-2); stroke-width: 2; pointer-events: none; }
-.ast-tipline { margin: 6px 4px 2px; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; min-height: 20px; }
-.ast-tipline b.up { color: var(--up); } .ast-tipline b.down { color: var(--down); }
+.ast-cl { fill: none; stroke: var(--ast-gl); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.ast-cd { fill: var(--surface-1); stroke: var(--ast-gl); stroke-width: 2.5; pointer-events: none; }
+.ast-cd.on { fill: var(--ast-gl); stroke: var(--surface-1); stroke-width: 2; }
+.ast-mode { display: flex; width: max-content; margin: 10px auto 0; }
+.ast-mode button { min-width: 64px; }
+.ast-mix { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.ast-mix-t { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.ast-mix-t span { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ast-mix-bar { display: flex; height: 12px; border-radius: 999px; background: var(--surface-0); overflow: hidden; margin-top: 4px; }
+.ast-mix-bar i { display: block; height: 100%; background: var(--ast-g); }
+.ast-mix-bar i.c { background: color-mix(in srgb, var(--ast-g) 30%, var(--text-muted)); opacity: .55; }
+.ast-mix-leg { margin: 8px 0 0; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+.ast-mix-leg i { width: 9px; height: 9px; border-radius: 2px; background: var(--ast-g); margin-left: 4px; }
+.ast-mix-leg i.c { background: color-mix(in srgb, var(--ast-g) 30%, var(--text-muted)); opacity: .55; }
 .ast-total { margin: 8px 2px 0; font-size: 14px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .ast-total b { color: var(--text-primary); font-size: 16px; }
 .ast-cash { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
