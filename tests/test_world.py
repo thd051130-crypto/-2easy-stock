@@ -64,3 +64,46 @@ def test_parse_ecos_rows():
     c["KR3Y"] = pd.Series([2.5, 2.6], index=pd.to_datetime(["2026-10-22", "2026-10-23"]))
     rows = {r["sym"]: r for g in world.snapshot(c)["groups"] for r in g["items"]}
     assert rows["KR3Y"]["kind"] == "rate" and abs(rows["KR3Y"]["d1"] - 0.1) < 1e-9
+
+
+def _meta(rmt, price, end, kind="INDEX", tz="Asia/Seoul"):
+    return {"instrumentType": kind, "exchangeTimezoneName": tz, "regularMarketTime": pd.Timestamp(rmt, tz=tz),
+            "regularMarketPrice": price, "currentTradingPeriod": {"regular": {"end": pd.Timestamp(end, tz=tz)}}}
+
+
+def test_settle_drops_intraday_bar():
+    # 한국 11:17 (장중): 오늘 막대는 장중 값이라 빼요. 어제(11-05)가 빠져 있으면 지난 기록으로 채워요
+    s = pd.Series([5683.8, 5058.4], index=pd.to_datetime(["2026-11-04", "2026-11-06"]))
+    m = _meta("2026-11-06 11:16", 5058.4, "2026-11-06 15:00")
+    out, live = world.settle(s, m, now=pd.Timestamp("2026-11-06 11:17", tz="Asia/Seoul"))
+    assert list(out) == [5683.8] and live == "2026-11-06"
+    old = pd.Series([5683.8, 5383.8, 5058.0], index=pd.to_datetime(["2026-11-04", "2026-11-05", "2026-11-06"]))
+    full = world.fill_gaps(out, old, live)
+    assert list(full) == [5683.8, 5383.8]  # 지난 기록의 장중 값(11-06)은 안 써요
+    assert abs(full.iloc[-1] / full.iloc[-2] - 1 - (-0.0528)) < 1e-3
+
+
+def test_settle_adds_missing_closed_day():
+    # 한국 00:26 (장 끝남): 야후 일봉에 11-05가 아직 없으면 시세 정보의 종가로 채워요
+    s = pd.Series([5648.8, 5683.8], index=pd.to_datetime(["2026-11-03", "2026-11-04"]))
+    m = _meta("2026-11-05 20:05", 5383.8, "2026-11-06 15:00")
+    out, live = world.settle(s, m, now=pd.Timestamp("2026-11-06 00:26", tz="Asia/Seoul"))
+    assert live is None and out.index[-1] == pd.Timestamp("2026-11-05") and out.iloc[-1] == 5383.8
+
+
+def test_settle_keeps_closed_day_and_fx():
+    s = pd.Series([7688.6, 7353.7], index=pd.to_datetime(["2026-11-04", "2026-11-05"]))
+    m = _meta("2026-11-05 16:00", 7353.7, "2026-11-05 16:00", tz="America/New_York")
+    out, live = world.settle(s, m, now=pd.Timestamp("2026-11-05 17:00", tz="America/New_York"))
+    assert list(out) == [7688.6, 7353.7] and live is None
+    fx = _meta("2026-11-06 11:00", 1450.0, "2026-11-06 23:59", kind="CURRENCY", tz="Europe/London")
+    assert world.settle(s, fx, now=pd.Timestamp("2026-11-05 12:00", tz="Europe/London"))[0] is s
+
+
+def test_snapshot_fills_gap_from_saved():
+    c = closes()
+    old = world.saved_series(world.snapshot(c))
+    ks = c["^KS11"]
+    c["^KS11"] = ks.drop(ks.index[-2])  # 야후가 어제를 빼먹음
+    rows = {r["sym"]: r for g in world.snapshot(c, old=old, live={})["groups"] for r in g["items"]}
+    assert rows["^KS11"]["dates"][-2] == ks.index[-2].date().isoformat()

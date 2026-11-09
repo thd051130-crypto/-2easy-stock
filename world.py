@@ -53,6 +53,11 @@ ECOS_URL = "https://ecos.bok.or.kr/api"
 KR_RATE = ECOS_RATE
 SCALE = {"JPYKRW=X": 100}  # 원/엔은 100엔 기준으로 보여 줘요
 KEEP = 260  # 앱에 보낼 종가 수 (약 1년)
+# 장 종료 기준 (사용자 2026-11-06): 예약 실행이 몇 시간씩 늦어 장중에 받을 때가 많아요. 거래소 장이 아직 안 끝났으면
+# 오늘 막대(장중 값)는 버리고, 야후 일봉에 막 끝난 날이 아직 없으면 시세 정보의 종가로 채워요.
+# 야후 정규장 끝 시각(코스피는 15:00으로 나와요, 실제 15:30)보다 이만큼 지나야 끝난 걸로 봐요
+SETTLE = pd.Timedelta(minutes=40)
+ALL_DAY = {"CURRENCY", "FUTURE", "CRYPTOCURRENCY"}  # 거의 24시간 거래라 장 종료가 없어요 (환율·선물·코인)
 
 
 def symbols():
@@ -71,10 +76,10 @@ def fetch(days=400, pause=1.0, retries=3):
     start = (dt.date.today() - dt.timedelta(days=days)).isoformat()
     out = {}
     for sym in symbols():
-        part = None
+        part, tk = None, yf.Ticker(sym)
         for attempt in range(retries):
             try:
-                part = yf.Ticker(sym).history(start=start, auto_adjust=True)
+                part = tk.history(start=start, auto_adjust=True)
                 if not part.empty:
                     break
             except Exception as e:  # 레이트리밋 등
@@ -86,7 +91,14 @@ def fetch(days=400, pause=1.0, retries=3):
             continue
         s = part["Close"].dropna()
         s.index = pd.to_datetime(s.index).tz_localize(None).normalize()
-        out[sym] = s[~s.index.duplicated(keep="last")]
+        s = s[~s.index.duplicated(keep="last")]
+        try:
+            meta = tk.history_metadata
+        except Exception:  # 시세 정보가 없으면 일봉 그대로
+            meta = None
+        out[sym], live = settle(s, meta)
+        if live:
+            LIVE[sym] = live
     if not out:
         raise SystemExit("야후에서 세계 지수·환율을 하나도 못 받았어요.")
     import big_events
@@ -104,6 +116,36 @@ def fetch(days=400, pause=1.0, retries=3):
         except Exception as e:  # ECOS가 막히면 그 줄만 빠져요. 키가 주소에 들어가니 네트워크 오류 글은 남기지 않아요
             print(f"경고: ECOS 국고채 금리 못 받음 ({type(e).__name__})")
     return out
+
+
+LIVE = {}  # 기호 → 장이 아직 안 끝난 오늘 날짜 (그날 값은 안 써요)
+
+
+def _ts(x):
+    return None if x is None else pd.Timestamp(x)
+
+
+def settle(s, meta, now=None):
+    """장 종료 기준 일봉. (일봉, 장중이라 뺀 날짜 또는 None).
+    - 거래소 장이 아직 안 끝났으면 오늘 막대(장중 값)를 빼요.
+    - 장이 끝났는데 일봉에 그날이 없으면(야후 국장 지수는 하루 늦게 붙어요) 시세 정보의 종가로 채워요."""
+    if not meta or meta.get("instrumentType") in ALL_DAY or not meta.get("exchangeTimezoneName"):
+        return s, None
+    tz = meta["exchangeTimezoneName"]
+    now = pd.Timestamp(now or dt.datetime.now(dt.timezone.utc)).tz_convert(tz)
+    today = pd.Timestamp(now.date())
+    reg = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
+    end = _ts(reg.get("end"))
+    open_today = end is not None and end.tz_convert(tz).date() == now.date() and now < end + SETTLE
+    live = None
+    if open_today and len(s) and s.index[-1] == today:
+        s, live = s.iloc[:-1], today.date().isoformat()
+    t, price = _ts(meta.get("regularMarketTime")), meta.get("regularMarketPrice")
+    if t is not None and price and (not len(s) or pd.Timestamp(t.tz_convert(tz).date()) > s.index[-1]):
+        day = pd.Timestamp(t.tz_convert(tz).date())
+        if not (day == today and open_today):
+            s = pd.concat([s, pd.Series([float(price)], index=[day])])
+    return s, live
 
 
 def ecos_get(key, *parts):
@@ -188,12 +230,34 @@ def item(sym, name, kind, s):
                 closes=[float(f"{x:.6g}") for x in keep], dates=[x.date().isoformat() for x in keep.index])
 
 
-def snapshot(closes, now=None):
+def saved_series(snap):
+    """지난 기록(paper/world.json) → {기호: 날짜→값}. 야후가 하루를 빼먹은 날을 지난 기록으로 채워요."""
+    out = {}
+    for g in (snap or {}).get("groups", []):
+        for r in g.get("items", []):
+            if r.get("dates") and len(r["dates"]) == len(r.get("closes", [])):
+                out[r["sym"]] = pd.Series(r["closes"], index=pd.to_datetime(r["dates"]), dtype=float)
+    return out
+
+
+def fill_gaps(s, old, live=None):
+    """새 일봉이 우선, 빠진 날만 지난 기록으로. 장중이라 뺀 날(live)부터는 지난 기록도 안 써요."""
+    if old is not None and len(old):
+        s = s.combine_first(old)
+    if live:
+        s = s[s.index < pd.Timestamp(live)]
+    return s
+
+
+def snapshot(closes, now=None, old=None, live=None):
+    old, live = old or {}, LIVE if live is None else live
     groups = []
     for gname, items in GROUPS:
         rows = []
         for sym, name, kind in items:
             s = series_of(sym, closes)
+            if s is not None:
+                s = fill_gaps(s, old.get(sym), live.get(sym))
             row = None if s is None else item(sym, name, kind, s)
             if row:
                 rows.append(row)
@@ -222,7 +286,13 @@ def main():
     parser.add_argument("--save", type=pathlib.Path, help="기록할 파일 (paper/world.json)")
     parser.add_argument("--dry-run", action="store_true", help="출력만")
     args = parser.parse_args()
-    snap = snapshot(fetch())
+    prev = None
+    if args.save and args.save.exists():
+        try:
+            prev = json.loads(args.save.read_text(encoding="utf-8"))
+        except ValueError:
+            prev = None
+    snap = snapshot(fetch(), old=saved_series(prev))
     print(format_text(snap))
     if args.save and not args.dry_run:
         args.save.parent.mkdir(parents=True, exist_ok=True)
