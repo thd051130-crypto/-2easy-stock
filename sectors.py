@@ -196,7 +196,7 @@ def _ret(c, n):
 
 
 def compute(closes, index_close, names, smap, market, lang="ko", fetch_news=None, news_n=NEWS_N):
-    """업종별 [{name, count, r5, r20, vs_index, above200, best, worst, codes, news, good, bad, label}], 5일 등락 순."""
+    """업종별 [{name, count, r5, r20, vs_index, above200, best, worst, codes, news, good, bad, label, r1, day_best, day_worst}], 5일 등락 순."""
     groups = {}
     for code in closes.columns:
         sec = sector_of(smap, market, code)
@@ -216,6 +216,12 @@ def compute(closes, index_close, names, smap, market, lang="ko", fetch_news=None
         valid = ma200.notna() & last.notna()
         best, worst = max(r5, key=r5.get), min(r5, key=r5.get)
         med5 = float(np.median(list(r5.values())))
+        # 오늘 하루 흐름 (분석팀 market_story.py가 '원인 → 결과' 사슬을 이을 때 써요): 업종 중간값 + 하루 가장 오른·빠진 종목과 그 전 20일 흐름
+        r1 = {c: v for c in codes if (v := _ret(closes[c], 1)) is not None}
+        day = lambda c: dict(code=c, name=names.get(c, c), r1=round(r1[c], 4),
+                             r20=None if (v := _ret(closes[c].iloc[:-1], 20)) is None else round(v, 4))
+        day_rows = dict(r1=round(float(np.median(list(r1.values()))), 4), day_best=day(max(r1, key=r1.get)),
+                        day_worst=day(min(r1, key=r1.get))) if r1 else {}
         news = []
         if fetch_news and sec in query:
             for n in fetch_news(query[sec], lang=lang, n=news_n):
@@ -229,7 +235,7 @@ def compute(closes, index_close, names, smap, market, lang="ko", fetch_news=None
             best=dict(code=best, name=names.get(best, best), r5=round(r5[best], 4)),
             worst=dict(code=worst, name=names.get(worst, worst), r5=round(r5[worst], 4)),
             codes=sorted(codes, key=lambda c: -(r5.get(c) if r5.get(c) is not None else -9)),
-            news=news, good=good, bad=bad, label=label(good, bad)))
+            news=news, good=good, bad=bad, label=label(good, bad), **day_rows))
     out.sort(key=lambda s: -s["r5"])
     return out
 

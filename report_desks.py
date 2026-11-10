@@ -4,11 +4,12 @@
   2. 일정·정책팀  시장팀 자료 + 큰 발표 일정·실적 발표·정부 정책 → 업종별 호재·악재 점수를 업종팀에 넘겨요
   3. 업종팀   일정·정책팀 점수 + 실제 업종 주가 흐름 → 정책과 주가가 같은 방향인지 보고, 볼 업종을 종목팀에 넘겨요
   4. 종목팀   업종팀이 고른 업종 안에서 많이 움직인 종목·수급·재무 등급·조용한 거래량 → 종목 메모를 편집팀에 넘겨요
-  5. 편집팀   네 팀 자료를 묶어 맨 위 세 줄 요약 + 팀별 자세히 + "자료가 넘어간 흐름" 한 장으로 만들어요
+  5. 분석팀   네 팀 숫자를 'A 때문에 B, B 때문에 C·D' 사슬로 잇고, 기대가 이미 반영된 움직임을 골라요 (market_story.py)
+  6. 편집팀   다섯 팀 자료를 묶어 맨 위 요약 + 팀별 자세히 + "자료가 넘어간 흐름" 한 장으로 만들어요
 
 자료는 다른 워크플로가 이미 저장한 파일만 읽어요 (새로 받지 않아요, 유료 API 안 씀):
   paper/world.json, macro.json, events.json, calendar.json, policies.json, <시장>/daily.json, kr/flows.json, <시장>/fundamentals.json
-결과: paper/report.json (앱 메시지함 '오늘의 리포트') + 텔레그램 한 통 (메시지함에도 저장)
+결과: paper/report.json (앱 메시지함 '오늘의 리포트') + paper/story_log.json (투자 공부 사례집) + 텔레그램 한 통 (메시지함에도 저장)
 
   python report_desks.py --dry-run     # 보내지 않고 출력만
 """
@@ -18,6 +19,7 @@ import datetime as dt
 import json
 import pathlib
 
+import market_story
 import tgfmt
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -235,8 +237,12 @@ def fact_text(f):
     return f"{f['name']} {val} ({pct(f['d1'], 2)}, 1달 {pct(f['m1'])})"
 
 
-def headline(market, policy, sectors, stocks):
+def headline(market, policy, sectors, stocks, story=None):
     lines = []
+    for mk in ("kr", "us"):
+        s = (story or {}).get(mk)
+        if s and s.get("title"):
+            lines.append(f"{FLAGS[mk]} 오늘의 연결 고리: {s['title']}")
     m = market["markets"]
     lines.append(f"시장 분위기: 국장 {m['kr']['tone']}(코스피 1달 {pct(m['kr']['m1'])}) · "
                  f"미장 {m['us']['tone']}(S&P500 1달 {pct(m['us']['m1'])})")
@@ -258,7 +264,7 @@ def headline(market, policy, sectors, stocks):
     return lines
 
 
-def chain(market, policy, sectors, stocks):
+def chain(market, policy, sectors, stocks, story=None):
     """자료가 팀 사이로 넘어간 흐름을 한 줄씩."""
     m = market["markets"]
     warn = ", ".join(w["name"] for w in market["warns"]) or "경기 경고 없음"
@@ -273,6 +279,10 @@ def chain(market, policy, sectors, stocks):
     for mk, st in stocks.items():
         if st["picks"]:
             lines.append(f"종목팀 {FLAGS[mk]} → " + ", ".join(f"{p['name']}({p['sector']})" for p in st["picks"][:4]))
+    for mk, s in (story or {}).items():
+        ok = [c["title"] for c in s["chains"] if c["verdict"] == "확인"]
+        lines.append(f"분석팀 {FLAGS[mk]} → 이어진 사슬 {len(ok)}개" + (f" ({', '.join(ok[:2])})" if ok else "")
+                     + (f", 기대 반영 {len(s['expect'])}건" if s["expect"] else ""))
     return lines
 
 
@@ -282,9 +292,14 @@ def build(inputs, today=None):
     policy = policy_desk(market, inputs["events"], inputs["calendar"], inputs["policies"], today)
     sectors = sector_desk(policy, inputs["signals"])
     stocks = stock_desk(sectors, inputs["signals"], inputs["flows"], inputs["funds"])
+    try:
+        story = market_story.build(inputs, policy)
+    except Exception as e:  # 분석팀이 고장 나도 리포트는 나가요
+        print(f"분석팀 건너뜀: {e!r}")
+        story = {}
     return dict(day=today.isoformat(), generated=dt.datetime.now(KST).isoformat(timespec="minutes"),
-                headline=headline(market, policy, sectors, stocks), chain=chain(market, policy, sectors, stocks),
-                market=market, policy=policy, sectors=sectors, stocks=stocks)
+                headline=headline(market, policy, sectors, stocks, story), chain=chain(market, policy, sectors, stocks, story),
+                market=market, policy=policy, sectors=sectors, stocks=stocks, story=story)
 
 
 def format_text(r):
@@ -318,6 +333,11 @@ def format_text(r):
             out.append(f"- {s['name']} ({s['sector']}) 5일 {pct(s['r5'])}" + (f": {', '.join(s['notes'])}" if s["notes"] else ""))
         for q in st["quiet"]:
             out.append(f"- 🔍 {q['name']}: 주가 그대로({pct(q['r5'])})인데 거래량 {q['ratio']:.1f}배")
+    for mk, s in (r.get("story") or {}).items():
+        out += ["", f"[분석팀] {FLAGS[mk]} 오늘의 연결 고리: {s['title']}"]
+        out += [f"- {market_story.chain_text(c)}" for c in s["chains"]]
+        out += [f"- 💡 {c['note']}" for c in s["chains"] if c.get("note")][:2]
+        out += [f"- 기대와 반영: {x['name']} {pct(x['r1'])} {x['title']}" for x in s["expect"][:3]]
     out += ["", "[편집팀] 자료가 넘어간 흐름"] + [f"- {x}" for x in r["chain"]]
     out.append("- 사고팔기 판단은 안 해요. 공개 자료로 만든 참고용 리포트예요")
     return "\n".join(out)
@@ -347,6 +367,8 @@ def main():
     args = parser.parse_args()
     r = build(load_inputs(args.paper))
     (args.paper / "report.json").write_text(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    if r.get("story"):
+        market_story.append_log(args.paper, r["story"])
     print("\n".join(r["headline"]) + "\n\n" + format_text(r))
     if not args.dry_run and not send(r):
         raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
