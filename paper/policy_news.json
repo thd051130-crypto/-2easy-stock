@@ -1,18 +1,18 @@
 {
- "day": "2026-11-09",
+ "day": "2026-11-10",
  "items": {
   "us-fed": [
    {
-    "title": "미국 금리 인상 우려에도 급등한 반도체주 (09.07)",
-    "source": "네이버페이 머니스토리",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMiWEFVX3lxTE1HZFZoQ2FnVjkwMDdmckJteGR0SFhIeS0yR0MyWF9qcDFxN2pTYUdqMnVEWWZCVEJLellMYVRDN3hPSXlHRDBtSDV3LUVDbnhYNFBOQzdydzE?oc=5"
+    "title": "\"연준, 기준금리 내년말 6.75%까지 인상해야 물가 목표 달성\"",
+    "source": "연합인포맥스",
+    "date": "2026-11-03",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBVdlJrX2JjU2huNTcxRWcxZUk3eVNsSVpFQzdsOTk3MDR2cWgyM1V3a0dGV21PLU1LQjdESkpQR2tuc2czSkZWRGswbkIzQ2RndC1JSzlIYUxwMjBkRVl2VzJZYXFFZmZKajRfOEpINnM?oc=5"
    },
    {
-    "title": "Fed's Hammack, Barkin favor gradual rate-hike path to lower inflation",
+    "title": "Fed policymakers consider rate hike after strong jobs report",
     "source": "Reuters",
-    "date": "2026-11-05",
-    "link": "https://news.google.com/rss/articles/CBMipgFBVV95cUxPTDI4cDU1ODdtRUFrTlZiTjZUbUlKNjZicWpjOHp0YnhONENvNEhMemJ3bWNyR1Rpd0d5akp3Yk1FVElzaDlBenRLRkttdjFvOXFZaGt6dm05WWdZZXpqcU5vazJSY2p3UEx6dkFtM18tNU5nVFZEb0dFY3NHUkRGZlAxS2xJVHZPWWFYOWNUd1lsU2VnbEliTXZDYnp1Um5aX2M1a3Fn?oc=5"
+    "date": "2026-11-06",
+    "link": "https://news.google.com/rss/articles/CBMimwFBVV95cUxQMF93ekZ4N2wtdW4zX1llS2FoZWpNVlhMLTRNOGVJTUktZmpLQUNBSzY2bW16Mm9mb3lrZERqNFZ6WkRmYkhBTG00Z2k2NFYyNTVLcmVBSkV5eVJRU1RwZFc5blM4MkRmcUxYU2hadXRWbVh0VXpjektqM1BGS3ZlZlNMeW43VWxmeE5TQm13d0E3bTVwUnp5dzFFNA?oc=5"
    }
   ],
   "kr-rate": [
@@ -31,38 +31,38 @@
   ],
   "kr-us-deal": [
    {
-    "title": "트럼프표 ‘마스가’, 민주당 의회서도 통할까… 국내 조선업계 ‘촉각’",
-    "source": "이코노미톡뉴스",
-    "date": "2026-11-08",
-    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Ia09KaUEtQ05ka3UzRDNSMWpjTERwbmY5dlZDVGpsSGJGNHR3cDBQTkRfWTdVSlhzTG12RTRoSWFBalJWbFh2M2V3ajhnMFRlZWlnU243ZTRaT1JQZW85WGtDS1lxRldZa3hSeA?oc=5"
-   },
-   {
     "title": "트럼프, 선거 뺨맞고 한국에 화풀이?…“대미투자 압박 세질듯”",
     "source": "중앙일보",
     "date": "2026-11-04",
     "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE1fOV8tODdmWTNveVRFSktrdkJYemlWTmZmb2ZBV0tsV0h6ZW5NanZMMDBKaG9wbEs4ZU5XemRvaXFIbWxRSmt4UXQ1UVp1cXBYWDM2bWR3?oc=5"
+   },
+   {
+    "title": "美민주 의회 장악…대미 투자 바뀌나",
+    "source": "중소기업신문",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Ka0s0Znc2Z01KdTNIbGRwZEgyYTRMUEN6bnFaWXFLZnFCamF3dWxjNjhBYzNSUkQycnNiWTdqb1FjcENlX1lObjBRMm0yTC13Nk9nSDljc1NqMC1fMmR0aUJjSnRwWDVSckE5dg?oc=5"
    }
   ],
   "world-oil": [
    {
-    "title": "OPEC+, 12월도 생산 제자리⋯4개월 연속 동결",
-    "source": "이투데이",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBodkxBb05Oek50cGRiYVNWVTZRc0ZGSDVUZEJ4cWx2Y3NDbWxKRUstZXFkQkYxbUlwN252am5iemdaeUl5d3h6U1E4dW9XMnFyZlpxWlJLc0JXQ2ZwRlhGV0szWmtlOTVwaG5nbw?oc=5"
+    "title": "OPEC 원유 생산 증가 등에 11월9일 국제유가 하락",
+    "source": "에너지신문",
+    "date": "2026-11-10",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTFA1VmZPaUFOeEdtM21yN1hTcTJKNFh3Z0RtWWlrVTJGUUJscVBWZ2Q5bHdKd1RCSE5CbTlvY04xa3oxOHhka3ZkY1Zsd3FXamp0bGF2M1lvMVZDN1hsLXIyRkZfWWVNcHBLQUlnRHBkRkxaUQ?oc=5"
    },
    {
-    "title": "Oil Futures Slump As Iran Peace Efforts Ease Supply Fears",
-    "source": "WSJ",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNSGlnQ2hWb0xhREU3dG5ZeGtaV3cxb1kzRk9TT2FOanNnRW8yWWVkd0xCLWpmbDRLVkVqRVpMWXJuY2E1N2tfMGRnV3hkWE1IRmtjYWU0M3Z0V1FlMmoyaTlGSXl2Y1R1ZVZYUUdvdnJnZjNVRzBTNzhtb0FnaWJuV3hhWkpVQU1iRkVtSmFhWjQ0XzM3T0NBVmFudVVldWhZemFoeDJPSy1hWXhCbmdEbUVB?oc=5"
+    "title": "Iraq Strikes U.S. Deal to Boost Oil Exports Through Hormuz",
+    "source": "Crude Oil Prices Today | OilPrice.com",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQVDFLMnliZE9CVEhBemh3Nlk2WjBXYXhQbXh6SC1ZRDl0MnV1ZWg0R2lRTk1KWnBKQk9mYjZzcjRmNDlnRG9KV29DNjR5TTFveDdOWkoxenVESnJQVmU3Z0VsODNremhBU0JVZU8tXzZNckkxTlhBdVYyVzZCUHZSOG5nZDlWTXYtMmgyUzFHRHRhUjZQbGVpNDBTTml3Zmxud0UwMFZaWldmdVhQQk02a3JR0gG3AUFVX3lxTE5Pck94RDZHSTlGUThxMnlvdEViSGNLYncxRlVUM1FOb3ZDTHdXeWE0QWNUeVgtR2F6MWN4YTd3Vkp3WTlPUFpnQ293VzJfb3E1OGg5UC05VldXUE9PM1M3ZlladFAwcTRKeDV3d1dvQjVMVGtlcmdXUVZBUlQxOEJjbXl6QUg3UzU2QzlDdmRWZ0w3Tjd0Vk5pRzBRdXNKa1VhR0p3V0xGLUlXVlZYbEFFUzQxcFBLOA?oc=5"
    }
   ],
   "world-us-china": [
    {
-    "title": "프리즘| 미·중 무역전쟁은 끝나지 않았다…관세 뒤에 숨은 희토류·반도체 봉쇄전",
-    "source": "OBC 뉴스",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBnVk1sMmVtZmw5YlhRZTNCNUw0aHcyaGUyc3ExbWlFTWZDTGpHeHl3THFGUlRERHRzXzh6SEIzb1JUbE1FbEtzUnpCLUdvbXFyV1Q3bVUzWVVweC0yOHpzUkRhWk05VjcyVGc?oc=5"
+    "title": "中, 대미 24% 추가관세·희토류 통제강화 유예 2개월 연장(종합)",
+    "source": "연합뉴스",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5XN1pzSjFsMTIwWVFGZXl3bDlQU2k2eUFnczhxS2RQbDN6dmxIODZCVHNMOWg3Y0R5M2FEMFFkRVc2QjRfaXlaSjNjX0hVU0J5TG5OdGRDUXoyOWhKN01teNIBYEFVX3lxTE5XN1pzSjFsMTIwWVFGZXl3bDlQU2k2eUFnczhxS2RQbDN6dmxIODZCVHNMOWg3Y0R5M2FEMFFkRVc2QjRfaXlaSjNjX0hVU0J5TG5OdGRDUXoyOWhKN01teA?oc=5"
    },
    {
     "title": "US warns China it must ‘immediately’ meet terms of Busan trade deal",
@@ -73,24 +73,24 @@
   ],
   "kr-budget-ai": [
    {
-    "title": "이 대통령 \"2027년 예산안은 성장확산 예산…'모두의 성장' 대전환\"",
-    "source": "대한민국 정책브리핑",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE9JbzEyZ1VJSXA2VDRsX3RiRUx2Vi1VTXl2cm9YbVBIQmNfWm9RNVQtcldKR2hZWXpIN1dSRV85ZFl3UjRtOUdiQ0lKdFhkdklEdVVtS3R1YjViY3dJUzdDNkwwUlNhMG9MbjRwcA?oc=5"
+    "title": "국회예산정책처, ‘2027년도 예산안 토론회’ 개최",
+    "source": "전기신문",
+    "date": "2026-11-03",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE9xdm1PdFRGd3F4R0tReG1MME4wbHlKTm1OMXZhNDdmUG5rYy02ZU9naWt3WXRTNmxGTjdTLXZIOHNRUE5ScU5uNmV4YjVHaU4za1lhOUstQS1tUmpqZkFfSnpVbUhhMi1DYnI2VtIBcEFVX3lxTE5ydzFYVnlxb3BlRENCZ3pJZVlocDA0b3poeUdCdlllQ1ZBcTI0Vl9nbjZVempERFplRXJMcURCUHdKX1AxdWdLZ1k4N2c2MWZHOUZuTlBNM2tsQzJ4TXIxaTJxdkxRTVZCdVhfQmI3WHI?oc=5"
    },
    {
-    "title": "정부, 2027년 예산안 820조 9천억 원 편성…AI·반도체에 21조 3천억 원 투입",
-    "source": "산업일보",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMiREFVX3lxTE5MSkc2Ml91TTdkZzd0MVhQa2RJU2VDc202Z2tMNFVrNmw2a0ctcWRIaEJUMkxMQmFBQlFQbDRxdE5DaEMx?oc=5"
+    "title": "박홍근 \"2027년 예산, 잠재성장률 높이고 K자형 양극화 완화 중점\"",
+    "source": "뉴스핌",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE14S3FnbFZhS2lRU0ZUYWZRVWRWRUo0VlhtRGpOaVpsM3diSGJZSEpKeGt0OHpsa1FxZG5NWTBCTjJNa0hfRDhjcmhfLUxrWXEtQm44OEs0b0ZuRTQz?oc=5"
    }
   ],
   "kr-buyback": [
    {
-    "title": "에스원 ‘자사주 소각’ 결단이 시사하는 것 [이나예의 인사이드 ESG]",
-    "source": "한겨레",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE91c1NBYjBSOU9SSDZYbF9aMDBkUl9tNUI3Zk51Tk4wcGF6V0pDLXhiNDFFa0pCaEk0cVdxT010dkx2SzVRaE5rY1RLWkloZ3hMdlZ4cGpBcVVsREtrNkRWQnZDVFlvazQ?oc=5"
+    "title": "1조에서 3000억으로… 자사주 ‘증시 방파제’ 말랐다",
+    "source": "조선일보",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxNbUxabWx3QzFhUXdoOGRvMjFDb0FBckg4b1BGWUN3X2VkOTUwb2RNWnpyZHFNMi1jYjlKYktkbkp5dmNXQ2g4VTNxZ25iRVZIdU5GTFhoYkw5Q0w0Y1ZvT0h4Qmo5bDRDcUI1S1B1eC01b2dQMUxqVjhJcHBMU0pBMjFfOU93VlZoZm1z?oc=5"
    },
    {
     "title": "주총 문화 바뀔까…개정 상법 앞두고 드러난 과제들",
@@ -107,32 +107,32 @@
     "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE9ab3dRbEIyOTM1eTBWU1ZwNU1yd1RZOWEtaHRBOWlVRzZDWGJ5Nnd6UjRGb2tKcl9YMFpqNXU0ekR5VzA0TWFCVkxJRGxtQVYwQlZzR3NWM2hHSVFi?oc=5"
    },
    {
-    "title": "The State of U.S. Tariffs",
-    "source": "The Budget Lab",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMiYkFVX3lxTFAxY2I2anZhamx5LWVnbndrMF9weDNOOUxyb2J0YXVzdDZ6aEFaYldGdFZsZ0I4ZjAtWmJfanBJVnc5ckVpeU1iczJ6dWdKYTNfTmc2ckoyd1dnN1hJd3hBU2FR?oc=5"
+    "title": "Democrats' Midterm Landslide Won't Dislodge Trump Tariffs; South Korea's U.S. Investment Push Emerges as Wild Card",
+    "source": "BigGo Finance",
+    "date": "2026-11-04",
+    "link": "https://news.google.com/rss/articles/CBMidkFVX3lxTFBYQlNqUU1oNnExRHRQclNTY3c3N1JBNjZ4MGV2bXNvYzhwcEJWY3A4WnFrb1QzZ1QwZlh3ZkoxU04tQnNjdXJvbGtFM292TGxJSUVUNG9ibVQxNHdJbWU0OHdNeTk2d1ZhV2w2YVh1RGxUSEZXMlE?oc=5"
    }
   ],
   "us-301": [
    {
-    "title": "관세 압박에 투자 검증까지…美중간선거 후 韓통상 셈법 복잡 - 머니투데이",
-    "source": "머니투데이",
-    "date": "2026-11-05",
-    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE5qR2NrUEdDeWx5T1BHVlFBcWZ2Tk84d2JFSWtqUXpqRXRJdXk3amhMU2RYTmV6ZkxZaUVYMTN4d3lCMTVkbUlVWVoyWVNnZDFZd1JlVDBCSFBVMUlwdzFuTlB6M0o4VDN2T1NV0gFwQVVfeXFMUGpaN1dVSVo2bDd5M2RMbWdHa01WUVJZZEFzVy15WnItTnFLMGhFNm1UX2JzVEdpb1lYVDYwMjJHc3FSUlRJZV9qcldsWUNvczVqY29oZWhvX0Q1VU1QLW50bC1XVXhoZUVTTUl3Y0FXZw?oc=5"
+    "title": "美 301조 관세 결정 안갯속…김정관, ‘15% 상한’ 사수 시험대",
+    "source": "아시아투데이",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTFA0Zkd4VlBTVmlHc2o2czh1WE5qbmZtRUlScG5DMUdDNnZqU2g4M0VlZ0ZCUlVfQ0ZpZmZ1Yk5IOHB4U2JhS3hkSk53Qk11Q19Nd3Vkd19va0JvbHd1OGtEZGVxelZRYld0YnlVY2Fn?oc=5"
    },
    {
-    "title": "After the Midterm Rout, Can Trump Change Course Without Giving Up Tariffs?",
-    "source": "Carnegie Endowment for International Peace",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMiigFBVV95cUxNTTlPWVM2SzF4RmJ1Ry1oX2NOMWc0MGJQREpBLTE5OEZ2RnVDT2JtZFZXR1JYWDRka19hUWkzTWJCR1ZrNVQ3R0RTUEFOcDJVSXJnWE54YjFlOUR6RkVUWTNiYWJweWsxQUI2TmpGWTdFZmtOc1VnVllRdWM1ajlhbjg5UXkxZ3Vid3c?oc=5"
+    "title": "Section 301 Probe of Vietnam Extended",
+    "source": "Sandler, Travis & Rosenberg, P.A.",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNTWNpT0tqNXRlT1Z1VnJmQWpRWnhUcTJiaTJPSzhVUExPbm1Hb3U3blkyVzBMLTFDOHI4VGR5RmVid29ISlpKUWhuVTN2UWc0aFdETGxETFlXVXVZWkV3MElyXy1uZmtIQ3RYTjBtTXE2SlhELTFKTUpncDBRSTgwR2JvMTlSMmR3X2ttTnhZSlhXSzNWWUxNN3J1R0tsanFGLTJCQnFmYmFaLVpoSkE?oc=5"
    }
   ],
   "us-pharma": [
    {
-    "title": "美 중간선거 D-2…트럼프 의약품 관세 향방에 국내 업계도 촉각",
-    "source": "동아일보",
-    "date": "2026-11-02",
-    "link": "https://news.google.com/rss/articles/CBMic0FVX3lxTE8zN2xXNTNWRGI2V2ZzYV9uemhySnZrSGpBUS1CUUs5SGxPSnllNkJQdngxdW91NFBUQ05kWjlxZkJjVVBZV3RndUstSEJxTXhsUkVIcVA3M3VxcVZzbGlDN3RCNmIzVjFWc3o2OWhSMk9NVG_SAWZBVV95cUxNb1ZSdkljRFFvRW1MZng4SzBEekNpbHFTZXVVLS01bGZCUmJZTTByelFVcW1aNGNWQmp6V3hsTTBsSldSN3hXaW50UHNRYzd4ZXBmVV9XdFd6UVlvMEoza0FJWXFrQ3c?oc=5"
+    "title": "美 중간선거 민주당 압승…국내 의약품 관세 영향은 제한적",
+    "source": "뉴스1",
+    "date": "2026-11-05",
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5PcUo4emt3SGc5RXpRelJIU3ZvNGZGb1pCSEtabFVvMTg3blBMelNkaE43cHl5ck5uRWpGWDF6emtWR1dxMkNHOC1tcWdLanVOcDBrcUNHd2lzVi1lcENVWg?oc=5"
    },
    {
     "title": "Bayer weighs drug price deal with Trump administration as tariff risks loom",
@@ -143,25 +143,25 @@
   ],
   "kr-dividend-tax": [
    {
+    "title": "“배당보다는 ‘총주주환원율’”…내년 주주가치 제고 ‘슈퍼 사이클’ 전망",
+    "source": "주주경제신문",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE1sSlJUM19VajMtN0hWWXpGaHVwYm1IaTB0eFhaWWlISTFyc243a3hPb21tTmpOaWdwaVhGU21XUUNiMlZnZU1JWGhUZEtrTEdOVHh5bEtzY240SmFxX1A5b2VaVkhLR2tY?oc=5"
+   },
+   {
     "title": "대신증권, MTS서 배당금·예상 수익 한 눈에 확인",
     "source": "뉴스핌",
     "date": "2026-11-04",
     "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE9RSEo0RmJEV1p1eUJKYURfWGw5NEhoOWhWX2w1S3NDV1ZONGFQNjNMbVRfRml6ZDFjcjE1UkNUUnh2cnJiZ2h4RDBKb2NiWG10dW5yRlBDay1aVUdj?oc=5"
-   },
-   {
-    "title": "하나금융, 창사 첫 개인주주 초청 간담회…ROE 12% 목표·자사주 9490억 소각 설명",
-    "source": "녹색경제신문",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE5nb2ZxUDBiRmh5dXUydTZDb3RZc0xaNno0aWZFREZpWDFMVVlJUlc3ZVNfak5DTUJLY283a0wyaFB4aE9YMVozRFh2SXdrSVJESmR0UFdCY2diMDFQY3EwbTY2WTZ4cVhU?oc=5"
    }
   ],
   "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "일본 인플레이션, BOJ 12월 금리 인상 가능성 강화",
-    "source": "IDNFinancials",
-    "date": "2026-11-03",
-    "link": "https://news.google.com/rss/articles/CBMiswJBVV95cUxOOEhhNGpXQWN0dG9LZ0ZscHV2UkJWSzVXbnZiQ00yRGN2dm1mN1dYVFNtZ0x3QkFSUjBQSG4xVGdTMUV4ejhfdnJEMUlRd1dHbDdDX0wzV1BkVnVacW5Xbl9EaHhUc1k1a3hQT0xvM05nVF9RbEpHZURkdXhmZ21hM0lEclJWQUphaHZtMTlSaGlwbDFoa0tWZEx2TmxvbzByTzl5a3RYMXljN3cyUjhaaHFLTEVKOG01VlVvSFNXcFNscjdJbGdpZWdYZW1Ra3doYjdOcTZsVkV0UUJjcDRaN2JCdEJKWFBZWnJEeGxqWGkySzdWaFRVVGhHUmlhTGtFOFNhQWsxNUdVU25sS3EzbGFiTGNxaF9BMkkzMDFVcUJtcmpuMW1lcE9wNnNpZU5Pa3Ew?oc=5"
+    "title": "일본은행, 조기 금리 인상 필요성 제기…12월 인상 가능성 70%",
+    "source": "블루밍비트",
+    "date": "2026-11-10",
+    "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE0wMjBPQThYLWFzNWViUTJkWGpLTWpQLXFoTTVQOTN1MnpySnQzR05uajl3TUk1WFdhTkFHdGFPQ1VuclVtLUJWUEhobE5jbXJs?oc=5"
    },
    {
     "title": "BOJ debated need for more rate hikes, scope for faster moves, September minutes show",
