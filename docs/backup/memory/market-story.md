@@ -10,4 +10,5 @@ metadata:
 - paper/story_log.json 시장마다 250일 (dashboard는 60일만 story_log로). `python market_story.py --backfill 60`으로 세계 지수만으로 과거 채움(처음 한 번, 아직 안 돌림 — PR 머지 뒤 한 번 돌려야 사례집 최근 사건이 채워짐).
 - 앱: 리포트 화면·투자 공부 '오늘 왜' 맨 위 🧠 카드(연결 그림 flowHtml), 투자 공부 새 탭 '사례집'(묶음 칩, 앱 기록 + site/casebook.js 과거 사건 14개, 오늘과 닮은 사례 먼저, '그 뒤 5거래일'). casebook.js는 index.html·sw.js(easystock-v5)·stamp_assets에 추가.
 - 미리보기 /mnt/project-files/story-preview/, 브랜치 claude/project-thread-kij9v6 (PR 없음, 검수 대기). 화면 고정 점검 버튼 283개 밀림 0.
+- 2026-11-11 사용자 "20년차 경제분석가 수준 견해를 쉽게" → analyst_view.py(분석가 시각): 쉽게 말하면, 오늘의 성격(넓은/좁은 움직임, 하락 추세 속 반등 등), 해석(주인공·조연·엇박자·가격 속 기대·함정), 확인할 것(외국인·원화·미국 금리·VIX·업종 퍼짐·반도체, 오르는 힘 기준 ✓✗), 시나리오 2개, 내일 볼 것(큰 발표 높으면/낮으면). 사례집 14개에 pro(분석가의 눈)·myth(흔한 착각). 미리보기 /mnt/project-files/story-preview/v2/. 사슬 표시는 '확인' 먼저.
 **How to apply:** 검수 통과 전 PR 금지. 사고팔기 신호 금지, '✓는 원인 증명 아님' 문구 유지. 사례 숫자는 대략값. 관련 [[learn-section]], [[report-desks]], [[ui-no-jump-rule]].

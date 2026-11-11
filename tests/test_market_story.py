@@ -47,3 +47,22 @@ def test_append_log_replaces_same_day(tmp_path):
     ms.append_log(tmp_path, story)
     out = ms.append_log(tmp_path, story)
     assert len(out["kr"]) == 1 and out["kr"][0]["chains"][0]["text"]
+
+
+def test_analyst_view_plain_checks_and_scenarios():
+    s = ms.build(make_inputs())["kr"]
+    p = s["pro"]
+    assert p["plain"].startswith("오늘 코스피") and "반도체" in p["plain"]
+    assert any(x["h"] == "주인공" for x in p["points"])
+    assert {c["q"] for c in p["checks"]} >= {"여러 업종이 같이 오르는가", "반도체가 버티는가"}
+    assert [x["name"] for x in p["scenarios"]] == ["반등이 이어지는 경우", "반등을 되돌리는 경우"]
+
+
+def test_watch_lists_upcoming_big_events():
+    inp = make_inputs()
+    day = inp["signals"]["kr"]["day"]
+    import datetime as dt
+    nxt = (dt.date.fromisoformat(day) + dt.timedelta(days=1)).isoformat()
+    inp["events"] = [dict(date=nxt, at=f"{nxt}T22:30+09:00", ko="소비자물가(CPI) 전월 대비", tier1=True, forecast="0.3%", flag="🇺🇸")]
+    w = ms.build(inp)["kr"]["pro"]["watch"]
+    assert w and "금리 인하 기대 ↓" in w[0]["hi"]

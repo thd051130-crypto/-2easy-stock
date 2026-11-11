@@ -3234,6 +3234,25 @@ function flowHtml(nodes, why, ends) {
     <b class="${x.s > 0 ? "up" : x.s < 0 ? "down" : ""}">${esc(x.v || (x.s > 0 ? "▲" : x.s < 0 ? "▼" : ""))}</b>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}${okText(x) ? `<em>${okText(x)}</em>` : ""}</div>`;
   return `<div class="flow">${nodes.map((x, i) => n(x) + a(why[i])).join("")}<div class="flow-ends">${ends.map(e).join("")}</div></div>`;
 }
+// 분석가 시각 (analyst_view.py): 쉽게 말하면 → 오늘의 성격 → 해석(주인공·조연·엇박자·함정) → 확인할 것 → 시나리오 → 내일 볼 것
+function proBox(s, where) {
+  const p = s.pro;
+  if (!p) return "";
+  const ck = (c) => `<li class="pro-ck"><span class="pro-ck-i ${c.good === true ? "ok" : c.good === false ? "no" : ""}">${c.good === true ? "✓" : c.good === false ? "✗" : "?"}</span>
+    <div class="l"><div class="name">${esc(c.q)} <small class="muted">${esc(c.now)}</small></div><div class="meta">${esc(c.why)}</div></div></li>`;
+  const key = `${where}:${s.day}:pro`, open = STORY_OPEN.has(key) || !STORY_OPEN.has(`${key}:x`);
+  return `<div class="pro"><p class="pro-plain"><b>쉽게 말하면</b> ${esc(p.plain)}</p>
+    ${(p.nature || []).length ? `<div class="learn-tags pro-nat">${p.nature.map((n) => `<span class="learn-tag strong">${esc(n.t)}</span>`).join("")}</div>
+      <ul class="brief">${p.nature.map((n) => `<li>${esc(n.x)}</li>`).join("")}</ul>` : ""}
+    <details class="lesson pro-more" data-story-open="${esc(key)}"${open ? " open" : ""}><summary><span class="hm-t"><b>🎙 분석가의 해석</b><small class="muted">주인공·엇박자·함정 · 확인할 것 ${esc(p.score)} · 시나리오${(p.watch || []).length ? " · 내일 볼 것" : ""}</small></span></summary>
+      <div class="lesson-body">${(p.points || []).map((x) => `<p class="learn-p"><b class="pro-h">${esc(x.h)}</b> ${esc(x.t)}</p>`).join("")}
+        ${(p.checks || []).length ? `<h3 class="brief-h">✅ 오르는 힘을 받으려면 <small class="muted">${esc(p.score)} 우호</small></h3><ul class="list">${p.checks.map(ck).join("")}</ul>` : ""}
+        ${(p.scenarios || []).length ? `<h3 class="brief-h">🧭 시나리오 <small class="muted">사고팔기 신호 아님</small></h3><div class="pro-scen">${p.scenarios.map((x) =>
+          `<div class="pro-sc"><b>${esc(x.name)}</b><span>신호: ${esc(x.sign)}</span><small>${esc(x.then)}</small></div>`).join("")}</div>` : ""}
+        ${(p.watch || []).length ? `<h3 class="brief-h">📅 내일 볼 것</h3>${p.watch.map((w) => `<div class="pro-w"><b>${esc(w.when)} ${esc(w.what)}</b>${w.forecast ? ` <small class="muted">예상 ${esc(w.forecast)}</small>` : ""}
+          <div class="pro-w2"><span class="up">▲ 예상보다 높으면</span> ${esc(w.hi)}</div><div class="pro-w2"><span class="down">▼ 낮으면</span> ${esc(w.lo)}</div><small class="muted">${esc(w.tip)}</small></div>`).join("")}` : ""}
+      </div></details></div>`;
+}
 const caseById = (id) => (typeof CASEBOOK !== "undefined" ? CASEBOOK : []).find((c) => c.id === id);
 function storyCard(where) {
   const s = ((DATA.report || {}).story || {})[market];
@@ -3252,7 +3271,8 @@ function storyCard(where) {
       <b class="${sign(x.r1)}">${pct(x.r1)}</b> <span class="badge">${esc(x.title)}</span></div><div class="meta">${x.sector && x.code ? `${esc(x.sector)} · ` : ""}${esc(x.text)}</div></div></li>`).join("");
   const sim = (s.similar || []).map(caseById).filter(Boolean);
   return `<section class="card story" id="story-${where}"><h2>🧠 오늘의 연결 고리 <small>${md(s.day)} · 분석팀</small></h2>
-    <p class="story-title">${esc(s.title)}</p>
+    <p class="story-title">${esc(s.title)}</p>${proBox(s, where)}
+    <h3 class="brief-h">🔗 무엇이 무엇으로 이어졌나</h3>
     ${(s.chains || []).length ? s.chains.map(chainBox).join("") : `<p class="empty">금리·환율·반도체·유가·해외 증시가 모두 평소 크기였어요. 이런 날은 업종·종목 소식이 주인공이에요.</p>`}
     ${ex ? `<h3 class="brief-h">🎯 기대와 반영 <small class="muted">이미 가격에 들어 있던 기대</small></h3><ul class="list">${ex}</ul>` : ""}
     ${sim.length ? `<h3 class="brief-h">📚 닮은 과거 사례</h3><div class="story-sim">${sim.map((c) => `<button type="button" class="learn-tag" data-case-go="${esc(c.id)}">${esc(c.date.slice(0, 4))} ${esc(c.title.split(" · ")[0])}</button>`).join("")}</div>` : ""}
@@ -3310,6 +3330,7 @@ function learnCaseCards() {
     return `<details class="lesson" data-story-open="${esc(key)}"${STORY_OPEN.has(key) ? " open" : ""}><summary><span class="learn-case-d">${md(r.day)}</span>
       <span class="hm-t"><b>${esc(r.title)}</b></span></summary><div class="lesson-body">
       <ul class="brief">${r.chains.map((c) => `<li><span class="badge ${(STORY_VERDICT[c.verdict] || [])[1] || ""}">${esc((STORY_VERDICT[c.verdict] || [c.verdict])[0])}</span> ${esc(c.text.replace(/ \[[^\]]+\]$/, ""))}</li>`).join("")}</ul>
+      ${r.plain ? `<p class="learn-p"><b>쉽게 말하면</b> ${esc(r.plain)}</p>` : ""}
       ${(r.expect || []).length ? `<p class="learn-why1">🎯 ${r.expect.map((x) => `${esc(x.name)} ${pct(x.r1)} ${esc(x.title)}`).join(" · ")}</p>` : ""}
       ${aft && (aft.d5 != null || aft.now != null) ? `<p class="learn-tip">⏩ 그 뒤: ${esc(aft.name)} ${aft.d5 != null ? `5거래일 뒤 <b class="${sign(aft.d5)}">${pct(aft.d5)}</b>` : "5거래일이 아직 안 지났어요"}${aft.now != null ? ` · 지금까지 <b class="${sign(aft.now)}">${pct(aft.now)}</b>` : ""}</p>` : ""}
       ${r.chains[0] ? `<p class="learn-why1">📌 ${esc(r.chains[0].lesson)}</p>` : ""}</div></details>`;
@@ -3328,6 +3349,8 @@ function learnCaseCards() {
       <div class="lesson-body"><p class="learn-p"><b>한 줄 요약</b> ${esc(c.one)}</p>
         ${flowHtml(c.chain.map(([t]) => ({ t })), c.chain.map(([, w]) => w), c.ends.map(([t, s]) => ({ t, s })))}
         <p class="learn-tip">⏩ 그 뒤: ${esc(c.after)}</p>
+        ${c.pro ? `<p class="learn-p"><b class="pro-h">🎙 분석가의 눈</b> ${esc(c.pro)}</p>` : ""}
+        ${c.myth ? `<p class="learn-p"><b class="pro-h">⚠️ 흔한 착각</b> ${esc(c.myth)}</p>` : ""}
         <h3 class="brief-h">📌 배운 점</h3><ul class="brief">${c.lesson.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
         ${(c.go || []).length ? `<div class="learn-tags" style="margin-top:8px">${c.go.map((k) => { const d = DRIVERS.find((x) => x.key === k);
           return d ? `<button type="button" class="learn-tag" data-learn-go="${esc(k)}">${d.icon} ${esc(d.title)} 배우기</button>` : ""; }).join("")}</div>` : ""}</div></details>`;

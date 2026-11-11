@@ -20,6 +20,7 @@ import json
 import pathlib
 import re
 
+import analyst_view
 import learn_cases as lc
 
 KEEP_LOG = 250  # 시장마다 최근 250거래일(약 1년)
@@ -299,7 +300,8 @@ def fx_chain(b):
                     [node("원/달러", f"{m['last']:,.0f}원 ({pct(m['d1'])})", up),
                      node("외국인이 들고 있는 한국 주식의 달러 값 " + ("↓" if up > 0 else "↑"))],
                     ["원/달러가 오르면(원화 약세) 같은 주가라도 달러로 바꾸면 손해예요" if up > 0 else "원/달러가 내리면(원화 강세) 한국 주식을 들고 있으면 환율로도 벌어요",
-                     "그래서 외국인이 지수 대형주를 " + ("팔기" if up > 0 else "사기") + " 쉬워요. 대신 수출 회사(자동차·조선)는 원화 약세가 이익을 늘려요"],
+                     "그래서 외국인이 지수 대형주를 " + ("팔기" if up > 0 else "사기") + " 쉬워요. "
+                     + ("대신 수출 회사(자동차·조선)는 원화 약세로 이익이 늘어요" if up > 0 else "대신 수출 회사(자동차·조선)는 원화 강세로 이익이 줄 수 있어요")],
                     ends, "환율은 외국인 돈의 방향을 알려 줘요. 원화가 크게 약해진 날은 외국인 수급과 수출주를 같이 보세요.", z=m["z"])
     m = b.move("DX-Y.NYB")
     if not m or not (m["z"] >= 1.5 or abs(m["d1"]) >= 0.006):
@@ -564,6 +566,12 @@ def build_market(inputs, market, tilt=None):
             c["note"] = (f"{names}: 이 경로로 보면 반대로 움직였어요. "
                          + (f"같은 날 '{top['title']}' 쪽 힘이 더 셌던 것으로 보여요." if top and top is not c
                             else "다른 소식(업종·종목 이야기, 수급)이 더 셌다는 뜻이에요."))
+    # 보여 줄 땐 숫자로 이어진 사슬을 먼저, 그다음 엇갈린 사슬 (엇갈린 건 '왜 안 이어졌나'가 공부거리)
+    chains.sort(key=lambda c: (c["verdict"] != "확인", -c["strength"]))
+    for c in chains:
+        if c["kind"] in ("infl", "jobs", "cb") and c["verdict"] in ("엇갈림", "반대"):
+            c["note"] = ("발표 숫자는 금리를 움직였지만 주가는 예상과 다르게 갔어요. 시장이 이 결과를 이미 어느 정도 예상해 가격에 넣어 뒀거나, "
+                         + (f"같은 날 '{top['title']}' 쪽 힘이 더 셌다는 뜻이에요." if top and top is not c else "다른 힘이 더 셌다는 뜻이에요."))
     expect = expectations(b, tilt)
     title, lines = summary(b, chains, expect)
     own = b.move(INDEXES[market][0][0])
@@ -573,8 +581,13 @@ def build_market(inputs, market, tilt=None):
         for s in SIMILAR.get(k, []):
             if s not in similar:
                 similar.append(s)
+    try:
+        pro = analyst_view.view(b, chains, expect)
+    except Exception as e:  # 분석가 시각이 고장 나도 사슬은 나가요
+        print(f"분석가 시각 건너뜀: {e!r}")
+        pro = None
     return dict(day=b.day, market=market, index=INDEXES[market][0][1], d1=own and round(own["d1"], 5),
-                title=title, lines=lines, chains=chains, expect=expect, similar=similar[:3])
+                title=title, lines=lines, chains=chains, expect=expect, similar=similar[:3], pro=pro)
 
 
 def build(inputs, policy=None):
@@ -602,7 +615,7 @@ def append_log(paper, story):
                               chains=[dict(key=c["key"], kind=c["kind"], title=c["title"], verdict=c["verdict"], text=chain_text(c),
                                            lesson=c["lesson"]) for c in s["chains"]],
                               expect=[dict(kind=x["kind"], name=x["name"], title=x["title"], r1=x["r1"]) for x in s["expect"][:3]],
-                              similar=s["similar"])
+                              similar=s["similar"], plain=(s.get("pro") or {}).get("plain"))
         old[mk] = sorted(rows.values(), key=lambda r: r["day"], reverse=True)[:KEEP_LOG]
     path.write_text(json.dumps(old, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     return old
