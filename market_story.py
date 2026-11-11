@@ -128,7 +128,10 @@ def sector_end(b, name, want, label=None):
         return None
     rel = s["r1"] - b.idx_d1 if b.idx_d1 is not None else None
     sub = f"{INDEXES[b.market][0][1]}보다 {rel * 100:+.1f}%p" if rel is not None else None
-    return end(f"{label or name} 업종", s["r1"], want, judge=rel, sub=sub)
+    e = end(f"{label or name} 업종", s["r1"], want, judge=rel, sub=sub)
+    if e:
+        e["sec"] = name
+    return e
 
 
 def index_end(b, k, want):
@@ -572,6 +575,10 @@ def build_market(inputs, market, tilt=None):
         if c["kind"] in ("infl", "jobs", "cb") and c["verdict"] in ("엇갈림", "반대"):
             c["note"] = ("발표 숫자는 금리를 움직였지만 주가는 예상과 다르게 갔어요. 시장이 이 결과를 이미 어느 정도 예상해 가격에 넣어 뒀거나, "
                          + (f"같은 날 '{top['title']}' 쪽 힘이 더 셌다는 뜻이에요." if top and top is not c else "다른 힘이 더 셌다는 뜻이에요."))
+    for c in chains:
+        leaders_of(b, c)
+    if chains and chains[0]["verdict"] == "확인":
+        spill_of(b, chains[0])
     expect = expectations(b, tilt)
     title, lines = summary(b, chains, expect)
     own = b.move(INDEXES[market][0][0])
@@ -588,6 +595,54 @@ def build_market(inputs, market, tilt=None):
         pro = None
     return dict(day=b.day, market=market, index=INDEXES[market][0][1], d1=own and round(own["d1"], 5),
                 title=title, lines=lines, chains=chains, expect=expect, similar=similar[:3], pro=pro)
+
+
+def leaders_of(b, c):
+    """사슬 끝 업종 중 예상대로 간 첫 업종: 그 업종을 이끈 종목 3개와, 그 종목들의 20일 흐름으로 본 성격."""
+    e = next((x for x in c["ends"] if x.get("sec") and x["ok"] is True), None)
+    row = e and b.sectors.get(e["sec"])
+    lead = [x for x in (row or {}).get("day_lead") or [] if x.get("r1") is not None]
+    if not lead:
+        return
+    up = (row.get("r1") or 0) >= 0
+    r20 = [x["r20"] for x in lead if x.get("r20") is not None]
+    avg = sum(r20) / len(r20) if r20 else None
+    if avg is None:
+        text = None
+    elif up and avg <= -0.1:
+        text = f"이끈 종목들은 그 전 20일 평균 {pct(avg)} 빠져 있던 종목이에요. 많이 빠졌던 종목이 더 크게 튄 '낙폭 과대 반등' 성격이 강해요. 실적 기대가 바뀐 건지, 되돌림인지는 며칠 더 봐야 해요."
+    elif up and avg >= 0.1:
+        text = f"이끈 종목들은 이미 20일 평균 {pct(avg)} 오르던 종목이에요. 원래 강하던 종목이 더 간 '주도주 강화'라, 시장이 이 이야기를 믿고 있다는 뜻이에요."
+    elif not up and avg >= 0.1:
+        text = f"가장 많이 빠진 종목들은 20일 평균 {pct(avg)} 올라 있던 종목이에요. 많이 오른 종목부터 이익을 챙긴 '차익 실현' 성격이 강해요."
+    elif not up and avg <= -0.1:
+        text = f"가장 많이 빠진 종목들은 이미 20일 평균 {pct(avg)} 빠지던 종목이에요. 약하던 종목이 더 약해진 '추세 하락'이에요."
+    else:
+        text = "업종 대표 종목들이 비교적 고르게 움직였어요. 특정 종목 이야기보다 업종 전체 바람이었어요."
+    c["leaders"] = dict(sector=e["sec"], stocks=lead, text=text)
+
+
+def spill_of(b, c):
+    """2차 효과: 주인공 사슬의 업종에서 연결 산업(daily.json sector_links)으로 번졌는지."""
+    e = next((x for x in c["ends"] if x.get("sec") and x["ok"] is True), None)
+    if not e:
+        return
+    links = (b.sig.get("sector_links") or {}).get(e["sec"]) or []
+    want = 1 if e["s"] > 0 else -1
+    out = []
+    for name, why in links[:4]:
+        s = b.sector(name)
+        if not s or s["r1"] is None:
+            continue
+        rel = s["r1"] - (b.idx_d1 or 0.0)
+        followed = None if abs(rel) < MOVE_SECTOR else (rel > 0) == (want > 0)
+        out.append(dict(sector=name, why=why, r1=s["r1"], rel=round(rel, 4), ok=followed))
+    if out:
+        n = sum(x["ok"] is True for x in out)
+        c["spill"] = dict(src=e["sec"], rows=out,
+                          text=(f"{e['sec']}의 {'강세' if want > 0 else '약세'}가 연결 산업 {len(out)}곳 중 {n}곳으로 번졌어요 (지수 대비). "
+                                + ("여러 곳으로 번질수록 하루 이야기보다 '테마'에 가까워져요." if n >= 2 else
+                                   "아직 연결 산업으로 크게 번지진 않았어요. 오늘 이야기는 그 업종 안에 머물렀어요.")))
 
 
 def build(inputs, policy=None):
@@ -615,7 +670,8 @@ def append_log(paper, story):
                               chains=[dict(key=c["key"], kind=c["kind"], title=c["title"], verdict=c["verdict"], text=chain_text(c),
                                            lesson=c["lesson"]) for c in s["chains"]],
                               expect=[dict(kind=x["kind"], name=x["name"], title=x["title"], r1=x["r1"]) for x in s["expect"][:3]],
-                              similar=s["similar"], plain=(s.get("pro") or {}).get("plain"))
+                              similar=s["similar"], plain=(s.get("pro") or {}).get("plain"),
+                              nature=[n["t"] for n in (s.get("pro") or {}).get("nature") or []])
         old[mk] = sorted(rows.values(), key=lambda r: r["day"], reverse=True)[:KEEP_LOG]
     path.write_text(json.dumps(old, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     return old

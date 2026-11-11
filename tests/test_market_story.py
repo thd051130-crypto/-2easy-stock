@@ -20,10 +20,12 @@ def make_inputs(sox_jump=0.06, kospi_move=0.04, chip_r1=0.06):
     world = dict(groups=[dict(name="x", items=[series("^SOX", "필라델피아 반도체", sox), series("^KS11", "코스피", ks),
                                               series("^KQ11", "코스닥", ks[:])])])
     day = world["groups"][0]["items"][1]["dates"][-1]
-    sectors = [dict(name="반도체", r1=chip_r1, r5=0.05, r20=0.02), dict(name="IT·전자", r1=chip_r1, r5=0.04, r20=-0.2),
+    lead = [dict(code="H", name="하이", r1=chip_r1 * 1.5, r20=-0.15), dict(code="S", name="삼", r1=chip_r1, r20=-0.12)]
+    sectors = [dict(name="반도체", r1=chip_r1, r5=0.05, r20=0.02, day_lead=lead), dict(name="IT·전자", r1=chip_r1, r5=0.04, r20=-0.2),
                dict(name="2차전지", r1=0.09, r5=0.05, r20=-0.21, day_best=dict(code="A", name="에이", r1=0.1, r20=-0.2),
                     day_worst=dict(code="B", name="비", r1=-0.05, r20=0.3))]
-    return dict(world=world, signals={"kr": dict(day=day, sectors=sectors)}, events=[], calendar=[], flows={})
+    links = {"반도체": [["IT·전자", "서버 수요"], ["2차전지", "예시"]]}
+    return dict(world=world, signals={"kr": dict(day=day, sectors=sectors, sector_links=links)}, events=[], calendar=[], flows={})
 
 
 def test_chip_chain_confirmed_relative_to_index():
@@ -66,3 +68,24 @@ def test_watch_lists_upcoming_big_events():
     inp["events"] = [dict(date=nxt, at=f"{nxt}T22:30+09:00", ko="소비자물가(CPI) 전월 대비", tier1=True, forecast="0.3%", flag="🇺🇸")]
     w = ms.build(inp)["kr"]["pro"]["watch"]
     assert w and "금리 인하 기대 ↓" in w[0]["hi"]
+
+
+def test_leaders_and_spill_on_lead_chain():
+    s = ms.build(make_inputs())["kr"]
+    chip = s["chains"][0]
+    assert chip["key"] == "chip"
+    assert [x["name"] for x in chip["leaders"]["stocks"]] == ["하이", "삼"] and "낙폭 과대" in chip["leaders"]["text"]
+    assert chip["spill"]["rows"][0]["sector"] == "IT·전자"
+    assert any(x["h"] == "이끈 종목" for x in s["pro"]["points"])
+
+
+def test_track_counts_same_nature_days():
+    inp = make_inputs()
+    days = inp["world"]["groups"][0]["items"][1]["dates"]
+    for k in range(6):
+        inp["signals"]["kr"]["sectors"].append(dict(name=f"업종{k}", r1=0.03, r5=0.0, r20=0.0))
+    labels = [n["t"] for n in ms.build(inp)["kr"]["pro"]["nature"]]
+    assert labels
+    inp["story_log"] = {"kr": [dict(day=d, d1=0.02, nature=labels) for d in days[-20:-10]]}
+    h = ms.build(inp)["kr"]["pro"]["history"]
+    assert h and h["n"] >= 3 and "5거래일" in h["text"]

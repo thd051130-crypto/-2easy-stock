@@ -3244,6 +3244,7 @@ function proBox(s, where) {
   return `<div class="pro"><p class="pro-plain"><b>쉽게 말하면</b> ${esc(p.plain)}</p>
     ${(p.nature || []).length ? `<div class="learn-tags pro-nat">${p.nature.map((n) => `<span class="learn-tag strong">${esc(n.t)}</span>`).join("")}</div>
       <ul class="brief">${p.nature.map((n) => `<li>${esc(n.x)}</li>`).join("")}</ul>` : ""}
+    ${p.history ? `<p class="learn-tip">📊 <b>분석팀 성적표</b> ${esc(p.history.text)}</p>` : ""}
     <details class="lesson pro-more" data-story-open="${esc(key)}"${open ? " open" : ""}><summary><span class="hm-t"><b>🎙 분석가의 해석</b><small class="muted">주인공·엇박자·함정 · 확인할 것 ${esc(p.score)} · 시나리오${(p.watch || []).length ? " · 내일 볼 것" : ""}</small></span></summary>
       <div class="lesson-body">${(p.points || []).map((x) => `<p class="learn-p"><b class="pro-h">${esc(x.h)}</b> ${esc(x.t)}</p>`).join("")}
         ${(p.checks || []).length ? `<h3 class="brief-h">✅ 오르는 힘을 받으려면 <small class="muted">${esc(p.score)} 우호</small></h3><ul class="list">${p.checks.map(ck).join("")}</ul>` : ""}
@@ -3263,6 +3264,13 @@ function storyCard(where) {
     return `<details class="lesson story-chain" data-story-open="${esc(key)}"${open ? " open" : ""}><summary><span class="story-no">${"①②③④"[i]}</span>
       <span class="hm-t"><b>${esc(c.title)}</b> <span class="badge ${vc}">${esc(vt)}</span></span></summary>
       <div class="lesson-body">${flowHtml(c.nodes, c.why, c.ends)}
+        ${c.leaders ? `<div class="story-lead"><b>🏃 ${esc(c.leaders.sector)} ${c.leaders.stocks.reduce((a, x) => a + x.r1, 0) >= 0 ? "앞장선 종목" : "가장 많이 빠진 종목"}</b><div class="story-lead-row">${c.leaders.stocks.map((x) =>
+          `<span class="story-lead-s" data-stock="${esc(x.code)}" role="button"><span>${esc(x.name)}</span><b class="${sign(x.r1)}">${pct(x.r1)}</b><small>20일 ${pct(x.r20)}</small></span>`).join("")}</div>
+          ${c.leaders.text ? `<p class="learn-why1">${esc(c.leaders.text)}</p>` : ""}</div>` : ""}
+        ${c.spill ? `<div class="story-lead"><b>🔁 연결 산업으로 번졌나</b><ul class="brief">${c.spill.rows.map((x) =>
+          `<li>${esc(c.spill.src)} → <b>${esc(x.sector)}</b> <small class="muted">(${esc(x.why)})</small> <span class="${sign(x.r1)}">${pct(x.r1)}</span>
+            <small class="muted">${x.ok === true ? "✓ 따라감" : x.ok === false ? "✗ 반대로" : "· 거의 그대로"}</small></li>`).join("")}</ul>
+          <p class="learn-why1">${esc(c.spill.text)}</p></div>` : ""}
         ${c.note ? `<p class="learn-tip">💡 ${esc(c.note)}</p>` : ""}
         <p class="learn-why1">📌 ${esc(c.lesson)}</p>
         ${CASE_GO[c.kind] ? `<button type="button" class="hot-ok story-learn" data-learn-go="${CASE_GO[c.kind]}">이 경로 배우기</button>` : ""}</div></details>`;

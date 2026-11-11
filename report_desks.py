@@ -63,6 +63,7 @@ def load_inputs(paper=PAPER):
         signals={mk: read_json(paper / mk / "daily.json") or {} for mk in ("kr", "us")},
         flows=read_json(paper / "kr" / "flows.json") or {},
         funds={mk: (read_json(paper / mk / "fundamentals.json") or {}).get("stocks") or {} for mk in ("kr", "us")},
+        story_log=read_json(paper / "story_log.json") or {},  # 분석팀 성적표: 지난 같은 유형의 날 그 뒤 어떻게 됐나
     )
 
 
@@ -337,6 +338,13 @@ def format_text(r):
         out += ["", f"[분석팀] {FLAGS[mk]} 오늘의 연결 고리: {s['title']}"]
         out += [f"- {market_story.chain_text(c)}" for c in s["chains"]]
         out += [f"- 💡 {c['note']}" for c in s["chains"] if c.get("note")][:2]
+        for c in s["chains"][:1]:
+            if c.get("leaders"):
+                out.append(f"- 🏃 {c['leaders']['sector']} 이끈 종목: " + ", ".join(f"{x['name']} {pct(x['r1'])}" for x in c["leaders"]["stocks"]))
+            if c.get("spill"):
+                out.append(f"- 🔁 {c['spill']['text']}")
+        if (s.get("pro") or {}).get("plain"):
+            out.append(f"- 🎙 {s['pro']['plain']}")
         out += [f"- 기대와 반영: {x['name']} {pct(x['r1'])} {x['title']}" for x in s["expect"][:3]]
     out += ["", "[편집팀] 자료가 넘어간 흐름"] + [f"- {x}" for x in r["chain"]]
     out.append("- 사고팔기 판단은 안 해요. 공개 자료로 만든 참고용 리포트예요")

@@ -169,6 +169,33 @@ def upcoming(b, days=2):
     return out[:3]
 
 
+def track(b, labels, after=5):
+    """분석팀 성적표: 지난 기록 중 오늘과 같은 성격이었던 날, 그 뒤 5거래일 지수가 같은 쪽으로 더 갔나."""
+    from market_story import INDEXES
+    s = b.w.get(INDEXES[b.market][0][0])
+    log = ((b.inputs.get("story_log") or {}).get(b.market)) or []
+    if not s or not log:
+        return None
+    for label in labels:
+        days = [r for r in log if r.get("day") and r["day"] < b.day and label in (r.get("nature") or [])]
+        res = []
+        for r in days:
+            i = s.at(r["day"], s.before)
+            if i is None or i + after >= len(s.closes) or s.dates[i] != r["day"]:
+                continue
+            way = 1 if (r.get("d1") or 0) >= 0 else -1
+            res.append((s.closes[i + after] / s.closes[i] - 1, way))
+        if len(res) >= 3:
+            same = sum((x > 0) == (w > 0) for x, w in res)
+            avg = sum(x for x, _ in res) / len(res)
+            return dict(label=label, n=len(res), same=same, avg=round(avg, 4),
+                        text=f"지난 기록에서 '{label}'이었던 날은 {len(res)}번. 그 뒤 5거래일 동안 같은 쪽으로 더 간 건 {same}번이었고, "
+                             f"{INDEXES[b.market][0][1]}는 평균 {pct(avg)} 움직였어요."
+                             + (" 이런 날 흐름이 이어진 경우가 절반이 안 됐어요. 하루 움직임만 보고 따라가지 않는 게 좋아요." if same * 2 < len(res)
+                                else " 이런 날은 흐름이 이어진 경우가 더 많았어요. 다만 횟수가 적어 참고만 해요."))
+    return None
+
+
 def view(b, chains, expect):
     ctx = index_context(b)
     if not ctx:
@@ -197,6 +224,15 @@ def view(b, chains, expect):
     pts = []
     if lead:
         pts.append(dict(h="주인공", t=f"{lead['title']}. " + " ".join(w.rstrip(".") + "." for w in (lead.get("why") or [])[:2])))
+        ld = lead.get("leaders")
+        if ld and ld.get("text"):
+            names = ", ".join(f"{x['name']} {pct(x['r1'])}" for x in ld["stocks"])
+            up_sec = sum(x["r1"] for x in ld["stocks"]) >= 0
+            verb = "가 앞장서 올랐어요" if up_sec else "가 가장 많이 빠졌어요"
+            pts.append(dict(h="이끈 종목" if up_sec else "앞장선 약세", t=f"{ld['sector']} 업종은 {names}{verb}. {ld['text']}"))
+        sp = lead.get("spill")
+        if sp:
+            pts.append(dict(h="번진 곳", t=sp["text"]))
     if support:
         pts.append(dict(h="조연", t=f"{support[0]['title']}도 같은 쪽으로 힘을 보탰어요. 원인이 하나가 아니라 여럿이 겹친 날은 움직임이 더 커요."))
     if off:
@@ -229,5 +265,6 @@ def view(b, chains, expect):
                 dict(name="하락이 더 이어지는 경우", sign=(f"{lead['nodes'][0]['t']} 쪽 압력이 계속되면" if lead else "부담 숫자가 더 나빠지면"),
                      then="출발점이 그대로면 결과도 이어지기 쉬워요.")]
     score = f"{len(good)}/{len([c for c in chk if c['good'] is not None])}"
-    return dict(plain=plain, nature=[dict(t=t, x=x) for t, x in nat], points=pts, checks=chk, score=score,
+    hist = track(b, [t for t, _ in nat if "추세" in t or "반등" in t or "조정" in t] + [t for t, _ in nat])
+    return dict(history=hist, plain=plain, nature=[dict(t=t, x=x) for t, x in nat], points=pts, checks=chk, score=score,
                 scenarios=scen, watch=upcoming(b), context=dict(m20=round(ctx["m20"], 4), dd=round(ctx["dd"], 4), streak=ctx["streak"]))
