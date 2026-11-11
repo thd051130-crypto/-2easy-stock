@@ -1346,3 +1346,44 @@ details.ast-brk:not([open]) { border-left-color: var(--border); }
 .ast-mix-n b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ast-mix-n small { font-size: 11px; color: var(--text-muted); }
 .ast-mix-t > span:last-child { flex: none; }
+
+/* 분석팀 '오늘의 연결 고리' + 사례집 연결 그림 (2026-11-10): 칸 → 이유 → 칸 → 갈라진 결과 */
+.story-title { font-size: 15px; font-weight: 700; line-height: 1.45; margin: 0 0 6px; }
+.story-no { flex: none; width: 22px; font-size: 15px; font-weight: 700; color: var(--accent); }
+.story-sim { display: flex; flex-wrap: wrap; gap: 6px; }
+.story-learn { margin-top: 10px; }
+.flow { display: flex; flex-direction: column; align-items: stretch; margin: 2px 0 4px; }
+.flow-n { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-s); padding: 9px 12px; font-size: 14px; line-height: 1.4; }
+.flow-n b { font-weight: 600; }
+.flow-n.up-b { border-color: color-mix(in srgb, var(--up) 40%, var(--border)); }
+.flow-n.down-b { border-color: color-mix(in srgb, var(--down) 40%, var(--border)); }
+.flow-a { display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 14px; min-height: 26px; }
+.flow-arr { flex: none; font-size: 15px; color: var(--accent); font-weight: 700; }
+.flow-why { font-size: 12.5px; line-height: 1.4; color: var(--text-secondary); }
+.flow-ends { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 6px; }
+.flow-e { display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 8px 10px; background: var(--surface-1); }
+.flow-et { font-size: 12.5px; color: var(--text-secondary); line-height: 1.35; }
+.flow-e b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.flow-e small { font-size: 11.5px; color: var(--text-muted); }
+.flow-e em { font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
+.flow-e.ok { background: var(--good-bg); border-color: transparent; }
+.flow-e.ok em { color: var(--good-fg); }
+.flow-e.no { background: var(--wait-bg); border-color: transparent; }
+.flow-e.no em { color: var(--wait-fg); }
+.case-kinds { margin-top: 4px; }
+/* 분석가 시각 (2026-11-11) */
+.pro { margin: 4px 0 6px; }
+.pro-plain { font-size: 14.5px; line-height: 1.55; background: var(--accent-bg); border-radius: var(--radius-s); padding: 10px 12px; margin: 0 0 8px; }
+.pro-plain b { color: var(--accent-fg); margin-right: 4px; }
+.pro-nat { margin: 0 0 4px; }
+.pro-h { color: var(--accent-fg); margin-right: 4px; }
+.pro-ck { align-items: flex-start; justify-content: flex-start !important; }
+.pro-ck .l { flex: 1; min-width: 0; }
+.pro-ck-i { flex: none; width: 22px; height: 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--surface-0); color: var(--text-muted); }
+.pro-ck-i.ok { background: var(--good-bg); color: var(--good-fg); }
+.pro-ck-i.no { background: var(--wait-bg); color: var(--wait-fg); }
+.pro-scen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
+.pro-sc { display: flex; flex-direction: column; gap: 3px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 9px 11px; font-size: 13px; line-height: 1.45; }
+.pro-sc small { color: var(--text-muted); font-size: 12px; }
+.pro-w { border: 1px solid var(--border); border-radius: var(--radius-s); padding: 9px 11px; margin-bottom: 6px; font-size: 13px; line-height: 1.5; }
+.pro-w2 { margin-top: 3px; }

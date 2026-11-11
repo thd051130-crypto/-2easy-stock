@@ -7,6 +7,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/weekly.json : 주간 리포트 (토요일 아침, weekly.py)
   - paper/learn_cases.json, reading.json : 투자 공부 사례 일지·증권사 무료 리포트 목록 (learn_cases.py, reading.py)
   - paper/learn_notes.json : 투자 공부 '공부 노트' (평일 장 마감 뒤 한 편씩 손으로 더해요, 새 용어는 용어집에)
+  - paper/story_log.json : 투자 공부 사례집 '앱이 기록한 최근 사건' (분석팀 market_story.py)
   - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
@@ -91,6 +92,8 @@ def build(paper_dir):
                 # 투자 공부: 날마다 쌓는 사례 일지(learn_cases.py)와 증권사 무료 리포트 목록(reading.py)
                 learn_cases=read_json(paper_dir / "learn_cases.json"), reading=read_json(paper_dir / "reading.json"),
                 learn_notes=(read_json(paper_dir / "learn_notes.json") or {}).get("notes"),
+                # 사례집 '앱이 기록한 최근 사건': 분석팀(market_story.py)이 날마다 쌓은 해설, 시장마다 최근 60거래일만
+                story_log={mk: rows[:60] for mk, rows in (read_json(paper_dir / "story_log.json") or {}).items()},
                 # 30분마다 news 워크플로가 live 브랜치에 올리는 장중 뉴스 (앱이 바로 읽어요)
                 news_url=f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY') or REPO}/live/news.json")
 
@@ -105,11 +108,11 @@ def site_version(site_dir):
 
 
 def stamp_assets(out_dir):
-    """index.html이 부르는 app.js·style.css 주소 끝에 내용 해시를 붙여요 (app.js?v=…).
+    """index.html이 부르는 app.js·casebook.js·style.css 주소 끝에 내용 해시를 붙여요 (app.js?v=…).
     파일이 바뀌면 주소도 바뀌어서, 폰 브라우저가 메모리에 들고 있던 예전 파일을 다시 쓰지 않아요."""
     index = out_dir / "index.html"
     html = index.read_text(encoding="utf-8")
-    for name in ("app.js", "style.css"):
+    for name in ("app.js", "casebook.js", "style.css"):
         asset = out_dir / name
         if asset.exists():
             digest = hashlib.sha1(asset.read_bytes()).hexdigest()[:10]
