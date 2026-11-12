@@ -1455,12 +1455,12 @@ function reportCards(d) {
   const stocks = st ? [...st.picks.map((x) => `<span data-stock="${esc(x.code)}" role="button"><b>${esc(x.name)}</b></span> <small class="muted">${esc(x.sector)}</small>
       ${rpChg(x.r5)}${x.notes.length ? `<br><small class="muted">${esc(x.notes.join(" · "))}</small>` : ""}`),
     ...st.quiet.map((q) => `🔍 <b>${esc(q.name)}</b> <small class="muted">주가 그대로(${pct(q.r5)})인데 거래량 ${q.ratio.toFixed(1)}배</small>`)] : [];
-  return [head,
+  return [head, storyCard("report"),
     rpSection("🌏", "1. 시장팀", "지수·환율·경기 → 일정·정책팀", facts),
     rpSection("🗓", "2. 일정·정책팀", "7일 일정·업종 점수 → 업종팀", plan),
     rpSection("🏭", "3. 업종팀", `${flag} 5일 흐름과 정책 비교 → 종목팀`, secs),
     rpSection("🔎", "4. 종목팀", `${flag} 볼 업종 안의 종목`, stocks),
-    `<section class="card"><p class="muted" style="margin:0">✍️ 5. 편집팀이 위 네 팀 자료를 묶어 맨 위 요약을 만들어요. 공개 자료로 만든 참고용 리포트예요.
+    `<section class="card"><p class="muted" style="margin:0">✍️ 분석팀이 숫자를 '원인 → 결과'로 잇고, 편집팀이 다섯 팀 자료를 묶어 맨 위 요약을 만들어요. 공개 자료로 만든 참고용 리포트예요.
       사고팔기 판단은 안 해요. 위 국장·미장 탭으로 업종·종목을 바꿔 봐요.</p>
       <button type="button" class="more" data-more="learn">📚 리포트에 나온 말과 원인 공부하기<span aria-hidden="true">›</span></button></section>`];
 }
@@ -2691,7 +2691,7 @@ function newsCard() {
 // 홈 '더 보기' 📚 투자 공부 → #kr/more/learn. 위 가로 줄에서 네 묶음 중 하나: 오늘 왜? · 움직이는 이유 · 대처법 · 용어집.
 // '오늘 왜?'는 앱이 이미 받은 자료(세계 지수·경기 국면·큰 발표·뉴스·업종·수급·리포트)로 열 때마다 새로 만들어요. 나머지는 고정 글.
 // 사고팔기 신호는 안 줘요 (매매 규칙은 사용자가 없앴어요). 숫자는 참고용, 원인은 '후보'로만 말해요.
-const LEARN_TABS = [["why", "오늘 왜 움직였나"], ["drivers", "움직이는 이유"], ["read", "전문가 리포트"], ["cope", "대처법"], ["terms", "용어집"]];
+const LEARN_TABS = [["why", "오늘 왜 움직였나"], ["cases", "사례집"], ["drivers", "움직이는 이유"], ["read", "전문가 리포트"], ["cope", "대처법"], ["terms", "용어집"]];
 let learnTab = "why";
 try { learnTab = localStorage.getItem("learn_tab") || "why"; } catch (e) { /* 처음 */ }
 const LEARN_OPEN = new Set();  // 펼친 요인·상황 (아래 버튼을 누르면 접혀요)
@@ -2987,7 +2987,7 @@ function learnWhyCards(d) {
   const c = COPE.find((x) => x.key === situ);
   const todo = `<section class="card"><h2>🧭 이럴 때 어떻게? <small>${esc(c.title)}</small></h2>${copeBody(c)}
     <button type="button" class="more" data-learn-tab="cope">상황별 대처법 전부 보기<span aria-hidden="true">›</span></button></section>`;
-  return [head, learnNoteCard(), sus2, learnBrokerCard(), learnCaseCard(), secCard, todo];
+  return [head, storyCard("learn"), learnNoteCard(), sus2, learnBrokerCard(), learnCaseCard(), secCard, todo];
 }
 // 증권사가 본 이유: 전문가 리포트 중 최근 시황·전략 리포트의 첫머리 (미장 탭은 미국 이야기만)
 function learnBrokerCard() {
@@ -3214,9 +3214,164 @@ function learnNoteCard() {
         <div class="lesson-body">${noteBody(x)}</div></details>`).join("")}</details>` : ""}</section>`;
 }
 
+// ── 분석팀 '오늘의 연결 고리' (market_story.py → report.json story): A 때문에 B, B 때문에 C·D (사용자 2026-11-10 "상관관계, 전문가처럼")
+// 숫자로 맞춰 본 연결이에요. ✓는 예상한 방향으로 움직였다는 뜻이지 원인을 증명한 건 아니에요.
+const STORY_VERDICT = { "확인": ["숫자로 이어짐", "good"], "엇갈림": ["일부만 이어짐", "bad"], "반대": ["반대로 감", "bad"], "미미": ["거의 안 전해짐", ""] };
+const STORY_OPEN = new Set();  // 펼친 사슬·사례 (아래 메뉴를 누르면 접혀요)
+const CASE_GO = { infl: "infl", jobs: "jobs", cb: "cb", rate: "rate", chip: "chip", fx: "fx", oil: "oil", fear: "fear", global: "global", local: "flows", expect: "earn" };
+document.addEventListener("toggle", (e) => {
+  const x = e.target;
+  if (!x || !x.dataset || !x.dataset.storyOpen) return;
+  const k = x.dataset.storyOpen;
+  if (x.open) { STORY_OPEN.add(k); STORY_OPEN.delete(`${k}:x`); } else { STORY_OPEN.delete(k); STORY_OPEN.add(`${k}:x`); }
+}, true);
+// 연결 그림: 칸 → (이유) → 칸 → … → 갈라진 결과 칸들
+function flowHtml(nodes, why, ends) {
+  const n = (x) => `<div class="flow-n${x.s > 0 ? " up-b" : x.s < 0 ? " down-b" : ""}"><b>${esc(x.t)}</b>${x.v ? ` <span class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${esc(x.v)}</span>` : ""}</div>`;
+  const a = (w) => `<div class="flow-a"><span class="flow-arr" aria-hidden="true">↓</span>${w ? `<span class="flow-why">${esc(w)}</span>` : ""}</div>`;
+  const okText = (e) => (e.ok === true ? "✓ 예상대로" : e.ok === false ? "✗ 반대로" : e.ok === null && e.want != null ? "· 거의 그대로" : "");
+  const e = (x) => `<div class="flow-e${x.ok === true ? " ok" : x.ok === false ? " no" : ""}"><span class="flow-et">${esc(x.t)}</span>
+    <b class="${x.s > 0 ? "up" : x.s < 0 ? "down" : ""}">${esc(x.v || (x.s > 0 ? "▲" : x.s < 0 ? "▼" : ""))}</b>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}${okText(x) ? `<em>${okText(x)}</em>` : ""}</div>`;
+  return `<div class="flow">${nodes.map((x, i) => n(x) + a(why[i])).join("")}<div class="flow-ends">${ends.map(e).join("")}</div></div>`;
+}
+// 분석가 시각 (analyst_view.py): 쉽게 말하면 → 오늘의 성격 → 해석(주인공·조연·엇박자·함정) → 확인할 것 → 시나리오 → 내일 볼 것
+function proBox(s, where) {
+  const p = s.pro;
+  if (!p) return "";
+  const ck = (c) => `<li class="pro-ck"><span class="pro-ck-i ${c.good === true ? "ok" : c.good === false ? "no" : ""}">${c.good === true ? "✓" : c.good === false ? "✗" : "?"}</span>
+    <div class="l"><div class="name">${esc(c.q)} <small class="muted">${esc(c.now)}</small></div><div class="meta">${esc(c.why)}</div></div></li>`;
+  const key = `${where}:${s.day}:pro`, open = STORY_OPEN.has(key) || !STORY_OPEN.has(`${key}:x`);
+  return `<div class="pro"><p class="pro-plain"><b>쉽게 말하면</b> ${esc(p.plain)}</p>
+    ${(p.nature || []).length ? `<div class="learn-tags pro-nat">${p.nature.map((n) => `<span class="learn-tag strong">${esc(n.t)}</span>`).join("")}</div>
+      <ul class="brief">${p.nature.map((n) => `<li>${esc(n.x)}</li>`).join("")}</ul>` : ""}
+    ${p.history ? `<p class="learn-tip">📊 <b>분석팀 성적표</b> ${esc(p.history.text)}</p>` : ""}
+    <details class="lesson pro-more" data-story-open="${esc(key)}"${open ? " open" : ""}><summary><span class="hm-t"><b>🎙 분석가의 해석</b><small class="muted">주인공·엇박자·함정 · 확인할 것 ${esc(p.score)} · 시나리오${(p.watch || []).length ? " · 내일 볼 것" : ""}</small></span></summary>
+      <div class="lesson-body">${(p.points || []).map((x) => `<p class="learn-p"><b class="pro-h">${esc(x.h)}</b> ${esc(x.t)}</p>`).join("")}
+        ${(p.checks || []).length ? `<h3 class="brief-h">✅ 오르는 힘을 받으려면 <small class="muted">${esc(p.score)} 우호</small></h3><ul class="list">${p.checks.map(ck).join("")}</ul>` : ""}
+        ${(p.scenarios || []).length ? `<h3 class="brief-h">🧭 시나리오 <small class="muted">사고팔기 신호 아님</small></h3><div class="pro-scen">${p.scenarios.map((x) =>
+          `<div class="pro-sc"><b>${esc(x.name)}</b><span>신호: ${esc(x.sign)}</span><small>${esc(x.then)}</small></div>`).join("")}</div>` : ""}
+        ${(p.watch || []).length ? `<h3 class="brief-h">📅 내일 볼 것</h3>${p.watch.map((w) => `<div class="pro-w"><b>${esc(w.when)} ${esc(w.what)}</b>${w.forecast ? ` <small class="muted">예상 ${esc(w.forecast)}</small>` : ""}
+          <div class="pro-w2"><span class="up">▲ 예상보다 높으면</span> ${esc(w.hi)}</div><div class="pro-w2"><span class="down">▼ 낮으면</span> ${esc(w.lo)}</div><small class="muted">${esc(w.tip)}</small></div>`).join("")}` : ""}
+      </div></details></div>`;
+}
+const caseById = (id) => (typeof CASEBOOK !== "undefined" ? CASEBOOK : []).find((c) => c.id === id);
+function storyCard(where) {
+  const s = ((DATA.report || {}).story || {})[market];
+  if (!s) return "";
+  const chainBox = (c, i) => {
+    const [vt, vc] = STORY_VERDICT[c.verdict] || [c.verdict, ""];
+    const key = `${where}:${s.day}:${c.key}`, open = STORY_OPEN.has(key) || (i === 0 && !STORY_OPEN.has(`${key}:x`));
+    return `<details class="lesson story-chain" data-story-open="${esc(key)}"${open ? " open" : ""}><summary><span class="story-no">${"①②③④"[i]}</span>
+      <span class="hm-t"><b>${esc(c.title)}</b> <span class="badge ${vc}">${esc(vt)}</span></span></summary>
+      <div class="lesson-body">${flowHtml(c.nodes, c.why, c.ends)}
+        ${c.leaders ? `<div class="story-lead"><b>🏃 ${esc(c.leaders.sector)} ${c.leaders.stocks.reduce((a, x) => a + x.r1, 0) >= 0 ? "앞장선 종목" : "가장 많이 빠진 종목"}</b><div class="story-lead-row">${c.leaders.stocks.map((x) =>
+          `<span class="story-lead-s" data-stock="${esc(x.code)}" role="button"><span>${esc(x.name)}</span><b class="${sign(x.r1)}">${pct(x.r1)}</b><small>20일 ${pct(x.r20)}</small></span>`).join("")}</div>
+          ${c.leaders.text ? `<p class="learn-why1">${esc(c.leaders.text)}</p>` : ""}</div>` : ""}
+        ${c.spill ? `<div class="story-lead"><b>🔁 연결 산업으로 번졌나</b><ul class="brief">${c.spill.rows.map((x) =>
+          `<li>${esc(c.spill.src)} → <b>${esc(x.sector)}</b> <small class="muted">(${esc(x.why)})</small> <span class="${sign(x.r1)}">${pct(x.r1)}</span>
+            <small class="muted">${x.ok === true ? "✓ 따라감" : x.ok === false ? "✗ 반대로" : "· 거의 그대로"}</small></li>`).join("")}</ul>
+          <p class="learn-why1">${esc(c.spill.text)}</p></div>` : ""}
+        ${c.note ? `<p class="learn-tip">💡 ${esc(c.note)}</p>` : ""}
+        <p class="learn-why1">📌 ${esc(c.lesson)}</p>
+        ${CASE_GO[c.kind] ? `<button type="button" class="hot-ok story-learn" data-learn-go="${CASE_GO[c.kind]}">이 경로 배우기</button>` : ""}</div></details>`;
+  };
+  const ex = (s.expect || []).map((x) => `<li><div class="l"><div class="name">${x.code ? `<span data-stock="${esc(x.code)}" role="button">${esc(x.name)}</span>` : esc(x.name)}
+      <b class="${sign(x.r1)}">${pct(x.r1)}</b> <span class="badge">${esc(x.title)}</span></div><div class="meta">${x.sector && x.code ? `${esc(x.sector)} · ` : ""}${esc(x.text)}</div></div></li>`).join("");
+  const sim = (s.similar || []).map(caseById).filter(Boolean);
+  return `<section class="card story" id="story-${where}"><h2>🧠 오늘의 연결 고리 <small>${md(s.day)} · 분석팀</small></h2>
+    <p class="story-title">${esc(s.title)}</p>${proBox(s, where)}
+    <h3 class="brief-h">🔗 무엇이 무엇으로 이어졌나</h3>
+    ${(s.chains || []).length ? s.chains.map(chainBox).join("") : `<p class="empty">금리·환율·반도체·유가·해외 증시가 모두 평소 크기였어요. 이런 날은 업종·종목 소식이 주인공이에요.</p>`}
+    ${ex ? `<h3 class="brief-h">🎯 기대와 반영 <small class="muted">이미 가격에 들어 있던 기대</small></h3><ul class="list">${ex}</ul>` : ""}
+    ${sim.length ? `<h3 class="brief-h">📚 닮은 과거 사례</h3><div class="story-sim">${sim.map((c) => `<button type="button" class="learn-tag" data-case-go="${esc(c.id)}">${esc(c.date.slice(0, 4))} ${esc(c.title.split(" · ")[0])}</button>`).join("")}</div>` : ""}
+    <p class="muted note" style="margin:10px 0 0">시장이 잘 알려진 길(금리 → 성장주, 반도체 → 코스피, 환율 → 외국인…)로 움직였는지 숫자로 맞춰 봤어요.
+      업종은 지수보다 더(덜) 움직였는지로 봐요. ✓는 '그 방향으로 움직였다'는 뜻이지 원인 증명은 아니에요. 사고팔기 신호가 아니에요.</p></section>`;
+}
+// 리포트 화면의 '이 경로 배우기': 투자 공부 → 움직이는 이유에서 그 요인을 펼쳐요 (투자 공부 화면 안에서는 bindLearn이 해요)
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("#app [data-learn-go]");
+  if (!b || (screen === "more" && moreKey === "learn")) return;
+  learnTab = "drivers";
+  try { localStorage.setItem("learn_tab", learnTab); } catch (er) { /* 이번만 기억 */ }
+  LEARN_OPEN.add(`d:${b.dataset.learnGo}`);
+  lastTap = null;
+  openMore("learn");
+  requestAnimationFrame(() => { const x = $(`#lesson-${CSS.escape(b.dataset.learnGo)}`); if (x) { x.scrollIntoView(); window.scrollBy(0, -70); } });
+});
+// 사례집으로 가서 그 사례를 펼쳐요 (이동하는 버튼이라 '화면 그대로'에서 빼요)
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-case-go]");
+  if (!b) return;
+  const id = b.dataset.caseGo;
+  learnTab = "cases"; caseKind = "all";
+  try { localStorage.setItem("learn_tab", learnTab); } catch (er) { /* 이번만 기억 */ }
+  STORY_OPEN.add(`case:${id}`);
+  lastTap = null;
+  if (screen === "more" && moreKey === "learn") { lastView = ""; render(); } else openMore("learn");
+  requestAnimationFrame(() => { const x = document.getElementById(`case-${id}`); if (x) { x.scrollIntoView(); window.scrollBy(0, -70); } });
+});
+
+// ── 사례집: 큰 사건을 '사건 → 연결 → 결과 → 그 뒤 → 배운 점'으로 (site/casebook.js) + 앱이 날마다 기록한 최근 사건 (paper/story_log.json)
+let caseKind = "all";
+const KIND_OF_CHAIN = { infl: "rate", jobs: "rate", cb: "rate", rate: "rate", chip: "chip", fx: "fx", oil: "fear", fear: "fear", global: "fear", local: "policy", expect: "expect" };
+function afterMove(day) {  // 그날 종가 → 5거래일 뒤, 지금까지 지수 변화
+  const r = wItem(OWN_IDX[market]);
+  if (!r || !r.dates) return null;
+  const i = r.dates.indexOf(day);
+  if (i < 0) return null;
+  const c0 = r.closes[i], c5 = r.closes[i + 5], cl = r.closes[r.closes.length - 1];
+  return { d5: c5 != null && c0 ? c5 / c0 - 1 : null, now: i < r.closes.length - 1 && c0 ? cl / c0 - 1 : null, name: r.name };
+}
+function learnCaseCards() {
+  const todaySim = new Set((((DATA.report || {}).story || {})[market] || {}).similar || []);
+  const kindOk = (ks) => caseKind === "all" || ks.includes(caseKind);
+  const chips = `<nav class="chips idx-chips case-kinds" aria-label="사례 묶음 고르기">${CASE_KINDS.map(([k, label]) =>
+    `<button type="button" data-case-kind="${k}" aria-pressed="${k === caseKind}">${esc(label)}</button>`).join("")}</nav>`;
+  const head = `<section class="card"><h2>🗂 사례집 <small>사건별 공부 자료</small></h2>
+    <p class="muted" style="margin:0 0 8px">시장을 크게 움직인 사건을 <b>사건 → 연결 → 결과 → 그 뒤 → 배운 점</b> 순서로 정리했어요.
+      위에는 앱이 장 마감마다 기록한 최근 사건, 아래는 꼭 알아 둘 과거 사건이에요.</p>${chips}</section>`;
+  // 앱이 기록한 최근 사건: 지수가 1% 넘게 움직였거나 '기대 반영'이 나온 날
+  const log = ((DATA.story_log || {})[market] || []).filter((r) => Math.abs(r.d1 || 0) >= 0.01 || (r.expect || []).length)
+    .filter((r) => kindOk([...r.chains.map((c) => KIND_OF_CHAIN[c.kind]), ...((r.expect || []).length ? ["expect"] : [])])).slice(0, 12);
+  const logRow = (r) => {
+    const key = `log:${r.day}`, aft = afterMove(r.day);
+    return `<details class="lesson" data-story-open="${esc(key)}"${STORY_OPEN.has(key) ? " open" : ""}><summary><span class="learn-case-d">${md(r.day)}</span>
+      <span class="hm-t"><b>${esc(r.title)}</b></span></summary><div class="lesson-body">
+      <ul class="brief">${r.chains.map((c) => `<li><span class="badge ${(STORY_VERDICT[c.verdict] || [])[1] || ""}">${esc((STORY_VERDICT[c.verdict] || [c.verdict])[0])}</span> ${esc(c.text.replace(/ \[[^\]]+\]$/, ""))}</li>`).join("")}</ul>
+      ${r.plain ? `<p class="learn-p"><b>쉽게 말하면</b> ${esc(r.plain)}</p>` : ""}
+      ${(r.expect || []).length ? `<p class="learn-why1">🎯 ${r.expect.map((x) => `${esc(x.name)} ${pct(x.r1)} ${esc(x.title)}`).join(" · ")}</p>` : ""}
+      ${aft && (aft.d5 != null || aft.now != null) ? `<p class="learn-tip">⏩ 그 뒤: ${esc(aft.name)} ${aft.d5 != null ? `5거래일 뒤 <b class="${sign(aft.d5)}">${pct(aft.d5)}</b>` : "5거래일이 아직 안 지났어요"}${aft.now != null ? ` · 지금까지 <b class="${sign(aft.now)}">${pct(aft.now)}</b>` : ""}</p>` : ""}
+      ${r.chains[0] ? `<p class="learn-why1">📌 ${esc(r.chains[0].lesson)}</p>` : ""}</div></details>`;
+  };
+  const logCard = `<section class="card" id="case-log"><h2>📒 앱이 기록한 최근 사건 <small>장 마감마다 늘어요</small></h2>
+    ${log.length ? log.map(logRow).join("") : `<p class="empty">아직 기록된 사건이 없어요. 장 마감 뒤 분석팀이 하루씩 쌓아요.</p>`}
+    <p class="muted note" style="margin:10px 0 0">'그 뒤'는 그날 종가에서 지수가 얼마나 더 움직였는지예요. 같은 사슬이 다시 나오면 지난번엔 어떻게 됐는지 비교해 보세요.</p></section>`;
+  // 과거 큰 사건: 오늘과 닮은 사례를 먼저
+  const book = (typeof CASEBOOK !== "undefined" ? CASEBOOK : []).filter((c) => kindOk(c.kind))
+    .sort((a, b) => (todaySim.has(b.id) ? 1 : 0) - (todaySim.has(a.id) ? 1 : 0));
+  const kindName = Object.fromEntries(CASE_KINDS);
+  const caseBox = (c) => {
+    const key = `case:${c.id}`;
+    return `<details class="lesson case-box" id="case-${esc(c.id)}" data-story-open="${esc(key)}"${STORY_OPEN.has(key) ? " open" : ""}><summary><span class="learn-case-d">${esc(c.date.length > 4 ? `${c.date.slice(2, 4)}.${c.date.slice(5, 7)}` : c.date)}</span>
+      <span class="hm-t"><b>${esc(c.title)}</b><span class="learn-tags">${todaySim.has(c.id) ? `<span class="learn-tag strong">오늘과 닮음</span>` : ""}${c.kind.map((k) => `<span class="learn-tag">${esc(kindName[k] || k)}</span>`).join("")}</span></span></summary>
+      <div class="lesson-body"><p class="learn-p"><b>한 줄 요약</b> ${esc(c.one)}</p>
+        ${flowHtml(c.chain.map(([t]) => ({ t })), c.chain.map(([, w]) => w), c.ends.map(([t, s]) => ({ t, s })))}
+        <p class="learn-tip">⏩ 그 뒤: ${esc(c.after)}</p>
+        ${c.pro ? `<p class="learn-p"><b class="pro-h">🎙 분석가의 눈</b> ${esc(c.pro)}</p>` : ""}
+        ${c.myth ? `<p class="learn-p"><b class="pro-h">⚠️ 흔한 착각</b> ${esc(c.myth)}</p>` : ""}
+        <h3 class="brief-h">📌 배운 점</h3><ul class="brief">${c.lesson.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+        ${(c.go || []).length ? `<div class="learn-tags" style="margin-top:8px">${c.go.map((k) => { const d = DRIVERS.find((x) => x.key === k);
+          return d ? `<button type="button" class="learn-tag" data-learn-go="${esc(k)}">${d.icon} ${esc(d.title)} 배우기</button>` : ""; }).join("")}</div>` : ""}</div></details>`;
+  };
+  const bookCard = `<section class="card" id="case-book"><h2>📜 꼭 알아 둘 과거 사건 <small>${book.length}개 · 대략값</small></h2>
+    ${book.length ? book.map(caseBox).join("") : `<p class="empty">이 묶음엔 아직 사례가 없어요.</p>`}
+    <p class="muted note" style="margin:10px 0 0">숫자는 널리 알려진 대략값(종가 기준)이에요. 사건을 외우기보다 '무엇이 무엇으로 이어졌나'를 보세요. 다음에 비슷한 출발점이 보이면 같은 길을 떠올릴 수 있어요.</p></section>`;
+  return [head, logCard, bookCard];
+}
+
 function learnView(d) {
   mergeNoteTerms();
-  const cards = learnTab === "drivers" ? learnDriverCards() : learnTab === "read" ? learnReadCards() : learnTab === "cope" ? learnCopeCards() : learnTab === "terms" ? learnTermCards() : learnWhyCards(d);
+  const cards = learnTab === "drivers" ? learnDriverCards() : learnTab === "read" ? learnReadCards() : learnTab === "cope" ? learnCopeCards() : learnTab === "terms" ? learnTermCards() : learnTab === "cases" ? learnCaseCards() : learnWhyCards(d);
   return [`<section class="card learn-head"><h2>📚 투자 공부 <small>${MK_NAME[market]} 자료로</small></h2>
     <p class="muted" style="margin:0 0 4px">앱이 모은 자료로 '왜 움직였나'를 매일 새로 풀어 줘요. 사고팔기 신호는 아니에요.</p>
     <p class="learn-tod">📌 오늘의 용어 <button type="button" class="learn-term" data-term="${esc(termOfDay())}">${esc(termOfDay())}</button></p>${learnTabsBar()}</section>`, ...cards].join("");
@@ -3259,6 +3414,8 @@ function bindLearn() {
     try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
     go("tools");
   }));
+  keepRow($(".case-kinds", app), "case-kinds");
+  app.querySelectorAll("[data-case-kind]").forEach((b) => b.addEventListener("click", () => { caseKind = b.dataset.caseKind; render(); }));
   app.querySelectorAll("[data-read-cat]").forEach((b) => b.addEventListener("click", () => {
     readCat = b.dataset.readCat;
     try { localStorage.setItem("read_cat", readCat); } catch (e) { /* 이번만 기억 */ }
@@ -6001,7 +6158,8 @@ $(".map-btn").addEventListener("click", () => {
 // 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
-  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN].forEach((x) => x.clear());
+  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN, STORY_OPEN].forEach((x) => x.clear());
+  caseKind = "all";
   worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
   AST_BOPEN.clear(); astEditOpen = false; try { localStorage.removeItem("ast_bopen"); } catch (e) { /* 이번만 */ }
