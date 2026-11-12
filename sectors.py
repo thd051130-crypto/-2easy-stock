@@ -196,7 +196,7 @@ def _ret(c, n):
 
 
 def compute(closes, index_close, names, smap, market, lang="ko", fetch_news=None, news_n=NEWS_N):
-    """업종별 [{name, count, r5, r20, vs_index, above200, best, worst, codes, news, good, bad, label, r1, day_best, day_worst}], 5일 등락 순."""
+    """업종별 [{name, count, r5, r20, vs_index, above200, best, worst, codes, news, good, bad, label, r1, day_best, day_worst, day_lead}], 5일 등락 순."""
     groups = {}
     for code in closes.columns:
         sec = sector_of(smap, market, code)
@@ -220,8 +220,10 @@ def compute(closes, index_close, names, smap, market, lang="ko", fetch_news=None
         r1 = {c: v for c in codes if (v := _ret(closes[c], 1)) is not None}
         day = lambda c: dict(code=c, name=names.get(c, c), r1=round(r1[c], 4),
                              r20=None if (v := _ret(closes[c].iloc[:-1], 20)) is None else round(v, 4))
-        day_rows = dict(r1=round(float(np.median(list(r1.values()))), 4), day_best=day(max(r1, key=r1.get)),
-                        day_worst=day(min(r1, key=r1.get))) if r1 else {}
+        med1 = float(np.median(list(r1.values()))) if r1 else 0.0
+        way = 1 if med1 >= 0 else -1  # 업종이 간 쪽으로 가장 크게 간 종목 3개 = 그날 업종을 이끈 종목
+        day_rows = dict(r1=round(med1, 4), day_best=day(max(r1, key=r1.get)), day_worst=day(min(r1, key=r1.get)),
+                        day_lead=[day(c) for c in sorted(r1, key=lambda c: -r1[c] * way)[:3]]) if r1 else {}
         news = []
         if fetch_news and sec in query:
             for n in fetch_news(query[sec], lang=lang, n=news_n):
