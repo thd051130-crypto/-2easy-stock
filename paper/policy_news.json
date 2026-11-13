@@ -1,5 +1,5 @@
 {
- "day": "2026-11-12",
+ "day": "2026-11-13",
  "items": {
   "us-fed": [
    {
@@ -9,15 +9,15 @@
     "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE5FQ1JaS0c1LVFidjF3TlJkNkNlVmMtamFMaVZ1YmZHTDRLRHNKRWI4Z1NtcXg1UThFbmIzZnRhVk02TDNMWno5SGc5LUpOZUNiZUZMaGlB?oc=5"
    },
    {
-    "title": "Fed policymakers consider rate hike after strong jobs report",
+    "title": "Fed officials open door to a quicker round of rate hikes as inflation worsens",
     "source": "Reuters",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMimwFBVV95cUxQMF93ekZ4N2wtdW4zX1llS2FoZWpNVlhMLTRNOGVJTUktZmpLQUNBSzY2bW16Mm9mb3lrZERqNFZ6WkRmYkhBTG00Z2k2NFYyNTVLcmVBSkV5eVJRU1RwZFc5blM4MkRmcUxYU2hadXRWbVh0VXpjektqM1BGS3ZlZlNMeW43VWxmeE5TQm13d0E3bTVwUnp5dzFFNA?oc=5"
+    "date": "2026-11-10",
+    "link": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxOTXo5UzFWVEh5WllQOHNxS1Q2cERxOEM0X1QyN1dPX0R4XzdfT1BpajYxdi0xOEltNWh6cE15Z2ZvZ2dXV0Vwb3NkbWZ1VGQ2M2tvVVVSaWd6clhPcS1XUEU2QXE3c0tlLUhPX0c2emRnWVpwOGtoajlnSS1VRXRNZXFaNEpyVlVwcFVIOUdkT18yQ2t6a1psZGVlOFpiZl90QnVhcmxqQzNxNnlNSEdXcWpjcUdzYUNJSi1hcnl6ZEpUSUU?oc=5"
    }
   ],
   "kr-rate": [
    {
-    "title": "씨티, 한국은행 기준금리 인상 시나리오 두 가지 제시",
+    "title": "씨티, 한국은행 기준금리 인상 시나리오 두 가지 제시 By Investing.com",
     "source": "Investing.com 한국어",
     "date": "2026-11-06",
     "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBpWkQwaU5nLTl0aGFuNjVPaEY4WnNFX2dLX2F5WFpacUZicVlFTXItWEoxaHBIOW8xQmNIZ3ItdXo3azNvVDdRUDAyTVpsRFNiRVotblRWRjczSDlBbktFZU41OFlaWmthWTdjbGFTbEc?oc=5"
@@ -31,16 +31,16 @@
   ],
   "kr-us-deal": [
    {
+    "title": "[대미투자 재점검 ⑤] 1500억달러 MASGA의 명암···K조선 美 진출 승부처는 수익성",
+    "source": "서울파이낸스",
+    "date": "2026-11-06",
+    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE96b1hWeklmeGY2WFotRGhfUzJHblM1U3RFNkxFUEZtM0t5LWY1MXF4ekJrazdwQWNzdGhIYXlEd0ZVWkhLVzVYcERMN25UUEhYWkdiM2Z4M2JKZ25XZ0ZDb05LZVRvVVRldmc?oc=5"
+   },
+   {
     "title": "트럼프표 ‘마스가’, 민주당 의회서도 통할까… 국내 조선업계 ‘촉각’",
     "source": "이코노미톡뉴스",
     "date": "2026-11-08",
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Ia09KaUEtQ05ka3UzRDNSMWpjTERwbmY5dlZDVGpsSGJGNHR3cDBQTkRfWTdVSlhzTG12RTRoSWFBalJWbFh2M2V3ajhnMFRlZWlnU243ZTRaT1JQZW85WGtDS1lxRldZa3hSeA?oc=5"
-   },
-   {
-    "title": "美 '블루 쓰나미'에 대미 수출·투자 셈법 복잡…관세보다 AI·조선이 변수",
-    "source": "뉴시스",
-    "date": "2026-11-05",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5YOHZ5R2VkSlRjSlZIa28tQjYzblhPTHExdlZyWTFzczlVeGhwUzJiNmJuMzBpZUxfeFFRcmNaQ3RfN1liOGdfc1R1YjhVeUFQYVJnN0cwVDJBY25xWEgtTNIBeEFVX3lxTE9nLWVmTmgzcjl6WUpyNUNFRkF3ZktKNnF2N1FsX0E2NUNzaWtkN1c5bWpDc3BCbmthUHdtT3pEbzdwbTE5WTk4ckVrckdvdHUxMXFuYi1IVzBnZy00LTg5MWtzQ29MMnpadjRLMENJbDhEZmJkZzBnWA?oc=5"
    }
   ],
   "world-oil": [
@@ -51,10 +51,10 @@
     "link": "https://news.google.com/rss/articles/CBMie0FVX3lxTE5HUUNnTUVrcjR6dXNSd0QzeW5saFJLanQweDRTZEViVDdwcGxsZUgzRlZCRERBSEU4clJ6QmY5QXBxSDRRN3JTb2h0UmdSZjN2UG9oeml4VElUUm5laGh5ZVFvdTVUMy1NZWRfWnBjOWNCUnkwVUpMOGFuVQ?oc=5"
    },
    {
-    "title": "Oil down more than $7 a barrel in post settlement trade as Trump signals restraint on Iran",
-    "source": "Reuters",
-    "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxNWnV4VENDNkFNVllVVEpoVTJLcC13SlhHREstWFZZQ252QTRiU3dKeW5EYWYxVUJjNnQzVzh1M1FsWjNGTmRKMVFEYjhxT3M2VmF4aVpERWwwczh6dV9OTG5NcFJCMFVZZ0toWEEyMnRRTnBZUm9iQVVzblIzcmJMOTR4V29sUDFVME1jcFQ5VVhoMHVUM0YzWHM2bmE1b3VCV0s0R2JmUUQ?oc=5"
+    "title": "Iran war impact on global oil markets",
+    "source": "Oil & Gas Journal",
+    "date": "2026-11-10",
+    "link": "https://news.google.com/rss/articles/CBMiQEFVX3lxTE1UVDNzMnV4NzBqQXJ4NUM4OTBKQlJSdnlOQjdGbXlSZkJSMDBvQkJITkgydndPR1ZPZTZPeEpmTjI?oc=5"
    }
   ],
   "world-us-china": [
@@ -62,13 +62,13 @@
     "title": "中, 대미 24% 추가관세·희토류 통제강화 유예 2개월 연장(종합)",
     "source": "연합뉴스",
     "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5XN1pzSjFsMTIwWVFGZXl3bDlQU2k2eUFnczhxS2RQbDN6dmxIODZCVHNMOWg3Y0R5M2FEMFFkRVc2QjRfaXlaSjNjX0hVU0J5TG5OdGRDUXoyOWhKN01teNIBYEFVX3lxTE5XN1pzSjFsMTIwWVFGZXl3bDlQU2k2eUFnczhxS2RQbDN6dmxIODZCVHNMOWg3Y0R5M2FEMFFkRVc2QjRfaXlaSjNjX0hVU0J5TG5OdGRDUXoyOWhKN01teA?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE05RlN4UGNMRVRaX0pvYzhESDU0Xzd5Y05tVXpTUXdiUEptc3BiSGhLcklLWDR2TGhGRXB0RWd4a0pPSDBTY0ZOZE9UTEJGYU50TlNLU0Vqamt4ZknSAWBBVV95cUxOVzdac0oxbDEyMFlRRmV5d2w5UFNpNnlBZ3M4cUtkUGwzenZsSDg2QlRzTDloN2NEeTNhRDBRZEVXNkI0X2l5WkozY19IVVNCeUxuTnRkQ1F6MjloSjdNbXg?oc=5"
    },
    {
-    "title": "One Year After Busan: Has China Kept Its Rare Earth Promises?",
-    "source": "CSIS | Center for Strategic and International Studies",
-    "date": "2026-11-10",
-    "link": "https://news.google.com/rss/articles/CBMikwFBVV95cUxOV3BqWHBac0pVdnQwY2lRQVlXYndZVFU0YVZNQ3pqdlNSRDUtYmVhSkFHQzlnMk41NXlXM3RXdk1YaEYwWDBtdEdsLVo3aU1nekkyWDFBdzd5T1dyWnREeWFrdC1WWlpqQ2FUTC03OUJqRVpDWEhjcXhJSHVpdlR4d05YOFZNeG5mOGsydlVJOG9KVjg?oc=5"
+    "title": "US warns China it must ‘immediately’ meet terms of Busan trade deal",
+    "source": "Financial Times",
+    "date": "2026-11-06",
+    "link": "https://news.google.com/rss/articles/CBMihAFBVV95cUxOYy1vdWUwVXRwOE5ZT180NmxHZ0JocXpNaEpYQWNmYmh4dXBrN1Q0SFBpYkMtXzRJSFQ4WkNKbUI5Z1VCS25kRVZpSDJaSTlEY1FsVlNkZTUxSG1jclhnNDlaZnNWMTdLWG9QQmdLZjhWOElZNDVGeVlYdFA0TVVvUW51ZFk?oc=5"
    }
   ],
   "kr-budget-ai": [
@@ -82,21 +82,21 @@
     "title": "\"어디서 본 사업인데?\"‥메가프로젝트·AI 예산 곳곳 '중복'",
     "source": "MBC 뉴스",
     "date": "2026-11-11",
-    "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTE44NkZtT2VoOG40YXlsTHV6cmZ6blhVdWdObTd5dmpHZEV0WlplVnNRREtrdk5CcFQ2SDJEaTlVOUFqU005aXpUMFJxRC1RSGU4OWJPUklaeG5LdXRVbnd4dXF2R2w2eFhESExGRFJ4a2trTXg3VkRVdA?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTE44NkZtT2VoOG40YXlsTHV6cmZ6blhVdWdObTd5dmpHZEV0WlplVnNRREtrdk5CcFQ2SDJEaTlVOUFqU005aXpUMFJxRC1RSGU4OWJPUklaeG5LdXRVbnd4dXF2R2w2eFhESExGRFJ4a2trTXg3VkRVdNIBeEFVX3lxTE9qRkpqX0JrbzFrdlVYVnBBeG5oNHh0bmZLMnduZ1JBN2MyOWUxSFpZNW50RXRKdGNsTDRqU3VXLVE1MzdOUWdNM1RxOERTY19BdnA4Mmg0YzUwRDFHOHNEUXJsSHh3azBaOUNkVGJPd0dBY2ZYX2oxag?oc=5"
    }
   ],
   "kr-buyback": [
-   {
-    "title": "1조에서 3000억으로… 자사주 ‘증시 방파제’ 말랐다",
-    "source": "조선일보",
-    "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxNbUxabWx3QzFhUXdoOGRvMjFDb0FBckg4b1BGWUN3X2VkOTUwb2RNWnpyZHFNMi1jYjlKYktkbkp5dmNXQ2g4VTNxZ25iRVZIdU5GTFhoYkw5Q0w0Y1ZvT0h4Qmo5bDRDcUI1S1B1eC01b2dQMUxqVjhJcHBMU0pBMjFfOU93VlZoZm1z?oc=5"
-   },
    {
     "title": "장호진 현대지에프홀딩스 부회장, 실적 주춤 속 1000억 자사주 소각",
     "source": "CEO저널",
     "date": "2026-11-08",
     "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFA3THRVRFBEYnhsS2N5NDZiNV9fLTNreE5NWVY0TEJOVXo2VG1idkN1bjB3aHhQVUJ3OVhwamNSNy1ib3F1THZnWEdxbU45VElnZk5INDlQTzRaM0t4enFwNU1oY3NPU3FWR2dV0gFrQVVfeXFMUDdMdFVEUERieGxLY3k0NmI1X18tM2t4Tk1ZVjRMQk5VejZUbWJ2Q3VuMHdoeFBVQnc5WHBqY1I3LWJvcXVMdmdYR3FtTjlUSWdmTkg0OVBPNFozS3h6cXA1TWhjc09TcVZHZ1U?oc=5"
+   },
+   {
+    "title": "블랙록, SK하이닉스 지분 5% 복귀… 외국인 자금이 다시 '정책+사이클'에 베팅한다",
+    "source": "비즈한국",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE5rdWxRRUgtRjA2VTVnTWIzNmVIVzBIdWNvVWRrUDRWTmFDenpTNy1sY05jd0R1a1hOWktZVkJVSmhMTFZ3NmJVNG5WX2pETXBHOGFTdw?oc=5"
    }
   ],
   "us-chip-tariff": [
@@ -107,10 +107,10 @@
     "link": "https://news.google.com/rss/articles/CBMid0FVX3lxTE5EMkxJUXdUTkhPZXNxcWgwOTVSSlN4RGtKR3NrV0V0RnBQU3hNQ0dBUDZKQVVLSHFqQzBUbDExckFQLUEtaFlOY3JTbVJYaHY3aHhyR0phNXBPUjljUGk2QjhLVjVDdkRYdFRLbl9yaTZiVEhCTEZR0gF3QVVfeXFMTkQyTElRd1ROSE9lc3FxaDA5NVJKU3hEa0pHc2tXRXRGcFBTeE1DR0FQNkpBVUtIcWpDMFRsMTFyQVAtQS1oWU5jclNtUlhodjdoeHJHSmE1cE9SOWNQaTZCOEtWNUN2RFh0VEtuX3JpNmJUSEJMRlE?oc=5"
    },
    {
-    "title": "Tools of Leverage: Preserving US and Allied Leadership in Semiconductor Equipment",
+    "title": "Tools of Leverage: Preserving US and Allied Leadership in Semiconductor Equipment Against China",
     "source": "Hudson Institute",
     "date": "2026-11-11",
-    "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQTGw3Wjd4YmdpQnpVRE5BZFNDaVRRS2g5VTdXR2kzeTdDVFRCenFDbDZSVkxhVVZpU2hydENONVl0ZlF0VkNJN1dVUnpzQnNUcUF3ckR3OE9NcjhEWGx1UlRpSGwyRktBRXA0aHNoNTZORkZ5OGk1MGExWW9kVmdjRWU0Nk1sVC1SUUVsbG85eGZpMTRxWHNJM0kzLWZzbk5QVW5oVnBpR3FXYXE2UmlhSDFzMHo?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxOTFlsdFJpaGhpVzYtbFZVY0N4WkVRaTZNdnpVa3hjYnBuZ3hsaXlQaXlxdU84Z205WWMtTk01SW9KOF9hM01sblpQRWRVLWRvQWlrYnpHSURZZ2dzSjF3NVFxUGNPWkNkcGRLYVo2WjkwNTYzRWRRYVBzMWx1NXlIZFB2bEFBQlZINWpBVEZOS1BZYWprVWdkelVlbl90NGpyaV9wajVYeWJBbmcxVjZ3QTlZcjVZbmJTanZaNWpueW40aGhBVVlj?oc=5"
    }
   ],
   "us-301": [
@@ -129,10 +129,10 @@
   ],
   "us-pharma": [
    {
-    "title": "美 중간선거 민주당 압승…국내 의약품 관세 영향은 제한적",
-    "source": "뉴스1",
-    "date": "2026-11-05",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5PcUo4emt3SGc5RXpRelJIU3ZvNGZGb1pCSEtabFVvMTg3blBMelNkaE43cHl5ck5uRWpGWDF6emtWR1dxMkNHOC1tcWdLanVOcDBrcUNHd2lzVi1lcENVWg?oc=5"
+    "title": "약가 협약 칼 빼든 美 의회...한국 제약 관세·수출 불똥 튀나",
+    "source": "팜뉴스",
+    "date": "2026-11-09",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE0xR3VoN0VLNlN6Y1ZZclcwdmk1YlRNYkY3bWlDS3NJSWdUZTJSZUF5ZDdBQU1reHZXcEFmY01seW41WGdjcS1TYm5hazZXZEVrZm11VDZHUnZfSUNmcW5WdzhfSGJFdE5LX2d6Vg?oc=5"
    },
    {
     "title": "The State of U.S. Tariffs",
@@ -143,16 +143,16 @@
   ],
   "kr-dividend-tax": [
    {
+    "title": "밸류업 공시, 대주주는 절세·소액주주는 배당",
+    "source": "IB토마토",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE9iYXJjWTZJbktDTVowbFY5cEUxMklfOGJ4UHgwanpISWVYRkdkb01rVnVQTmVrZ0F4ZHpFVG9ZQlRiNmFSMGpqenV0bkNZQ1B5cUk3YmN6OUd3TmdHUUlWTVgtQzdMOW9Gbmc?oc=5"
+   },
+   {
     "title": "배당소득 과세체계 개선 시동 \"현금배당 중심 세제 혜택 한계 보완\" |",
     "source": "한스경제",
     "date": "2026-11-11",
     "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTE5qT2VzMUU0OHJoRWEyY0g2eHA2WTRLNjRXWVRkYmk4RGhCelNYVE11aVIyemdtWU9SV05wOXhOMHp0NjBfeUJwY2lJQ2FhdnYzMk5ZbHVJckJPSFNqZWFoMldnS0c0VE5DTHhERU9nWQ?oc=5"
-   },
-   {
-    "title": "“배당보다는 ‘총주주환원율’”…내년 주주가치 제고 ‘슈퍼 사이클’ 전망",
-    "source": "주주경제신문",
-    "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE1sSlJUM19VajMtN0hWWXpGaHVwYm1IaTB0eFhaWWlISTFyc243a3hPb21tTmpOaWdwaVhGU21XUUNiMlZnZU1JWGhUZEtrTEdOVHh5bEtzY240SmFxX1A5b2VaVkhLR2tY?oc=5"
    }
   ],
   "kr-budget-future": [
@@ -161,6 +161,12 @@
     "source": "연합인포맥스",
     "date": "2026-11-11",
     "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTFBWdFR6VkE2Q3hwT0UzQV9Ec0F0LTlkcjhVNjVTMEFRVEZ2MThzOHhVOE01UlNrVGZvYVpJV1VrR3NZOV9nUGFFMnZXS2JvajBRZlM0Q3N2SXZxMnN2M0QyeHotZklfcVlJUVEtTXp4eGxnd2U1?oc=5"
+   },
+   {
+    "title": "반도체 호황 뒤에 가려진 경제 편중…정부, 산업 다변화·민생 지원 '투트랙'",
+    "source": "뉴시안",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1nOXV0WERDOVJuZllCVkpSY2h5ejNzVXh6TjRabGo0M3Q2eWxkT09vb0V0M2UyV0t1MC02akpabm93ZFdlcFBsNVpZTjlpUXM3TzA2OGNqcXczekZOQlhLWU1TOHpsdzJmdGpGZg?oc=5"
    }
   ],
   "world-boj": [
