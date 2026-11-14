@@ -1,5 +1,5 @@
 {
- "day": "2026-11-13",
+ "day": "2026-11-14",
  "items": {
   "us-fed": [
    {
@@ -17,10 +17,10 @@
   ],
   "kr-rate": [
    {
-    "title": "씨티, 한국은행 기준금리 인상 시나리오 두 가지 제시 By Investing.com",
-    "source": "Investing.com 한국어",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBpWkQwaU5nLTl0aGFuNjVPaEY4WnNFX2dLX2F5WFpacUZicVlFTXItWEoxaHBIOW8xQmNIZ3ItdXo3azNvVDdRUDAyTVpsRFNiRVotblRWRjczSDlBbktFZU41OFlaWmthWTdjbGFTbEc?oc=5"
+    "title": "11월엔 올린다지만 그다음은…금통위가 주목한 소비의 온도",
+    "source": "연합인포맥스",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9hdmN3R0ZfV2pQZG5SRG1uM0ZkczZyQkdQSmFhR2RDYTNxVkduU0VmU2tBVU5ZNmpLV3NSZUJmSFlmcFdWb2d5VEVVZS1Nb0RQd2pfUS0yWXNMUUNTUTVhS0xJYy1vQUQ2dURxRjExTWw?oc=5"
    },
    {
     "title": "[현승윤 칼럼] 한은, 기준금리 인상에 신중할 때",
@@ -31,16 +31,16 @@
   ],
   "kr-us-deal": [
    {
-    "title": "[대미투자 재점검 ⑤] 1500억달러 MASGA의 명암···K조선 美 진출 승부처는 수익성",
-    "source": "서울파이낸스",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE96b1hWeklmeGY2WFotRGhfUzJHblM1U3RFNkxFUEZtM0t5LWY1MXF4ekJrazdwQWNzdGhIYXlEd0ZVWkhLVzVYcERMN25UUEhYWkdiM2Z4M2JKZ25XZ0ZDb05LZVRvVVRldmc?oc=5"
-   },
-   {
     "title": "트럼프표 ‘마스가’, 민주당 의회서도 통할까… 국내 조선업계 ‘촉각’",
     "source": "이코노미톡뉴스",
     "date": "2026-11-08",
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Ia09KaUEtQ05ka3UzRDNSMWpjTERwbmY5dlZDVGpsSGJGNHR3cDBQTkRfWTdVSlhzTG12RTRoSWFBalJWbFh2M2V3ajhnMFRlZWlnU243ZTRaT1JQZW85WGtDS1lxRldZa3hSeA?oc=5"
+   },
+   {
+    "title": "CSIS \"韓, 대미투자 확대… 美도 관세 인하·비자 지원해야\"",
+    "source": "파이낸셜뉴스",
+    "date": "2026-11-08",
+    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFBzWTdtR2ZIdHdsQnZUeEhkTVpVRHZPTjRtc2tYSTZPNm9mNm05eERfRUZWZzJOWDRtZy1GdF9yOUZzaFFVVWEyYjdLc3doQndOelBWWDRQcVJ5Zw?oc=5"
    }
   ],
   "world-oil": [
@@ -51,24 +51,24 @@
     "link": "https://news.google.com/rss/articles/CBMie0FVX3lxTE5HUUNnTUVrcjR6dXNSd0QzeW5saFJLanQweDRTZEViVDdwcGxsZUgzRlZCRERBSEU4clJ6QmY5QXBxSDRRN3JTb2h0UmdSZjN2UG9oeml4VElUUm5laGh5ZVFvdTVUMy1NZWRfWnBjOWNCUnkwVUpMOGFuVQ?oc=5"
    },
    {
-    "title": "Iran war impact on global oil markets",
-    "source": "Oil & Gas Journal",
-    "date": "2026-11-10",
-    "link": "https://news.google.com/rss/articles/CBMiQEFVX3lxTE1UVDNzMnV4NzBqQXJ4NUM4OTBKQlJSdnlOQjdGbXlSZkJSMDBvQkJITkgydndPR1ZPZTZPeEpmTjI?oc=5"
+    "title": "Oil production nears pre-Iran war levels, OPEC says",
+    "source": "Al Jazeera",
+    "date": "2026-11-11",
+    "link": "https://news.google.com/rss/articles/CBMilgFBVV95cUxNWVl4QjNFcFhZd1N4V2ZIQlM0ejAwcEVmbUxqXzdmamFJeUE0QXBNU3FoQW9ldGNYdF95QnU2MVZxTGlMX1NiYWZrUVY0S2hKTFlVSGJBZTExY0xfWGl1Q2RobDlQa0M5a1ozU1VYSlBNd2lDYzQwS2FKV0pNNnpJUnNUNDV1RmJYZENBNWVXcVM0R0MyVWfSAZsBQVVfeXFMTVdoNlkwaFM0R0ZuOExoUHowckk2eFNRejVwY1NUM1pnZEp1RDdMdVdGLXM3ZFFCeEJIOE5zdWJZeXJwcTlHLVk5azdLUTV2R0EtaGJ1VHMyb0tiTmp3MHhJVzBZSjBJRURLcF8yWkJvcXhHY2UwTS1wd1JFbkZGMkY1eXcwNk9LTlBkNDh6clNWSUlRRXppdG5QelE?oc=5"
    }
   ],
   "world-us-china": [
    {
-    "title": "中, 대미 24% 추가관세·희토류 통제강화 유예 2개월 연장(종합)",
-    "source": "연합뉴스",
+    "title": "美中, 무역 휴전 2개월 연장…관세·희토류 수출통제 유예",
+    "source": "한국경제",
     "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE05RlN4UGNMRVRaX0pvYzhESDU0Xzd5Y05tVXpTUXdiUEptc3BiSGhLcklLWDR2TGhGRXB0RWd4a0pPSDBTY0ZOZE9UTEJGYU50TlNLU0Vqamt4ZknSAWBBVV95cUxOVzdac0oxbDEyMFlRRmV5d2w5UFNpNnlBZ3M4cUtkUGwzenZsSDg2QlRzTDloN2NEeTNhRDBRZEVXNkI0X2l5WkozY19IVVNCeUxuTnRkQ1F6MjloSjdNbXg?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE1VTGlqMkQwX0hpZTRPVlFCb3IzblNSenRpRDBIWFp5TzhtOFhxSEdKYUd5YWVMMTBNcnczS19iaG1mYW8wNUVIVEEySlI4OC1ES2ttOGh6NTJQQQ?oc=5"
    },
    {
-    "title": "US warns China it must ‘immediately’ meet terms of Busan trade deal",
-    "source": "Financial Times",
-    "date": "2026-11-06",
-    "link": "https://news.google.com/rss/articles/CBMihAFBVV95cUxOYy1vdWUwVXRwOE5ZT180NmxHZ0JocXpNaEpYQWNmYmh4dXBrN1Q0SFBpYkMtXzRJSFQ4WkNKbUI5Z1VCS25kRVZpSDJaSTlEY1FsVlNkZTUxSG1jclhnNDlaZnNWMTdLWG9QQmdLZjhWOElZNDVGeVlYdFA0TVVvUW51ZFk?oc=5"
+    "title": "China Extends Suspension of Rare Earth Export Controls",
+    "source": "Thompson Hine",
+    "date": "2026-11-13",
+    "link": "https://news.google.com/rss/articles/CBMiowFBVV95cUxOVUdiSTZDb0c2U0lWWEpiRV9ZMnpESmlpZDdBcXdxbmNsUVVFOHdxZHR5LTd4THI1RGpybjdsRTJhUlNjR1hkRU9rU3JyUnNwX1RxZ0pVMmFMejFZRHY2Tm1NTk1mN0NoMzdudFZLVEI4MlVPNjlDQ3ZSNFVzSUhHWmRWbVNMQ09DbHBtWHdmbV8yRDF3OUJ0aFNfYlJ3UzBocFhv?oc=5"
    }
   ],
   "kr-budget-ai": [
@@ -87,16 +87,16 @@
   ],
   "kr-buyback": [
    {
-    "title": "장호진 현대지에프홀딩스 부회장, 실적 주춤 속 1000억 자사주 소각",
-    "source": "CEO저널",
-    "date": "2026-11-08",
-    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFA3THRVRFBEYnhsS2N5NDZiNV9fLTNreE5NWVY0TEJOVXo2VG1idkN1bjB3aHhQVUJ3OVhwamNSNy1ib3F1THZnWEdxbU45VElnZk5INDlQTzRaM0t4enFwNU1oY3NPU3FWR2dV0gFrQVVfeXFMUDdMdFVEUERieGxLY3k0NmI1X18tM2t4Tk1ZVjRMQk5VejZUbWJ2Q3VuMHdoeFBVQnc5WHBqY1I3LWJvcXVMdmdYR3FtTjlUSWdmTkg0OVBPNFozS3h6cXA1TWhjc09TcVZHZ1U?oc=5"
+    "title": "의무공개매수 '제3의 절충안'…대주주 지분 사고 나머지 절반도 매수 |",
+    "source": "연합인포맥스",
+    "date": "2026-11-13",
+    "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE44ODNWUVYzQmJ0X3IxYmoyTjBlSTA0X0kxc0kzOG5sNmE1MGZWSGNHd2pQOHE0dnB0U0tjM1JXck8tYVA1Q2tsd25IVlRhbzVoeUt0V2VHRUNyVlczMlRiblh0WHNEYUFaTE50YVNuYURiMEM1?oc=5"
    },
    {
-    "title": "블랙록, SK하이닉스 지분 5% 복귀… 외국인 자금이 다시 '정책+사이클'에 베팅한다",
-    "source": "비즈한국",
-    "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE5rdWxRRUgtRjA2VTVnTWIzNmVIVzBIdWNvVWRrUDRWTmFDenpTNy1sY05jd0R1a1hOWktZVkJVSmhMTFZ3NmJVNG5WX2pETXBHOGFTdw?oc=5"
+    "title": "미래에셋증권, 자사주 1.4조 소각 예고… 주주환원 약속 구체화",
+    "source": "리버티코리아포스트",
+    "date": "2026-11-13",
+    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE1EZVJZM1dMeGRIeVJMeXhBMjlXT2NpMFhlX0hxS0xRRUlXRUlvVTYtdjkzcmhHRmhWMEJYMURZVnZSNndyeDJKYjhYaGFOd1kzS2VYQl9pRmUzNmdNdjVCbEtCbkZxUDTSAWdBVV95cUxNRGVSWTNXTHhkSHlSTHl4QTI5V09jaTBYZV9IcUtMUUVJV0VJb1U2LXY5M3JoR0ZoVjBCWDFEWVZ2UjZ3cngySmI4WGhhTndZM0tlWEJfaUZlMzZnTXY1QmxLQm5GcVA0?oc=5"
    }
   ],
   "us-chip-tariff": [
@@ -121,10 +121,10 @@
     "link": "https://news.google.com/rss/articles/CBMiZEFVX3lxTFBhYVBhMldWeHYzZDV6NFBUcEtiZWEzMW8xelA3WmhUTExWZTIyc3ZWOEwyeGNPTUxFbGZIWklMcmdDM1kyeUtUMEtpak56Nnp0OTRzS3ItMkZXZkxFTXFHUFc3M3A?oc=5"
    },
    {
-    "title": "Section 301 Probe of Vietnam Extended",
+    "title": "Excess Capacity Tariffs: Will They or Won’t They? Part 2",
     "source": "Sandler, Travis & Rosenberg, P.A.",
-    "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNTWNpT0tqNXRlT1Z1VnJmQWpRWnhUcTJiaTJPSzhVUExPbm1Hb3U3blkyVzBMLTFDOHI4VGR5RmVid29ISlpKUWhuVTN2UWc0aFdETGxETFlXVXVZWkV3MElyXy1uZmtIQ3RYTjBtTXE2SlhELTFKTUpncDBRSTgwR2JvMTlSMmR3X2ttTnhZSlhXSzNWWUxNN3J1R0tsanFGLTJCQnFmYmFaLVpoSkE?oc=5"
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxNYjNDTVFrbzhRZ3BoRTVoaVprYzQ3VHc2Rm1WTGRTRDd0dm95clp5SktZSXBQNkF5NzdjMVFEaUJXM1VmZVotSHlRUUVBVE9WU2l0RHphQ0EzUl94Y1FrdV9RMUlsWEx4U0dBWHROTGtEMzRhdkdOMUY5NDA4SWhBeFQxb214Sl9NRVdfOWtybmNnTnF0ZGpuMnZNRlgwMFdzYWxydWUtVDRFRnNCN0VyLVV2N0NHZG5SNmlOb3MtM3hVOFk?oc=5"
    }
   ],
   "us-pharma": [
@@ -135,10 +135,10 @@
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE0xR3VoN0VLNlN6Y1ZZclcwdmk1YlRNYkY3bWlDS3NJSWdUZTJSZUF5ZDdBQU1reHZXcEFmY01seW41WGdjcS1TYm5hazZXZEVrZm11VDZHUnZfSUNmcW5WdzhfSGJFdE5LX2d6Vg?oc=5"
    },
    {
-    "title": "The State of U.S. Tariffs",
-    "source": "The Budget Lab",
-    "date": "2026-11-09",
-    "link": "https://news.google.com/rss/articles/CBMiYkFVX3lxTFAxY2I2anZhamx5LWVnbndrMF9weDNOOUxyb2J0YXVzdDZ6aEFaYldGdFZsZ0I4ZjAtWmJfanBJVnc5ckVpeU1iczJ6dWdKYTNfTmc2ckoyd1dnN1hJd3hBU2FR?oc=5"
+    "title": "Why the Next Wave of Drug Launches Will Be Won on Market Access",
+    "source": "Pharmaceutical Commerce",
+    "date": "2026-11-13",
+    "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxQZWJFTng3cTZkRl83R0lZTVdQRVJHYXZtYjFLNFpKbVFhcVU5QmtpWjcydmwzYnJKYkktSHlONGl2S2U4aUg1V1dtQnM4U1RGMnowS0MwUnZ4ZEVhTnJvanI5SzFtNmFEbTFDS3ZxbDREbHZWWkhfOThoV0ZwWHNuV01rdjBiM1QzampYbVJZNm9vY2ROV3pzVGFjbDdBWld1TjFEQlBVdi02SW8?oc=5"
    }
   ],
   "kr-dividend-tax": [
@@ -149,10 +149,10 @@
     "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE9iYXJjWTZJbktDTVowbFY5cEUxMklfOGJ4UHgwanpISWVYRkdkb01rVnVQTmVrZ0F4ZHpFVG9ZQlRiNmFSMGpqenV0bkNZQ1B5cUk3YmN6OUd3TmdHUUlWTVgtQzdMOW9Gbmc?oc=5"
    },
    {
-    "title": "배당소득 과세체계 개선 시동 \"현금배당 중심 세제 혜택 한계 보완\" |",
-    "source": "한스경제",
-    "date": "2026-11-11",
-    "link": "https://news.google.com/rss/articles/CBMib0FVX3lxTE5qT2VzMUU0OHJoRWEyY0g2eHA2WTRLNjRXWVRkYmk4RGhCelNYVE11aVIyemdtWU9SV05wOXhOMHp0NjBfeUJwY2lJQ2FhdnYzMk5ZbHVJckJPSFNqZWFoMldnS0c0VE5DTHhERU9nWQ?oc=5"
+    "title": "[자산관리와 절세] \"ETF는 안 됩니다\" 배당 분리과세의 숨은 한 줄",
+    "source": "뷰어스",
+    "date": "2026-11-14",
+    "link": "https://news.google.com/rss/articles/CBMiWEFVX3lxTE5oNlo2VUZsSHNRUVBDblg1djlOeWRWOWgtRDlqZVd5S1p0NDV3eVoycTBrOVNHUWhpZ245NzU4WllITi1DdFRNb0R3N0VHUXlRYWpkc3ZDaGM?oc=5"
    }
   ],
   "kr-budget-future": [
