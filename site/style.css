@@ -231,6 +231,7 @@ details li { margin: 4px 0; }
 .fb-field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary);
   font: inherit; font-size: 16px; line-height: 1.5; padding: 10px 12px; resize: vertical; min-height: 140px; }
 .fb-count { margin: 4px 0 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.fb-warn { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--radius-s); background: var(--wait-bg); color: var(--wait-fg); font-size: 13px; line-height: 1.5; }
 .fb-send { width: 100%; min-height: 46px; font-size: 15px; }
 .fb-done { margin: 8px 0 0; color: var(--good-fg); font-weight: 600; }
 .fb-done.bad { color: var(--wait-fg); }
@@ -1426,6 +1427,45 @@ details.ast-brk:not([open]) { border-left-color: var(--border); }
 .story-lead-s > span { font-size: 12.5px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .story-lead-s b { font-size: 15px; font-variant-numeric: tabular-nums; }
 .story-lead-s small { font-size: 11.5px; color: var(--text-muted); }
+
+/* 처음 쓰는 사람 사용법 안내 (짚는 곳만 밝게, 카드는 반대쪽) */
+.guide-catch { position: fixed; inset: 0; z-index: 60; touch-action: none; }
+.guide-spot { position: fixed; z-index: 61; pointer-events: none; border-radius: var(--radius-s); border: 2px solid var(--accent);
+  box-shadow: 0 0 0 9999px rgba(10, 10, 9, .62); transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease; }
+.guide-spot.none { left: 50% !important; top: 50% !important; width: 0 !important; height: 0 !important; border-color: transparent; }
+.guide-card { position: fixed; z-index: 62; left: 16px; right: 16px; max-width: 520px; margin: 0 auto; top: 50%; transform: translateY(-50%);
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--pop-shadow);
+  padding: 14px 18px 16px; outline: none; touch-action: pan-y; }
+.guide-card.at-top { top: calc(84px + env(safe-area-inset-top)); transform: none; }
+.guide-card.at-bottom { top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); transform: none; }
+.guide-head { display: flex; justify-content: space-between; align-items: center; min-height: 32px; }
+.guide-skip, .guide-prev { border: 0; background: none; padding: 6px 4px; min-height: 36px; font: inherit; font-size: 14px; color: var(--text-muted); cursor: pointer; }
+.guide-card h2 { margin: 2px 0 8px; font-size: 19px; font-weight: 700; }
+.guide-body { font-size: 15px; line-height: 1.6; color: var(--text-secondary); }
+.guide-body b { color: var(--text-primary); }
+.guide-list { margin: 0; padding-left: 18px; }
+.guide-list li { margin: 3px 0; }
+.guide-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; gap: 8px; }
+.guide-dots { display: flex; gap: 2px; }
+.guide-dots button { width: 22px; height: 28px; border: 0; padding: 0; background: none; cursor: pointer; position: relative; }
+.guide-dots button::after { content: ""; position: absolute; left: 7px; top: 11px; width: 7px; height: 7px; border-radius: 999px; background: var(--border); }
+.guide-dots button[aria-current="step"]::after { background: var(--accent); width: 16px; left: 3px; }
+.guide-btns { display: flex; align-items: center; gap: 6px; }
+.guide-next { min-height: 42px; padding: 6px 20px; }
+.foot .help-row { display: flex; justify-content: center; gap: 18px; margin: 0 0 10px; }
+.foot .guide-open, .foot .help-open { border: 0; background: none; padding: 0 4px; font: inherit; font-size: 14px; cursor: pointer; min-height: 40px; }
+.guide-more { display: block; margin-top: 10px; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 15px; cursor: pointer; }
+details.help-sec { border-top: 1px solid var(--border); }
+details.help-sec > summary { display: flex; align-items: center; gap: 10px; padding: 12px 0; cursor: pointer; list-style: none; }
+details.help-sec > summary::-webkit-details-marker { display: none; }
+details.help-sec > summary::after { content: "›"; margin-left: auto; color: var(--text-muted); font-size: 20px; transition: transform .15s ease; }
+details.help-sec[open] > summary::after { transform: rotate(90deg); }
+.help-t { display: flex; flex-direction: column; min-width: 0; }
+.help-t b { font-size: 16px; color: var(--text-primary); }
+.help-t small { font-size: 13px; color: var(--text-muted); }
+details.help-sec .guide-body { padding: 0 0 12px; }
+.help-tour { margin-top: 12px; width: 100%; min-height: 44px; }
+@media (prefers-reduced-motion: reduce) { .guide-spot, details.help-sec > summary::after { transition: none; } }
 
 /* 폰을 가로로 돌렸을 때(높이가 낮을 때): 위·아래 막대를 얇게 해서 내용이 더 보이게 */
 @media (orientation: landscape) and (max-height: 500px) {
