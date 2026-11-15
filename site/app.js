@@ -5134,7 +5134,9 @@ function bigEventsCard() {
   if (!ev.length && !shocks.length) return "";
   const days = "일월화수목금토";
   const when = (iso) => { const k = new Date(Date.parse(iso) + 9 * H); return `${k.getUTCMonth() + 1}.${String(k.getUTCDate()).padStart(2, "0")}(${days[k.getUTCDay()]}) ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`; };
-  const left = (iso) => { const m = Math.round((Date.parse(iso) - now) / 60e3); return m <= 0 ? "발표됨" : m < 60 ? `${m}분 뒤` : m < 24 * 60 ? `${Math.floor(m / 60)}시간 뒤` : `${Math.floor(m / 1440)}일 뒤`; };
+  // 하루 넘게 남으면 한국 날짜로 세요 (달력 D-n과 같게: 일요일 밤 → 화요일 새벽은 '2일 뒤')
+  const kday = (t) => Math.floor((t + 9 * H) / 864e5);
+  const left = (iso) => { const t = Date.parse(iso), m = Math.round((t - now) / 60e3); return m <= 0 ? "발표됨" : m < 60 ? `${m}분 뒤` : m < 24 * 60 ? `${Math.floor(m / 60)}시간 뒤` : `${kday(t) - kday(now)}일 뒤`; };
   const num = (t) => { const m = /^\s*([-+]?\d+(?:\.\d+)?)/.exec(t || ""); return m ? parseFloat(m[1]) : null; };
   const vs = (e) => {
     const a = num(e.actual), f = num(e.forecast);
@@ -5147,9 +5149,11 @@ function bigEventsCard() {
   ev.forEach((e) => { const g = groups.find((x) => x.at === e.at); g ? g.items.push(e) : groups.push({ at: e.at, items: [e] }); });
   const rows = groups.map((g) => {
     const done = Date.parse(g.at) <= now, tier = g.items.some((e) => e.tier1);
+    // 달력과 같은 등급 표시: 🚨 지수를 크게 흔드는 발표(1급), 📌 그 밖의 발표
+    const mark = tier ? "🚨" : "📌";
     const items = g.items.map((e) => {
       const bits = [e.actual && done ? `실제 <b>${esc(e.actual)}</b>` : "", e.forecast ? `예상 ${esc(e.forecast)}` : "", e.previous ? `이전 ${esc(e.previous)}` : ""].filter(Boolean).join(" · ");
-      return `<div class="big-item"><div class="name">${esc(e.flag || "")} ${esc(e.ko)}</div>${bits ? `<div class="meta">${bits} ${done && e.actual ? vs(e) : ""}</div>` : ""}</div>`;
+      return `<div class="big-item"><div class="name">${mark} ${esc(e.flag || "")} ${esc(e.ko)}</div>${bits ? `<div class="meta">${bits} ${done && e.actual ? vs(e) : ""}</div>` : ""}</div>`;
     }).join("");
     const g0 = g.items.find((e) => e.react && e.react.length) || {};
     const news = (g.items.find((e) => e.news && e.news.length) || {}).news || [];
@@ -5162,7 +5166,7 @@ function bigEventsCard() {
       ${(x.news || []).slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}</li>`).join("");
   return `<section class="card big-card" id="big-card"><h2>🚨 큰 발표·지수 급변 <small>한국시간 · 참고</small></h2>
     <ul class="list big-list">${shockRows}${rows}</ul>
-    <p class="muted note" style="margin:10px 0 0">물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표예요. 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표, 📌 그 밖의 발표예요 (다가오는 일정 달력과 같은 기준). 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
       실제 값은 FRED(미국 연준 무료 자료)에서 계산해서 공식 발표와 소수 둘째 자리가 다를 수 있어요. 매매 규칙은 그대로예요.</p></section>`;
 }
 
