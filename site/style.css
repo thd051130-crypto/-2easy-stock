@@ -264,6 +264,8 @@ details li { margin: 4px 0; }
 .spark.down polyline { stroke: var(--down); }
 .spark .base { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 .stat small { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.35; margin-top: 2px; }
+/* 좁은 폰: 세 칸 숫자에서 '%'가 다음 줄로 떨어지지 않게 여백·글자를 조금 줄여요 */
+@media (max-width: 380px) { .stats { gap: 6px; } .stat { padding: 10px 8px; } .stat b { font-size: 15px; } }
 .track-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .track-line > span:first-child { flex-basis: 100%; font-size: 13px; color: var(--text-secondary); }
 .track-line small { color: var(--text-muted); }
@@ -1022,6 +1024,8 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .wr-s .spark { height: 36px; }
 .wr-c { justify-self: end; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wr-list > .world-graph { margin: 0 0 8px; }
+/* 좁은 폰(접는 폰 바깥 화면·작은 폰): 작은 그래프 칸을 줄여 숫자가 '1,333…'처럼 잘리지 않게 */
+@media (max-width: 400px) { .wr { grid-template-columns: minmax(0, 1fr) 60px auto; gap: 8px; } }
 
 /* 주간 리포트 (리포트 화면 '주간' 탭) */
 .rp-tabs { margin-top: 0; }
