@@ -44,11 +44,12 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world", "more", "feedback"];
+const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world", "more", "feedback", "help"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search", "map", "inbox", "world", "more", "feedback"];  // 의견 보내기(#kr/feedback)도 한 겹 위  // 메시지함(#kr/inbox), 세계 지수(#kr/world), 더 보기 칸(#kr/more/<칸>)도 한 겹 위
+const LAYERS = ["stock", "search", "map", "inbox", "world", "more", "feedback", "help"];  // 자세한 사용법(#kr/help)도 한 겹 위
+// 의견 보내기(#kr/feedback)도 한 겹 위  // 메시지함(#kr/inbox), 세계 지수(#kr/world), 더 보기 칸(#kr/more/<칸>)도 한 겹 위
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
@@ -535,6 +536,7 @@ const VIEWS = {
   inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
   world: () => [worldCard()],
   feedback: () => [feedbackCard()],
+  help: () => [helpCard()],
   more: (d) => moreView(d),
 };
 
@@ -6271,7 +6273,8 @@ const GUIDE = [
   { t: "메시지함", sel: ".inbox-btn",
     b: "오른쪽 가장자리의 작은 손잡이예요. 누르면 오늘의 리포트와 시장 알림을 모아 볼 수 있어요. 끌어서 위아래로 옮길 수도 있어요." },
   { t: "알아 두면 좋아요", sel: "",
-    b: `<ul class="guide-list"><li>실시간이 아니에요. 대부분 장 마감 뒤 값이에요.</li><li>공개 자료로 만든 참고용이에요. 사고팔기는 직접 판단해요.</li><li>관심 종목·자산 기록은 이 폰에만 저장돼요.</li><li>맨 아래 <b>사용법 다시 보기</b>로 이 안내를 다시 볼 수 있어요.</li></ul>` },
+    b: `<ul class="guide-list"><li>실시간이 아니에요. 대부분 장 마감 뒤 값이에요.</li><li>공개 자료로 만든 참고용이에요. 사고팔기는 직접 판단해요.</li><li>관심 종목·자산 기록은 이 폰에만 저장돼요.</li><li>맨 아래 <b>사용법</b>에서 이 안내와 자세한 설명을 다시 볼 수 있어요.</li></ul>
+      <button type="button" class="linkish guide-more" data-g="help">📖 화면별 자세한 사용법 보기 ›</button>` },
 ];
 let guideAt = -1;
 function guideSeen() { try { return !!localStorage.getItem("guide_v1"); } catch (e) { return true; } }  // 저장소를 못 쓰면 매번 띄우지 않아요
@@ -6327,6 +6330,7 @@ function guideShow(i) {
       if (b.dataset.g === "skip") guideClose();
       else if (b.dataset.g === "next") guideShow(guideAt + 1);
       else if (b.dataset.g === "prev") guideShow(guideAt - 1);
+      else if (b.dataset.g === "help") { guideClose(); go("help"); }
       else if (b.dataset.gDot != null) guideShow(+b.dataset.gDot);
     });
     let x0 = null;  // 옆으로 밀어서 넘기기
@@ -6350,6 +6354,65 @@ function guideShow(i) {
 }
 function guideMaybe() { if (guideAt < 0 && screen === "home" && !guideSeen()) guideShow(0); }
 $(".guide-open").addEventListener("click", () => guideShow(0));
+$(".help-open").addEventListener("click", () => go("help"));
+
+// 자세한 사용법(#kr/help): 더 알고 싶은 사람만 맨 아래나 안내 마지막 장에서 들어와요 (사용자 2026-11-15).
+// 화면별로 접어 두고 누르면 펼쳐요. 남에게 안 되는 기능(텔레그램 알림 걸기 등)은 쓰지 않아요.
+const HELP_OPEN = new Set();
+const HELP = [
+  ["home", "🏠", "홈", "오늘 시장을 한눈에", `<ul class="guide-list">
+    <li><b>맨 위 얇은 줄</b>에 세계 지수·환율이 돌아가며 보여요. 누르면 세계 지수 화면이 열리고, 작은 그래프를 누르면 크게 보여요.</li>
+    <li><b>큰 발표·지수 급변</b> 칸은 물가·금리 발표처럼 시장을 크게 흔드는 일정이 있을 때만 떠요.</li>
+    <li><b>한국·미국 지수</b>는 오늘·1주·1개월·1년을 눌러 기간을 바꿔요.</li>
+    <li><b>더 보기</b> 줄을 누르면 그 칸만 있는 화면으로 넘어가요. 지금 뉴스(장중 30분마다), 투자 공부, 다가오는 일정, 실적·배당, 왜 움직였나, 시장 히트맵, 업종별 호재·악재, 정부 정책, 경기 국면 등이 있어요.</li></ul>`],
+  ["report", "📄", "리포트", "하루 한 장 시장 정리", `<ul class="guide-list">
+    <li>국장은 오후 5시 반쯤, 미장은 아침 7시 반쯤 그날 시장을 한 장으로 정리해요.</li>
+    <li>위 버튼으로 <b>주간 리포트</b>(토요일 아침, 한 주 묶음)로 바꿔 볼 수 있어요.</li></ul>`],
+  ["watch", "⭐", "관심", "내 종목 모아 보기", `<ul class="guide-list">
+    <li>종목 옆 <b>☆</b>를 누르면 ★이 되고 여기에 모여요. 다시 누르면 빠져요.</li>
+    <li><b>조건 검색</b>으로 많이 오른 종목·배당 높은 종목 같은 조건을 골라 걸러 볼 수 있어요.</li>
+    <li>관심 목록은 이 폰(이 브라우저)에만 저장돼요.</li></ul>`],
+  ["tools", "🧮", "도구", "계산기와 기록장", `<ul class="guide-list">
+    <li>맨 위 가로 줄을 옆으로 밀어 골라요.</li>
+    <li><b>자산 기록</b> 달마다 증권사·계좌·종목별 투자금과 배당을 적어 둬요. 이 폰에만 저장되니 <b>백업</b> 글자를 복사해 두면 다른 폰으로 옮길 수 있어요.</li>
+    <li><b>적립식 계산기</b> 매달 얼마씩 모으면 몇 년 뒤 얼마가 되는지 그래프로 보여 줘요.</li>
+    <li><b>포트폴리오 실험실·수익률 달력·폭락 대비·목표</b>도 있어요. 모두 과거 자료로 계산한 참고값이에요.</li></ul>`],
+  ["chart", "📈", "차트", "지수 차트 보기", `<ul class="guide-list">
+    <li>위 버튼으로 코스피·나스닥 같은 지수를 고르고, 일봉·주봉·월봉·년봉으로 바꿔요.</li>
+    <li>차트를 누르고 옆으로 움직이면 그날 값이 보여요.</li>
+    <li><b>이동평균선</b> 설정과 <b>비교 차트</b>(여러 지수·종목 함께 보기)도 있어요.</li></ul>`],
+  ["stock", "🔍", "종목 찾기·종목 화면", "돋보기에서 시작", `<ul class="guide-list">
+    <li>맨 위 돋보기를 눌러 이름·코드로 찾아요. 띄어쓰기나 오타가 조금 있어도 찾아 줘요.</li>
+    <li>종목을 누르면 가격 차트, 점검, 공시, 업종, 재무제표(국장은 외국인·기관 수급도)를 볼 수 있어요.</li>
+    <li>어려운 말 옆 <b>?</b>를 누르면 뜻이 나와요. 검색 화면 아래 <b>용어집</b>도 있어요.</li></ul>`],
+  ["map", "🕸️", "산업 지도", "산업끼리 어떻게 이어지나", `<ul class="guide-list">
+    <li>맨 위 이지스톡 글자 옆 버튼이에요.</li>
+    <li>점 하나가 산업 하나예요. 점이 클수록 관련 종목 시가총액이 커요. 누르면 이어진 산업과 종목이 보여요.</li></ul>`],
+  ["inbox", "💬", "메시지함", "리포트·알림 모아 보기", `<ul class="guide-list">
+    <li>화면 오른쪽 가장자리의 얇은 손잡이예요. 누르면 열려요.</li>
+    <li>빨간 점이 있으면 새 소식이 있다는 뜻이에요. 손잡이는 끌어서 위아래로 옮길 수 있어요.</li></ul>`],
+  ["install", "📱", "폰 홈 화면에 앱처럼 두기", "설치 없이", `<ul class="guide-list">
+    <li><b>안드로이드(크롬)</b> 오른쪽 위 ⋮ → <b>홈 화면에 추가</b>(또는 앱 설치).</li>
+    <li><b>아이폰(사파리)</b> 아래 공유 버튼 → <b>홈 화면에 추가</b>.</li>
+    <li>그 뒤로는 홈 화면 아이콘으로 바로 열려요.</li></ul>`],
+  ["note", "❗", "알아 둘 것", "자료와 저장", `<ul class="guide-list">
+    <li>실시간이 아니에요. 대부분 장 마감 뒤 종가 기준이고, 늦거나 빠진 값이 있을 수 있어요.</li>
+    <li>공개 자료로 만든 참고용이에요. 사고팔기 추천을 하지 않아요.</li>
+    <li>로그인이 없어요. 관심 종목·자산 기록·설정은 이 폰에만 있어서, 브라우저 기록을 지우면 사라져요.</li>
+    <li>고칠 곳이나 바라는 기능은 맨 아래 <b>의견·수정 요청 보내기</b>로 알려 주세요.</li></ul>`],
+];
+function helpCard() {
+  return `<section class="card" id="help-card"><button type="button" class="back" data-back>‹ 뒤로</button><h2 class="stock-name">자세한 사용법</h2>
+    <p class="muted" style="margin:0 0 6px">궁금한 화면을 눌러 펼쳐 보세요.</p>
+    ${HELP.map(([k, ico, t, sub, body]) => `<details class="help-sec" data-help="${k}"${HELP_OPEN.has(k) ? " open" : ""}><summary><span class="hm-ico" aria-hidden="true">${ico}</span><span class="help-t"><b>${t}</b><small>${sub}</small></span></summary>
+      <div class="guide-body">${body}</div></details>`).join("")}
+    <button type="button" class="add help-tour" data-help-tour>처음 안내 다시 보기</button></section>`;
+}
+document.addEventListener("toggle", (e) => {
+  const d = e.target;
+  if (d && d.classList && d.classList.contains("help-sec")) { if (d.open) HELP_OPEN.add(d.dataset.help); else HELP_OPEN.delete(d.dataset.help); }
+}, true);
+document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("[data-help-tour]")) guideShow(0); });
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
@@ -6358,7 +6421,7 @@ $(".map-btn").addEventListener("click", () => {
 // 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
-  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN, STORY_OPEN].forEach((x) => x.clear());
+  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN, STORY_OPEN, HELP_OPEN].forEach((x) => x.clear());
   caseKind = "all";
   worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
