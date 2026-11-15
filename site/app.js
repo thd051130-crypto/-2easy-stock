@@ -662,7 +662,14 @@ function render() {
       setTimeout(() => { b.classList.remove("armed"); t.textContent = "모두 읽음"; }, 3000);
       return;
     }
-    readHot(hotOf(market).map(hotId), true); holdHeight(); render();
+    // 위 목록이 통째로 빠져서 그대로 두면 아래 '지금 뉴스'·빈칸이 올라와 맨 밑으로 간 것처럼 보여요 (사용자 2026-11-15).
+    // 누른 버튼 자리에 '안 읽은 핫 뉴스가 없어요' 줄이 오게 맞추고, 붙잡은 높이(빈칸)는 바로 놓아요
+    const top = b.getBoundingClientRect().top;
+    readHot(hotOf(market).map(hotId), true); render();
+    lastTap = null;
+    clearTimeout(holdH); holdReady = false; $("#app").style.minHeight = "";
+    const a = $("#hot-card .hot-body > .empty") || $("#hot-card");
+    if (a) window.scrollBy(0, a.getBoundingClientRect().top - top);
   }));
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
