@@ -13,6 +13,11 @@
   도움말
 웹앱의 '추가'·'텔레그램으로 알림 받기' 버튼은 같은 명령을 시작 링크(t.me/봇?start=c_…)에 담아 보내요.
 기록: paper/watch.json, paper/alerts.json, paper/bot.json (watchlist.py).
+
+의견 받기 (사용자 2026-11-15): 앱 맨 아래 '의견 보내기' 화면에서 글을 복사해 이 봇에게 보내면, 내 대화방(TELEGRAM_CHAT_ID)으로
+옮겨 줘요. 남의 대화방에서 온 글은 명령으로 처리하지 않고 의견으로만 받아요. 도배를 막으려고 한 사람 하루 3통,
+모두 합쳐 하루 30통까지, 글은 1500자까지. 하루 개수는 paper/feedback.json에 보낸 사람 번호를 가린 값(해시)으로만 남겨요
+(저장소가 공개라서 의견 내용·이름은 저장하지 않아요).
 같이 도는 큰 발표 알림(CPI·고용·FOMC 예고와 결과, 지수 급변)은 big_events.py, 기록은 paper/events.json.
 
 사용법:
@@ -108,6 +113,25 @@ def parse(text):
     return f"{kind}_{action}", market, rest
 
 
+FB_MARK = "💬 이지스톡 의견"  # 앱 '의견 보내기' 화면이 복사해 주는 글의 첫 줄
+FB_PER_SENDER, FB_PER_DAY, FB_MAX_CHARS = 3, 30, 1500
+FB_HELLO = ("이지스톡 의견 받는 봇이에요. 앱 맨 아래 '의견 보내기'에서 복사한 글을 여기에 붙여 넣어 보내 주세요. "
+            "그냥 하고 싶은 말을 바로 적어도 돼요. 15분 안에 만든 사람에게 전달돼요.")
+
+
+def fb_key(chat_id):
+    """보낸 사람 번호를 그대로 남기지 않게 가려요 (공개 저장소)."""
+    import hashlib
+
+    return hashlib.sha256(f"easy-stock-fb:{chat_id}".encode()).hexdigest()[:12]
+
+
+def fb_sender(msg):
+    u = msg.get("from") or msg.get("chat") or {}
+    name = " ".join(x for x in (u.get("first_name"), u.get("last_name")) if x) or "이름 없음"
+    return f"{name} (@{u['username']})" if u.get("username") else name
+
+
 class Bot:
     """명령 처리와 알림 확인. 시세·재무는 함수로 받아서(테스트에선 가짜) 써요."""
 
@@ -122,12 +146,13 @@ class Bot:
         self.username = watchlist.bot_username(paper)
         self.added = []  # 이번에 넣은 종목 (재무를 바로 받으려고)
         self.logged = 0  # 이번에 앱 메시지함에 남긴 알림 수
+        self.feedback = watchlist.read(paper / "feedback.json", {})  # {day, total, by: {가린 번호: 통}}
         self.saved = self.snapshot()
 
     # ------------------------------------------------------------ 기록
 
     def snapshot(self):
-        return json.dumps([self.watch, self.alerts, self.username], ensure_ascii=False, sort_keys=True)
+        return json.dumps([self.watch, self.alerts, self.username, self.feedback], ensure_ascii=False, sort_keys=True)
 
     def changed(self):
         return self.snapshot() != self.saved
@@ -139,6 +164,8 @@ class Bot:
         watchlist.write(self.paper / "alerts.json", self.alerts)
         if self.username:
             watchlist.write(self.paper / "bot.json", dict(username=self.username))
+        if self.feedback:
+            watchlist.write(self.paper / "feedback.json", self.feedback)
         self.saved = self.snapshot()
         return True
 
@@ -179,7 +206,32 @@ class Bot:
 
     # ------------------------------------------------------------ 명령
 
+    def take_feedback(self, msg):
+        """남의 대화방에서 온 메시지 → (그 사람에게 줄 답, 나에게 옮길 글 또는 None)."""
+        text = (msg.get("text") or "").strip()
+        if not text:
+            return "글로만 받아요. 하고 싶은 말을 글로 적어 보내 주세요.", None
+        if re.fullmatch(r"/start(?:@\w+)?(?:\s+\S+)?|/help|도움말", text):
+            return FB_HELLO, None
+        day = self.now().strftime("%Y-%m-%d")
+        if self.feedback.get("day") != day:
+            self.feedback = dict(day=day, total=0, by={})
+        key = fb_key((msg.get("chat") or {}).get("id"))
+        if self.feedback["by"].get(key, 0) >= FB_PER_SENDER:
+            return f"오늘은 {FB_PER_SENDER}통까지 받아요. 내일 다시 보내 주세요.", None
+        if self.feedback["total"] >= FB_PER_DAY:
+            return "오늘은 의견이 많이 와서 더 받지 못해요. 내일 다시 보내 주세요.", None
+        self.feedback["by"][key] = self.feedback["by"].get(key, 0) + 1
+        self.feedback["total"] += 1
+        body = text.removeprefix(FB_MARK).strip()
+        if len(body) > FB_MAX_CHARS:
+            body = body[:FB_MAX_CHARS] + "… (뒷부분 잘림)"
+        note = f"[새 의견] {fb_sender(msg)}\n{body}"
+        return "고마워요! 만든 사람에게 전달했어요.", note
+
     def handle(self, text):
+        if text.strip().startswith(FB_MARK):  # 내가 시험 삼아 보낸 의견 글: 남이 보내면 이렇게 와요
+            return "의견 글이에요. 다른 사람이 보내면 이렇게 전달돼요.\n\n[새 의견] 보낸 사람 이름\n" + text.strip().removeprefix(FB_MARK).strip()[:FB_MAX_CHARS]
         kind, market, words = parse(text)
         query = " ".join(words)
         if kind == "help":
@@ -404,8 +456,20 @@ def run(tg, chat_id, bot):
     for update in tg.call("getUpdates", timeout=0, allowed_updates=["message"]):
         offset = max(offset or 0, update["update_id"] + 1)
         msg = update.get("message") or {}
-        if str((msg.get("chat") or {}).get("id")) != str(chat_id) or not msg.get("text"):
-            continue  # 내 대화방이 아닌 메시지는 답하지 않아요
+        mine = str((msg.get("chat") or {}).get("id")) == str(chat_id)
+        if not mine:  # 남의 대화방: 명령은 안 받고 의견으로만 받아서 내 대화방으로 옮겨요
+            if (msg.get("chat") or {}).get("type", "private") != "private" or (msg.get("from") or {}).get("is_bot"):
+                continue  # 단체방·다른 봇은 답하지 않아요
+            try:
+                reply, note = bot.take_feedback(msg)
+                if note:
+                    tg.send(chat_id, note)
+                tg.send(msg["chat"]["id"], reply)
+            except Exception as e:  # 한 사람 때문에 나머지가 막히지 않게
+                print(f"의견 처리 실패: {e!r}")
+            continue
+        if not msg.get("text"):
+            continue
         try:
             reply = bot.handle(msg["text"])
         except Exception as e:  # 한 메시지 때문에 나머지가 막히지 않게
