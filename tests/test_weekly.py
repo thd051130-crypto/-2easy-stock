@@ -84,9 +84,9 @@ def test_issues_from_hot_news():
     inp = dict(inputs(), news=news)
     iss = wk.build(inp, today=SAT)["events"]["issues"]
     assert [x["title"] for x in iss["kr"]] == ["젠슨 황 사임 스캔들", "환율 급등"]  # 날짜 순, 같은 사건 묶음, 지난주 끝난 건 빼요
-    assert iss["kr"][0]["topic"] == "기업·경영자"  # 주제는 지금 규칙으로 다시 붙여요
+    assert iss["kr"][0]["topic"] == "기업·경영자" and iss["kr"][0]["bad"]  # 주제·악재는 지금 규칙으로 다시 붙여요
     assert iss["kr"][0]["more"] == 1 and iss["kr"][0]["ongoing"] and iss["kr"][0]["since"] == "2026-10-19"
     assert iss["us"] == []
     t = wk.format_text(wk.build(inp, today=SAT))
-    assert "[이번 주 이슈] 🇰🇷" in t and "🔥 지난주부터 젠슨 황 사임 스캔들 (언론 13곳)" in t
+    assert "[이번 주 이슈] 🇰🇷" in t and "⚠️ 지난주부터 젠슨 황 사임 스캔들 (언론 13곳)" in t  # 사임·스캔들은 악재 표시
     assert wk.build(inputs(), today=SAT)["events"]["issues"] == {"kr": [], "us": []}  # 뉴스 파일 없어도 괜찮아요

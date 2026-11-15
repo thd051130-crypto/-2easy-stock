@@ -828,6 +828,9 @@ details.pol-sec { margin-top: 6px; }
 .big-item .name { font-weight: 600; }
 .big-hot { color: var(--up); } .big-cold { color: var(--down); }
 .cal li.cal-big .name { font-weight: 700; color: var(--wait-fg); }
+/* ⚠️ 리스크 일정·악재 뉴스 (사용자 2026-11-15): 왼쪽 빨간 줄로 눈에 띄게 */
+.cal li.cal-risk .name { font-weight: 700; color: var(--wait-fg); }
+li.cal-risk, li.news-bad { box-shadow: inset 3px 0 0 var(--wait-fg); padding-left: 10px; }
 
 /* 홈 '더 보기': 칸마다 한 줄, 누르면 그 자리에서 펼쳐져요 */
 .home-more { padding-bottom: 6px; }

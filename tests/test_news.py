@@ -80,3 +80,10 @@ def test_topic_owner_risk():
     assert news.topic("[젠슨황 퇴진] 트럼프, 반도체 수출통제 풀어주고") == "기업·경영자"
     assert news.topic("Nvidia CEO steps down") == "기업·경영자"
     assert news.topic("한은 기준금리 동결") == "금리"
+
+
+def test_bad_news():
+    """악재로 읽히는 제목 (사용자 2026-11-15 '악영향이 가는 뉴스를 강조')."""
+    assert news.bad("'9천피'에 발행된 ELS, 내달 만기 도래…원금 손실 우려")
+    assert news.bad("외국인, 한국 주식 193억 달러 팔았다…AI 투자 불안에 흔들리는 코스피")
+    assert not news.bad("AI 특수에 ICT 수출 703억달러…증가율 202% '역대 최고'")

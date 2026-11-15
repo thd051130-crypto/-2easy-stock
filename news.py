@@ -63,6 +63,10 @@ TOPICS = [
     ("정책", r"정부|대책|규제|법안|세제|예산|policy|regulat"),
     ("실적", r"실적|영업이익|어닝|earnings|revenue|profit"),
 ]
+# 증시에 악재로 읽히는 낱말 (사용자 2026-11-15 "악영향이 가는 뉴스를 강조해서"). 앱 site/app.js BAD_NEWS와 같게 맞춰요
+BAD = (r"급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|"
+       r"스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|"
+       r"\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign")
 WORKERS = 6     # 동시에 받을 개수 (너무 많으면 구글이 막아요)
 
 
@@ -120,6 +124,11 @@ def topic(title):
         if re.search(pat, title, re.I):
             return name
     return None
+
+
+def bad(title):
+    """제목이 악재로 읽히면 True."""
+    return bool(re.search(BAD, title, re.I))
 
 
 def fresh(items, now, hours=MAX_HOURS):
@@ -189,14 +198,15 @@ def build(fetch=fetch, now=None, prev=None):
     with concurrent.futures.ThreadPoolExecutor(WORKERS) as pool:
         jobs = {m: [pool.submit(fetch, q, lang, QUERY_N) for q, lang in qs] for m, qs in MARKET_QUERIES.items()}
     got = {m: [fresh(f.result(), now) for f in fs] for m, fs in jobs.items()}
-    out = {m: [dict(x, topic=topic(x["title"])) for x in merge(ls)] for m, ls in got.items()}
+    tag = lambda x: dict(x, topic=topic(x["title"]), bad=bad(x["title"]))  # noqa: E731
+    out = {m: [tag(x) for x in merge(ls)] for m, ls in got.items()}
     # 핫 뉴스는 같은 기사가 여러 검색어에 걸려도 한 번만 세요 (merge로 같은 제목 하나로)
     new_hot = {m: hot(merge(ls, n=10**6)) for m, ls in got.items()}
     prev = prev or {}
-    out["hot"] = {m: [dict(x, topic=topic(x["title"])) for x in keep_hot([dict(h) for h in new_hot[m]], (prev.get("hot") or {}).get(m), now)]
+    out["hot"] = {m: [tag(x) for x in keep_hot([dict(h) for h in new_hot[m]], (prev.get("hot") or {}).get(m), now)]
                   for m in got}
     # 주간 리포트가 읽는 한 주 핫 뉴스 기록: 앱 핫 칸(8개)보다 길게 모아요
-    out["week"] = {m: [dict(x, topic=topic(x["title"])) for x in keep_hot([dict(h) for h in new_hot[m]],
+    out["week"] = {m: [tag(x) for x in keep_hot([dict(h) for h in new_hot[m]],
                        (prev.get("week") or prev.get("hot") or {}).get(m), now, days=WEEK_DAYS, n=WEEK_N)]
                    for m in got}
     return dict(updated=now.isoformat(timespec="minutes"), **out)

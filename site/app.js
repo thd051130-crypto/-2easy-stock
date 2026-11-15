@@ -283,7 +283,12 @@ function stashHot(x) {
   }
   saveHot();
 }
-const hotOf = (m) => HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
+// 악재로 읽히는 제목 (사용자 2026-11-15 "증시에 악영향이 가는 뉴스를 강조해서"). news.py BAD와 같게 맞춰요
+const BAD_NEWS = /급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign/i;
+const isBad = (n) => n.bad === true || BAD_NEWS.test(n.title || "");
+const badTag = (n) => (isBad(n) ? `<span class="badge bad">⚠️ 악재</span> ` : "");
+// 안 읽은 핫 뉴스: 악재 먼저 (그 안에선 원래 순서)
+const hotOf = (m) => { const H = HOT[m].filter((n) => !HOT_READ.has(hotId(n))); return [...H.filter(isBad), ...H.filter((n) => !isBad(n))]; };
 const hotReadOf = (m) => HOT[m].filter((n) => HOT_READ.has(hotId(n))).sort((a, b) => HOT_READ.get(hotId(b)) - HOT_READ.get(hotId(a)));
 let hotUndo = null;  // 방금 읽음 처리한 id들 (되돌리기)
 let hotReadOpen = false;  // '읽은 핫 뉴스' 칸을 펼쳤는지 (다시 그려도 그대로)
@@ -1540,10 +1545,10 @@ function weeklyCards() {
   const iss = (ev.issues || {})[market] || [];
   const issLink = (x) => /^https:\/\//.test(x.link || "") ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title);
   const issCard = ev.issues ? `<section class="card"><h2>🔥 이번 주 이슈 <small>${flag} 언론 여러 곳이 다룬 뉴스</small></h2>
-    ${iss.length ? `<ol class="wk-tl">${iss.map((x) => `<li><time>${x.ongoing ? "지난주<br>부터" : wkDay(x.since || "")}</time><div>${x.topic ? `<span class="badge ${x.topic === "기업·경영자" ? "bad" : ""}">${esc(x.topic)}</span> ` : ""}${issLink(x)}
+    ${iss.length ? `<ol class="wk-tl">${iss.map((x) => `<li><time>${x.ongoing ? "지난주<br>부터" : wkDay(x.since || "")}</time><div>${badTag(x)}${x.topic ? `<span class="badge">${esc(x.topic)}</span> ` : ""}${issLink(x)}
       <small>언론 ${x.sources}곳${x.source ? ` · ${esc(x.source)}` : ""}${x.more ? ` · 비슷한 기사 묶음 ${x.more + 1}개` : ""}</small></div></li>`).join("")}</ol>` : `<p class="empty">이번 주엔 여러 언론이 같이 다룬 뉴스가 없어요</p>`}</section>` : "";
   // 6. 다음 주: 요일별 묶음 + 종류 표시
-  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"] };
+  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"], risk: ["⚠️ 리스크", "bad"] };
   const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
     ...(nx.cal || []).map((c) => ({ d: c.date, k: c.kind, h: `${REPORT_FLAG[c.market] || ""} ${esc(c.title)}`, sub: c.note || "" })),
     ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => ({ d: c.date, k: "earn", h: `${esc(c.title.replace(/ 실적 발표$/, ""))}${c.mine ? " ⭐" : ""}`, sub: "" }))];
@@ -2579,7 +2584,8 @@ function homeMoreRows(d) {
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
   // 지금 뉴스: 안 읽은 🔥 핫 뉴스가 있으면 그걸, 없으면 가장 최근 뉴스 한 줄 (30분마다 따로 받아요)
   const N = newsOf(market), n1 = N && N[0], hot = hotOf(market);
-  add("news", "📰", "지금 뉴스", hot.length ? `🔥 <b>${hot.length}건</b> · ${esc(hot[0].title)}`
+  const nBad = hot.filter(isBad).length;  // 악재가 있으면 요약 줄에 먼저 (hotOf가 악재를 앞에 둬요)
+  add("news", "📰", "지금 뉴스", hot.length ? `${nBad ? `⚠️ <b>악재 ${nBad}건</b> · ` : ""}🔥 <b>${hot.length}건</b> · ${esc(hot[0].title)}`
     : n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard());
   // 투자 공부: 용어집·움직이는 이유·대처법, '오늘 왜?'는 앱 자료로 매일 새로 (사용자 2026-10-24)
   add("learn", "📚", "투자 공부", learnSummary(), learnView(d));
@@ -2643,7 +2649,7 @@ function ago(at) {
 const hm = (at) => (at ? `${at.slice(11, 16)}` : "");
 function newsLi(n) {
   const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title);
-  return `<li><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
+  return `<li${isBad(n) ? ` class="news-bad"` : ""}><div class="l"><div class="name news-t">${badTag(n)}${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
     <div class="meta">${esc(n.source || "")}${n.at ? ` · ${md(n.at.slice(0, 10))} ${hm(n.at)} (${ago(n.at)})` : ""}</div></div></li>`;
 }
 // 24시간 지난 기사는 화면에서도 빼요 (뉴스 작업이 한동안 못 돌아 예전 파일이 남아 있을 때)
@@ -2653,7 +2659,7 @@ const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m].filter((n) => Da
 function hotLi(n, read) {
   const id = esc(hotId(n));
   const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener"${read ? "" : ` data-hot-read="${id}"`}>${esc(n.title)}</a>` : esc(n.title);
-  return `<li data-hot="${id}"><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
+  return `<li data-hot="${id}"${isBad(n) ? ` class="news-bad"` : ""}><div class="l"><div class="name news-t">${badTag(n)}${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
     <div class="meta">언론 ${n.sources || "여러"}곳 · ${n.since ? `처음 ${md(n.since.slice(0, 10))} ${hm(n.since)}` : ""}${n.at ? ` · 최근 기사 ${ago(n.at)}` : ""}</div></div>
     ${read ? `<button type="button" class="hot-ok" data-hot-undo="${id}" aria-label="안 읽음으로 되돌리기">안 읽음</button>`
       : `<button type="button" class="hot-ok" data-hot-ok="${id}" aria-label="읽음으로 표시">읽음</button>`}</li>`;
@@ -2673,7 +2679,7 @@ function hotGroups(H) {
 function hotGrpLi(g) {
   const k = esc(g[0].topic), src = g.reduce((a, n) => a + (n.sources || 0), 0);
   return `<li class="hot-grp"><details class="hot-grp-d" data-hot-grp="${k}"${HOT_GRP_OPEN.has(g[0].topic) ? " open" : ""}>
-    <summary><div class="l"><div class="name news-t"><span class="badge">${k}</span> ${esc(g[0].title)}</div>
+    <summary><div class="l"><div class="name news-t">${g.some(isBad) ? `<span class="badge bad">⚠️ 악재</span> ` : ""}<span class="badge">${k}</span> ${esc(g[0].title)}</div>
       <div class="meta">같은 주제 ${g.length}건${src ? ` · 언론 ${src}곳` : ""}${g[0].at ? ` · 최근 기사 ${ago(g[0].at)}` : ""}</div></div>
       <span class="hot-grp-n"><span class="fold-more">${g.length}건</span><span class="fold-less">접기</span></span></summary>
     <ul class="list">${g.map((n) => hotLi(n)).join("")}</ul></details></li>`;
@@ -5077,7 +5083,7 @@ function bigEventsCard() {
 // 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목만, 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
 const EARN_DAYS = 30;  // 실적·배당은 한 달 치
-const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
+const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰", risk: "⚠️" };
 const STOCK_KINDS = ["earn", "exdiv"];
 let calAll = false;
 const calMine = (e) => e.mine || (e.code && WATCH[e.market] && WATCH[e.market].includes(e.code));
@@ -5094,7 +5100,7 @@ function calRows(list) {
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    const cls = [e.big ? "cal-big" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
+    const cls = [e.big ? "cal-big" : "", e.kind === "risk" ? "cal-risk" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
     return `${head}<li${tap}${cls ? ` class="${cls}"` : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");

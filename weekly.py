@@ -28,7 +28,7 @@ from report_desks import FLAGS, KST, MARKET_NAMES, PAPER, BIG_CAP, pct, read_jso
 WEEK_FACTS = ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "일본 닛케이225", "원/달러",
               "미국 10년 국채 금리", "한국 국고채 3년 금리", "VIX 공포 지수", "WTI 유가", "금 (온스)", "비트코인"]
 DAY_INDEX = {"kr": "코스피", "us": "S&P500"}
-CAL_KINDS = ("big", "rate", "expiry")
+CAL_KINDS = ("big", "rate", "expiry", "risk")
 ISSUE_N = 6        # 시장마다 이번 주 이슈 몇 개
 ISSUE_SHARE = 2    # 핵심 낱말이 이만큼 겹치면 같은 사건으로 묶어요 (news.HOT_SHARE와 같게)
 
@@ -116,7 +116,7 @@ def issue_desk(news, mon, fri):
                 same["more"] += 1
                 same["since"] = min(same["since"], x.get("since") or x.get("at") or "")
                 continue
-            keep.append(dict(title=x["title"], source=x.get("source"), link=x.get("link"), topic=newsmod.topic(x["title"]),  # 주제는 지금 규칙으로 다시
+            keep.append(dict(title=x["title"], source=x.get("source"), link=x.get("link"), topic=newsmod.topic(x["title"]), bad=newsmod.bad(x["title"]),  # 주제·악재는 지금 규칙으로 다시
                              sources=x.get("sources") or 0, since=x.get("since") or x.get("at"), at=x.get("at"),
                              key=list(k), more=0))
         for y in keep:  # 지난주부터 이어진 사건은 이번 주 월요일로 놓고 '지난주부터' 표시
@@ -210,12 +210,12 @@ def format_text(r):
     for mk, xs in (ev.get("issues") or {}).items():
         if xs:
             out += ["", f"[이번 주 이슈] {FLAGS[mk]} {MARKET_NAMES[mk]} 언론 여러 곳이 다룬 뉴스"]
-            out += [f"- 🔥 {'지난주부터' if x['ongoing'] else md(x['since'])} {x['title']} (언론 {x['sources']}곳)" for x in xs]
+            out += [f"- {'⚠️' if x['bad'] else '🔥'} {'지난주부터' if x['ongoing'] else md(x['since'])} {x['title']} (언론 {x['sources']}곳)" for x in xs]
     n = r["next"]
     out += ["", f"[다음 주 일정] {md(n['start'])}~{md(n['end'])}"]
     rows = [(e["date"], f"{md(e['date'])} {e['time']} {e['flag']} {e['title']}" + (f" (예상 {e['forecast']})" if e["forecast"] else ""))
             for e in n["big"]]
-    rows += [(c["date"], f"{md(c['date'])} {FLAGS.get(c['market'], '')} {c['title']}") for c in n["cal"]]
+    rows += [(c["date"], f"{md(c['date'])} {FLAGS.get(c['market'], '')} {'⚠️ ' if c['kind'] == 'risk' else ''}{c['title']}") for c in n["cal"]]
     rows += [(c["date"], f"{md(c['date'])} {FLAGS.get(c['market'], '')} {c['title']}" + (" ⭐" if c["mine"] else "")) for c in n["earn"][:8]]
     out += [f"- {t}" for _, t in sorted(rows, key=lambda x: x[0])] or ["- 아직 잡힌 큰 일정 없음"]
     out.append("- 사고팔기 판단은 안 해요. 공개 자료로 만든 참고용 리포트예요")

@@ -102,3 +102,23 @@ def test_build_covers_last_year_to_next_year(tmp_path):
     ev = ec.build(dt.date(2026, 10, 18), [], [], tmp_path)
     dates = [e["date"] for e in ev]
     assert min(dates) < "2025-02-01" and max(dates) > "2027-11-30"
+
+
+def test_risk_events_and_big_earn(tmp_path):
+    """⚠️ 리스크 일정(사람이 적은 파일)과 초대형주 실적 (사용자 2026-11-15)."""
+    import json
+
+    (tmp_path / "risk_events.json").write_text(json.dumps({"events": [
+        dict(date="2026-12-01", market="kr", title="ELS 만기 시작", note="12월 197억 원")]}), encoding="utf-8")
+    today = ec.dt.date(2026, 11, 24)
+    earn = ec.big_earn(fetch=lambda code: (1794949200, 4e12) if code == "NVDA" else (None, None))
+    assert [x["code"] for x in earn] == ["NVDA"] and earn[0]["date"] == "2026-11-17"
+    ev = ec.build(today, [], [], tmp_path, (), earn)
+    risk = [e for e in ev if e["kind"] == "risk"]
+    assert risk == [dict(date="2026-12-01", market="kr", kind="risk", title="ELS 만기 시작", note="12월 197억 원")]
+    assert any(e["title"] == "엔비디아 실적 발표" for e in ev)
+    alert = ec.risk_alert(ev, today)
+    assert alert.startswith("[⚠️ 리스크 일정 미리 알림]") and "7일 뒤 · ELS 만기 시작" in alert
+    assert ec.risk_alert(ev, ec.dt.date(2026, 11, 30)).count("내일") == 1
+    assert ec.risk_alert(ev, ec.dt.date(2026, 11, 27)) is None
+    assert "⚠️ ELS 만기 시작 (12월 197억 원)" in ec.week_text(ev, ec.dt.date(2026, 11, 30))
