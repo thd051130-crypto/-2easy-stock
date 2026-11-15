@@ -1,0 +1,38 @@
+# API 키 만료 미리 알림 + 막힘 감지 (keys.py). 매일 한국시간 09:00, 알릴 게 없으면 조용히 끝나요.
+#   만료일은 저장소 api_keys.json의 expires에 적어요 (모르면 null, 막힘 감지는 날짜 없이도 돼요).
+#   폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → keys → Run workflow
+# 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (+ 확인할 키 DART_API_KEY, ECOS_API_KEY)
+name: keys
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # UTC 00:00 = 한국 09:00 매일
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read  # 바로 전 실행 결과를 봐요 (같은 막힘 알림 반복 안 하게)
+
+concurrency:
+  group: keys
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
+    timeout-minutes: 5
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DART_API_KEY: ${{ secrets.DART_API_KEY }}
+      ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python keys.py
