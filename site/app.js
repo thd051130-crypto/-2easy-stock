@@ -1325,7 +1325,7 @@ const MK_NAME = { kr: "국장", us: "미장" };
 // 저장소가 공개라 봇 열쇠(토큰)를 화면에 넣을 수 없어요. 두 가지 길:
 //  1) FB_URL(클라우드플레어 무료 우체통, cloudflare/feedback-worker.js)이 있으면 '보내기'만 누르면 바로 텔레그램으로 가요.
 //  2) 없거나 실패하면 글을 복사해 봇 대화창에 붙여 넣어요. 봇(bot.py)이 15분마다 읽어서 만든 사람 대화방으로 옮겨요.
-const FB_URL = "";  // 우체통 주소 (예: https://easystock-feedback.<이름>.workers.dev). 비밀이 아니라 화면에 둬도 돼요
+const FB_URL = "https://easystock-feedback.thd051130.workers.dev";  // 우체통 주소 (예: https://easystock-feedback.<이름>.workers.dev). 비밀이 아니라 화면에 둬도 돼요
 const FB_KINDS = ["수정 요청", "오류", "의견"];
 const FB_MAX = 1500;
 let fbKind = "수정 요청", fbText = "", fbBusy = false;
@@ -1349,6 +1349,7 @@ function feedbackCard() {
     <p class="fb-count muted"><span id="fb-n">${fbText.length}</span> / ${FB_MAX}자 · 보내기 전까지 이 폰에 임시로 남아요</p>
     ${btn}
     <p class="fb-done muted" id="fb-done" role="status" hidden></p>
+    ${direct && bot ? `<button type="button" class="linkish fb-alt" id="fb-alt" hidden>대신 텔레그램으로 보내기 (복사해서 붙여넣기)</button>` : ""}
     ${steps}
     <p class="muted note" style="margin:10px 0 0">${direct ? "로그인 없이 보낼 수 있어요. 이름·연락처는 받지 않고, 글 내용은 어디에도 공개되지 않아요. 도배를 막으려고 한 곳에서 하루 5통까지 받아요."
       : "텔레그램이 있어야 보낼 수 있어요. 텔레그램 이름이 같이 전달되고, 글 내용은 어디에도 공개되지 않아요. 도배를 막으려고 한 사람 하루 3통까지 받아요."}</p></section>`;
@@ -1370,6 +1371,8 @@ function bindFeedback() {
     document.querySelectorAll("[data-fb-kind]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
   }));
   if (!send) return;
+  const alt = $("#fb-alt");
+  if (alt) alt.addEventListener("click", () => viaBot());
   const viaBot = () => {
     // 복사는 누른 순간에 해야 폰 브라우저가 허락해요. 그다음 봇 대화창을 새 창으로 열어요
     const text = fbMessage();
@@ -1386,7 +1389,12 @@ function bindFeedback() {
       .then(({ ok, msg }) => {
         fbBusy = false; send.textContent = "보내기";
         if (ok) { fbText = ""; ta.value = ""; n.textContent = "0"; saveDraft(); say("보냈어요. 고마워요!", true); }
-        else { send.disabled = !fbText.trim(); say(msg || "지금은 못 보냈어요. 잠시 뒤 다시 눌러 주세요. 적은 글은 그대로 있어요.", false); }
+        else {
+          send.disabled = !fbText.trim();
+          say(msg || "지금은 못 보냈어요. 잠시 뒤 다시 눌러 주세요. 적은 글은 그대로 있어요.", false);
+          const alt = $("#fb-alt");
+          if (alt) alt.hidden = false;  // 우체통이 안 되면 봇에 붙여 넣는 길로
+        }
       });
   });
 }

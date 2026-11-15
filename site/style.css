@@ -224,6 +224,8 @@ details li { margin: 4px 0; }
 .fb-send { width: 100%; min-height: 46px; font-size: 15px; }
 .fb-done { margin: 8px 0 0; color: var(--good-fg); font-weight: 600; }
 .fb-done.bad { color: var(--wait-fg); }
+.fb-alt { display: block; margin-top: 6px; padding: 6px 0; border: 0; background: none; font: inherit; font-size: 14px; cursor: pointer; }
+.fb-alt[hidden] { display: none; }
 .fb-steps { margin: 14px 0 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
 
 /* 아래쪽 화면 버튼 (홈·신호·성과·차트) */
