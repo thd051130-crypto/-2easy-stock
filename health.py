@@ -43,6 +43,7 @@ WORKFLOWS = {
     "all-stocks": ("전 종목 차트", 10),
     "disclosures": ("공시 알림", None),
     "news": ("장중 뉴스", None),
+    "keys": ("API 키 점검", None),
 }
 
 
