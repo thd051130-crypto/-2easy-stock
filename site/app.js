@@ -343,6 +343,7 @@ async function load() {
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   const had = NEWS && NEWS.updated;
   render();
+  guideMaybe();  // 처음 연 사람에게만 사용법 안내 한 번
   news.then(() => { if (NEWS && NEWS.updated !== had) paintNews(); });
 }
 // 늦게 도착한 뉴스: 홈 '더 보기'의 지금 뉴스 한 줄만 바꿔요 (칸 화면은 다음에 그릴 때. 보던 화면이 튀지 않게)
@@ -6255,6 +6256,100 @@ $(".search-btn").addEventListener("click", () => go("search"));
 $(".fb-open").addEventListener("click", () => go("feedback"));  // 맨 아래 '의견·수정 요청 보내기'
 
 inboxHandle($(".inbox-btn"));
+
+// ---------------------------------------------------------------- 처음 쓰는 사람 사용법 안내
+// 사용자 2026-11-15 "맨 처음 사용시 사용법 간단히". 처음 홈을 열면 한 번만 떠요(이 폰에만 'guide_v1' 기억, 서버·추적 없음).
+// 5장, 넘기기(옆으로 밀기·다음 버튼)·건너뛰기 가능, 맨 아래 '사용법 다시 보기'로 언제든 다시. 화면 위치는 건드리지 않아요.
+// 남에게 안 되는 기능(텔레그램 알림 걸기 등)은 소개하지 않아요.
+const GUIDE = [
+  { t: "이지스톡에 오신 걸 환영해요", sel: ".tabs",
+    b: "국장·미장 시세와 차트, 오늘의 리포트를 한 곳에서 보는 무료 앱이에요. 오른쪽 위 <b>국장 | 미장</b>을 눌러 시장을 바꿔요." },
+  { t: "아래 메뉴 5개", sel: ".nav",
+    b: `<ul class="guide-list"><li><b>홈</b> 오늘 시장 한눈에. 아래 '더 보기'에 뉴스·일정·투자 공부</li><li><b>리포트</b> 하루 한 장 정리한 시장 이야기</li><li><b>관심</b> ★ 찍은 종목만 모아 보기</li><li><b>도구</b> 적립식 계산기·자산 기록</li><li><b>차트</b> 지수 차트와 이동평균선</li></ul>` },
+  { t: "종목 찾기", sel: ".search-btn",
+    b: "돋보기를 눌러 이름이나 코드로 찾아요. 대충 써도 찾아 줘요. 종목 옆 <b>☆</b>를 누르면 관심에 담겨요." },
+  { t: "메시지함", sel: ".inbox-btn",
+    b: "오른쪽 가장자리의 작은 손잡이예요. 누르면 오늘의 리포트와 시장 알림을 모아 볼 수 있어요. 끌어서 위아래로 옮길 수도 있어요." },
+  { t: "알아 두면 좋아요", sel: "",
+    b: `<ul class="guide-list"><li>실시간이 아니에요. 대부분 장 마감 뒤 값이에요.</li><li>공개 자료로 만든 참고용이에요. 사고팔기는 직접 판단해요.</li><li>관심 종목·자산 기록은 이 폰에만 저장돼요.</li><li>맨 아래 <b>사용법 다시 보기</b>로 이 안내를 다시 볼 수 있어요.</li></ul>` },
+];
+let guideAt = -1;
+function guideSeen() { try { return !!localStorage.getItem("guide_v1"); } catch (e) { return true; } }  // 저장소를 못 쓰면 매번 띄우지 않아요
+function guideClose() {
+  guideAt = -1;
+  try { localStorage.setItem("guide_v1", "1"); } catch (e) { /* 이번만 */ }
+  document.querySelectorAll(".guide-catch, .guide-spot, .guide-card").forEach((x) => x.remove());
+  window.removeEventListener("resize", guidePlace);
+  document.removeEventListener("keydown", guideKey);
+}
+function guideKey(e) {
+  if (e.key === "Escape") guideClose();
+  else if (e.key === "ArrowRight") guideShow(guideAt + 1);
+  else if (e.key === "ArrowLeft") guideShow(guideAt - 1);
+}
+// 짚는 곳에 동그란 테두리(나머지는 어둡게), 안내 카드는 짚는 곳 반대쪽에
+function guidePlace() {
+  const s = GUIDE[guideAt], spot = $(".guide-spot"), card = $(".guide-card");
+  if (!s || !spot || !card) return;
+  const el = s.sel && $(s.sel);
+  const r = el && el.getBoundingClientRect();
+  if (r && r.width && r.height) {
+    const pad = 6, W = window.innerWidth, H = window.innerHeight;  // 테두리가 화면 밖으로 잘리지 않게 안쪽으로
+    const L = Math.max(3, r.left - pad), T = Math.max(3, r.top - pad), R = Math.min(W - 3, r.right + pad), B = Math.min(H - 3, r.bottom + pad);
+    Object.assign(spot.style, { left: `${L}px`, top: `${T}px`, width: `${R - L}px`, height: `${B - T}px` });
+    spot.classList.remove("none");
+    const low = r.top + r.height / 2 > window.innerHeight / 2;
+    card.classList.toggle("at-top", low);
+    card.classList.toggle("at-bottom", !low);
+  } else {
+    spot.classList.add("none");
+    card.classList.remove("at-top", "at-bottom");
+  }
+}
+function guideShow(i) {
+  if (i < 0) return;
+  if (i >= GUIDE.length) { guideClose(); return; }
+  if (guideAt < 0) {
+    const c = document.createElement("div");
+    c.className = "guide-catch";  // 뒤 화면이 눌리거나 밀리지 않게 막아요
+    const sp = document.createElement("div");
+    sp.className = "guide-spot";
+    const card = document.createElement("div");
+    card.className = "guide-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    card.setAttribute("aria-label", "사용법 안내");
+    card.tabIndex = -1;
+    document.body.append(c, sp, card);
+    card.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      if (b.dataset.g === "skip") guideClose();
+      else if (b.dataset.g === "next") guideShow(guideAt + 1);
+      else if (b.dataset.g === "prev") guideShow(guideAt - 1);
+      else if (b.dataset.gDot != null) guideShow(+b.dataset.gDot);
+    });
+    let x0 = null;  // 옆으로 밀어서 넘기기
+    card.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+    card.addEventListener("pointerup", (e) => {
+      if (x0 == null) return;
+      const dx = e.clientX - x0; x0 = null;
+      if (Math.abs(dx) > 50) guideShow(guideAt + (dx < 0 ? 1 : -1));
+    });
+    window.addEventListener("resize", guidePlace);
+    document.addEventListener("keydown", guideKey);
+  }
+  guideAt = i;
+  const s = GUIDE[i], last = i === GUIDE.length - 1, card = $(".guide-card");
+  card.innerHTML = `<div class="guide-head"><small class="muted">${i + 1} / ${GUIDE.length}</small>${last ? "" : `<button type="button" class="guide-skip" data-g="skip">건너뛰기</button>`}</div>
+    <h2>${esc(s.t)}</h2><div class="guide-body">${s.b}</div>
+    <div class="guide-foot"><div class="guide-dots">${GUIDE.map((_, k) => `<button type="button" data-g-dot="${k}" aria-label="${k + 1}번째 안내"${k === i ? ' aria-current="step"' : ""}></button>`).join("")}</div>
+      <div class="guide-btns">${i ? `<button type="button" class="guide-prev" data-g="prev">이전</button>` : ""}<button type="button" class="add guide-next" data-g="next">${last ? "시작하기" : "다음"}</button></div></div>`;
+  guidePlace();
+  card.focus({ preventScroll: true });
+}
+function guideMaybe() { if (guideAt < 0 && screen === "home" && !guideSeen()) guideShow(0); }
+$(".guide-open").addEventListener("click", () => guideShow(0));
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
