@@ -213,6 +213,20 @@ details li { margin: 4px 0; }
 .empty { color: var(--text-secondary); font-size: 14px; margin: 0; }
 .foot { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; }
 .foot p { margin: 4px 0; }
+.foot .fb-open { display: flex; width: 100%; margin: 4px 0 12px; min-height: 44px; }
+.foot .fb-open[hidden] { display: none; }
+
+/* 의견 보내기 화면 */
+.fb-field { display: block; margin-top: 12px; }
+.fb-field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary);
+  font: inherit; font-size: 16px; line-height: 1.5; padding: 10px 12px; resize: vertical; min-height: 140px; }
+.fb-count { margin: 4px 0 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.fb-send { width: 100%; min-height: 46px; font-size: 15px; }
+.fb-done { margin: 8px 0 0; color: var(--good-fg); font-weight: 600; }
+.fb-done.bad { color: var(--wait-fg); }
+.fb-alt { display: block; margin-top: 6px; padding: 6px 0; border: 0; background: none; font: inherit; font-size: 14px; cursor: pointer; }
+.fb-alt[hidden] { display: none; }
+.fb-steps { margin: 14px 0 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
 
 /* 아래쪽 화면 버튼 (홈·신호·성과·차트) */
 .nav {
@@ -828,6 +842,9 @@ details.pol-sec { margin-top: 6px; }
 .big-item .name { font-weight: 600; }
 .big-hot { color: var(--up); } .big-cold { color: var(--down); }
 .cal li.cal-big .name { font-weight: 700; color: var(--wait-fg); }
+/* ⚠️ 리스크 일정·악재 뉴스 (사용자 2026-11-15): 왼쪽 빨간 줄로 눈에 띄게 */
+.cal li.cal-risk .name { font-weight: 700; color: var(--wait-fg); }
+li.cal-risk, li.news-bad { box-shadow: inset 3px 0 0 var(--wait-fg); padding-left: 10px; }
 
 /* 홈 '더 보기': 칸마다 한 줄, 누르면 그 자리에서 펼쳐져요 */
 .home-more { padding-bottom: 6px; }
@@ -1058,6 +1075,7 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .wk-tl li:last-child::before { display: none; }
 .wk-tl time { font-size: 11px; color: var(--text-muted); line-height: 1.35; font-variant-numeric: tabular-nums; }
 .wk-tl div { padding-left: 12px; font-size: 14px; line-height: 1.45; }
+.wk-tl a { color: inherit; text-decoration: none; }
 .wk-tl small, .wk-dayg small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .wk-reg { margin: 4px 0 0; padding: 10px 12px; background: var(--surface-0); border-radius: var(--radius-s); font-size: 14px; }
 .wk-dayg { margin-top: 12px; }

@@ -27,9 +27,11 @@ KST = dt.timezone(dt.timedelta(hours=9))
 # (검색어, 언어). 증시 전체를 움직일 만한 사건 위주로
 MARKET_QUERIES = {
     "kr": [("코스피 증시", "ko"), ("한국은행 기준금리", "ko"), ("원달러 환율", "ko"), ("반도체 수출", "ko"),
-           ("외국인 순매도 증시", "ko"), ("정부 증시 대책", "ko")],
+           ("외국인 순매도 증시", "ko"), ("정부 증시 대책", "ko"),
+           ("오너 리스크 주가", "ko")],  # 경영자 개인 일(사임·수사·스캔들)이 증시를 흔들 때 (사용자 2026-11-15)
     "us": [("뉴욕증시", "ko"), ("연준 금리", "ko"), ("미국 물가 고용 지표", "ko"), ("관세 무역", "ko"),
-           ("국제유가", "ko"), ("S&P500 나스닥 마감", "ko")],  # 영어 검색은 종목 하나 기사('X stock trades down')가 많아서 뺐어요
+           ("국제유가", "ko"), ("S&P500 나스닥 마감", "ko"),
+           ("CEO 사임 주가 급락", "ko")],  # 영어 검색은 종목 하나 기사('X stock trades down')가 많아서 뺐어요
 }
 QUERY_N = 15    # 검색어마다 몇 개 (핫 뉴스를 세려고 넉넉히 받아요)
 MARKET_N = 15   # 시장마다 남길 개수
@@ -39,6 +41,8 @@ HOT_SOURCES = 3  # 같은 사건을 다룬 언론이 이만큼 넘으면 핫 뉴
 HOT_SHARE = 2    # 제목 핵심 낱말이 이만큼 겹치면 같은 사건
 HOT_N = 8        # 시장마다 핫 뉴스 몇 개까지
 HOT_DAYS = 7     # 핫 뉴스를 며칠 남길지
+WEEK_DAYS = 8    # 주간 리포트 '이번 주 이슈'용 핫 뉴스 기록은 며칠 (월~금 + 주말)
+WEEK_N = 20      # 그 기록에 시장마다 몇 개까지 (×2)
 # 어디에나 나오는 낱말은 같은 사건을 가리는 데 안 써요
 STOP = set("""증시 코스피 코스닥 뉴욕증시 국내 미국 한국 국내증시 미 美 韓 中 日 마감 개장 장중 상승 하락 급등 급락 강세 약세 오늘 내일 어제
 주가 시장 투자자 전망 종합 속보 단독 지수 기자 뉴스 이번 지난 올해 내년 전날 마켓 포커스 오전 오후 대비 영향 기록 가능성
@@ -47,6 +51,9 @@ the and for stock stocks market markets""".split())
 JOSA = "은는을를에의도로와과"  # 이·가·서·만은 낱말 끝에도 많이 와서(국제유가·만에) 안 떼요
 # 제목 낱말 → 주제 (앞에 있는 것부터 봐요)
 TOPICS = [
+    # 경영자·오너 일 (젠슨 황 사임·스캔들 같은 것, 사용자 2026-11-15). 금리·관세 낱말이 같이 있어도 이쪽이 먼저예요
+    ("기업·경영자", r"CEO|최고경영자|대표이사|창업자|오너|총수|경영권|사임|퇴진|사퇴|스캔들|횡령|배임|구속|기소|압수수색|"
+                  r"젠슨\s?황|머스크|올트먼|저커버그|이재용|최태원|정의선|\bresigns?\b|step(s|ping)? down|ousted|scandal"),
     ("금리", r"금리|연준|Fed|FOMC|한은|기준금리|국채|채권|\brates?\b"),
     ("물가·지표", r"물가|CPI|PCE|고용|실업|GDP|성장률|PMI|소매판매|inflation|jobs|payroll"),
     ("환율", r"환율|원·달러|원달러|달러|엔화|위안|dollar|yen"),
@@ -56,6 +63,10 @@ TOPICS = [
     ("정책", r"정부|대책|규제|법안|세제|예산|policy|regulat"),
     ("실적", r"실적|영업이익|어닝|earnings|revenue|profit"),
 ]
+# 증시에 악재로 읽히는 낱말 (사용자 2026-11-15 "악영향이 가는 뉴스를 강조해서"). 앱 site/app.js BAD_NEWS와 같게 맞춰요
+BAD = (r"급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|"
+       r"스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|"
+       r"\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign")
 WORKERS = 6     # 동시에 받을 개수 (너무 많으면 구글이 막아요)
 
 
@@ -113,6 +124,11 @@ def topic(title):
         if re.search(pat, title, re.I):
             return name
     return None
+
+
+def bad(title):
+    """제목이 악재로 읽히면 True."""
+    return bool(re.search(BAD, title, re.I))
 
 
 def fresh(items, now, hours=MAX_HOURS):
@@ -182,10 +198,17 @@ def build(fetch=fetch, now=None, prev=None):
     with concurrent.futures.ThreadPoolExecutor(WORKERS) as pool:
         jobs = {m: [pool.submit(fetch, q, lang, QUERY_N) for q, lang in qs] for m, qs in MARKET_QUERIES.items()}
     got = {m: [fresh(f.result(), now) for f in fs] for m, fs in jobs.items()}
-    out = {m: [dict(x, topic=topic(x["title"])) for x in merge(ls)] for m, ls in got.items()}
+    tag = lambda x: dict(x, topic=topic(x["title"]), bad=bad(x["title"]))  # noqa: E731
+    out = {m: [tag(x) for x in merge(ls)] for m, ls in got.items()}
     # 핫 뉴스는 같은 기사가 여러 검색어에 걸려도 한 번만 세요 (merge로 같은 제목 하나로)
-    out["hot"] = {m: [dict(x, topic=topic(x["title"])) for x in keep_hot(hot(merge(ls, n=10**6)), ((prev or {}).get("hot") or {}).get(m), now)]
-                  for m, ls in got.items()}
+    new_hot = {m: hot(merge(ls, n=10**6)) for m, ls in got.items()}
+    prev = prev or {}
+    out["hot"] = {m: [tag(x) for x in keep_hot([dict(h) for h in new_hot[m]], (prev.get("hot") or {}).get(m), now)]
+                  for m in got}
+    # 주간 리포트가 읽는 한 주 핫 뉴스 기록: 앱 핫 칸(8개)보다 길게 모아요
+    out["week"] = {m: [tag(x) for x in keep_hot([dict(h) for h in new_hot[m]],
+                       (prev.get("week") or prev.get("hot") or {}).get(m), now, days=WEEK_DAYS, n=WEEK_N)]
+                   for m in got}
     return dict(updated=now.isoformat(timespec="minutes"), **out)
 
 

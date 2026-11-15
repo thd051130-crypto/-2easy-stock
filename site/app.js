@@ -44,11 +44,11 @@ try {
 let market = "kr";
 try { market = localStorage.getItem("market") || "kr"; } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
 // 아래쪽 버튼으로 바꾸는 화면. 앱을 새로 열면 늘 홈부터 보여요. 주소 끝(#kr/chart)에 시장과 화면을 적어 둬요.
-const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world", "more"];
+const SCREENS = ["home", "report", "watch", "tools", "chart", "stock", "search", "map", "inbox", "world", "more", "feedback"];
 let screen = "home";
 // 종목 화면(#kr/stock/005930), 검색 화면(#kr/search), 산업 지도(#kr/map/조선)는 보던 화면 위에 한 겹 더 열려요 (뒤로 가면 보던 화면).
 // 아래 버튼은 그 아래 깔린 화면(stockFrom)에 불이 들어와요.
-const LAYERS = ["stock", "search", "map", "inbox", "world", "more"];  // 메시지함(#kr/inbox), 세계 지수(#kr/world), 더 보기 칸(#kr/more/<칸>)도 한 겹 위
+const LAYERS = ["stock", "search", "map", "inbox", "world", "more", "feedback"];  // 의견 보내기(#kr/feedback)도 한 겹 위  // 메시지함(#kr/inbox), 세계 지수(#kr/world), 더 보기 칸(#kr/more/<칸>)도 한 겹 위
 let stockCode = null;
 let stockFrom = "watch";
 let searchQuery = "";
@@ -283,7 +283,12 @@ function stashHot(x) {
   }
   saveHot();
 }
-const hotOf = (m) => HOT[m].filter((n) => !HOT_READ.has(hotId(n)));
+// 악재로 읽히는 제목 (사용자 2026-11-15 "증시에 악영향이 가는 뉴스를 강조해서"). news.py BAD와 같게 맞춰요
+const BAD_NEWS = /급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign/i;
+const isBad = (n) => n.bad === true || BAD_NEWS.test(n.title || "");
+const badTag = (n) => (isBad(n) ? `<span class="badge bad">⚠️ 악재</span> ` : "");
+// 안 읽은 핫 뉴스: 악재 먼저 (그 안에선 원래 순서)
+const hotOf = (m) => { const H = HOT[m].filter((n) => !HOT_READ.has(hotId(n))); return [...H.filter(isBad), ...H.filter((n) => !isBad(n))]; };
 const hotReadOf = (m) => HOT[m].filter((n) => HOT_READ.has(hotId(n))).sort((a, b) => HOT_READ.get(hotId(b)) - HOT_READ.get(hotId(a)));
 let hotUndo = null;  // 방금 읽음 처리한 id들 (되돌리기)
 let hotReadOpen = false;  // '읽은 핫 뉴스' 칸을 펼쳤는지 (다시 그려도 그대로)
@@ -528,6 +533,7 @@ const VIEWS = {
   map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
   inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
   world: () => [worldCard()],
+  feedback: () => [feedbackCard()],
   more: (d) => moreView(d),
 };
 
@@ -610,6 +616,8 @@ function render() {
   const mb = $(".map-btn");
   if (mb) { if (screen === "map") mb.setAttribute("aria-current", "page"); else mb.removeAttribute("aria-current"); }
   inboxDot();
+  const fo = $(".fb-open");
+  if (fo) fo.hidden = screen === "feedback";  // 의견 화면에선 맨 아래 버튼을 숨겨요
   const lit = LAYERS.includes(screen) ? stockFrom : screen;
   document.querySelectorAll(".nav button").forEach((b) => {
     if (b.dataset.screen === lit) b.setAttribute("aria-current", "page");
@@ -662,7 +670,14 @@ function render() {
       setTimeout(() => { b.classList.remove("armed"); t.textContent = "모두 읽음"; }, 3000);
       return;
     }
-    readHot(hotOf(market).map(hotId), true); holdHeight(); render();
+    // 위 목록이 통째로 빠져서 그대로 두면 아래 '지금 뉴스'·빈칸이 올라와 맨 밑으로 간 것처럼 보여요 (사용자 2026-11-15).
+    // 누른 버튼 자리에 '안 읽은 핫 뉴스가 없어요' 줄이 오게 맞추고, 붙잡은 높이(빈칸)는 바로 놓아요
+    const top = b.getBoundingClientRect().top;
+    readHot(hotOf(market).map(hotId), true); render();
+    lastTap = null;
+    clearTimeout(holdH); holdReady = false; $("#app").style.minHeight = "";
+    const a = $("#hot-card .hot-body > .empty") || $("#hot-card");
+    if (a) window.scrollBy(0, a.getBoundingClientRect().top - top);
   }));
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
@@ -793,6 +808,7 @@ function render() {
   if (screen === "search") bindSearch();
   if (screen === "map") bindMap();
   if (screen === "inbox") bindInbox();
+  if (screen === "feedback") bindFeedback();
   if (screen !== "search") app.querySelectorAll("[data-map]").forEach((b) => b.addEventListener("click", () => openMap(b.dataset.map)));
   bindRows(app, d);
   if (screen === "chart") {
@@ -1316,6 +1332,85 @@ const kindName = (m, row) => (m === "kr" ? (row[3] === "e" ? "국내 ETF" : row[
   : (row[3] === "e" ? "미국 ETF" : "미국 주식"));
 const MK_NAME = { kr: "국장", us: "미장" };
 
+// ---------------------------------------------------------------- 의견 보내기
+// 화면 맨 아래 '의견·수정 요청 보내기' → 이 화면 (사용자 2026-11-15: 수정 사항·의견을 모아서 텔레그램으로 받기).
+// 저장소가 공개라 봇 열쇠(토큰)를 화면에 넣을 수 없어요. 두 가지 길:
+//  1) FB_URL(클라우드플레어 무료 우체통, cloudflare/feedback-worker.js)이 있으면 '보내기'만 누르면 바로 텔레그램으로 가요.
+//  2) 없거나 실패하면 글을 복사해 봇 대화창에 붙여 넣어요. 봇(bot.py)이 15분마다 읽어서 만든 사람 대화방으로 옮겨요.
+const FB_URL = "https://easystock-feedback.thd051130.workers.dev";  // 우체통 주소 (예: https://easystock-feedback.<이름>.workers.dev). 비밀이 아니라 화면에 둬도 돼요
+const FB_KINDS = ["수정 요청", "오류", "의견"];
+const FB_MAX = 1500;
+let fbKind = "수정 요청", fbText = "", fbBusy = false;
+try { fbText = localStorage.getItem("fb_draft") || ""; } catch (e) { /* 이번만 */ }
+const fbMessage = () => `💬 이지스톡 의견 · ${fbKind}\n${fbText.trim()}`;
+function feedbackCard() {
+  const bot = DATA && DATA.bot, direct = !!FB_URL;
+  const steps = direct ? "" : `<ol class="fb-steps">
+      <li><b>복사하고 텔레그램 열기</b>를 누르면 글이 복사되고 봇 대화창이 열려요.</li>
+      <li>처음이면 <b>시작</b>을 누르고, 입력칸을 길게 눌러 <b>붙여넣기 → 보내기</b>.</li>
+      <li>15분 안에 전달되고, 봇이 "전달했어요"라고 답해요.</li>
+    </ol>`;
+  const btn = direct ? `<button type="button" class="add fb-send" id="fb-send"${fbText.trim() ? "" : " disabled"}>보내기</button>`
+    : bot ? `<button type="button" class="add fb-send" id="fb-send"${fbText.trim() ? "" : " disabled"}>복사하고 텔레그램 열기</button>`
+      : `<p class="empty">봇 정보를 아직 못 받았어요. 잠시 뒤 다시 열어 주세요.</p>`;
+  return `<section class="card" id="fb-card"><button type="button" class="back" data-back>‹ 뒤로</button><h2 class="stock-name">의견 보내기</h2>
+    <p class="muted" style="margin:0">고쳐 줬으면 하는 곳, 오류, 바라는 기능을 적어 주세요. 만든 사람에게 텔레그램으로 가요.</p>
+    <div class="chips" role="group" aria-label="종류">${FB_KINDS.map((k) => `<button type="button" data-fb-kind="${k}" aria-pressed="${k === fbKind}">${k}</button>`).join("")}</div>
+    <label class="fb-field"><span class="sr">내용</span>
+      <textarea id="fb-text" rows="6" maxlength="${FB_MAX}" placeholder="예: 차트 화면에서 글씨가 너무 작아요">${esc(fbText)}</textarea></label>
+    <p class="fb-count muted"><span id="fb-n">${fbText.length}</span> / ${FB_MAX}자 · 보내기 전까지 이 폰에 임시로 남아요</p>
+    ${btn}
+    <p class="fb-done muted" id="fb-done" role="status" hidden></p>
+    ${direct && bot ? `<button type="button" class="linkish fb-alt" id="fb-alt" hidden>대신 텔레그램으로 보내기 (복사해서 붙여넣기)</button>` : ""}
+    ${steps}
+    <p class="muted note" style="margin:10px 0 0">${direct ? "로그인 없이 보낼 수 있어요. 이름·연락처는 받지 않고, 글 내용은 어디에도 공개되지 않아요. 도배를 막으려고 한 곳에서 하루 5통까지 받아요."
+      : "텔레그램이 있어야 보낼 수 있어요. 텔레그램 이름이 같이 전달되고, 글 내용은 어디에도 공개되지 않아요. 도배를 막으려고 한 사람 하루 3통까지 받아요."}</p></section>`;
+}
+function bindFeedback() {
+  const ta = $("#fb-text"), send = $("#fb-send"), n = $("#fb-n"), done = $("#fb-done");
+  if (!ta) return;
+  const say = (msg, ok) => { done.hidden = false; done.textContent = msg; done.classList.toggle("bad", !ok); };
+  const saveDraft = () => { try { localStorage.setItem("fb_draft", fbText); } catch (e) { /* 이번만 */ } };
+  ta.addEventListener("input", () => {
+    fbText = ta.value;
+    n.textContent = fbText.length;
+    if (send) send.disabled = !fbText.trim() || fbBusy;
+    saveDraft();
+  });
+  // 종류는 버튼 불만 바꿔요 (다시 그리지 않아서 화면·입력칸 그대로)
+  document.querySelectorAll("[data-fb-kind]").forEach((b) => b.addEventListener("click", () => {
+    fbKind = b.dataset.fbKind;
+    document.querySelectorAll("[data-fb-kind]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+  if (!send) return;
+  const alt = $("#fb-alt");
+  if (alt) alt.addEventListener("click", () => viaBot());
+  const viaBot = () => {
+    // 복사는 누른 순간에 해야 폰 브라우저가 허락해요. 그다음 봇 대화창을 새 창으로 열어요
+    const text = fbMessage();
+    const copied = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text).then(() => true, () => false) : Promise.resolve(false);
+    if (DATA && DATA.bot) window.open(`https://t.me/${encodeURIComponent(DATA.bot)}`, "_blank", "noopener");
+    copied.then((ok) => say(ok ? "복사했어요. 텔레그램에서 붙여넣기 → 보내기를 눌러 주세요." : "복사가 안 됐어요. 위 글을 길게 눌러 직접 복사해 주세요.", ok));
+  };
+  send.addEventListener("click", () => {
+    if (!FB_URL) { viaBot(); return; }
+    fbBusy = true; send.disabled = true; send.textContent = "보내는 중…";
+    fetch(FB_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ kind: fbKind, text: fbText.trim(), screen: stockFrom }) })
+      .then((r) => r.json().catch(() => ({})).then((j) => ({ ok: r.ok && j.ok, msg: j.msg })))
+      .catch(() => ({ ok: false }))
+      .then(({ ok, msg }) => {
+        fbBusy = false; send.textContent = "보내기";
+        if (ok) { fbText = ""; ta.value = ""; n.textContent = "0"; saveDraft(); say("보냈어요. 고마워요!", true); }
+        else {
+          send.disabled = !fbText.trim();
+          say(msg || "지금은 못 보냈어요. 잠시 뒤 다시 눌러 주세요. 적은 글은 그대로 있어요.", false);
+          const alt = $("#fb-alt");
+          if (alt) alt.hidden = false;  // 우체통이 안 되면 봇에 붙여 넣는 길로
+        }
+      });
+  });
+}
+
 // ---------------------------------------------------------------- 메시지함
 // 텔레그램으로 보낸 알림(오늘의 리포트·경기·큰 발표·가격 알림·주간 점검)을 앱에서도 봐요.
 // inbox.json은 열 때만 받아요 (dashboard.py가 paper/inbox/ 최근 60일로 만들어요). 명령에 대한 봇 답장은 빼요.
@@ -1529,8 +1624,14 @@ function weeklyCards() {
   const reg = ev.regime ? `<p class="wk-reg">🌡️ 경기 판정 <b>${esc(ev.regime)}</b>${ev.prev_regime && ev.prev_regime !== ev.regime ? ` <span class="badge bad">${esc(ev.prev_regime)}에서 바뀜</span>` : ` <span class="badge">그대로</span>`}${(ev.warns || []).length ? `<br><small class="muted">⚠️ ${esc(ev.warns.join(", "))}</small>` : ""}</p>` : "";
   const evCard = `<section class="card"><h2>⚡ 이번 주 사건 <small>지수 급변·발표 결과</small></h2>
     ${tl.length ? `<ol class="wk-tl">${tl.map((x) => `<li><time>${wkDay(x.t)}${x.t.length > 10 ? `<br>${esc(x.t.slice(11, 16))}` : ""}</time><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ol>` : `<p class="empty">큰 사건 없음</p>`}${reg}</section>`;
+  // 5-2. 이번 주 이슈: 한 주 동안 언론 여러 곳이 다룬 핫 뉴스 (경영자 사임·스캔들처럼 숫자 없는 사건도, 사용자 2026-11-15)
+  const iss = (ev.issues || {})[market] || [];
+  const issLink = (x) => /^https:\/\//.test(x.link || "") ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title);
+  const issCard = ev.issues ? `<section class="card"><h2>🔥 이번 주 이슈 <small>${flag} 언론 여러 곳이 다룬 뉴스</small></h2>
+    ${iss.length ? `<ol class="wk-tl">${iss.map((x) => `<li><time>${x.ongoing ? "지난주<br>부터" : wkDay(x.since || "")}</time><div>${badTag(x)}${x.topic ? `<span class="badge">${esc(x.topic)}</span> ` : ""}${issLink(x)}
+      <small>언론 ${x.sources}곳${x.source ? ` · ${esc(x.source)}` : ""}${x.more ? ` · 비슷한 기사 묶음 ${x.more + 1}개` : ""}</small></div></li>`).join("")}</ol>` : `<p class="empty">이번 주엔 여러 언론이 같이 다룬 뉴스가 없어요</p>`}</section>` : "";
   // 6. 다음 주: 요일별 묶음 + 종류 표시
-  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"] };
+  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"], risk: ["⚠️ 리스크", "bad"] };
   const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
     ...(nx.cal || []).map((c) => ({ d: c.date, k: c.kind, h: `${REPORT_FLAG[c.market] || ""} ${esc(c.title)}`, sub: c.note || "" })),
     ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => ({ d: c.date, k: "earn", h: `${esc(c.title.replace(/ 실적 발표$/, ""))}${c.mine ? " ⭐" : ""}`, sub: "" }))];
@@ -1540,7 +1641,7 @@ function weeklyCards() {
     ${items.length ? Object.keys(byDay).sort().map((d) => `<div class="wk-dayg"><p class="wk-dh">${wkDay(d)}</p><ul>${byDay[d].map((x) =>
       `<li><span class="badge ${TAG[x.k] ? TAG[x.k][1] : ""}">${TAG[x.k] ? TAG[x.k][0] : "일정"}</span><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ul></div>`).join("")
     : `<p class="empty">아직 잡힌 큰 일정 없음</p>`}</section>`;
-  return [head, secCard, evCard, nxCard, restCard,
+  return [head, secCard, evCard, issCard, nxCard, restCard,
     `<section class="card"><p class="muted" style="margin:0">토요일 아침에 한 주를 묶어 텔레그램으로도 보내요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.
       위 국장·미장 탭으로 업종을 바꿔 봐요.</p></section>`];
 }
@@ -2566,7 +2667,8 @@ function homeMoreRows(d) {
   const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
   // 지금 뉴스: 안 읽은 🔥 핫 뉴스가 있으면 그걸, 없으면 가장 최근 뉴스 한 줄 (30분마다 따로 받아요)
   const N = newsOf(market), n1 = N && N[0], hot = hotOf(market);
-  add("news", "📰", "지금 뉴스", hot.length ? `🔥 <b>${hot.length}건</b> · ${esc(hot[0].title)}`
+  const nBad = hot.filter(isBad).length;  // 악재가 있으면 요약 줄에 먼저 (hotOf가 악재를 앞에 둬요)
+  add("news", "📰", "지금 뉴스", hot.length ? `${nBad ? `⚠️ <b>악재 ${nBad}건</b> · ` : ""}🔥 <b>${hot.length}건</b> · ${esc(hot[0].title)}`
     : n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard());
   // 투자 공부: 용어집·움직이는 이유·대처법, '오늘 왜?'는 앱 자료로 매일 새로 (사용자 2026-10-24)
   add("learn", "📚", "투자 공부", learnSummary(), learnView(d));
@@ -2630,7 +2732,7 @@ function ago(at) {
 const hm = (at) => (at ? `${at.slice(11, 16)}` : "");
 function newsLi(n) {
   const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title);
-  return `<li><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
+  return `<li${isBad(n) ? ` class="news-bad"` : ""}><div class="l"><div class="name news-t">${badTag(n)}${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
     <div class="meta">${esc(n.source || "")}${n.at ? ` · ${md(n.at.slice(0, 10))} ${hm(n.at)} (${ago(n.at)})` : ""}</div></div></li>`;
 }
 // 24시간 지난 기사는 화면에서도 빼요 (뉴스 작업이 한동안 못 돌아 예전 파일이 남아 있을 때)
@@ -2640,7 +2742,7 @@ const newsOf = (m) => (NEWS && Array.isArray(NEWS[m]) ? NEWS[m].filter((n) => Da
 function hotLi(n, read) {
   const id = esc(hotId(n));
   const t = /^https:\/\//.test(n.link || "") ? `<a href="${esc(n.link)}" target="_blank" rel="noopener"${read ? "" : ` data-hot-read="${id}"`}>${esc(n.title)}</a>` : esc(n.title);
-  return `<li data-hot="${id}"><div class="l"><div class="name news-t">${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
+  return `<li data-hot="${id}"${isBad(n) ? ` class="news-bad"` : ""}><div class="l"><div class="name news-t">${badTag(n)}${n.topic ? `<span class="badge">${esc(n.topic)}</span> ` : ""}${t}</div>
     <div class="meta">언론 ${n.sources || "여러"}곳 · ${n.since ? `처음 ${md(n.since.slice(0, 10))} ${hm(n.since)}` : ""}${n.at ? ` · 최근 기사 ${ago(n.at)}` : ""}</div></div>
     ${read ? `<button type="button" class="hot-ok" data-hot-undo="${id}" aria-label="안 읽음으로 되돌리기">안 읽음</button>`
       : `<button type="button" class="hot-ok" data-hot-ok="${id}" aria-label="읽음으로 표시">읽음</button>`}</li>`;
@@ -2660,7 +2762,7 @@ function hotGroups(H) {
 function hotGrpLi(g) {
   const k = esc(g[0].topic), src = g.reduce((a, n) => a + (n.sources || 0), 0);
   return `<li class="hot-grp"><details class="hot-grp-d" data-hot-grp="${k}"${HOT_GRP_OPEN.has(g[0].topic) ? " open" : ""}>
-    <summary><div class="l"><div class="name news-t"><span class="badge">${k}</span> ${esc(g[0].title)}</div>
+    <summary><div class="l"><div class="name news-t">${g.some(isBad) ? `<span class="badge bad">⚠️ 악재</span> ` : ""}<span class="badge">${k}</span> ${esc(g[0].title)}</div>
       <div class="meta">같은 주제 ${g.length}건${src ? ` · 언론 ${src}곳` : ""}${g[0].at ? ` · 최근 기사 ${ago(g[0].at)}` : ""}</div></div>
       <span class="hot-grp-n"><span class="fold-more">${g.length}건</span><span class="fold-less">접기</span></span></summary>
     <ul class="list">${g.map((n) => hotLi(n)).join("")}</ul></details></li>`;
@@ -5064,7 +5166,7 @@ function bigEventsCard() {
 // 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목만, 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
 const EARN_DAYS = 30;  // 실적·배당은 한 달 치
-const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰" };
+const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰", risk: "⚠️" };
 const STOCK_KINDS = ["earn", "exdiv"];
 let calAll = false;
 const calMine = (e) => e.mine || (e.code && WATCH[e.market] && WATCH[e.market].includes(e.code));
@@ -5081,7 +5183,7 @@ function calRows(list) {
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
     const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
-    const cls = [e.big ? "cal-big" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
+    const cls = [e.big ? "cal-big" : "", e.kind === "risk" ? "cal-risk" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
     return `${head}<li${tap}${cls ? ` class="${cls}"` : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
   }).join("");
@@ -6149,6 +6251,8 @@ function lineChart(el, { dates, series, fmt, zero, tall, xfmt = (s) => s.slice(2
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => selectMarket(b.dataset.market)));
 $(".search-btn").addEventListener("click", () => go("search"));
+$(".fb-open").addEventListener("click", () => go("feedback"));  // 맨 아래 '의견·수정 요청 보내기'
+
 inboxHandle($(".inbox-btn"));
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
