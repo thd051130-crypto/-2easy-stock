@@ -1359,7 +1359,7 @@ function feedbackCard() {
     <label class="fb-field"><span class="sr">내용</span>
       <textarea id="fb-text" rows="6" maxlength="${FB_MAX}" placeholder="예: 차트 화면에서 글씨가 너무 작아요">${esc(fbText)}</textarea></label>
     <p class="fb-count muted"><span id="fb-n">${fbText.length}</span> / ${FB_MAX}자 · 보내기 전까지 이 폰에 임시로 남아요</p>
-    <p class="fb-warn">욕설·비방·협박·남의 개인정보는 적지 마세요. 보낸 글의 책임은 작성한 본인에게 있으며, 법에 어긋나는 글은 관련 법에 따라 처리될 수 있어요.</p>
+    <p class="fb-warn">욕설·비방·협박·타인의 개인정보는 적지 마세요. 보낸 글의 책임은 작성한 본인에게 있으며, 법에 어긋나는 글은 관련 법에 따라 처리될 수 있어요.</p>
     ${btn}
     <p class="fb-done muted" id="fb-done" role="status" hidden></p>
     ${direct && bot ? `<button type="button" class="linkish fb-alt" id="fb-alt" hidden>대신 텔레그램으로 보내기 (복사해서 붙여넣기)</button>` : ""}
