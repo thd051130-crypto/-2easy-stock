@@ -123,7 +123,7 @@ h1 { font-size: 19px; font-weight: 800; margin: 0; letter-spacing: -0.03em; }
 /* 메시지함 (텔레그램으로 보낸 알림). 평소엔 오른쪽 가장자리 얇은 손잡이라 글자를 안 가려요 (사용자 2026-10-24).
    누르거나 왼쪽으로 밀면 동그란 버튼으로 나오고, 위아래로 끌어 옮겨요 (app.js). 안 읽은 알림이 있으면 빨간 점 */
 .inbox-btn {
-  position: fixed; z-index: 7; top: calc(100% - 132px); right: max(16px, calc((100% - 640px) / 2 + 16px));
+  position: fixed; z-index: 7; top: calc(100% - 132px); right: max(16px, calc((100% - var(--page-w)) / 2 + 16px));
   width: 48px; height: 48px; border-radius: 999px; border: 0; padding: 0; margin-top: 0;
   background: var(--accent); color: #fff; display: grid; place-items: center; cursor: pointer;
   box-shadow: var(--pop-shadow); -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; -webkit-user-select: none;
@@ -161,7 +161,17 @@ details.msg > summary .new { flex: none; }
 .msg-body details > div { white-space: pre-wrap; padding-top: 4px; }
 @media (max-width: 350px) { .brand h1 { display: none; } }
 
-main { max-width: 640px; margin: 0 auto; padding: 14px 16px; display: grid; gap: 14px; align-content: start; }  /* 높이를 붙잡는 동안(min-height) 칸이 늘어나지 않게 */
+/* 화면 크기에 맞춰 폭 자동 조절 (2026-11-15 사용자 "화면에 맞게 비율 자동으로")
+   폰: 한 줄 640px까지 · 접는 폰 펼침·세로 태블릿: 한 줄 760px · PC·가로 태블릿: 두 줄로 칸을 나란히 */
+:root { --page-w: 640px; }
+@media (min-width: 720px) { :root { --page-w: 760px; } }
+@media (min-width: 1000px) {
+  :root { --page-w: 1120px; }
+  main { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  /* 선택 바·뒤로 줄·지수 바처럼 칸이 아닌 줄, 칸이 하나뿐인 화면은 양옆 다 써요 */
+  main > :not(section), main > section:only-of-type { grid-column: 1 / -1; }
+}
+main { max-width: var(--page-w); margin: 0 auto; padding: 14px 16px; display: grid; gap: 14px; align-content: start; }  /* 높이를 붙잡는 동안(min-height) 칸이 늘어나지 않게 */
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; min-width: 0; box-shadow: var(--card-shadow); }
 .card h2 { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: -0.02em; color: var(--text-primary); margin: 0 0 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .card h2 small { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--text-muted); text-align: right; }
@@ -211,7 +221,7 @@ details ol { margin: 8px 0 0; padding-left: 20px; color: var(--text-secondary); 
 details li { margin: 4px 0; }
 
 .empty { color: var(--text-secondary); font-size: 14px; margin: 0; }
-.foot { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; }
+.foot { max-width: var(--page-w); margin: 0 auto; padding: 4px 16px 24px; }
 .foot p { margin: 4px 0; }
 .foot .fb-open { display: flex; width: 100%; margin: 4px 0 12px; min-height: 44px; }
 .foot .fb-open[hidden] { display: none; }
@@ -233,7 +243,7 @@ details li { margin: 4px 0; }
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
-  padding: 2px max(8px, calc((100% - 640px) / 2)) env(safe-area-inset-bottom);
+  padding: 2px max(8px, calc((100% - min(var(--page-w), 640px)) / 2)) env(safe-area-inset-bottom);
   background: var(--nav-bg); border-top: 1px solid var(--border);
   -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px);
 }
@@ -265,6 +275,8 @@ details li { margin: 4px 0; }
 .spark.down polyline { stroke: var(--down); }
 .spark .base { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 .stat small { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.35; margin-top: 2px; }
+/* 좁은 폰: 세 칸 숫자에서 '%'가 다음 줄로 떨어지지 않게 여백·글자를 조금 줄여요 */
+@media (max-width: 380px) { .stats { gap: 6px; } .stat { padding: 10px 8px; } .stat b { font-size: 15px; } }
 .track-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .track-line > span:first-child { flex-basis: 100%; font-size: 13px; color: var(--text-secondary); }
 .track-line small { color: var(--text-muted); }
@@ -1023,6 +1035,8 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .wr-s .spark { height: 36px; }
 .wr-c { justify-self: end; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wr-list > .world-graph { margin: 0 0 8px; }
+/* 좁은 폰(접는 폰 바깥 화면·작은 폰): 작은 그래프 칸을 줄여 숫자가 '1,333…'처럼 잘리지 않게 */
+@media (max-width: 400px) { .wr { grid-template-columns: minmax(0, 1fr) 60px auto; gap: 8px; } }
 
 /* 주간 리포트 (리포트 화면 '주간' 탭) */
 .rp-tabs { margin-top: 0; }
@@ -1452,3 +1466,10 @@ details.help-sec[open] > summary::after { transform: rotate(90deg); }
 details.help-sec .guide-body { padding: 0 0 12px; }
 .help-tour { margin-top: 12px; width: 100%; min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .guide-spot, details.help-sec > summary::after { transition: none; } }
+
+/* 폰을 가로로 돌렸을 때(높이가 낮을 때): 위·아래 막대를 얇게 해서 내용이 더 보이게 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .top { padding-top: calc(4px + env(safe-area-inset-top)); padding-bottom: 4px; }
+  .nav button { flex-direction: row; gap: 6px; min-height: 40px; }
+  .nav svg { width: 20px; height: 20px; padding: 2px 8px; }
+}
