@@ -213,6 +213,18 @@ details li { margin: 4px 0; }
 .empty { color: var(--text-secondary); font-size: 14px; margin: 0; }
 .foot { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; }
 .foot p { margin: 4px 0; }
+.foot .fb-open { display: flex; width: 100%; margin: 4px 0 12px; min-height: 44px; }
+.foot .fb-open[hidden] { display: none; }
+
+/* 의견 보내기 화면 */
+.fb-field { display: block; margin-top: 12px; }
+.fb-field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary);
+  font: inherit; font-size: 16px; line-height: 1.5; padding: 10px 12px; resize: vertical; min-height: 140px; }
+.fb-count { margin: 4px 0 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.fb-send { width: 100%; min-height: 46px; font-size: 15px; }
+.fb-done { margin: 8px 0 0; color: var(--good-fg); font-weight: 600; }
+.fb-done.bad { color: var(--wait-fg); }
+.fb-steps { margin: 14px 0 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
 
 /* 아래쪽 화면 버튼 (홈·신호·성과·차트) */
 .nav {
