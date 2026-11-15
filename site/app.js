@@ -1529,6 +1529,12 @@ function weeklyCards() {
   const reg = ev.regime ? `<p class="wk-reg">🌡️ 경기 판정 <b>${esc(ev.regime)}</b>${ev.prev_regime && ev.prev_regime !== ev.regime ? ` <span class="badge bad">${esc(ev.prev_regime)}에서 바뀜</span>` : ` <span class="badge">그대로</span>`}${(ev.warns || []).length ? `<br><small class="muted">⚠️ ${esc(ev.warns.join(", "))}</small>` : ""}</p>` : "";
   const evCard = `<section class="card"><h2>⚡ 이번 주 사건 <small>지수 급변·발표 결과</small></h2>
     ${tl.length ? `<ol class="wk-tl">${tl.map((x) => `<li><time>${wkDay(x.t)}${x.t.length > 10 ? `<br>${esc(x.t.slice(11, 16))}` : ""}</time><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ol>` : `<p class="empty">큰 사건 없음</p>`}${reg}</section>`;
+  // 5-2. 이번 주 이슈: 한 주 동안 언론 여러 곳이 다룬 핫 뉴스 (경영자 사임·스캔들처럼 숫자 없는 사건도, 사용자 2026-11-15)
+  const iss = (ev.issues || {})[market] || [];
+  const issLink = (x) => /^https:\/\//.test(x.link || "") ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title);
+  const issCard = ev.issues ? `<section class="card"><h2>🔥 이번 주 이슈 <small>${flag} 언론 여러 곳이 다룬 뉴스</small></h2>
+    ${iss.length ? `<ol class="wk-tl">${iss.map((x) => `<li><time>${x.ongoing ? "지난주<br>부터" : wkDay(x.since || "")}</time><div>${x.topic ? `<span class="badge ${x.topic === "기업·경영자" ? "bad" : ""}">${esc(x.topic)}</span> ` : ""}${issLink(x)}
+      <small>언론 ${x.sources}곳${x.source ? ` · ${esc(x.source)}` : ""}${x.more ? ` · 비슷한 기사 묶음 ${x.more + 1}개` : ""}</small></div></li>`).join("")}</ol>` : `<p class="empty">이번 주엔 여러 언론이 같이 다룬 뉴스가 없어요</p>`}</section>` : "";
   // 6. 다음 주: 요일별 묶음 + 종류 표시
   const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"] };
   const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
@@ -1540,7 +1546,7 @@ function weeklyCards() {
     ${items.length ? Object.keys(byDay).sort().map((d) => `<div class="wk-dayg"><p class="wk-dh">${wkDay(d)}</p><ul>${byDay[d].map((x) =>
       `<li><span class="badge ${TAG[x.k] ? TAG[x.k][1] : ""}">${TAG[x.k] ? TAG[x.k][0] : "일정"}</span><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ul></div>`).join("")
     : `<p class="empty">아직 잡힌 큰 일정 없음</p>`}</section>`;
-  return [head, secCard, evCard, nxCard, restCard,
+  return [head, secCard, evCard, issCard, nxCard, restCard,
     `<section class="card"><p class="muted" style="margin:0">토요일 아침에 한 주를 묶어 텔레그램으로도 보내요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.
       위 국장·미장 탭으로 업종을 바꿔 봐요.</p></section>`];
 }

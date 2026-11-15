@@ -3,10 +3,12 @@
   1. 이번 주 지수   세계 지수·환율·금리·원자재의 1주 등락, 코스피·S&P500은 요일별로
   2. 이번 주 업종   국장·미장 업종 5일 흐름 상위·하위
   3. 이번 주 사건   지수 급변, 큰 발표 결과, 경기 판정이 바뀌었는지
+     이번 주 이슈   한 주 동안 언론 여러 곳이 다룬 🔥 핫 뉴스 (경영자 사임·스캔들 같은 숫자 없는 사건도, 사용자 2026-11-15)
   4. 다음 주 일정   월~금 큰 발표·금리 결정·옵션 만기·대형주/관심종목 실적
 
 자료는 다른 워크플로가 이미 저장한 파일만 읽어요 (새로 받지 않아요, 유료 API 안 씀):
   paper/world.json, macro.json, events.json, calendar.json, <시장>/daily.json
+  + 장중 뉴스 news.json (live 브랜치, 워크플로가 받아 --news로 넘겨요. 없으면 이슈 칸만 비어요)
 결과: paper/weekly.json (앱 리포트 화면 '주간' 탭) + 텔레그램 한 통 (메시지함에도 저장)
 사고팔기 판단은 안 해요. 급등락 종목은 넣지 않아요 (사용자 2026-10-24 '급등락 종목은 빼자').
 
@@ -18,6 +20,7 @@ import datetime as dt
 import json
 import pathlib
 
+import news as newsmod
 import tgfmt
 from report_desks import FLAGS, KST, MARKET_NAMES, PAPER, BIG_CAP, pct, read_json, world_items
 
@@ -26,12 +29,14 @@ WEEK_FACTS = ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 
               "미국 10년 국채 금리", "한국 국고채 3년 금리", "VIX 공포 지수", "WTI 유가", "금 (온스)", "비트코인"]
 DAY_INDEX = {"kr": "코스피", "us": "S&P500"}
 CAL_KINDS = ("big", "rate", "expiry")
+ISSUE_N = 6        # 시장마다 이번 주 이슈 몇 개
+ISSUE_SHARE = 2    # 핵심 낱말이 이만큼 겹치면 같은 사건으로 묶어요 (news.HOT_SHARE와 같게)
 
 
-def load_inputs(paper=PAPER):
+def load_inputs(paper=PAPER, news=None):
     paper = pathlib.Path(paper)
     events = read_json(paper / "events.json") or {}
-    return dict(world=read_json(paper / "world.json") or {}, macro=read_json(paper / "macro.json") or {},
+    return dict(news=(read_json(pathlib.Path(news)) if news else None) or {}, world=read_json(paper / "world.json") or {}, macro=read_json(paper / "macro.json") or {},
                 events=events.get("events") or [], shocks=events.get("shocks") or [],
                 calendar=(read_json(paper / "calendar.json") or {}).get("events") or [],
                 signals={mk: read_json(paper / mk / "daily.json") or {} for mk in ("kr", "us")})
@@ -94,6 +99,35 @@ def event_desk(events, shocks, macro, mon, fri):
                 warns=[s["name"] for s in macro.get("signals") or [] if s.get("warn")])
 
 
+def issue_desk(news, mon, fri):
+    """이번 주 이슈: news.json의 한 주 핫 뉴스 기록(week, 없으면 hot)에서 이번 주(월~토 아침)에 다룬 것.
+    같은 사건(핵심 낱말 겹침)은 언론 수가 많은 쪽 하나로, 언론 많은 순으로 ISSUE_N개."""
+    start, end = mon.isoformat(), (fri + dt.timedelta(days=1)).isoformat() + "T99"
+    log = news.get("week") or news.get("hot") or {}
+    out = {}
+    for mk in ("kr", "us"):
+        items = [x for x in log.get(mk) or [] if (x.get("at") or "") >= start and (x.get("since") or x.get("at") or "") <= end]
+        items.sort(key=lambda x: (x.get("sources") or 0, x.get("at") or ""), reverse=True)
+        keep = []
+        for x in items:
+            k = set(x.get("key") or [])
+            same = next((y for y in keep if len(k & set(y["key"])) >= ISSUE_SHARE), None)
+            if same:
+                same["more"] += 1
+                same["since"] = min(same["since"], x.get("since") or x.get("at") or "")
+                continue
+            keep.append(dict(title=x["title"], source=x.get("source"), link=x.get("link"), topic=newsmod.topic(x["title"]),  # 주제는 지금 규칙으로 다시
+                             sources=x.get("sources") or 0, since=x.get("since") or x.get("at"), at=x.get("at"),
+                             key=list(k), more=0))
+        for y in keep:  # 지난주부터 이어진 사건은 이번 주 월요일로 놓고 '지난주부터' 표시
+            y["ongoing"] = (y["since"] or "") < start
+            if y["ongoing"]:
+                y["since"] = start
+        top = sorted(keep[:ISSUE_N], key=lambda y: (y["since"] or "", -y["sources"]))  # 고른 뒤엔 날짜 순 (시간 줄로 보여요)
+        out[mk] = [dict((k, v) for k, v in y.items() if k != "key") for y in top]
+    return out
+
+
 def next_week(events, calendar, nmon, nfri):
     start, end = nmon.isoformat(), nfri.isoformat()
     big = [dict(date=e["date"], time=(e.get("at") or "")[11:16], flag=e.get("flag") or "", title=e.get("ko") or e.get("title"),
@@ -134,6 +168,7 @@ def build(inputs, today=None):
     idx = index_desk(inputs["world"], mon, fri)
     sectors = sector_week(inputs["signals"])
     ev = event_desk(inputs["events"], inputs["shocks"], inputs["macro"], mon, fri)
+    ev["issues"] = issue_desk(inputs.get("news") or {}, mon, fri)
     nxt = next_week(inputs["events"], inputs["calendar"], nmon, nfri)
     return dict(day=today.isoformat(), week=[mon.isoformat(), fri.isoformat()],
                 generated=dt.datetime.now(KST).isoformat(timespec="minutes"),
@@ -172,6 +207,10 @@ def format_text(r):
         rows.append(f"- 경기 판정 {ev['regime']}" + (f" (전엔 {ev['prev_regime']})" if changed else " (그대로)")
                    + (f", 경고 {ev['score']}/{ev['total']}" if ev["total"] else "") + (f": {', '.join(ev['warns'])}" if ev["warns"] else ""))
     out += ["", "[이번 주 사건] 지수 급변·발표 결과·경기"] + (rows or ["- 큰 사건 없음"])
+    for mk, xs in (ev.get("issues") or {}).items():
+        if xs:
+            out += ["", f"[이번 주 이슈] {FLAGS[mk]} {MARKET_NAMES[mk]} 언론 여러 곳이 다룬 뉴스"]
+            out += [f"- 🔥 {'지난주부터' if x['ongoing'] else md(x['since'])} {x['title']} (언론 {x['sources']}곳)" for x in xs]
     n = r["next"]
     out += ["", f"[다음 주 일정] {md(n['start'])}~{md(n['end'])}"]
     rows = [(e["date"], f"{md(e['date'])} {e['time']} {e['flag']} {e['title']}" + (f" (예상 {e['forecast']})" if e["forecast"] else ""))
@@ -203,9 +242,10 @@ def send(r):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--paper", type=pathlib.Path, default=PAPER)
+    parser.add_argument("--news", type=pathlib.Path, help="장중 뉴스 news.json (이번 주 이슈). 없거나 깨져도 괜찮아요")
     parser.add_argument("--dry-run", action="store_true", help="보내지 않고 출력만")
     args = parser.parse_args()
-    r = build(load_inputs(args.paper))
+    r = build(load_inputs(args.paper, args.news if args.news and args.news.exists() else None))
     (args.paper / "weekly.json").write_text(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print("\n".join(r["headline"]) + "\n\n" + format_text(r))
     if not args.dry_run and not send(r):

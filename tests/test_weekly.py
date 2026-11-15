@@ -70,3 +70,23 @@ def test_empty_inputs():
     r = wk.build(dict(world={}, macro={}, events=[], shocks=[], calendar=[], signals={"kr": {}, "us": {}}), today=SAT)
     t = wk.format_text(r)
     assert "큰 사건 없음" in t and "아직 잡힌 큰 일정 없음" in t
+
+
+def test_issues_from_hot_news():
+    """이번 주 이슈: 한 주 핫 뉴스 기록에서 이번 주 것만, 같은 사건은 하나로 (사용자 2026-11-15 '오너리스크가 왜 안 떠')."""
+    news = dict(week=dict(kr=[
+        dict(title="젠슨 황 사임 스캔들", at="2026-10-22T10:00+09:00", since="2026-10-15T09:00+09:00", sources=13,
+             key=["젠슨", "사임", "스캔들"], topic="기업·경영자", link="https://a"),
+        dict(title="젠슨 황 스캔들 후폭풍", at="2026-10-23T10:00+09:00", since="2026-10-22T09:00+09:00", sources=5,
+             key=["젠슨", "스캔들"], topic="기업·경영자"),
+        dict(title="환율 급등", at="2026-10-21T10:00+09:00", since="2026-10-21T09:00+09:00", sources=4, key=["환율"], topic="환율"),
+        dict(title="지난주 뉴스", at="2026-10-14T10:00+09:00", since="2026-10-13T09:00+09:00", sources=20, key=["예전"])]))
+    inp = dict(inputs(), news=news)
+    iss = wk.build(inp, today=SAT)["events"]["issues"]
+    assert [x["title"] for x in iss["kr"]] == ["젠슨 황 사임 스캔들", "환율 급등"]  # 날짜 순, 같은 사건 묶음, 지난주 끝난 건 빼요
+    assert iss["kr"][0]["topic"] == "기업·경영자"  # 주제는 지금 규칙으로 다시 붙여요
+    assert iss["kr"][0]["more"] == 1 and iss["kr"][0]["ongoing"] and iss["kr"][0]["since"] == "2026-10-19"
+    assert iss["us"] == []
+    t = wk.format_text(wk.build(inp, today=SAT))
+    assert "[이번 주 이슈] 🇰🇷" in t and "🔥 지난주부터 젠슨 황 사임 스캔들 (언론 13곳)" in t
+    assert wk.build(inputs(), today=SAT)["events"]["issues"] == {"kr": [], "us": []}  # 뉴스 파일 없어도 괜찮아요

@@ -72,3 +72,11 @@ def test_hot_needs_three_sources_and_keeps_until_old():
 def test_words_drop_josa_and_common():
     assert news.words("트럼프가 관세를 올렸다…증시 급락") == {"트럼프가", "관세", "올렸다"}
     assert "국제유가" in news.words("국제유가는 23주째 상승")
+
+
+def test_topic_owner_risk():
+    """경영자 개인 일은 금리·관세 낱말이 같이 있어도 '기업·경영자' (사용자 2026-11-15)."""
+    assert news.topic("젠슨황 스캔들 APEC 미중 정상회담 변수...무역은 협력") == "기업·경영자"
+    assert news.topic("[젠슨황 퇴진] 트럼프, 반도체 수출통제 풀어주고") == "기업·경영자"
+    assert news.topic("Nvidia CEO steps down") == "기업·경영자"
+    assert news.topic("한은 기준금리 동결") == "금리"
