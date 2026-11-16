@@ -116,3 +116,25 @@ def test_fund_table_keeps_screen_fields_only(tmp_path):
     assert t["grade"] == ["B", 3, 4] and t["target"]["n"] == 36 and t["events"]["earn"] == "2026-10-28"
     assert "annual" not in t and "loss" not in t and "financial" not in t and t["per"] == 11.8
     assert db.fund_table(tmp_path / "없음.json") == {}
+
+
+def test_fresh_calendar_uses_latest_events_for_big_rows(tmp_path):
+    # 달력은 아침에 만들었고, 그 뒤 들어온 다음 주 일정(연준 의장 연설)이 홈 칸과 같게 달력에도 들어가야 해요
+    import datetime as dt
+    cal = dict(releases=[dict(at="2026-11-17T22:30+09:00", rid=9), dict(at="2026-11-25T22:30+09:00", rid=54)],
+               events=[dict(date="2026-11-17", market="us", kind="big", title="미국 소매판매", big=False, note="한국시간 22:30 발표"),
+                       dict(date="2026-11-17", market="us", kind="earn", title="홈디포 실적 발표", code="HD"),
+                       dict(date="2026-11-25", market="us", kind="big", title="미국 PCE 물가 (연준이 보는 물가)", big=True, note="한국시간 22:30 발표")])
+    (tmp_path / "calendar.json").write_text(json.dumps(cal))
+    ev = [dict(id="a", at="2026-11-17T02:00+09:00", date="2026-11-17", country="us", flag="🇺🇸", title="Fed Chairman Warsh Speaks",
+               ko="연준 의장 연설", group="rate", tier1=False),
+          dict(id="b", at="2026-11-17T22:30+09:00", date="2026-11-17", country="us", flag="🇺🇸", title="Retail Sales m/m",
+               ko="소매판매 전월 대비", group="growth", tier1=False)]
+    (tmp_path / "events.json").write_text(json.dumps(dict(events=ev)))
+    got = dashboard.fresh_calendar(tmp_path, dt.date(2026, 11, 15))
+    big = [(e["date"], e["title"], e["big"], e["note"]) for e in got if e["kind"] == "big"]
+    assert big == [("2026-11-17", "연준 의장 연설", False, "한국시간 02:00 발표"),
+                   ("2026-11-17", "소매판매 전월 대비", False, "한국시간 22:30 발표"),
+                   ("2026-11-25", "미국 PCE 물가 (연준이 보는 물가)", True, "한국시간 22:30 발표")]
+    assert any(e["kind"] == "earn" for e in got)
+    assert dashboard.build(tmp_path)["calendar"]
