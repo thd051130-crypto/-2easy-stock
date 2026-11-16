@@ -1,0 +1,8 @@
+{
+  "_설명": "API 키 만료일 적는 곳. expires에 \"2027-11-15\"처럼 날짜를 넣으면 30·14·7·3·1일 전과 당일에 텔레그램으로 알려요. 모르면 null로 두세요 (막힘 감지는 날짜 없이도 돼요). 키 값은 여기에 절대 적지 마세요.",
+  "keys": {
+    "DART_API_KEY": {"name": "DART 키", "expires": null, "uses": "공시 알림", "renew": "opendart.fss.or.kr → 로그인 → 인증키 관리"},
+    "ECOS_API_KEY": {"name": "ECOS 키", "expires": null, "uses": "국고채 3년·10년 금리", "renew": "ecos.bok.or.kr/api → 로그인 → 인증키 신청/관리"},
+    "KIS_APP_KEY": {"name": "한국투자 앱키", "expires": null, "uses": "실시간 시세 감시 (지금 안 씀)", "renew": "apiportal.koreainvestment.com → KIS Developers → 앱키 재발급"}
+  }
+}

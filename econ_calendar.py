@@ -7,6 +7,9 @@
   - 만기일: 규칙으로 계산 (국장 매달 둘째 목요일, 미장 매달 셋째 금요일, 3·6·9·12월은 선물까지 같이 만기).
     거래소 휴일이면 하루 앞당겨질 수 있어요
   - 종목 실적 발표일·배당락: fundamentals.py가 매주 받는 야후 자료 (감시 종목·텔레그램으로 넣은 종목)
+  - 초대형주 실적 (엔비디아·테슬라 등 감시 종목 밖, BIG_EARN): 야후에서 실적 날짜만 매일 받아요
+  - ⚠️ 리스크 일정 (ELS 대량 만기·보호예수 해제처럼 숫자 발표는 아니지만 증시에 부담인 일): paper/risk_events.json에
+    사람이 적어 둔 것. 7일 전·하루 전에 텔레그램으로 미리 알려요 (사용자 2026-11-15 "리스크 있는 일 있으면 미리 알려줘")
   - 미국 물가(CPI)·고용·PCE·GDP 같은 큰 발표: 몇 달 치 날짜는 FRED(세인트루이스 연준) 발표 일정표
     (fred.stlouisfed.org/releases/calendar, 미국 중부 시간 → 한국시간). 미국 노동부 홈페이지는 자동 접속을 막아서 FRED로 받아요.
     이번 주 일정은 big_events.py가 받아 둔 paper/events.json(예상치 포함)이 같은 시각 FRED 일정 대신 들어가요.
@@ -52,6 +55,11 @@ YEARS_BACK = 1   # 작년 1월부터 (앱 달력에서 지난 일정도 연하�
 YEARS_AHEAD = 1  # 내년 12월까지 (미국 발표·FOMC는 올라온 해까지만 있어요)
 WEEK = 7      # 텔레그램 주간 일정 범위
 EARN_MAX = 12  # 텔레그램 주간 일정에 넣을 실적 발표 종목 수
+# 감시 종목(fundamentals)엔 없지만 실적 하나로 지수를 흔드는 초대형주. 실적 날짜만 받아요
+BIG_EARN = {"NVDA": "엔비디아", "TSLA": "테슬라", "AVGO": "브로드컴", "AMD": "AMD", "NFLX": "넷플릭스", "COST": "코스트코",
+            "MU": "마이크론", "TSM": "TSMC", "ASML": "ASML", "PLTR": "팔란티어", "CRM": "세일즈포스", "ADBE": "어도비"}
+RISK_FILE = "risk_events.json"
+RISK_ALERT_DAYS = (7, 1)  # 리스크 일정 며칠 전에 텔레그램으로 알릴지
 
 
 def text_of(html):
@@ -202,7 +210,59 @@ def stock_events(paper, start, end):
     return out
 
 
-def build(today, fomc, bok, paper, releases=()):
+def big_earn(old=(), fetch=None):
+    """초대형주 다음 실적 날짜 [{date, code, name, cap}]. 못 받은 종목은 지난번 것."""
+    if fetch is None:
+        import yfinance as yf
+
+        def fetch(code):
+            info = yf.Ticker(code).info or {}
+            ts = info.get("earningsTimestamp") or info.get("earningsTimestampStart")
+            return ts, info.get("marketCap")
+    prev = {x["code"]: x for x in old or []}
+    out = []
+    for code, name in BIG_EARN.items():
+        try:
+            ts, cap = fetch(code)
+            if not ts:
+                raise ValueError("실적 날짜 없음")
+            out.append(dict(code=code, name=name, cap=cap,
+                            date=f"{dt.datetime.fromtimestamp(ts, ZoneInfo('America/New_York')).date():%Y-%m-%d}"))
+        except Exception as e:
+            print(f"{name} 실적 날짜를 못 받았어요 (지난번 것을 써요): {e!r}")
+            if code in prev:
+                out.append(prev[code])
+    return out
+
+
+def risk_events(paper, start, end):
+    """paper/risk_events.json의 ⚠️ 리스크 일정 → 달력 줄 (kind risk)."""
+    try:
+        items = json.loads((pathlib.Path(paper) / RISK_FILE).read_text(encoding="utf-8")).get("events") or []
+    except (OSError, ValueError):
+        return []
+    return [dict(date=x["date"], market=x.get("market") or "kr", kind="risk", title=x["title"], note=x.get("note") or "",
+                 **({"src": x["src"]} if x.get("src") else {}))
+            for x in items if x.get("date") and x.get("title") and f"{start:%Y-%m-%d}" <= x["date"] <= f"{end:%Y-%m-%d}"]
+
+
+def risk_alert(events, today, days=RISK_ALERT_DAYS):
+    """⚠️ 리스크 일정이 딱 days일 뒤면 텔레그램 글, 없으면 None."""
+    rows = []
+    for e in events:
+        if e["kind"] != "risk":
+            continue
+        left = (dt.date.fromisoformat(e["date"]) - today).days
+        if left in days:
+            d = dt.date.fromisoformat(e["date"])
+            rows.append(f"- {d:%m.%d}({'월화수목금토일'[d.weekday()]}) {'내일' if left == 1 else f'{left}일 뒤'} · {e['title']}"
+                        + (f"\n  {e['note']}" if e.get("note") else ""))
+    if not rows:
+        return None
+    return "\n".join(["[⚠️ 리스크 일정 미리 알림]", *rows, "증시에 부담이 될 수 있는 일정이에요. 참고용이고 사고팔기 판단은 안 해요."])
+
+
+def build(today, fomc, bok, paper, releases=(), earn=()):
     start, end = dt.date(today.year - YEARS_BACK, 1, 1), dt.date(today.year + YEARS_AHEAD, 12, 31)
     ev = []
     for x in fomc:
@@ -216,8 +276,11 @@ def build(today, fomc, bok, paper, releases=()):
 
     week = big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
     ev += week + release_events(releases, start, end, {(e["date"], e["note"]) for e in week})
-    ev += expiries(start, end) + stock_events(paper, start, end)
-    ev.sort(key=lambda x: (x["date"], x["kind"] not in ("big", "rate"), -(x.get("cap") or 0)))
+    ev += expiries(start, end) + stock_events(paper, start, end) + risk_events(paper, start, end)
+    have = {e.get("code") for e in ev if e["kind"] == "earn"}
+    ev += [dict(date=x["date"], market="us", kind="earn", title=f"{x['name']} 실적 발표", code=x["code"], cap=x.get("cap"), mine=False)
+           for x in earn if x["code"] not in have and f"{start:%Y-%m-%d}" <= x["date"] <= f"{end:%Y-%m-%d}"]
+    ev.sort(key=lambda x: (x["date"], x["kind"] not in ("risk", "big", "rate"), -(x.get("cap") or 0)))
     return ev
 
 
@@ -234,13 +297,15 @@ def week_text(events, today, limit=EARN_MAX):
     for e in sorted(big + stocks, key=lambda e: e["date"]):
         d = dt.date.fromisoformat(e["date"])
         star = " ⭐" if e.get("mine") else ""
-        mark = "🚨 " if e.get("big") else ""
-        when = f" ({e['note']})" if e["kind"] == "big" else ""
+        mark = "🚨 " if e.get("big") else "⚠️ " if e["kind"] == "risk" else ""
+        when = f" ({e['note']})" if e["kind"] in ("big", "risk") and e.get("note") else ""
         lines.append(f"- {d:%m.%d}({days[d.weekday()]}) {flag.get(e['market'], '🌐')} {mark}{e['title']}{when}{star}")
     if len(lines) == 2:
         lines.append("- 이번 주엔 큰 일정이 없어요.")
     if any(e.get("big") for e in big):
         lines.append("🚨 지수가 크게 움직일 수 있는 발표예요. 전날과 발표 뒤에 따로 알려 드려요.")
+    if any(e["kind"] == "risk" for e in big):
+        lines.append("⚠️ 숫자 발표는 아니지만 증시에 부담이 될 수 있는 일정이에요. 7일 전·하루 전에 다시 알려 드려요.")
     if any(e.get("mine") for e in stocks):
         lines.append("⭐ 텔레그램으로 넣은 관심종목이에요.")
     return "\n".join(lines)
@@ -270,9 +335,11 @@ def main():
         releases = fetch_fred(today) or releases
     except Exception as e:
         print(f"FRED 발표 일정을 못 받았어요 (지난번 날짜를 써요): {e!r}")
-    events = build(today, fomc, bok, args.paper, releases)
+    earn = big_earn(old.get("big_earn"))
+    events = build(today, fomc, bok, args.paper, releases, earn)
     args.save.parent.mkdir(parents=True, exist_ok=True)
-    payload = dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), fomc=fomc, bok=bok, releases=releases, events=events)
+    payload = dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), fomc=fomc, bok=bok, releases=releases,
+                   big_earn=earn, events=events)
     args.save.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     text = week_text(events, today)
     print(text)
@@ -281,6 +348,13 @@ def main():
 
         if not send_telegram(text, collapse=False):
             raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
+    alert = risk_alert(events, today)
+    if alert:
+        print(alert)
+        if not args.dry_run:
+            from realtime_monitor import send_telegram
+
+            send_telegram(alert, collapse=False)  # 못 보내도 달력 저장은 그대로
 
 
 if __name__ == "__main__":

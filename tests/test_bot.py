@@ -159,7 +159,9 @@ def test_run_answers_only_my_chat_and_saves(tmp_path):
     ])
     b = make(tmp_path)
     assert tb.run(tg, "111", b) == 13
-    assert len(tg.sent) == 1 and tg.sent[0][0] == "111" and "카카오(035720" in tg.sent[0][1]
+    assert tg.sent[0][0] == "111" and "카카오(035720" in tg.sent[0][1]
+    assert tg.sent[1] == ("111", "[새 의견] 이름 없음\n관심 카카오뱅크") and tg.sent[2][0] == 999  # 남의 글은 의견으로 옮겨요
+    assert len(tg.sent) == 3
     assert json.loads((tmp_path / "bot.json").read_text()) == dict(username="Automarmae_bot")
     assert [e["code"] for e in json.loads((tmp_path / "watch.json").read_text())["kr"]] == ["035720"]
     assert tb.run(FakeTelegram([]), "111", make(tmp_path)) is None
@@ -177,3 +179,40 @@ def test_output_appends_to_github_output(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_OUTPUT", str(path))
     tb.output(offset=13, changed="true")
     assert path.read_text() == "offset=13\nchanged=true\n"
+
+
+def test_feedback_from_other_chats_is_forwarded_not_run(tmp_path):
+    other = lambda uid, text, **kw: dict(chat=dict(id=uid, type=kw.get("type", "private")),
+                                         **{"from": dict(id=uid, first_name="민수", username="ms")}, text=text)
+    ups = [dict(update_id=20 + i, message=m) for i, m in enumerate([
+        other(999, "/start"),
+        other(999, tb.FB_MARK + " · 수정 요청\n차트 글씨가 작아요"),
+        other(999, "관심 카카오"),            # 남이 보낸 명령은 처리하지 않고 의견으로만
+        other(999, "셋째"),
+        other(999, "넷째는 막혀요"),
+        other(555, "단체방", type="group"),
+    ])]
+    tg = FakeTelegram(ups)
+    b = make(tmp_path)
+    tb.run(tg, "111", b)
+    mine = [t for c, t in tg.sent if c == "111"]
+    theirs = [t for c, t in tg.sent if c == 999]
+    assert len(mine) == 3 and mine[0].startswith("[새 의견] 민수 (@ms)") and "차트 글씨가 작아요" in mine[0]
+    assert tb.FB_MARK not in mine[0] and "관심 카카오" in mine[1]
+    assert theirs[0] == tb.FB_HELLO and "3통까지" in theirs[-1] and len(theirs) == 5
+    assert not b.watch.get("kr")                          # 명령은 안 돌았어요
+    saved = json.loads((tmp_path / "feedback.json").read_text())
+    assert saved["total"] == 3 and "999" not in json.dumps(saved) and "민수" not in json.dumps(saved)
+
+
+def test_feedback_daily_total_cap(tmp_path, monkeypatch):
+    monkeypatch.setattr(tb, "FB_PER_DAY", 2)
+    b = make(tmp_path)
+    msg = lambda uid: dict(chat=dict(id=uid, type="private"), text="의견")
+    got = [b.take_feedback(msg(u))[1] for u in (1, 2, 3)]
+    assert got[0] and got[1] and got[2] is None
+
+
+def test_own_feedback_text_is_preview(tmp_path):
+    r = make(tmp_path).handle(tb.FB_MARK + " · 의견\n좋아요")
+    assert "이렇게 전달돼요" in r and "좋아요" in r

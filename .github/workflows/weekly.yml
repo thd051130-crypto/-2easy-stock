@@ -33,8 +33,10 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      - name: 이번 주 뉴스 (live 브랜치 news.json)
+        run: git fetch -q --depth=1 origin live && git show FETCH_HEAD:news.json > "$RUNNER_TEMP/news.json" || echo "뉴스 없음 (이슈 칸만 비어요)"
       - name: 주간 리포트
-        run: python weekly.py
+        run: python weekly.py --news "$RUNNER_TEMP/news.json"
       - name: commit
         run: |
           git config user.name "github-actions[bot]"
