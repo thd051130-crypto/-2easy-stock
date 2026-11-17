@@ -69,6 +69,26 @@ def fund_table(path):
     return out
 
 
+
+def fresh_calendar(paper_dir, today=None):
+    """달력(calendar.json, 하루 한 번 06:50) 중 큰 발표 줄만 지금 events.json으로 다시 만들어요.
+    events.json은 15분마다 새로 받아서(다음 주 일정은 일요일 오후부터), 그대로 두면 홈 '큰 발표' 칸엔 있는
+    연준 의장 연설이 달력엔 빠지거나 이름·등급이 달라져요 (사용자 2026-11-15 "연준 발표내용 서로 다른데 통일해")."""
+    import econ_calendar
+
+    cal = read_json(paper_dir / "calendar.json") or {}
+    ev = cal.get("events")
+    if not ev:
+        return ev
+    today = today or dt.datetime.now(KST).date()
+    start = dt.date(today.year - econ_calendar.YEARS_BACK, 1, 1)
+    end = dt.date(today.year + econ_calendar.YEARS_AHEAD, 12, 31)
+    try:
+        big = econ_calendar.big_rows(paper_dir, cal.get("releases") or [], start, end)
+    except (KeyError, TypeError, ValueError):
+        return ev
+    return sorted([e for e in ev if e.get("kind") != "big"] + big, key=econ_calendar.sort_key)
+
 def build(paper_dir):
     markets = {}
     watch, alerts = watchlist.load_watch(paper_dir), watchlist.load_alerts(paper_dir)["active"]
@@ -86,7 +106,7 @@ def build(paper_dir):
     return dict(built=dt.datetime.now(KST).isoformat(timespec="minutes"), markets=markets, fx=fx,
                 bot=watchlist.bot_username(paper_dir), health=read_json(paper_dir / "health.json"),
                 macro=read_json(paper_dir / "macro.json"), policies=policies.payload(paper_dir),
-                calendar=(read_json(paper_dir / "calendar.json") or {}).get("events"), events=read_json(paper_dir / "events.json"),
+                calendar=fresh_calendar(paper_dir), events=read_json(paper_dir / "events.json"),
                 world=read_json(paper_dir / "world.json"),
                 report=read_json(paper_dir / "report.json"), weekly=read_json(paper_dir / "weekly.json"),
                 # 투자 공부: 날마다 쌓는 사례 일지(learn_cases.py)와 증권사 무료 리포트 목록(reading.py)

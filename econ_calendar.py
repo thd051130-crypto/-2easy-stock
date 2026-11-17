@@ -262,6 +262,20 @@ def risk_alert(events, today, days=RISK_ALERT_DAYS):
     return "\n".join(["[⚠️ 리스크 일정 미리 알림]", *rows, "증시에 부담이 될 수 있는 일정이에요. 참고용이고 사고팔기 판단은 안 해요."])
 
 
+def big_rows(paper, releases, start, end):
+    """큰 발표 줄 (kind big): 이번 주는 events.json(홈 '큰 발표' 칸과 같은 자료), 나머지는 FRED 일정.
+    dashboard.py도 배포 때마다 이걸로 다시 만들어요 — 홈 칸과 달력이 늘 같은 이름·시각·등급이 되게
+    (사용자 2026-11-15 "연준 발표내용 서로 다른데 통일해")."""
+    import big_events
+
+    week = big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
+    return week + release_events(releases, start, end, {(e["date"], e["note"]) for e in week})
+
+
+def sort_key(e):
+    return (e["date"], e["kind"] not in ("risk", "big", "rate"), -(e.get("cap") or 0))
+
+
 def build(today, fomc, bok, paper, releases=(), earn=()):
     start, end = dt.date(today.year - YEARS_BACK, 1, 1), dt.date(today.year + YEARS_AHEAD, 12, 31)
     ev = []
@@ -272,15 +286,12 @@ def build(today, fomc, bok, paper, releases=(), earn=()):
     for d in bok:
         if f"{start:%Y-%m-%d}" <= d <= f"{end:%Y-%m-%d}":
             ev.append(dict(date=d, market="kr", kind="rate", title="한국 금리 결정 (금통위)", note="보통 오전 10시쯤 발표"))
-    import big_events
-
-    week = big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
-    ev += week + release_events(releases, start, end, {(e["date"], e["note"]) for e in week})
+    ev += big_rows(paper, releases, start, end)
     ev += expiries(start, end) + stock_events(paper, start, end) + risk_events(paper, start, end)
     have = {e.get("code") for e in ev if e["kind"] == "earn"}
     ev += [dict(date=x["date"], market="us", kind="earn", title=f"{x['name']} 실적 발표", code=x["code"], cap=x.get("cap"), mine=False)
            for x in earn if x["code"] not in have and f"{start:%Y-%m-%d}" <= x["date"] <= f"{end:%Y-%m-%d}"]
-    ev.sort(key=lambda x: (x["date"], x["kind"] not in ("risk", "big", "rate"), -(x.get("cap") or 0)))
+    ev.sort(key=sort_key)
     return ev
 
 
