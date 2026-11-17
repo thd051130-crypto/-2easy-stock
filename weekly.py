@@ -21,6 +21,7 @@ import json
 import pathlib
 
 import news as newsmod
+import report_archive
 import tgfmt
 from report_desks import FLAGS, KST, MARKET_NAMES, PAPER, BIG_CAP, pct, read_json, world_items
 
@@ -247,6 +248,7 @@ def main():
     args = parser.parse_args()
     r = build(load_inputs(args.paper, args.news if args.news and args.news.exists() else None))
     (args.paper / "weekly.json").write_text(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    report_archive.save(args.paper, "weekly", r)  # 지난 리포트 보관함 (앱 '📅 지난 리포트' 달력)
     print("\n".join(r["headline"]) + "\n\n" + format_text(r))
     if not args.dry_run and not send(r):
         raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")

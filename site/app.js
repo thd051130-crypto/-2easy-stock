@@ -523,7 +523,7 @@ const VIEWS = {
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
   // 맨 위 얇은 지수 바는 세계 지수가 돌아가며 보이고, 누르면 세계 지수 화면(한 겹 위)이 열려요 (사용자 2026-10-24)
   home: (d) => [worldTicker(), bigEventsCard(), marketStatusCard(), worldHomeCard(), homeMoreCard(d), homeReportCard()],
-  report: (d) => [rpTabsBar(), ...(rpTabNow() === "week" ? weeklyCards() : reportCards(d))],
+  report: (d) => [rpTabsBar(), ...(rpTabNow() === "past" ? pastCards(d) : rpTabNow() === "week" ? weeklyCards() : reportCards(d))],
   watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
   tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
@@ -685,7 +685,7 @@ function render() {
   foldNotes(app);  // 설명 글씨는 바로 접어요. 나중에 접히면 위 칸이 줄어 화면이 밀려요 (업종 버튼 누를 때 튀던 이유)
   app.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
   app.querySelectorAll("[data-rp-week]").forEach((b) => b.addEventListener("click", () => { rpTab = "week"; go("report"); }));
-  if (screen === "report") bindRpTabs();
+  if (screen === "report") { bindRpTabs(); if (rpTabNow() === "past") bindPast(); }
   app.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", back));
   if (screen === "tools") {
     keepRow($(".perf-tabs", app), "tools");
@@ -1573,15 +1573,110 @@ function weeklyFresh() {
   return age >= 0 && age < 3;
 }
 function rpTabNow() {
+  if (rpTab === "past" && DATA.reports_n) return "past";
   if (!DATA.weekly) return "day";
-  if (rpTab) return rpTab;
+  if (rpTab && rpTab !== "past") return rpTab;
   return weeklyFresh() || !DATA.report ? "week" : "day";
 }
 function rpTabsBar() {
-  if (!DATA.weekly) return "";
+  const tabs = [["day", "📰 오늘의 리포트"], ...(DATA.weekly ? [["week", "🗞 주간 리포트"]] : []), ...(DATA.reports_n ? [["past", "📅 지난 리포트"]] : [])];
+  if (tabs.length < 2) return "";
   const cur = rpTabNow();
-  return `<nav class="chips rp-tabs" aria-label="리포트 고르기">${[["day", "📰 오늘의 리포트"], ["week", "🗞 주간 리포트"]].map(([k, label]) =>
+  return `<nav class="chips rp-tabs" aria-label="리포트 고르기">${tabs.map(([k, label]) =>
     `<button type="button" data-rp-tab="${k}" aria-pressed="${k === cur}">${label}</button>`).join("")}</nav>`;
+}
+// 지난 리포트 (report_archive.py → _site/reports/): 만들 때마다 한 장씩 따로 남긴 오늘의 리포트·주간 리포트를 달력으로 (사용자 2026-11-17)
+// 목록(index.json)은 탭을 열 때만, 리포트 한 장은 날짜를 누를 때만 받아요. 날짜를 눌러도 달력은 제자리, 아래 리포트만 바뀌어요
+let PAST = null, pastLoading = null, pastMonth = null, pastDay = null, pastFile = null;
+const PAST_DOC = {}, PAST_KIND = { kr: ["🇰🇷", "국장 마감 뒤"], us: ["🇺🇸", "미장 마감 뒤"], both: ["🇰🇷🇺🇸", "국장·미장"] };
+function loadPast() {
+  if (!pastLoading) {
+    pastLoading = fetch(`reports/index.json?t=${DATA ? DATA.built : Date.now()}`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((x) => { PAST = (x && x.items) || []; if (screen === "report") render(); });
+  }
+  return pastLoading;
+}
+function loadPastDoc(f) {
+  if (PAST_DOC[f]) return;
+  PAST_DOC[f] = "loading";
+  fetch(`reports/${f}`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    .then((x) => { PAST_DOC[f] = x || "fail"; if (screen === "report") render(); });
+}
+const PAST_ORDER = ["🇰🇷", "🇰🇷🇺🇸", "🇺🇸", "📰", "🗞"];
+const pastMark = (e) => (e.k === "weekly" ? "🗞" : (PAST_KIND[e.m] || ["📰"])[0]);
+const pastLabel = (e) => (e.k === "weekly" ? "🗞 주간 리포트" : e.m && PAST_KIND[e.m] ? `${PAST_KIND[e.m][0]} ${PAST_KIND[e.m][1]}` : "📰 오늘의 리포트");
+// 그날 고를 리포트: 고른 게 없으면 지금 국장·미장 탭에 맞는 것 → 아니면 그날 마지막 것
+function pastPick(list) {
+  const hit = list.find((e) => e.f === pastFile);
+  if (hit) return hit;
+  return list.find((e) => e.k === "daily" && (e.m === market || e.m === "both")) || list[0];
+}
+function pastCards(d) {
+  if (!PAST) {
+    loadPast();
+    return [`<section class="card past-card"><h2>📅 지난 리포트</h2><p class="empty">보관함을 불러오는 중이에요…</p></section>`];
+  }
+  if (!PAST.length) return [`<section class="card past-card"><h2>📅 지난 리포트</h2><p class="empty">아직 보관된 리포트가 없어요. 리포트를 만들 때마다 한 장씩 쌓여요.</p></section>`];
+  const byDay = {};
+  PAST.forEach((e) => (byDay[e.d] = byDay[e.d] || []).push(e));
+  const days = Object.keys(byDay).sort(), first = days[0].slice(0, 7), last = days[days.length - 1].slice(0, 7);
+  if (!pastMonth || pastMonth < first || pastMonth > last) pastMonth = last;
+  if (!pastDay || !byDay[pastDay]) pastDay = days[days.length - 1];
+  const [y, m] = pastMonth.split("-").map(Number), today = TODAY();
+  // 월~일 일곱 칸 (주간 리포트가 토요일에 나와서 주말도 보여요)
+  const firstD = new Date(Date.UTC(y, m - 1, 1)), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let cells = `<span class="cal-cell blank"></span>`.repeat((firstD.getUTCDay() + 6) % 7);
+  for (let dd = 1; dd <= dim; dd++) {
+    const key = `${pastMonth}-${String(dd).padStart(2, "0")}`, list = byDay[key] || [];
+    const marks = [...new Set(list.map(pastMark))].sort((a, b) => PAST_ORDER.indexOf(a) - PAST_ORDER.indexOf(b)).join("");  // 늘 🇰🇷 → 🇺🇸 → 🗞 순서
+    const cls = ["cal-cell", "past-cell", list.length ? "" : "off", key === today ? "today" : "", pastDay === key ? "picked" : ""].filter(Boolean).join(" ");
+    cells += list.length ? `<button type="button" class="${cls}" data-pastday="${key}" aria-label="${m}월 ${dd}일 리포트 ${list.length}장" aria-pressed="${pastDay === key}">
+      <span class="cd">${dd}</span><span class="em">${marks}</span></button>`
+      : `<span class="${cls}" aria-hidden="true"><span class="cd">${dd}</span><span class="em"></span></span>`;
+  }
+  const nMonth = PAST.filter((e) => e.d.startsWith(pastMonth)).length;
+  const list = byDay[pastDay] || [], pick = pastPick(list);
+  const cal = `<section class="card past-card" id="past-card"><h2>📅 지난 리포트 <small>보관 ${PAST.length}장 · ${md(days[0])}부터</small></h2>
+    <div class="cal-head"><button type="button" class="cal-nav" data-paststep="-1" aria-label="이전 달" ${pastMonth <= first ? "disabled" : ""}>‹</button>
+      <div><b>${y}년 ${m}월</b><small>${nMonth ? `리포트 ${nMonth}장 · 날짜를 누르면 그날 리포트` : "이달엔 보관된 리포트가 없어요"}</small></div>
+      <button type="button" class="cal-nav" data-paststep="1" aria-label="다음 달" ${pastMonth >= last ? "disabled" : ""}>›</button></div>
+    <div class="cal-grid past-grid">${"월화수목금토일".split("").map((w) => `<span class="cal-w">${w}</span>`).join("")}${cells}</div>
+    <p class="past-legend muted">🇰🇷 국장 마감 뒤 · 🇺🇸 미장 마감 뒤 · 🗞 주간 리포트</p>
+    <p class="wk-sub past-day">${wkDay(pastDay)} 리포트 ${list.length}장</p>
+    <div class="chips past-pick" aria-label="그날 리포트 고르기">${list.slice().reverse().map((e) => `<button type="button" data-pastfile="${esc(e.f)}" aria-pressed="${e === pick}">${pastLabel(e)} <small>${esc(e.t)}</small></button>`).join("")}</div></section>`;
+  return [cal, ...pastDocCards(d, pick)];
+}
+function pastDocCards(d, e) {
+  const doc = PAST_DOC[e.f];
+  if (!doc || doc === "loading") { loadPastDoc(e.f); return [`<section class="card past-doc"><p class="empty">리포트를 불러오는 중이에요…</p></section>`]; }
+  if (doc === "fail") return [`<section class="card past-doc"><p class="empty">이 리포트를 못 불러왔어요. 잠시 뒤 다시 눌러 주세요.</p></section>`];
+  // 화면 그리는 함수는 그대로 쓰고, 그동안만 그날 리포트로 바꿔 끼워요
+  const key = e.k === "weekly" ? "weekly" : "report", keep = DATA[key];
+  DATA[key] = doc;
+  let cards;
+  try {
+    cards = e.k === "weekly" ? weeklyCards() : reportCards(d);
+  } catch (err) {  // 아주 예전 형식이라 칸 일부가 없을 때는 요약만
+    cards = [`<section class="card"><h2>📰 지난 리포트 <small>${md(doc.day)} ${esc((doc.generated || "").slice(11, 16))}</small></h2>
+      <ul class="brief brief-top">${(doc.headline || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <p class="muted note">예전 형식 리포트라 요약만 보여요.</p></section>`];
+  } finally {
+    DATA[key] = keep;
+  }
+  if (e.k !== "weekly") cards[0] = cards[0].replace("📰 오늘의 리포트", `📰 ${wkDay(e.d)} 리포트`);
+  return cards.map((c, i) => (i === 0 ? c.replace('<section class="card', '<section class="card past-doc') : c));
+}
+function bindPast() {
+  const app = $("#app");
+  app.querySelectorAll("[data-paststep]").forEach((b) => b.addEventListener("click", () => {
+    pastMonth = ymAdd(pastMonth, Number(b.dataset.paststep));
+    const inM = (PAST || []).filter((e) => e.d.startsWith(pastMonth)).map((e) => e.d).sort();
+    if (inM.length) { pastDay = inM[inM.length - 1]; pastFile = null; }
+    render();
+  }));
+  app.querySelectorAll("[data-pastday]").forEach((b) => b.addEventListener("click", () => { pastDay = b.dataset.pastday; pastFile = null; render(); }));
+  app.querySelectorAll("[data-pastfile]").forEach((b) => b.addEventListener("click", () => { pastFile = b.dataset.pastfile; render(); }));
 }
 const wkDay = (day) => { const d = new Date(`${day.slice(0, 10)}T12:00:00Z`); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}(${"일월화수목금토"[d.getUTCDay()]})`; };
 const wkRange = (w) => (w && w.week ? `${md(w.week[0])}~${md(w.week[1])}` : "");
