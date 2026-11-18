@@ -138,3 +138,16 @@ def test_fresh_calendar_uses_latest_events_for_big_rows(tmp_path):
                    ("2026-11-25", "미국 PCE 물가 (연준이 보는 물가)", True, "한국시간 22:30 발표")]
     assert any(e["kind"] == "earn" for e in got)
     assert dashboard.build(tmp_path)["calendar"]
+
+
+def test_split_learn_moves_learn_only_data_out_of_data_json():
+    data = dict(built="2026-11-18T22:00+09:00", markets={}, learn_notes=[1],
+                reading=dict(cats=[], items=dict(market=[dict(date="2026-11-18"), dict(date="2026-11-17")],
+                                                 invest=[dict(date="2026-11-18"), dict(title="날짜 없음")])),
+                learn_cases=dict(kr=[1]), story_log=dict(kr=[2]))
+    learn = dashboard.split_learn(data)
+    # 공부 화면 전용 자료는 learn.json으로, 홈 '오늘 리포트 N개'는 날짜별 개수만 남아요
+    assert set(learn) == {"learn_cases", "reading", "story_log", "built"} and learn["built"] == data["built"]
+    assert not any(k in data for k in dashboard.LEARN_KEYS)
+    assert data["reading_days"] == {"2026-11-18": 2, "2026-11-17": 1}
+    assert data["learn_notes"] == [1]  # 용어 '?' 버튼에 쓰는 노트는 그대로

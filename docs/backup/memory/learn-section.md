@@ -11,6 +11,9 @@ metadata:
 - 공부 노트: paper/learn_notes.json {notes:[{day, market, title, tags, body[], quiz[q,a], terms{}}]} — 평일 장 마감 뒤 한 편씩 손으로(정기 작업) 더함, terms는 용어집에 합쳐짐.
 - 전문가 리포트: reading.py → paper/reading.json. 네이버 리서치 옛 목록(finance.naver.com/research/*_list.naver)은 이제 JS 화면이라 HTML 파싱 불가 → 새 JSON API https://stock.naver.com/api/stockSecurity/researches/v2/<묶음>?index=0&size=15 (items[].nid,title,content(html 요약)…). 원문 주소 https://stock.naver.com/research/<daily(시황)|invest|economy|industry|debenture>/<nid> (Actions에서 확인). 이 클라우드 환경에선 naver 막힘 → Actions에서만. 시험 워크플로는 삭제함. 오늘 왜 탭에 '🏦 증권사가 본 이유' 칸(최근 5일 시황·전략 리포트 3개, 미장 탭은 미국 이야기만).
 - '배우기'·'대처법 전부 보기'는 이동 버튼(lastTap=null). 점검 스크립트 사본에 learn:<탭> 추가.
+- 2026-10-24 23:50 KST: 두 번째 미리보기 보냄(브랜치 claude/project-thread-177r8e에 푸시, PR 없음). 사용자 '사용량 초기화되면 알아서 업데이트해' → 사용량 풀리면 이어서 스스로 진행.
 - 2026-11-02: daily(국장) 자료는 GitHub 일정 지연으로 다음 날 00:30 KST쯤 들어옴 → 18:43 정기 작업 때 그날 자료 없음(10.26~30 노트 0편). 11-02에 10.26~30 한 주 노트 써서 브랜치 claude/project-thread-177r8e에 저장, 검수 대기. 정기 작업을 다음 날 11:00(화~토)로 옮기자고 제안함.
-- 2026-11-03: 11.2 노트 추가 + learn_cases.py closed_days(장 마감 전 '오늘' 값 빼기; daily가 다음 날 10:45에 돌아 11.3 장중 값이 사례로 쌓였었음). 같은 브랜치, 검수 대기 (노트 13편: 10.26~30, 11.2~11.17).
+- 2026-11-03: 11.2 노트 추가 + learn_cases.py closed_days(장 마감 전 '오늘' 값 빼기; daily가 다음 날 10:45에 돌아 11.3 장중 값이 사례로 쌓였었음). 같은 브랜치, 검수 대기 (노트 13편 10.26~11.17).
+- 2026-11-18: 사용자 '올려'·'머지도 해' → PR #135 머지 (노트 13편 + closed_days). 다음 노트부터는 main에서 브랜치 새로 시작(같은 이름 claude/project-thread-177r8e를 main으로 다시).
+- 2026-11-18: 사용자 '요즘 변동성 커서 도움 될까' → '이런 상황' 꼬리표(노트 patterns, app.js NOTE_PATS 10개: priced·rate_fear·split·rebound·panic·overnight·event·flows·ai_money·breadth)와 사례집 '📝 상황별 공부 노트' 칸(같은 상황 노트 + 닮은 과거 사건). 브랜치 claude/project-thread-177r8e 푸시, 검수 대기. 정기 작업 지시문에 patterns 추가함.
 **How to apply:** 검수 통과 전 PR 금지. 노트는 사실·후보 구분, 사고팔기 신호 금지. 관련 [[home-cleanup-pr64]], [[ui-no-jump-rule]], [[report-team]].

@@ -9,6 +9,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - paper/learn_cases.json, reading.json : 투자 공부 사례 일지·증권사 무료 리포트 목록 (learn_cases.py, reading.py)
   - paper/learn_notes.json : 투자 공부 '공부 노트' (평일 장 마감 뒤 한 편씩 손으로 더해요, 새 용어는 용어집에)
   - paper/story_log.json : 투자 공부 사례집 '앱이 기록한 최근 사건' (분석팀 market_story.py)
+    → 사례 일지·리포트 목록·사례집 기록은 <out>/learn.json으로 따로 (홈에 안 써서, 앱이 홈을 그린 뒤 받아요)
   - paper/watch.json, alerts.json, bot.json : 텔레그램으로 넣은 관심종목·가격 알림 (bot.py)
   - paper/health.json : 주간 점검 (health.py)
   - paper/macro.json : 경기 국면 (macro.py)
@@ -120,6 +121,24 @@ def build(paper_dir):
                 news_url=f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY') or REPO}/live/news.json")
 
 
+LEARN_KEYS = ("learn_cases", "reading", "story_log")
+
+
+def split_learn(data):
+    """투자 공부 화면에서만 쓰는 큰 자료(data.json의 약 3분의 1)를 떼어 learn.json으로 보내요.
+    앱은 홈을 먼저 그리고 뒤에서 learn.json을 받아요 (첫 화면이 빨리 떠요, 2026-11-18).
+    홈 '투자 공부' 줄의 '오늘 리포트 N개'는 날짜별 개수(reading_days)만 data.json에 남겨요."""
+    learn = {k: data.pop(k, None) for k in LEARN_KEYS}
+    learn["built"] = data.get("built")
+    days = {}
+    for rows in ((learn.get("reading") or {}).get("items") or {}).values():
+        for x in rows or []:
+            if x.get("date"):
+                days[x["date"]] = days.get(x["date"], 0) + 1
+    data["reading_days"] = days
+    return learn
+
+
 def site_version(site_dir):
     """웹앱 파일이 바뀌면 달라지는 짧은 값. 앱을 열어 둔 사이 새 화면이 배포됐는지 앱이 알아채는 데 써요."""
     h = hashlib.sha1()
@@ -171,7 +190,9 @@ def main():
                                                          encoding="utf-8")
     data = dict(build(args.paper), site_version=site_version(args.site), inbox_last=mail[0]["t"] if mail else None,
                 reports_n=len(past))
-    (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    learn = split_learn(data)
+    (args.out / "learn.json").write_text(json.dumps(learn, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     for key, m in data["markets"].items():
         print(f"{m['name']}: 매일 자료 {'있음' if m['daily'] else '없음'}")
     print(f"오늘의 리포트 {'있음' if data['report'] else '없음'} · 지난 리포트 {len(past)}장")
