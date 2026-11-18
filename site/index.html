@@ -11,6 +11,49 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="이지스톡">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+// 첫 화면 빨리 띄우기 (2026-11-18): app.js(큰 파일)를 받는 동안 data.json·뉴스를 같이 받기 시작해요.
+// 아래 대기화면의 가로 진행률 막대도 여기서 움직여요 (받은 양 기준). app.js가 BOOT.data를 이어받아요.
+(function () {
+  var B = window.BOOT = { got: 0, need: 0, app: 0, shown: 0 };
+  var bar = null, pct = null;
+  function paint() {
+    bar = bar || document.querySelector(".boot-fill"); pct = pct || document.querySelector(".boot-pct");
+    var f = B.need ? Math.min(1, B.got / B.need) : 0;
+    var p = Math.round(8 + 72 * f + 18 * B.app);  // 화면 8 → 자료 받기 72 → 앱 준비 18
+    if (p > 99) p = 99;
+    if (p <= B.shown) return;
+    B.shown = p;
+    if (bar) bar.style.transform = "scaleX(" + p / 100 + ")";
+    if (pct) pct.textContent = p + "%";
+  }
+  B.step = function () { B.app = 1; paint(); };
+  B.paint = paint;
+  try { B.need = +localStorage.getItem("data_bytes") || 750000; } catch (e) { B.need = 750000; }
+  B.data = fetch("data.json", { cache: "no-cache" }).then(function (r) {
+    if (!r.ok) throw new Error(r.status);
+    if (!r.body || !window.TextDecoder) return r.json();
+    var rd = r.body.getReader(), parts = [];
+    return (function pump() {
+      return rd.read().then(function (x) {
+        if (x.done) {
+          var all = new Uint8Array(B.got), o = 0;
+          parts.forEach(function (c) { all.set(c, o); o += c.length; });
+          try { localStorage.setItem("data_bytes", String(B.got)); } catch (e) { }
+          return JSON.parse(new TextDecoder().decode(all));
+        }
+        parts.push(x.value); B.got += x.value.length; paint();
+        return pump();
+      });
+    })();
+  });
+  try { B.newsUrl = localStorage.getItem("news_url"); } catch (e) { }
+  if (B.newsUrl == null) B.newsUrl = "https://raw.githubusercontent.com/thd051130-crypto/-2easy-stock/live/news.json";  // 처음 연 폰도 바로 (app.js가 data.json 주소와 맞는지 확인해요)
+  if (B.newsUrl) B.news = fetch(B.newsUrl + "?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+})();
+</script>
+<link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -29,7 +72,14 @@
     </div>
   </div>
 </header>
-<main id="app"><p class="muted center">불러오는 중…</p></main>
+<main id="app"><div class="boot" role="status" aria-label="불러오는 중">
+  <div class="sk sk-bar"></div>
+  <div class="sk sk-card sk-big"><i></i><i></i><i class="s"></i></div>
+  <div class="sk sk-card"><i></i><i class="s"></i></div>
+  <div class="sk-grid"><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div>
+  <div class="sk sk-card"><i></i><i></i><i class="s"></i></div>
+  <div class="boot-prog"><div class="boot-row"><span>시세·리포트 불러오는 중</span><b class="boot-pct">8%</b></div><div class="boot-track"><div class="boot-fill"></div></div></div>
+</div></main>
 <footer class="foot">
   <button type="button" class="add fb-open">💬 의견·수정 요청 보내기</button>
   <div class="help-row"><button type="button" class="linkish guide-open">❓ 사용법 다시 보기</button><button type="button" class="linkish help-open">📖 자세한 사용법</button></div>
