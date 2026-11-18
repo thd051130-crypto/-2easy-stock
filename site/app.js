@@ -317,15 +317,41 @@ function undoBar(ids) {
   undoBar.t = setTimeout(() => { hotUndo = null; bar.remove(); }, 6000);
 }
 
+// 투자 공부 화면에서만 쓰는 큰 자료(사례 일지·리포트 목록·사례집 기록)는 learn.json으로 따로 와요.
+// 홈을 그린 뒤 뒤에서 받아 두고, 공부 화면을 먼저 열면 받는 동안 '불러오는 중'을 보여요 (2026-11-18 로딩 빠르게)
+const LEARN_KEYS = ["learn_cases", "reading", "story_log"];
+let LEARN = null, learnP = null;
+const learnReady = () => !!(LEARN && DATA && LEARN.built === DATA.built);
+function loadLearn() {
+  if (!DATA || !DATA.reading_days || learnReady()) return Promise.resolve();
+  if (learnP) return learnP;
+  const built = DATA.built;
+  learnP = fetch(`learn.json?v=${encodeURIComponent(built)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((x) => {
+    learnP = null;
+    if (!x || !DATA || DATA.built !== built) return;
+    LEARN = x;
+    for (const k of LEARN_KEYS) DATA[k] = x[k];
+    if (screen === "more" && moreKey === "learn") { lastView = ""; render(); }  // 기다리던 공부 화면
+  });
+  return learnP;
+}
+// index.html이 app.js를 받는 동안 미리 받기 시작한 data.json·뉴스 (예전엔 app.js가 다 온 뒤에야 받기 시작했어요)
+const BOOT = window.BOOT || {};
+const fetchData = () => fetch("data.json", { cache: "no-cache" })  // 바뀐 게 없으면 서버가 짧은 304로 답해요
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
 async function load() {
   let data;
   let news = null;
+  if (BOOT.step) BOOT.step("app");
   try {
-    const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) throw new Error(res.status);
-    data = await res.json();
+    const early = BOOT.data;
+    BOOT.data = null;  // 미리 받은 건 처음 한 번만
+    data = await (early || fetchData());
+    try { localStorage.setItem("news_url", data.news_url || ""); } catch (e) { /* 다음에 */ }
     // 뉴스는 잠깐만 기다려요. 늦으면 화면을 먼저 그리고, 받은 뉴스는 다음에 그릴 때 보여요 (화면이 튀지 않게)
-    news = loadNews(data.news_url);
+    const earlyNews = BOOT.news && BOOT.newsUrl === data.news_url ? BOOT.news : null;
+    BOOT.news = null;
+    news = earlyNews ? earlyNews.then((x) => { if (x && x.updated) { NEWS = x; stashHot(x); } return x; }) : loadNews(data.news_url);
     await Promise.race([news, new Promise((ok) => setTimeout(ok, 2500))]);
   } catch (e) {
     if (DATA) return;  // 이미 화면이 있으면 그대로 둬요
@@ -340,17 +366,19 @@ async function load() {
   siteVersion = siteVersion || data.site_version || null;
   if (DATA && DATA.built !== data.built) { STOCK_DATA.clear(); STOCK_READY.clear(); INBOX = null; inboxLoading = null; }  // 새로 배포됐으면 종목 자료도 새로
   DATA = data;
+  if (learnReady()) for (const k of LEARN_KEYS) DATA[k] = LEARN[k];
   adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   const had = NEWS && NEWS.updated;
   render();
   guideMaybe();  // 처음 연 사람에게만 사용법 안내 한 번
+  setTimeout(loadLearn, 1500);  // 홈이 다 뜬 뒤에 (홈 사진·종목 자료와 다투지 않게)
   news.then(() => { if (NEWS && NEWS.updated !== had) paintNews(); });
 }
 // 늦게 도착한 뉴스: 홈 '더 보기'의 지금 뉴스 한 줄만 바꿔요 (칸 화면은 다음에 그릴 때. 보던 화면이 튀지 않게)
 function paintNews() {
   if (screen !== "home" || !DATA) return;
-  const row = homeMoreRows(DATA.markets[market]).find((r) => r.key === "news");
+  const row = homeMoreRows(DATA.markets[market], "news")[0];
   const sum = document.querySelector('[data-more="news"] .hm-s');
   if (row && sum) sum.innerHTML = row.sum;
 }
@@ -2771,51 +2799,56 @@ function perfTabsBar(d) {
 
 // 홈 '더 보기': 칸마다 제목 + 한 줄 요약만 보이고, 누르면 그 칸만 있는 화면(#kr/more/<칸>)으로 넘어가요 (사용자 2026-10-24)
 const upDown = (r) => (r == null ? "" : `<b class="${sign(r)}">${pct(r)}</b>`);
-function homeMoreRows(d) {
+function homeMoreRows(d, only) {
   const s = d.daily || {};
   const rows = [];
-  const add = (key, icon, title, sum, html) => { if (html) rows.push({ key, icon, title, sum, html }); };
+  // 칸 HTML은 함수로 받아서, 칸 화면(only)을 열 땐 그 칸만 만들어요 (예전엔 홈·칸 화면마다 13칸을 전부 만들었어요)
+  const add = (key, icon, title, sum, html) => {
+    if (only && key !== only) return;
+    const h = html();
+    if (h) rows.push({ key, icon, title, sum, html: h });
+  };
   // 지금 뉴스: 안 읽은 🔥 핫 뉴스가 있으면 그걸, 없으면 가장 최근 뉴스 한 줄 (30분마다 따로 받아요)
   const N = newsOf(market), n1 = N && N[0], hot = hotOf(market);
   const nBad = hot.filter(isBad).length;  // 악재가 있으면 요약 줄에 먼저 (hotOf가 악재를 앞에 둬요)
   add("news", "📰", "지금 뉴스", hot.length ? `${nBad ? `⚠️ <b>악재 ${nBad}건</b> · ` : ""}🔥 <b>${hot.length}건</b> · ${esc(hot[0].title)}`
-    : n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", newsCard());
+    : n1 ? `${esc(n1.title)} · ${ago(n1.at)}` : NEWS ? "최근 뉴스 없음" : "받는 중", () => newsCard());
   // 투자 공부: 용어집·움직이는 이유·대처법, '오늘 왜?'는 앱 자료로 매일 새로 (사용자 2026-10-24)
-  add("learn", "📚", "투자 공부", learnSummary(), learnView(d));
+  add("learn", "📚", "투자 공부", learnSummary(), () => learnView(d));
   const dn = dropNow(d);
-  add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", dropCard(d));
+  add("drop", "⚠️", "급락 점검", dn ? `${esc(dn.name)} ${dn.weekly ? `한 주 ${upDown(dn.w1)}` : `1년 고점 대비 ${upDown(dn.dd)}`}` : "", () => dropCard(d));
   // 다가오는 일정: 가장 가까운 큰 일정
   const ev = calNear(CAL_DAYS).filter((e) => !STOCK_KINDS.includes(e.kind));
   const ev1 = ev.find((e) => e.big) || ev[0];  // 큰 발표가 있으면 그걸 먼저
-  add("cal", "📅", "다가오는 일정", ev1 ? `${md(ev1.date)} ${esc(ev1.title)} · ${dday(ev1.date)}` : "2주 안 큰 일정 없음", calendarCard());
+  add("cal", "📅", "다가오는 일정", ev1 ? `${md(ev1.date)} ${esc(ev1.title)} · ${dday(ev1.date)}` : "2주 안 큰 일정 없음", () => calendarCard());
   // 실적·배당 발표: 가장 가까운 내 종목 일정
   const er = calNear(EARN_DAYS).filter((e) => STOCK_KINDS.includes(e.kind) && calMine(e));
-  add("earn", "📢", "실적·배당 발표", er.length ? `${md(er[0].date)} ${esc(er[0].title)} · ${dday(er[0].date)}${er.length > 1 ? ` 외 ${er.length - 1}건` : ""}` : "한 달 안 내 종목 일정 없음", earningsCard());
+  add("earn", "📢", "실적·배당 발표", er.length ? `${md(er[0].date)} ${esc(er[0].title)} · ${dday(er[0].date)}${er.length > 1 ? ` 외 ${er.length - 1}건` : ""}` : "한 달 안 내 종목 일정 없음", () => earningsCard());
   const mine = myStocks(d);
-  add("watch", "⭐", "관심종목", mine.length ? `${mine.length}개 · ${esc(mine[0].name)}${mine.length > 1 ? " 외" : ""}` : "", homeWatchCard(d));
+  add("watch", "⭐", "관심종목", mine.length ? `${mine.length}개 · ${esc(mine[0].name)}${mine.length > 1 ? " 외" : ""}` : "", () => homeWatchCard(d));
   const mv = s.movers;
   const top = (l) => (l && l[0] ? `${esc(l[0].name)} ${upDown(l[0].r5)}` : "");
-  add("movers", "❓", "왜 움직였나", mv ? [top(mv.up), top(mv.down)].filter(Boolean).join(" · ") || "크게 움직인 종목 없음" : "", moversCard(d));
+  add("movers", "❓", "왜 움직였나", mv ? [top(mv.up), top(mv.down)].filter(Boolean).join(" · ") || "크게 움직인 종목 없음" : "", () => moversCard(d));
   const all = stocksOf(d).filter((x) => !x.extra && x.d1 != null);
   const ups = all.filter((x) => x.d1 > 0).length, downs = all.filter((x) => x.d1 < 0).length;
-  add("heat", "🟥", "시장 히트맵", `오늘 오른 <b class="up">${ups}</b> · 내린 <b class="down">${downs}</b>`, heatmapCard(d));
+  add("heat", "🟥", "시장 히트맵", `오늘 오른 <b class="up">${ups}</b> · 내린 <b class="down">${downs}</b>`, () => heatmapCard(d));
   const secs = (s.sectors || []).filter((x) => x.r5 != null);
   const sb = secs.length ? [...secs].sort((a, b) => b.r5 - a.r5) : [];
-  add("sectors", "🏭", "업종별 호재·악재", sb.length ? `${esc(sb[0].name)} ${upDown(sb[0].r5)} · ${esc(sb[sb.length - 1].name)} ${upDown(sb[sb.length - 1].r5)}` : "", sectorsCard(d));
+  add("sectors", "🏭", "업종별 호재·악재", sb.length ? `${esc(sb[0].name)} ${upDown(sb[0].r5)} · ${esc(sb[sb.length - 1].name)} ${upDown(sb[sb.length - 1].r5)}` : "", () => sectorsCard(d));
   // 정부 정책은 업종 호재·악재 바로 아래 (둘이 서로 연결돼서, 사용자 2026-10-18)
   const P = DATA && DATA.policies;
-  add("policy", "🏛️", "정부 정책", P && P.items ? `${P.items.length}개 정리${P.stale ? " · ⚠️ 오래됨" : ""}` : "", policyCard());
+  add("policy", "🏛️", "정부 정책", P && P.items ? `${P.items.length}개 정리${P.stale ? " · ⚠️ 오래됨" : ""}` : "", () => policyCard());
   const f = market === "kr" && d.flows;
-  add("flows", "🏦", "외국인·기관 수급", f ? ((f.warn || []).length ? `⚠️ 같이 파는 종목 ${f.warn.length}개` : "같이 파는 종목 없음") : "", flowsCard(d));
+  add("flows", "🏦", "외국인·기관 수급", f ? ((f.warn || []).length ? `⚠️ 같이 파는 종목 ${f.warn.length}개` : "같이 파는 종목 없음") : "", () => flowsCard(d));
   if (market === "kr" && d.disclosures) {
     const since = new Date(Date.parse(TODAY()) - 7 * 864e5).toISOString().slice(0, 10);
     const n = d.disclosures.filter((x) => x.day >= since && x.tone === "warn").length;
-    add("disclose", "📄", "최근 공시", n ? `⚠️ 주의 공시 ${n}건` : "주의 공시 없음", discloseHomeCard(d));
+    add("disclose", "📄", "최근 공시", n ? `⚠️ 주의 공시 ${n}건` : "주의 공시 없음", () => discloseHomeCard(d));
   }
   const q = s.quiet_volume;
-  add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", quietVolumeCard(d));
+  add("quiet", "🔍", "주가 그대로·거래량 급증", q ? (q.total ? `${q.total}개 · ${esc(q.rows[0].name)}` : "오늘은 없음") : "", () => quietVolumeCard(d));
   const m = DATA && DATA.macro;
-  add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", macroCard());
+  add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", () => macroCard());
   return rows;
 }
 function homeMoreCard(d) {
@@ -2827,7 +2860,12 @@ function homeMoreCard(d) {
 }
 // 더 보기에서 연 칸 화면: 맨 위 ‹ 더 보기(뒤로) + 원래 칸 그대로
 function moreView(d) {
-  const r = homeMoreRows(d).find((x) => x.key === moreKey);
+  if (moreKey === "learn" && !learnReady() && DATA.reading_days) {  // 공부 자료를 아직 받는 중
+    loadLearn();
+    return [`<div class="more-back"><button type="button" class="back" data-back>‹ ${stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`,
+      `<section class="card"><h2>📚 투자 공부</h2><p class="muted">공부 자료 불러오는 중…</p></section>`];
+  }
+  const r = homeMoreRows(d, moreKey)[0];
   return [`<div class="more-back"><button type="button" class="back" data-back>‹ ${stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`,
     r ? r.html : `<section class="card"><p class="empty">이 칸은 지금 ${market === "kr" ? "국장" : "미장"}에 자료가 없어요.</p></section>`];
 }
@@ -3595,7 +3633,7 @@ function learnSummary() {
   if (nt && nt.day >= TODAY()) return `📝 새 노트 · ${esc(nt.title)}`;
   const s = idxStory(OWN_IDX[market]);
   const n = driversFor(market).map((x) => driverNow(x)).filter((x) => x && x.hit > 0).length;
-  const R = DATA.reading, r = R && R.items ? Object.values(R.items).flat().filter((x) => x.date === TODAY()).length : 0;
+  const R = DATA.reading, r = R && R.items ? Object.values(R.items).flat().filter((x) => x.date === TODAY()).length : (DATA.reading_days || {})[TODAY()] || 0;
   return `${s ? `${esc(s.r.name)} ${upDown(s.d1)} 왜? · 원인 후보 ${n}개` : "대처법"}${r ? ` · 오늘 리포트 ${r}개` : ""} · 오늘의 용어 ${esc(termOfDay())}`;
 }
 function bindLearn() {
