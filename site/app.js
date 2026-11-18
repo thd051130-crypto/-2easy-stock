@@ -1642,10 +1642,12 @@ function pastCards(d) {
       <div><b>${y}년 ${m}월</b><small>${nMonth ? `리포트 ${nMonth}장 · 날짜를 누르면 그날 리포트` : "이달엔 보관된 리포트가 없어요"}</small></div>
       <button type="button" class="cal-nav" data-paststep="1" aria-label="다음 달" ${pastMonth >= last ? "disabled" : ""}>›</button></div>
     <div class="cal-grid past-grid">${"월화수목금토일".split("").map((w) => `<span class="cal-w">${w}</span>`).join("")}${cells}</div>
-    <p class="past-legend muted">🇰🇷 국장 마감 뒤 · 🇺🇸 미장 마감 뒤 · 🗞 주간 리포트</p>
-    <p class="wk-sub past-day">${wkDay(pastDay)} 리포트 ${list.length}장</p>
-    <div class="chips past-pick" aria-label="그날 리포트 고르기">${list.slice().reverse().map((e) => `<button type="button" data-pastfile="${esc(e.f)}" aria-pressed="${e === pick}">${pastLabel(e)} <small>${esc(e.t)}</small></button>`).join("")}</div></section>`;
-  return [cal, ...pastDocCards(d, pick)];
+    <p class="past-legend muted">🇰🇷 국장 마감 뒤 · 🇺🇸 미장 마감 뒤 · 🗞 주간 리포트</p></section>`;
+  // 맨 위는 고른 날 리포트, 달력은 맨 아래 (사용자 2026-11-18 '당일게 위로 오고 달력이 밑으로')
+  const top = `<section class="card past-top"><h2>📅 ${wkDay(pastDay)} 리포트 <small>${list.length}장</small></h2>
+    <div class="chips past-pick" aria-label="그날 리포트 고르기">${list.slice().reverse().map((e) => `<button type="button" data-pastfile="${esc(e.f)}" aria-pressed="${e === pick}">${pastLabel(e)} <small>${esc(e.t)}</small></button>`).join("")}</div>
+    <button type="button" class="more" data-past-cal>📅 다른 날 보기 <small class="muted">맨 아래 달력</small><span aria-hidden="true">›</span></button></section>`;
+  return [top, ...pastDocCards(d, pick), cal];
 }
 function pastDocCards(d, e) {
   const doc = PAST_DOC[e.f];
@@ -1670,12 +1672,21 @@ function pastDocCards(d, e) {
 function bindPast() {
   const app = $("#app");
   app.querySelectorAll("[data-paststep]").forEach((b) => b.addEventListener("click", () => {
+    // 달만 넘겨요 (위 리포트는 그대로라 달력이 제자리). 달력 칸 수가 바뀌어도 아래쪽만 늘고 줄어요
     pastMonth = ymAdd(pastMonth, Number(b.dataset.paststep));
-    const inM = (PAST || []).filter((e) => e.d.startsWith(pastMonth)).map((e) => e.d).sort();
-    if (inM.length) { pastDay = inM[inM.length - 1]; pastFile = null; }
     render();
   }));
-  app.querySelectorAll("[data-pastday]").forEach((b) => b.addEventListener("click", () => { pastDay = b.dataset.pastday; pastFile = null; render(); }));
+  // 날짜를 누르면 그날 리포트가 맨 위에 오니까, 맨 위로 올라가서 바로 보여 줘요 (화면을 바꾸는 버튼)
+  app.querySelectorAll("[data-pastday]").forEach((b) => b.addEventListener("click", () => {
+    pastDay = b.dataset.pastday; pastFile = null;
+    lastTap = null;  // 누른 날짜 칸 자리로 되돌리지 않게
+    render();
+    window.scrollTo(0, 0);  // 바로 (부드럽게 올리면 리포트를 받아 다시 그릴 때 중간에서 멈춰요)
+  }));
+  app.querySelectorAll("[data-past-cal]").forEach((b) => b.addEventListener("click", () => {
+    const c = $("#past-card");
+    if (c) window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - (($(".top") || { offsetHeight: 0 }).offsetHeight + 8), behavior: calm() ? "auto" : "smooth" });
+  }));
   app.querySelectorAll("[data-pastfile]").forEach((b) => b.addEventListener("click", () => { pastFile = b.dataset.pastfile; render(); }));
 }
 const wkDay = (day) => { const d = new Date(`${day.slice(0, 10)}T12:00:00Z`); return `${d.getUTCMonth() + 1}.${d.getUTCDate()}(${"일월화수목금토"[d.getUTCDay()]})`; };
