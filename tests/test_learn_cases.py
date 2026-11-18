@@ -49,3 +49,14 @@ def test_run_backfill_and_merge(tmp_path):
     assert [c["day"] for c in out["kr"]] == DAYS[-1:-4:-1]
     again = learn_cases.run(tmp_path)  # 같은 날을 다시 돌리면 덮어써요
     assert len(again["kr"]) == 3
+
+
+def test_today_before_close_is_left_out(tmp_path):
+    (tmp_path / "world.json").write_text(json.dumps(world()))
+    learn_cases.run(tmp_path, backfill=3)
+    # 다음 날 장중(한국 10:45)에 다시 돌면 그날 값은 장중 값이라 빼고, 이미 쌓인 그날 사례도 지워요
+    morning = dt.datetime.fromisoformat(f"{DAYS[-1]}T10:45+09:00")
+    out = learn_cases.run(tmp_path, now=morning)
+    assert DAYS[-1] not in [c["day"] for c in out["kr"]] and out["kr"][0]["day"] == DAYS[-2]
+    evening = dt.datetime.fromisoformat(f"{DAYS[-1]}T17:30+09:00")
+    assert learn_cases.run(tmp_path, now=evening)["kr"][0]["day"] == DAYS[-1]
