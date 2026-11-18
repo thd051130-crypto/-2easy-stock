@@ -1,0 +1,52 @@
+# 버튼 누르기 점검: PR마다 화면의 버튼을 전부 눌러 보고, 누른 버튼 자리가 밀리면 실패로 알려요 (사용자 규칙: 눌러도 화면 그대로).
+#   - 공개 저장소라 GitHub Actions 기본 러너는 무료예요. 유료 러너·유료 서비스는 안 써요.
+#   - 화면 코드(site/, dashboard.py, paper/)나 이 점검 도구가 바뀐 PR에서만 돌아요.
+#   - 결과는 실행 화면 맨 위 요약(Summary)과 jump-audit 파일(7일 보관)에 남아요.
+name: ui-audit
+
+on:
+  pull_request:
+    paths: ["site/**", "dashboard.py", "paper/**", "tools/jump-audit*", ".github/workflows/ui-audit.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-audit-${{ github.ref }}
+  cancel-in-progress: true  # 같은 PR에 새로 올리면 앞 점검은 멈춰요 (시간 아끼기)
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python dashboard.py --out _site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: playwright 설치
+        run: npm install --no-save --no-package-lock playwright@1.63.0
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-chromium-1.63.0
+      - run: npx playwright install --with-deps chromium
+      - name: 버튼 누르기 점검
+        shell: bash  # tee를 써도 점검 실패가 그대로 전해져요 (pipefail)
+        run: |
+          (cd _site && python -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &)
+          for i in $(seq 20); do curl -sf http://127.0.0.1:8765/ >/dev/null && break; sleep 0.5; done
+          node tools/jump-audit.js --workers 4 | tee jump-audit.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jump-audit
+          path: jump-audit.txt
+          retention-days: 7
