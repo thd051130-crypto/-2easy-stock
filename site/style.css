@@ -1194,6 +1194,10 @@ details.learn-quiz p { margin: 6px 0 0; color: var(--text-secondary); }
 h3.learn-note-t { font-size: 15px; font-weight: 700; margin: 0 0 8px; line-height: 1.4; }
 .learn-p { font-size: 14px; line-height: 1.65; color: var(--text-secondary); margin: 0 0 10px; }
 button.learn-tag { border: 0; font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }
+.note-pats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0 0 8px; font-size: 12px; }
+.note-pats > b { margin-right: 2px; color: var(--text-secondary); }
+button.learn-tag.pat { background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
+button.learn-tag.pat small { font-weight: 400; opacity: .8; }
 .learn-rep > summary { padding: 11px 0; }
 .learn-rep .hm-t > b { font-size: 14px; font-weight: 600; line-height: 1.45; }
 .learn-rep .lesson-one .badge { margin: 0 2px 0 0; }
