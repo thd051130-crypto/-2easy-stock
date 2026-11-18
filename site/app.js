@@ -3446,9 +3446,29 @@ function mergeNoteTerms() {  // 노트의 새 용어를 용어집에 더해요 (
   notesMerged = DATA;
   for (const n of DATA.learn_notes || []) for (const [t, v] of Object.entries(n.terms || {})) if (!TERMS[t]) TERMS[t] = v;
 }
-function noteBody(n) {
+// '이런 상황' 꼬리표: 변동이 큰 장도 모양은 되풀이돼요 (사용자 2026-11-18 "미래에 비슷한 상황이 있으려나")
+// [키, 아이콘, 이름, 한 줄 설명, 닮은 과거 사례(site/casebook.js id)]
+const NOTE_PATS = [
+  ["priced", "🎯", "선반영·재료 소멸", "좋은 소식이 나왔는데 오히려 빠지는 날. 기대가 이미 가격에 들어가 있었어요.", ["nvda-2024", "battery-2023"]],
+  ["rate_fear", "🏦", "금리 걱정", "경제 지표가 좋거나 물가가 높으면 '금리 못 내린다'는 걱정에 성장주가 빠져요.", ["cpi-2022", "fed-2022", "taper-2013"]],
+  ["split", "↔️", "업종마다 반대로", "같은 소식인데 어떤 업종은 오르고 어떤 업종은 빠져요. 누가 이득이고 누가 손해인지 나눠 보세요.", ["hbm-2024", "deepseek-2025", "oil-2022"]],
+  ["rebound", "↩️", "급락 뒤 반등", "크게 빠진 다음 날 되돌림. 반등의 크기보다 '무엇이 바뀌었나'가 중요해요.", ["covid-2020", "yen-2024", "tariff-2025"]],
+  ["panic", "🚨", "투매·사이드카", "겁이 겁을 부르는 날. 서킷브레이커·사이드카가 나오고 좋은 종목도 같이 빠져요.", ["yen-2024", "covid-2020", "tariff-2025"]],
+  ["overnight", "🌙", "밤사이 미국 → 국장", "전날 밤 미국장 분위기가 다음 날 국장 출발을 정해요. 특히 반도체.", ["deepseek-2025", "yen-2024"]],
+  ["event", "🗓", "큰 일정 앞뒤", "선거·FOMC·실적 발표 앞에선 눈치 보고, 발표 뒤엔 결과보다 '예상과의 차이'로 움직여요.", ["cpi-2022", "martial-2024", "tariff-2025"]],
+  ["flows", "💸", "수급이 만든 날", "뉴스보다 외국인·기관이 사고판 양이 지수를 끌고 간 날이에요.", ["martial-2024", "yen-2024"]],
+  ["ai_money", "🤖", "AI 돈·빚 걱정", "AI 투자가 돈을 벌까, 빚이 너무 크진 않을까. 이 걱정에 반도체·빅테크가 출렁여요.", ["deepseek-2025", "nvda-2024"]],
+  ["breadth", "🌊", "넓게/좁게 오른 날", "몇 종목만 오른 건지, 다 같이 오른 건지. 지수만 보면 놓쳐요.", ["hbm-2024", "battery-2023"]],
+];
+const NOTE_PAT = Object.fromEntries(NOTE_PATS.map((x) => [x[0], x]));
+let notePat = null;  // 사례집 '상황별 공부 노트'에서 고른 상황
+const patNotes = (k) => learnNotes().filter((n) => (n.patterns || []).includes(k));
+function noteBody(n, inCases) {
   const ic = DRIVER_ICON();
+  const pats = (n.patterns || []).filter((k) => NOTE_PAT[k]);
   return `${(n.tags || []).length ? `<div class="learn-tags" style="margin-bottom:8px">${n.tags.map((k) => `<button type="button" class="learn-tag" data-learn-go="${esc(k)}">${ic[k] || ""} ${esc((DRIVERS.find((x) => x.key === k) || {}).title || k)}</button>`).join("")}</div>` : ""}
+    ${pats.length && !inCases ? `<p class="note-pats"><b>🔁 이런 상황</b> ${pats.map((k) => { const c = patNotes(k).length - 1;
+      return `<button type="button" class="learn-tag pat" data-note-pat="${k}">${NOTE_PAT[k][1]} ${esc(NOTE_PAT[k][2])}${c > 0 ? ` <small>+${c}편</small>` : ""}</button>`; }).join("")}</p>` : ""}
     ${(n.body || []).map((p) => `<p class="learn-p">${esc(p)}</p>`).join("")}
     ${n.quiz ? `<details class="learn-quiz"><summary><b>🤔 확인 문제</b> ${esc(n.quiz[0])} <span class="learn-quiz-open">답 보기</span></summary><p>${esc(n.quiz[1])}</p></details>` : ""}
     ${termChips(Object.keys(n.terms || {}))}`;
@@ -3616,8 +3636,42 @@ function learnCaseCards() {
   const bookCard = `<section class="card" id="case-book"><h2>📜 꼭 알아 둘 과거 사건 <small>${book.length}개 · 대략값</small></h2>
     ${book.length ? book.map(caseBox).join("") : `<p class="empty">이 묶음엔 아직 사례가 없어요.</p>`}
     <p class="muted note" style="margin:10px 0 0">숫자는 널리 알려진 대략값(종가 기준)이에요. 사건을 외우기보다 '무엇이 무엇으로 이어졌나'를 보세요. 다음에 비슷한 출발점이 보이면 같은 길을 떠올릴 수 있어요.</p></section>`;
-  return [head, logCard, bookCard];
+  return [head, noteCaseCard(), logCard, bookCard];
 }
+// 사례집 '상황별 공부 노트': 같은 상황의 노트끼리 모아 보고, 닮은 과거 큰 사건으로 이어져요
+function noteCaseCard() {
+  const N = learnNotes();
+  const cnt = (k) => N.filter((n) => (n.patterns || []).includes(k)).length;
+  const pats = NOTE_PATS.filter((p) => cnt(p[0]));
+  if (!pats.length) return "";
+  if (!notePat || !cnt(notePat)) notePat = ((N.find((n) => (n.patterns || []).some((k) => NOTE_PAT[k])) || {}).patterns || []).find((k) => NOTE_PAT[k]) || pats[0][0];
+  const [k, icon, name, one, cases] = NOTE_PAT[notePat];
+  const list = N.filter((n) => (n.patterns || []).includes(k));
+  const book = typeof CASEBOOK !== "undefined" ? CASEBOOK : [];
+  const rel = cases.map((id) => book.find((c) => c.id === id)).filter(Boolean);
+  return `<section class="card" id="case-notes"><h2>📝 상황별 공부 노트 <small>${N.length}편 · 비슷한 날끼리</small></h2>
+    <p class="muted" style="margin:0 0 8px">변동이 큰 장도 모양은 되풀이돼요. 같은 상황이었던 날을 모아 보면 '이번엔 어디가 다른가'가 보여요.</p>
+    <nav class="chips idx-chips note-pat-row" aria-label="상황 고르기">${pats.map(([pk, pi, pn]) =>
+      `<button type="button" data-note-pick="${pk}" aria-pressed="${pk === k}">${pi} ${esc(pn)} <small>${cnt(pk)}</small></button>`).join("")}</nav>
+    <p class="learn-why1" style="margin:10px 0 6px">${icon} <b>${esc(name)}</b> · ${esc(one)}</p>
+    ${list.map((n) => { const key = `pnote:${n.day}`;
+      return `<details class="lesson" data-learn-open="${esc(key)}"${LEARN_OPEN.has(key) ? " open" : ""}><summary><span class="learn-case-d">${md(n.day)}</span><span class="hm-t"><b>${esc(n.title)}</b></span></summary>
+        <div class="lesson-body">${noteBody(n, true)}</div></details>`; }).join("")}
+    ${rel.length ? `<h3 class="brief-h">📜 같은 모양의 과거 큰 사건</h3><div class="story-sim">${rel.map((c) =>
+      `<button type="button" class="learn-tag" data-case-go="${esc(c.id)}">${esc(c.date.slice(0, 4))} ${esc(c.title.split(" · ")[0])}</button>`).join("")}</div>` : ""}
+    <p class="muted note" style="margin:10px 0 0">꼬리표는 그날 노트를 쓰며 붙인 거라 정답이 아니라 '비슷한 모양' 표시예요. 다음에 같은 모양이 보이면 지난번 노트부터 다시 읽어 보세요.</p></section>`;
+}
+// 노트의 '이런 상황' 칩: 사례집의 상황별 노트로 가요 (이동하는 버튼이라 '화면 그대로'에서 빼요)
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-note-pat]");
+  if (!b) return;
+  notePat = b.dataset.notePat;
+  learnTab = "cases"; caseKind = "all";
+  try { localStorage.setItem("learn_tab", learnTab); } catch (er) { /* 이번만 기억 */ }
+  lastTap = null;
+  if (screen === "more" && moreKey === "learn") { lastView = ""; render(); } else openMore("learn");
+  requestAnimationFrame(() => { const x = document.getElementById("case-notes"); if (x) { x.scrollIntoView(); window.scrollBy(0, -70); } });
+});
 
 function learnView(d) {
   mergeNoteTerms();
@@ -3666,6 +3720,8 @@ function bindLearn() {
   }));
   keepRow($(".case-kinds", app), "case-kinds");
   app.querySelectorAll("[data-case-kind]").forEach((b) => b.addEventListener("click", () => { caseKind = b.dataset.caseKind; render(); }));
+  keepRow($(".note-pat-row", app), "note-pats");
+  app.querySelectorAll("[data-note-pick]").forEach((b) => b.addEventListener("click", () => { notePat = b.dataset.notePick; render(); }));
   app.querySelectorAll("[data-read-cat]").forEach((b) => b.addEventListener("click", () => {
     readCat = b.dataset.readCat;
     try { localStorage.setItem("read_cat", readCat); } catch (e) { /* 이번만 기억 */ }
@@ -6570,7 +6626,7 @@ $(".map-btn").addEventListener("click", () => {
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
   [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN, STORY_OPEN, HELP_OPEN].forEach((x) => x.clear());
-  caseKind = "all";
+  caseKind = "all"; notePat = null;
   worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
   cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
   AST_BOPEN.clear(); astEditOpen = false; try { localStorage.removeItem("ast_bopen"); } catch (e) { /* 이번만 */ }
