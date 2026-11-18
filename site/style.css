@@ -222,7 +222,6 @@ body:has(#app .boot) .foot { display: none; }  /* 대기화면 동안 맨 아래
 .list .r { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .list .name { font-weight: 600; }
 .list .meta { font-size: 12px; color: var(--text-muted); }
-.opinion { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 
 .chart { position: relative; touch-action: pan-y; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -291,7 +290,6 @@ details li { margin: 4px 0; }
 .caution { font-size: 13px; color: var(--wait-fg); background: var(--wait-bg); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
 .big { font-size: 28px; font-weight: 750; letter-spacing: -0.035em; line-height: 1.2; margin: 0; font-variant-numeric: tabular-nums; }
 .tile { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.tile-spark { flex: 0 1 44%; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
 .nowrap { white-space: nowrap; }
 .spark { display: block; width: 100%; height: 44px; overflow: visible; }
 .spark polyline { fill: none; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
@@ -301,10 +299,6 @@ details li { margin: 4px 0; }
 .stat small { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.35; margin-top: 2px; }
 /* 좁은 폰: 세 칸 숫자에서 '%'가 다음 줄로 떨어지지 않게 여백·글자를 조금 줄여요 */
 @media (max-width: 380px) { .stats { gap: 6px; } .stat { padding: 10px 8px; } .stat b { font-size: 15px; } }
-.track-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-.track-line > span:first-child { flex-basis: 100%; font-size: 13px; color: var(--text-secondary); }
-.track-line small { color: var(--text-muted); }
-.track-line b { font-size: 20px; font-variant-numeric: tabular-nums; }
 
 /* 관심종목 한 줄: 이름 | 가격 | ★ / 코드·3개월 | (3개월 추세선) | 전일 대비 */
 .list li.stock {
@@ -337,8 +331,6 @@ details li { margin: 4px 0; }
 details.more-list { margin-top: 4px; }
 details.more-list summary { padding: 10px 0; }
 details.more-list .list li:first-child { border-top: 1px solid var(--border); padding-top: 10px; }
-.list li.divider { display: block; font-size: 12px; color: var(--text-muted); background: var(--surface-0); border-radius: 8px; padding: 6px 10px; margin: 6px 0; border-top: 0; }
-.list li.divider + li { border-top: 0; }
 .search {
   width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: var(--radius-s); color: var(--text-primary);
   border: 1px solid var(--border); background: var(--surface-0); -webkit-appearance: none; appearance: none;
@@ -831,7 +823,6 @@ details.fold > summary + * { margin-top: 2px !important; }
 .cal-cell .cd { font-size: 11px; line-height: 1; }
 .cal-cell .cd i { font-style: normal; font-size: 9px; margin-left: 1px; }
 .cal-cell .cr { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.cal-cell.idle .cr { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .cal-pick { font-size: 13px; margin: 8px 0 0; color: var(--text-secondary); }
 .cal-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .cal-m { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-1);
@@ -942,11 +933,6 @@ button.hm:active .hm-t > b { color: var(--accent); }
 .more-back .back { margin: 0; }
 
 /* 성과 화면: 가상계좌 한 줄 요약과 접는 그래프 */
-.acc-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
-.acc-eq { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-details.fold-chart { margin-top: 10px; }
-details.fold-chart summary { padding: 8px 0; color: var(--text-secondary); font-size: 14px; }
-details.fold-chart[open] summary { margin-bottom: 6px; }
 /* 신호 화면 부서별 보고: 설명 한 줄, 누르면 펼침 */
 
 /* 성과 화면 맨 위 선택 바: 옆으로 밀어서 골라요. 따라 내려오지 않아요 (사용자 요청) */
@@ -1107,7 +1093,6 @@ details.fold-chart[open] summary { margin-bottom: 6px; }
 .wk-track i.up { left: 50%; background: var(--up); }
 .wk-track i.down { right: 50%; background: var(--down); }
 .wk-bv { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
-.wk-list li { align-items: center; cursor: pointer; }
 .wk-tl { list-style: none; margin: 10px 0 0; padding: 0; }
 .wk-tl li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; padding: 0 0 12px; position: relative; }
 .wk-tl li::before { content: ""; position: absolute; left: 62px; top: 6px; bottom: -2px; border-left: 2px solid var(--border); }
@@ -1287,7 +1272,6 @@ a.more { text-decoration: none; }
 .ast-tag.new { background: var(--accent-bg); color: var(--accent-fg); }
 .ast-gone { margin-top: 10px; }
 .ast-gone small { display: block; margin-bottom: 2px; }
-.ast-accts { margin-top: 4px; }
 .ast-new { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
 .ast-new .search { flex: 1; margin: 0; }
 .ast-btn { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -1510,6 +1494,5 @@ details.help-sec .guide-body { padding: 0 0 12px; }
 .past-cell.today { border-color: var(--accent); }
 .past-cell.picked { background: var(--accent-bg); }
 .past-legend { font-size: 12px; margin: 8px 0 0; }
-.past-day { margin: 14px 0 0; }
 .past-pick { margin-top: 6px; }
 .past-pick small { font-size: 11px; opacity: .8; margin-left: 2px; font-variant-numeric: tabular-nums; }
