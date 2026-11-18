@@ -17,9 +17,11 @@
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
 
 import market_story
+import report_archive
 import tgfmt
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -375,6 +377,8 @@ def main():
     args = parser.parse_args()
     r = build(load_inputs(args.paper))
     (args.paper / "report.json").write_text(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    # 지난 리포트 보관함: 한 장씩 따로 남겨 앱 '📅 지난 리포트' 달력에서 다시 봐요 (MARKETS = 이번에 새로 받은 장)
+    report_archive.save(args.paper, "daily", r, os.environ.get("MARKETS", ""))
     if r.get("story"):
         market_story.append_log(args.paper, r["story"])
     print("\n".join(r["headline"]) + "\n\n" + format_text(r))

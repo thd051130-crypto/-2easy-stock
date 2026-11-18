@@ -5,6 +5,7 @@ paper/<시장>/ 에 쌓인 기록만 읽어요 (네트워크·pandas 필요 없�
   - daily.json : 매일 시세 자료 (많이 움직인 종목·업종·지수 캔들·관심종목 시세, daily.py)
   - paper/report.json : 오늘의 리포트 (리포트 부서, report_desks.py)
   - paper/weekly.json : 주간 리포트 (토요일 아침, weekly.py)
+  - paper/reports/ : 지난 리포트 보관함 → _site/reports/ (report_archive.py, 앱 '📅 지난 리포트' 달력)
   - paper/learn_cases.json, reading.json : 투자 공부 사례 일지·증권사 무료 리포트 목록 (learn_cases.py, reading.py)
   - paper/learn_notes.json : 투자 공부 '공부 노트' (평일 장 마감 뒤 한 편씩 손으로 더해요, 새 용어는 용어집에)
   - paper/story_log.json : 투자 공부 사례집 '앱이 기록한 최근 사건' (분석팀 market_story.py)
@@ -41,6 +42,7 @@ import flows
 import inbox
 import industry_map
 import policies
+import report_archive
 import themes
 import watchlist
 from markets import MARKETS
@@ -180,13 +182,20 @@ def main():
     mail = inbox.load(args.paper / "inbox")
     (args.out / "inbox.json").write_text(json.dumps({"items": mail}, ensure_ascii=False, separators=(",", ":")),
                                          encoding="utf-8")
-    data = dict(build(args.paper), site_version=site_version(args.site), inbox_last=mail[0]["t"] if mail else None)
+    # 지난 리포트 보관함 (report_archive.py): 한 장씩 그대로 옮기고 목록(index.json)만 따로. 앱은 '📅 지난 리포트' 탭을 열 때만 받아요
+    past = report_archive.index(args.paper)
+    if past:
+        shutil.copytree(args.paper / "reports", args.out / "reports")
+        (args.out / "reports" / "index.json").write_text(json.dumps({"items": past}, ensure_ascii=False, separators=(",", ":")),
+                                                         encoding="utf-8")
+    data = dict(build(args.paper), site_version=site_version(args.site), inbox_last=mail[0]["t"] if mail else None,
+                reports_n=len(past))
     learn = split_learn(data)
     (args.out / "learn.json").write_text(json.dumps(learn, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (args.out / "data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     for key, m in data["markets"].items():
         print(f"{m['name']}: 매일 자료 {'있음' if m['daily'] else '없음'}")
-    print(f"오늘의 리포트 {'있음' if data['report'] else '없음'}")
+    print(f"오늘의 리포트 {'있음' if data['report'] else '없음'} · 지난 리포트 {len(past)}장")
     print(f"{args.out}/ 준비 완료")
 
 

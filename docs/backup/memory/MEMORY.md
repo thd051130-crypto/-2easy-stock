@@ -93,3 +93,4 @@
 - 🔑 API 키 만료 미리 알림·막힘 감지(keys.py 매일 09:00, 만료일은 api_keys.json, 2026-11-15) → [[api-key-expiry]].
 - [screen-fit](screen-fit.md) — 화면 크기 자동 맞춤(2026-11-15): 넓은 화면 두 줄, 폰 가로 막대 얇게, 좁은 폰 숫자 잘림
 - [load-speed](load-speed.md) — 첫 화면 로딩 빠르게(2026-11-18): 대기화면+가로 진행률, data.json 미리 받기, learn.json 분리, 서비스워커 캐시
+- 📅 지난 리포트 보관함(paper/reports, report_archive.py) + 리포트 화면 '지난 리포트' 달력 탭 (2026-11-17) → [[report-archive]].

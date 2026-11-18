@@ -1497,3 +1497,15 @@ details.help-sec .guide-body { padding: 0 0 12px; }
   .nav button { flex-direction: row; gap: 6px; min-height: 40px; }
   .nav svg { width: 20px; height: 20px; padding: 2px 8px; }
 }
+
+/* 지난 리포트 달력 (리포트 화면 '📅 지난 리포트' 탭, 사용자 2026-11-17). 주간 리포트가 토요일이라 월~일 일곱 칸 */
+.past-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.past-cell { min-height: 50px; }
+.past-cell .em { font-size: 12px; line-height: 1.2; min-height: 15px; letter-spacing: -2px; white-space: nowrap; }
+.past-cell.off { background: transparent; border-style: dashed; opacity: .45; cursor: default; }
+.past-cell.today { border-color: var(--accent); }
+.past-cell.picked { background: var(--accent-bg); }
+.past-legend { font-size: 12px; margin: 8px 0 0; }
+.past-day { margin: 14px 0 0; }
+.past-pick { margin-top: 6px; }
+.past-pick small { font-size: 11px; opacity: .8; margin-left: 2px; font-variant-numeric: tabular-nums; }
