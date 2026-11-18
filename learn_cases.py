@@ -15,11 +15,13 @@ import argparse
 import datetime as dt
 import json
 import pathlib
+from zoneinfo import ZoneInfo
 
 PAPER = pathlib.Path("paper")
 OUT = PAPER / "learn_cases.json"
 KEEP = 120  # 시장마다 최근 120거래일(약 반년). 앱 data.json에 같이 실려서 너무 길지 않게
 OWN = {"kr": "^KS11", "us": "^GSPC"}
+CLOSE = {"kr": ("Asia/Seoul", "15:40"), "us": ("America/New_York", "16:10")}  # 이 시각 전의 '오늘' 값은 장중 값이라 빼요
 NAME = {"kr": "코스피", "us": "S&P500"}
 
 
@@ -199,6 +201,15 @@ def build_case(w, day, market, events=None, report=None):
     return case
 
 
+def closed_days(days, market, now=None):
+    """장이 아직 안 끝난 오늘 날짜는 빼요 (daily 작업이 늦게 돌아 다음 날 장중에 받으면 그날 값이 장중 값이라서)."""
+    tz, hm = CLOSE[market]
+    t = (now or dt.datetime.now(dt.timezone.utc)).astimezone(ZoneInfo(tz))
+    if days and days[-1] == t.date().isoformat() and t.strftime("%H:%M") < hm:
+        return days[:-1]
+    return days
+
+
 def merge(old, new_cases):
     by_day = {c["day"]: c for c in old or []}
     for c in new_cases:
@@ -208,7 +219,7 @@ def merge(old, new_cases):
     return sorted(by_day.values(), key=lambda c: c["day"], reverse=True)[:KEEP]
 
 
-def run(paper=PAPER, backfill=0):
+def run(paper=PAPER, backfill=0, now=None):
     world = read_json(paper / "world.json")
     events, report = read_json(paper / "events.json"), read_json(paper / "report.json")
     old = read_json(paper / "learn_cases.json") or {}
@@ -216,8 +227,11 @@ def run(paper=PAPER, backfill=0):
     for market, sym in OWN.items():
         w = load_world(world, market)
         own = w.get(sym)
-        days = (own.dates[-backfill:] if backfill else own.dates[-1:]) if own else []
-        out[market] = merge(old.get(market), [build_case(w, d, market, events, report if d == days[-1] else None) for d in days])
+        dates = closed_days(own.dates, market, now) if own else []
+        days = dates[-backfill:] if backfill else dates[-1:]
+        # 장중 값으로 잘못 쌓인 오늘 사례는 지워요 (마감 뒤 다시 돌면 제대로 채워져요)
+        kept = [c for c in old.get(market) or [] if not own or c["day"] in dates or c["day"] not in own.dates]
+        out[market] = merge(kept, [build_case(w, d, market, events, report if d == days[-1] else None) for d in days])
     (paper / "learn_cases.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return out
 
