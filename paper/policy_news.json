@@ -1,42 +1,36 @@
 {
- "day": "2026-11-17",
+ "day": "2026-11-18",
  "items": {
   "us-fed": [
    {
-    "title": "美연준 월러 “12월 금리 50bp 인상 검토”…‘빅스텝’ 가능성도",
-    "source": "중앙일보",
-    "date": "2026-11-10",
-    "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE5FQ1JaS0c1LVFidjF3TlJkNkNlVmMtamFMaVZ1YmZHTDRLRHNKRWI4Z1NtcXg1UThFbmIzZnRhVk02TDNMWno5SGc5LUpOZUNiZUZMaGlB?oc=5"
+    "title": "알리안츠 \"연준, 금리 세 번 더 올린 뒤 2028년 말 3.75%까지 인하\"",
+    "source": "연합인포맥스",
+    "date": "2026-11-16",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE1ybFdnRFU5TXVqNTNaX0MwRGpNaldTejRGOEZwcWgwcGZwSEYxLV9RQ3c2N1RnaU8tRF9hNkJEb3BsUGJfakMzSFdvdlFkeXhGamtRblltQ3hwQjB4VkxBeGFoNklfcjdqckZHOUxMRWE?oc=5"
    },
    {
-    "title": "Fed officials open door to a quicker round of rate hikes as inflation worsens",
-    "source": "Reuters",
-    "date": "2026-11-10",
-    "link": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxOTXo5UzFWVEh5WllQOHNxS1Q2cERxOEM0X1QyN1dPX0R4XzdfT1BpajYxdi0xOEltNWh6cE15Z2ZvZ2dXV0Vwb3NkbWZ1VGQ2M2tvVVVSaWd6clhPcS1XUEU2QXE3c0tlLUhPX0c2emRnWVpwOGtoajlnSS1VRXRNZXFaNEpyVlVwcFVIOUdkT18yQ2t6a1psZGVlOFpiZl90QnVhcmxqQzNxNnlNSEdXcWpjcUdzYUNJSi1hcnl6ZEpUSUU?oc=5"
-   }
-  ],
-  "kr-rate": [],
-  "kr-us-deal": [
-   {
-    "title": "관세 15% 방어·텍사스발전소 1호 투자… 실익 확보엔 '글쎄' [한미 팩트시트 1년]",
-    "source": "파이낸셜뉴스",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE9MSHYtcTliY0FhM2REZXBfWnZNQ1N6OF9hUUctQVRLdy1sVnJBTE11cVJkOFJmaHFRUkJQNThYT0VtMEpCckNYa0hZRE51YzBIZFZYYUN2SW9XQQ?oc=5"
-   },
-   {
-    "title": "[목멱칼럼]美 민주당 시대, 대미 투자 이슈 선점해야",
-    "source": "m.edaily.co.kr",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMigAFBVV95cUxOUVRyZnJ3dERZZF91NEVKYXlPN3RxdkhhZWhvRWdqdksxRC0tWTlsZHM3RnE2QUd5SDlPYllMZC05Tm8wbHJMZ1lLTnJTS2FsNFBMRWhMYlVGVHNkTVU5TDBnWnJkcXBSaXdIbDYwQ1FYMXU3Nk9BdjRWVjFFNkJBUA?oc=5"
-   }
-  ],
-  "world-oil": [
-   {
-    "title": "호르무즈 해협 유조선 폭발 등에 11월12일 국제유가 상승",
-    "source": "에너지신문",
+    "title": "Fed on Track to Raise Interest Rates Next Month And Maybe Again in January",
+    "source": "Bloomberg.com",
     "date": "2026-11-13",
-    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTFBRX094VGZBazk2cG8wRjI0SU4wYW1IM1otTU9UNEtPdHJCMktxeG5CX2M4N1dBaUo2UXhrVElHdnVjZnRiMzF3d25PYnd2Mzhna1JVOXNfSFczekxMUXZEOHR6VjN2X3ZLeGdCYy0yQVB1QQ?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMivAFBVV95cUxNeXJmalVqcjF1WEgxXzRyZ2hNRTRMWXdCWGdpblhnaGwxY0ZDeFIwYTVnWENtQ2U2NFg3YkpUS21EdkNHaXlwVlVicGxWd2RJZnJqOXlySXJfZzdscXlqRFNJSkswUjZ0ZjFINC11aU9GMWdrMGR6SzdfYUlkN3pGaDZZci1NbnkxWmtoZ1lNa3E2MmxDcnFqRnN0MWpwUURLT05odHBpdVlhNXRjNUJOd3JGcnNCYzd6bjVqWQ?oc=5"
+   }
+  ],
+  "kr-rate": [
+   {
+    "title": "한은, 이달 기준금리 0.25%p 인상 가능성 커져",
+    "source": "한겨레",
+    "date": "2026-11-16",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5BRGR2dWo0VlNOSFlZcTk3ZXN3MmJXZ1MxczRibTFKRWc5WXptQnJBM1NoRmZnYm9Wa1ZkaGRwZFd2Q29YSVVhSVRZM25MelpiWGFIalo1SWxFMEJBY1hOTDZSenJMQV9aenZfNkVldTNUZw?oc=5"
    },
+   {
+    "title": "11월엔 올린다지만 그다음은…금통위가 주목한 소비의 온도",
+    "source": "연합인포맥스",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9hdmN3R0ZfV2pQZG5SRG1uM0ZkczZyQkdQSmFhR2RDYTNxVkduU0VmU2tBVU5ZNmpLV3NSZUJmSFlmcFdWb2d5VEVVZS1Nb0RQd2pfUS0yWXNMUUNTUTVhS0xJYy1vQUQ2dURxRjExTWw?oc=5"
+   }
+  ],
+  "kr-us-deal": [],
+  "world-oil": [
    {
     "title": "Oil production nears pre-Iran war levels, OPEC says",
     "source": "Al Jazeera",
@@ -48,14 +42,14 @@
    {
     "title": "미중 무역휴전부터 한중 FTA까지…韓 경제의 APEC 관전 포인트",
     "source": "뉴스1",
-    "date": "2026-11-14",
+    "date": "2026-11-16",
     "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE84Wk44MGFpZTVJSEtveTJaeDNrOUdrTkIyOFNrUFlZa1UwR2M0SHhwMDlIRjFoSlpyMXJoel9uZ1lGcldRV2VyQ3hheDdUa3pwc01xUw?oc=5"
    },
    {
-    "title": "China Extends Suspension of Rare Earth Export Controls",
-    "source": "Thompson Hine",
-    "date": "2026-11-13",
-    "link": "https://news.google.com/rss/articles/CBMiowFBVV95cUxOVUdiSTZDb0c2U0lWWEpiRV9ZMnpESmlpZDdBcXdxbmNsUVVFOHdxZHR5LTd4THI1RGpybjdsRTJhUlNjR1hkRU9rU3JyUnNwX1RxZ0pVMmFMejFZRHY2Tm1NTk1mN0NoMzdudFZLVEI4MlVPNjlDQ3ZSNFVzSUhHWmRWbVNMQ09DbHBtWHdmbV8yRDF3OUJ0aFNfYlJ3UzBocFhv?oc=5"
+    "title": "How Trump and Xi went from tariff war to trade truce",
+    "source": "Reuters",
+    "date": "2026-11-17",
+    "link": "https://news.google.com/rss/articles/CBMipgFBVV95cUxOQ1B5ZTVMbHctSmxMMmV2SFRrM25UM2ZvZmJpZkpnMXVCSGRVNjlQbFZrQmVRX1poOXdoQjNiV056eGxRUlhpUnVyclQ3aVBXWHBhS1JXUHZLVmtPcHhVMlotQ2JfbUhZZVRndlg3NzJNci14MEJKdkw1c3BoVWYwOFlBbzlGS25WVGxFRy1tV3h2WGJHV3FOeGpBcnJHSUdvVTc4N2VB?oc=5"
    }
   ],
   "kr-budget-ai": [
@@ -72,13 +66,26 @@
     "link": "https://news.google.com/rss/articles/CBMifkFVX3lxTE5yd05CR2owc2NoNGZBNGlFR0FTTHhacG9ZR0MzR004b2lXQ3Vsang1VDE4Y3JtZnZ2ckltM0RERzQ1YmNaREhRbDh3LUhTNjVkMFN4OVpHQnR6ZXozVy1Nb1ZVemFxakYyTUwteUpFeV93S1lCTldFRjRycjJxUQ?oc=5"
    }
   ],
-  "kr-buyback": [],
+  "kr-buyback": [
+   {
+    "title": "의무공개매수 '제3의 절충안'…대주주 지분 사고 나머지 절반도 매수",
+    "source": "KB Think",
+    "date": "2026-11-13",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5yMkU4Rkp6X1pQRU94OC0wamlfaWV6WnBLbVpCN05pTDhtaTd4OVEtR2E2aVJwbTRiMXNaLTRKZV9SRnlydmNoNnQwTVk3Q0F1czJMRG5obzhrdFhMc1JYNEpFRHZGanpGclNrLVR3QUwxZw?oc=5"
+   },
+   {
+    "title": "주총 문화 바뀔까…개정 상법 앞두고 드러난 과제들",
+    "source": ":: 위즈경제 ::",
+    "date": "2026-11-13",
+    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE55U3dlOUhLa3hfU21EcUluVGplRmtqQTl1VGtXYmtxMUd0WlZfd3oxMWk5YlR5QnRPQ2xoTGYzNkh2N2pXSW9vdUJrbnNYbk5tNWplXw?oc=5"
+   }
+  ],
   "us-chip-tariff": [
    {
-    "title": "미 의회 바뀌어도 통상 압박 계속…‘관세·투자·입법’ 3대 변수",
-    "source": "뉴스토마토",
-    "date": "2026-11-10",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE1TbnpSYWpwdndjSlVWZmtLTklOQktsVFpuaEpVaS03bDRpaVFDX2VpeGxqQnRHS0otVHJvTFVia21ULXJrdjdWZ29wMkR0UTVmN1NSWFBIWG9sTFVvamNmTA?oc=5"
+    "title": "2026 미국 중간선거 결과와 한미 통상 현안 전망",
+    "source": "법률신문",
+    "date": "2026-11-16",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE96bDg1TldyMzdkbEttaDdsNXNMVF9ya1JhdzkwTlZSNFhsYXg2YVh1VVc4bTRfTVRpcnJDWEVqVWpuaWc0MjkxVzdSZWV5RkczN1NuNnpXalJCX2xPeUNYQXh1WkJwY3pmSVJDNTZ4TnVZZ9IBckFVX3lxTE96bDg1TldyMzdkbEttaDdsNXNMVF9ya1JhdzkwTlZSNFhsYXg2YVh1VVc4bTRfTVRpcnJDWEVqVWpuaWc0MjkxVzdSZWV5RkczN1NuNnpXalJCX2xPeUNYQXh1WkJwY3pmSVJDNTZ4TnVZZw?oc=5"
    },
    {
     "title": "Tools of Leverage: Preserving US and Allied Leadership in Semiconductor Equipment Against China",
@@ -93,6 +100,12 @@
     "source": "한국세정신문",
     "date": "2026-11-11",
     "link": "https://news.google.com/rss/articles/CBMiZEFVX3lxTFBhYVBhMldWeHYzZDV6NFBUcEtiZWEzMW8xelA3WmhUTExWZTIyc3ZWOEwyeGNPTUxFbGZIWklMcmdDM1kyeUtUMEtpak56Nnp0OTRzS3ItMkZXZkxFTXFHUFc3M3A?oc=5"
+   },
+   {
+    "title": "Excess Capacity Tariffs: Will They or Won’t They? Part 2",
+    "source": "Sandler, Travis & Rosenberg, P.A.",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxNYjNDTVFrbzhRZ3BoRTVoaVprYzQ3VHc2Rm1WTGRTRDd0dm95clp5SktZSXBQNkF5NzdjMVFEaUJXM1VmZVotSHlRUUVBVE9WU2l0RHphQ0EzUl94Y1FrdV9RMUlsWEx4U0dBWHROTGtEMzRhdkdOMUY5NDA4SWhBeFQxb214Sl9NRVdfOWtybmNnTnF0ZGpuMnZNRlgwMFdzYWxydWUtVDRFRnNCN0VyLVV2N0NHZG5SNmlOb3MtM3hVOFk?oc=5"
    }
   ],
   "us-pharma": [
@@ -119,6 +132,12 @@
   ],
   "kr-budget-future": [
    {
+    "title": "반도체 호황 뒤에 가려진 경제 편중…정부, 산업 다변화·민생 지원 '투트랙'",
+    "source": "뉴시안",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1nOXV0WERDOVJuZllCVkpSY2h5ejNzVXh6TjRabGo0M3Q2eWxkT09vb0V0M2UyV0t1MC02akpabm93ZFdlcFBsNVpZTjlpUXM3TzA2OGNqcXczekZOQlhLWU1TOHpsdzJmdGpGZg?oc=5"
+   },
+   {
     "title": "337호 커버스토리) 2027 대한민국 대전환 권력·돈·산업의 지도가 바뀐다.",
     "source": "시사매거진",
     "date": "2026-11-14",
@@ -127,10 +146,16 @@
   ],
   "world-boj": [
    {
-    "title": "Hawkish Bank of Japan Member Urges Nimble Rate Hikes",
-    "source": "WSJ",
+    "title": "세계 최저 실질금리 경고한 일본은행 매파…조기 인상 촉구 속내",
+    "source": "글로벌이코노믹",
     "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQNlpmbVJtQTN1Sk9SNm92WWdHRkRPTDBtRG4xNS1zaEVqVkJ4a2lOeHZvT19LOThNV0ZKSlVfbmdVT01UbEhHQ0dHYWltS3Y3OU9iZzNiMlpnSzdSY2NhR3R0cFF0Z3JHQkUzd24tZlFqXy1jSm1BM1FRcjNleExYNUJFcWtOOGszNHhmTzlCczVNSVp2NURoSnVQSWliQ0EyVUpvMDBSMmE?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxNWmZHTzZ1eHVQQ3MweDl6UlVDbTlIU2xVaHNxOURFcElvT3hVWk5QZ1JDci1JdW81b2tyOXBrRUE4Ujl6MUpDeWFSRkJPdWZ2TVpQRU5pNTlkQ2c5Y3UzdU12S25CcEh5VFJmY2F5aERfUzFzdlQzZ1dDNUVZeTBOYnI0SWtuSFVq?oc=5"
+   },
+   {
+    "title": "Dovish BOJ policymaker Asada pushes back against early rate hike calls",
+    "source": "Reuters",
+    "date": "2026-11-12",
+    "link": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxNUm1LbmxiVXptVmZNY3hIbG9rSU5ja0lHejBkNEpxSGFQSGxtQ0hfd0VScXhuUG40LWhvQkE1TFhNekZnMEw0Rnhwal8zem1iZVp6UHpvT2ZuYm1LSmxPeDkyQWJGcHpRZkZyZTd3WHZ5YUFMLS1wYS14V091U2RvNm96b21XZnZ4STJLNW1TbEh6RlRIZGdkZm9CZ01SWHNFeFFCRkJXSGlHNy1QOHI5dTRxVHZzejBqRzNv?oc=5"
    }
   ]
  }
