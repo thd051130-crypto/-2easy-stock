@@ -96,3 +96,4 @@
 - [load-speed](load-speed.md) — 첫 화면 로딩 빠르게(2026-11-18): 대기화면+가로 진행률, data.json 미리 받기, learn.json 분리, 서비스워커 캐시
 - 📅 지난 리포트 보관함(paper/reports, report_archive.py) + 리포트 화면 '지난 리포트' 달력 탭 (2026-11-17) → [[report-archive]].
 - [stock-chart-top](stock-chart-top.md) — 종목 화면 차트를 사기 전 체크리스트 위로(2026-11-19)
+- [market-events-calendar](market-events-calendar.md) — 일정 달력·홈 큰 발표 칸에 증시 구조 일정 채움(2026-11-19): 네 마녀의 날·지수 정기변경·휴장·연말 배당락·FOMC 회의록·ISM·한국 수출입

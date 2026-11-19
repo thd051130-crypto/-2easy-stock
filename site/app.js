@@ -146,6 +146,8 @@ const TERMS = {
   "FOMC": "미국 중앙은행(연준)의 금리 결정 회의. 1년에 8번. 금리를 올리면 보통 주가에 부담, 내리면 도움이 돼요. 한국시간 새벽에 발표돼요.",
   "금통위": "한국은행 금융통화위원회. 한국 기준금리를 정해요. 1년에 8번, 보통 목요일 오전에 발표해요.",
   "옵션 만기": "선물·옵션 계약이 끝나는 날(국장 매달 둘째 목요일, 미장 셋째 금요일). 큰손들이 계약을 정리하느라 장 막판에 주가가 출렁일 수 있어요.",
+  "네 마녀의 날": "3·6·9·12월 만기일. 주가지수 선물·옵션과 개별 주식 선물·옵션 네 가지가 한꺼번에 끝나서 장 마감 무렵 큰 매매가 몰려요. 미장은 같은 날 S&P 500 리밸런싱도 겹쳐요.",
+  "지수 정기변경": "코스피200·MSCI·S&P 500 같은 지수가 정해진 날 종목을 바꾸는 것. 지수를 따라가는 펀드가 그날 종가에 한꺼번에 사고팔아서, 들어가는 종목은 오르고 빠지는 종목은 내리는 경우가 많아요.",
   "실적 시즌": "회사들이 분기 실적을 몰아서 발표하는 때. 예상보다 나쁘면 하루에 -10%도 나와요.",
   "유상증자": "회사가 새 주식을 찍어 돈을 받는 것. 주식 수가 늘어 내 몫이 줄어서(희석) 주가가 내릴 때가 많아요.",
   "전환사채": "나중에 주식으로 바꿀 수 있는 회사 빚(CB). 주식으로 바뀌면 주식 수가 늘어 주가에 부담이 돼요.",
@@ -211,7 +213,7 @@ const TERMS = {
 };
 // 투자 공부 → 용어집에서 묶어 보여 줄 분야 (여기 없는 말은 '그 밖에')
 const TERM_GROUPS = [
-  ["📈 시장·지수", ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "시가총액", "조정", "약세장", "최대 낙폭", "변동성", "서킷브레이커", "사이드카", "옵션 만기", "공매도", "히트맵"]],
+  ["📈 시장·지수", ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "시가총액", "조정", "약세장", "최대 낙폭", "변동성", "서킷브레이커", "사이드카", "옵션 만기", "네 마녀의 날", "지수 정기변경", "공매도", "히트맵"]],
   ["🏦 금리·경제 지표", ["기준금리", "국채 금리", "장단기 금리 역전", "FOMC", "금통위", "CPI", "근원 물가", "PCE", "비농업 고용", "실업률", "삼 법칙", "GDP", "PMI", "경기 침체", "스태그플레이션", "연착륙", "양적 긴축"]],
   ["💱 환율·원자재", ["환율", "원화 약세", "달러인덱스", "WTI", "안전자산", "구리/금 비율", "하이일드"]],
   ["😨 심리·수급", ["VIX", "패닉 셀", "반대매매", "FOMO", "순매수", "외국인 보유율"]],
@@ -1771,7 +1773,7 @@ function weeklyCards() {
     ${iss.length ? `<ol class="wk-tl">${iss.map((x) => `<li><time>${x.ongoing ? "지난주<br>부터" : wkDay(x.since || "")}</time><div>${badTag(x)}${x.topic ? `<span class="badge">${esc(x.topic)}</span> ` : ""}${issLink(x)}
       <small>언론 ${x.sources}곳${x.source ? ` · ${esc(x.source)}` : ""}${x.more ? ` · 비슷한 기사 묶음 ${x.more + 1}개` : ""}</small></div></li>`).join("")}</ol>` : `<p class="empty">이번 주엔 여러 언론이 같이 다룬 뉴스가 없어요</p>`}</section>` : "";
   // 6. 다음 주: 요일별 묶음 + 종류 표시
-  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"], risk: ["⚠️ 리스크", "bad"] };
+  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"], risk: ["⚠️ 리스크", "bad"], index: ["정기변경", ""], holiday: ["휴장", ""], divday: ["배당락", ""] };
   const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
     ...(nx.cal || []).map((c) => ({ d: c.date, k: c.kind, h: `${REPORT_FLAG[c.market] || ""} ${esc(c.title)}`, sub: c.note || "" })),
     ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => ({ d: c.date, k: "earn", h: `${esc(c.title.replace(/ 실적 발표$/, ""))}${c.mine ? " ⭐" : ""}`, sub: "" }))];
@@ -5328,12 +5330,35 @@ function marketStatusCard() {
     ${rows.map((r) => `<div class="mkt-row"><b>${r.name}</b><span class="${r.cls}">${r.state}</span><small class="muted">${r.last ? `${md(r.last)} 종가 기준` : "자료 없음"}</small></div>`).join("")}
     ${warn.length ? `<p class="mkt-warn">⚠️ ${warn.map((r) => `${r.name} 자료가 ${md(r.last)} 거예요`).join(", ")}. 연휴가 아니면 자동 실행이 멈춘 거라, 숫자를 오늘 값으로 보지 마세요.</p>` : ""}</section>`;
 }
+// 오늘·내일 증시 일정 (달력 DATA.calendar와 같은 자료): 만기일·지수 정기변경·휴장·배당락·리스크·금통위,
+// 그리고 위 발표 줄(events.json)에 없는 같은 시각 발표 (한국 수출입처럼). 사용자 2026-11-19 "알아서 채워두도록"
+const BIG_CAL_KINDS = ["expiry", "index", "holiday", "divday", "risk", "rate", "big"];
+function bigCalRows(ev) {
+  const today = TODAY(), tmr = new Date(Date.parse(today) + 864e5).toISOString().slice(0, 10);
+  const kst = (iso) => new Date(Date.parse(iso) + 9 * 3600e3).toISOString();
+  const shown = new Set(ev.map((e) => { const k = kst(e.at); return `${k.slice(0, 10)} ${k.slice(11, 16)}`; }));
+  return ((DATA && DATA.calendar) || []).filter((e) => (e.date === today || e.date === tmr) && BIG_CAL_KINDS.includes(e.kind)
+    && !(e.kind === "rate" && e.market === "us")  // FOMC는 위 발표 줄에 시각까지 있어요
+    && !(e.kind === "big" && shown.has(`${e.date} ${((e.note || "").match(/\d\d:\d\d/) || [""])[0]}`)));
+}
+function bigCalHtml(cal) {
+  if (!cal.length) return "";
+  const today = TODAY(), flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" };
+  return ["오늘", "내일"].map((lab, i) => {
+    const day = i ? new Date(Date.parse(today) + 864e5).toISOString().slice(0, 10) : today;
+    const xs = cal.filter((e) => e.date === day);
+    if (!xs.length) return "";
+    return `<li class="big-row big-cal${xs.some((e) => e.big) ? " tier1" : ""}"><div class="big-when"><b>${md(day)} 증시 일정</b> <span class="pill">${lab}</span></div>
+      ${xs.map((e) => `<div class="big-item"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${esc(e.title)}</div>${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div>`).join("")}</li>`;
+  }).join("");
+}
 function bigEventsCard() {
   const data = (DATA && DATA.events) || {};
   const now = Date.now(), H = 3600e3;
   const ev = (data.events || []).filter((e) => { const t = Date.parse(e.at); return t > now - 24 * H && t < now + 48 * H; });
   const shocks = (data.shocks || []).filter((x) => Date.parse(x.at) > now - 24 * H);
-  if (!ev.length && !shocks.length) return "";
+  const cal = bigCalRows(ev);
+  if (!ev.length && !shocks.length && !cal.length) return "";
   const days = "일월화수목금토";
   const when = (iso) => { const k = new Date(Date.parse(iso) + 9 * H); return `${k.getUTCMonth() + 1}.${String(k.getUTCDate()).padStart(2, "0")}(${days[k.getUTCDay()]}) ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`; };
   // 하루 넘게 남으면 한국 날짜로 세요 (달력 D-n과 같게: 일요일 밤 → 화요일 새벽은 '2일 뒤')
@@ -5367,8 +5392,8 @@ function bigEventsCard() {
       <div class="big-item"><div class="name">${esc(x.label)} 1시간 <span class="${x.move > 0 ? "up" : "down"}">${pct(x.move)}</span></div></div>
       ${(x.news || []).slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}</li>`).join("");
   return `<section class="card big-card" id="big-card"><h2>🚨 큰 발표·지수 급변 <small>한국시간 · 참고</small></h2>
-    <ul class="list big-list">${shockRows}${rows}</ul>
-    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표, 📌 그 밖의 발표예요 (다가오는 일정 달력과 같은 기준). 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
+    <ul class="list big-list">${shockRows}${rows}${bigCalHtml(cal)}</ul>
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표, 📌 그 밖의 발표예요 (다가오는 일정 달력과 같은 기준). 만기일·지수 정기변경·휴장 같은 오늘·내일 증시 일정도 달력에서 같이 보여 줘요. 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
       실제 값은 FRED(미국 연준 무료 자료)에서 계산해서 공식 발표와 소수 둘째 자리가 다를 수 있어요. 매매 규칙은 그대로예요.</p></section>`;
 }
 
@@ -5376,7 +5401,7 @@ function bigEventsCard() {
 // 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목만, 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
 const EARN_DAYS = 30;  // 실적·배당은 한 달 치
-const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰", risk: "⚠️" };
+const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰", risk: "⚠️", index: "⚖️", holiday: "🛑", divday: "💰" };
 const STOCK_KINDS = ["earn", "exdiv"];
 let calAll = false;
 const calMine = (e) => e.mine || (e.code && WATCH[e.market] && WATCH[e.market].includes(e.code));
@@ -5392,7 +5417,7 @@ function calRows(list) {
     const head = e.date !== last ? `<li class="cal-day${e.date < TODAY() ? " past" : ""}"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
-    const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
+    const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: e.big ? "네 마녀의 날" : "옵션 만기", season: "실적 시즌", exdiv: "배당락", divday: "배당락", index: "지수 정기변경" }[e.kind];
     const cls = [e.big ? "cal-big" : "", e.kind === "risk" ? "cal-risk" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
     return `${head}<li${tap}${cls ? ` class="${cls}"` : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
@@ -5449,7 +5474,7 @@ function calendarCard() {
       <button type="button" class="cal-nav" data-ecstep="1" aria-label="다음 달" ${econMonth >= hi ? "disabled" : ""}>›</button></div>
     <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div></div>
     <div class="ec-list">${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}</div>
-    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표, 📌 PPI·소매판매, 🏦 금리 결정, ⏳ 만기일, 📊 국장 실적 시즌이에요 (한국시간). 지난 일정은 연하게 보여요.
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표와 네 마녀의 날·MSCI 정기변경, 📌 PPI·소매판매·ISM·FOMC 회의록·한국 수출입, 🏦 금리 결정, ⏳ 만기일, ⚖️ 지수 정기변경(코스피200·MSCI·S&P 500·러셀), 🛑 휴장·조기 폐장, 💰 연말 배당락, ⚠️ ELS 대량 만기 같은 리스크 일정이에요 (한국시간). 지난 일정은 연하게 보여요.
       위 달 버튼은 옆으로 밀면 작년·내년도 볼 수 있고, 지난달~5개월 뒤는 파랗게 표시돼요. 미국 발표·FOMC 날짜는 올라온 해까지만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
 }
 // 일정 화면: 달력(월 제목 + 칸)은 위 막대 바로 아래에 멈춰 있고, 그 아래 일정 목록만 움직여요 (사용자 2026-10-24, 이 화면만 sticky 예외)
