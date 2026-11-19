@@ -557,7 +557,8 @@ const VIEWS = {
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
   tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
-  stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
+  // 차트는 머리 칸 바로 아래, 사기 전 체크리스트보다 위 (사용자, 2026-11-19)
+  stock: (d) => [stockHeadCard(d), stockChartCard(), checkCard(d), discloseStockCard(d), stockSectorCard(d),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
