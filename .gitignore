@@ -5,3 +5,5 @@ __pycache__/
 .pytest_cache/
 data/
 _site/
+node_modules/
+jump-audit.txt
