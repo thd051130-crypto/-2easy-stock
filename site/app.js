@@ -726,7 +726,7 @@ function render() {
       remember("tools_tab", perfTabKey);
       render();
     }));
-    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab(); bindAsset();
+    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab(); bindAsset(); bindDivCal();
     if (!RET[market]) loadReturns().then(() => { if (screen === "tools") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
   }
   app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {
@@ -2781,7 +2781,7 @@ function bindMap() {
 
 // 도구 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 적립식 계산기, 고른 건 이 폰에 기억해요
 const PERF_TABS = [
-  ["asset", "자산 기록", () => [assetCard()]],
+  ["asset", "자산 기록", () => [assetCard(), divCalCard()]],
   ["sav", "적립식 계산기", () => [savingsCard()]],
   ["lab", "포트폴리오 실험실", () => [labCard()]],
   ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],
@@ -7375,6 +7375,7 @@ function bindAsset() {
     c.outerHTML = assetCard();
     astAnim = false;
     bindAsset();
+    dvRefresh();  // 종목·주 수가 바뀌면 아래 배당 달력도 같이
     keepTap();
   };
   const month = (ym) => AST.months[ym] || (AST.months[ym] = { memo: "", items: [], cash: {} });
@@ -7562,6 +7563,144 @@ function bindAsset() {
     if (!cl.classList.contains("armed")) { cl.classList.add("armed"); setTimeout(() => cl.classList.remove("armed"), 3000); return; }
     delete AST.months[ym]; astSave(); lastTap = null; redraw();
   });
+}
+
+// ---------------------------------------------------------------- 배당 달력 (자산 기록 종목)
+// 자산 기록에 적은 마지막 달 종목·주 수로 앞으로 12달 언제 얼마 들어올지 보여요 (사용자 2026-11-20 "2번도 하자").
+// 자료: symbols/<시장>_returns.json 최근 12개월 [배당락 달, 1주당 배당] (returns.py, 야후 무료·매주) + 종목 자료(funds)의 배당락일·지급일.
+// 받는 달은 짐작해요: 국장 주식 12월 배당락 → 다음 해 4월, 3·6·9월 → 2달 뒤, 그 밖 → 다음 달 / 국장 ETF → 다음 달 /
+// 미장 → 지급일을 알면 배당락과의 차이, 모르면 같은 달. 세후 = 국장 15.4%, 미장 15% 뺀 값. 미장은 오늘 환율로 원화.
+// 카드 오른쪽 위 '끄기'로 접어 둘 수 있어요 (이 폰에 기억, divcal_off). 등락 색은 안 써요 (자산 기록 규칙).
+let dvOn = true, dvPick = null;
+try { dvOn = localStorage.getItem("divcal_off") !== "1"; } catch (e) { /* 처음 */ }
+const DV_TAX = { kr: 0.154, us: 0.15 };
+const dvFx = () => +DATA.fx || 1350;
+const dvEtf = (m, code, name) => {
+  const r = symRow(m, code);
+  return r ? r[3] === "e" : m === "kr" && /^(KODEX|TIGER|ACE|SOL|RISE|PLUS|HANARO|KBSTAR|ARIRANG|KOSEF|TIMEFOLIO|KIWOOM|WON|BNK|1Q|마이다스|에셋플러스)/i.test(name || "");
+};
+const dvEv = (m, code) => { const f = ((DATA.markets[m] || {}).funds || {})[code]; return (f && f.events) || null; };
+const dvDay = (s, n = 0) => { const d = new Date(`${s}T00:00:00`); d.setDate(d.getDate() + n); return d; };
+const dvMd = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
+// 지금 들고 있는 것: 이번 달까지 종목을 적은 마지막 달의 종목, 같은 종목은 계좌를 넘어 주 수를 합쳐요
+function dvHold() {
+  const n = new Date(), ym = astPrevYm(ymOf(new Date(n.getFullYear(), n.getMonth() + 1, 1)));
+  const by = new Map();
+  if (ym) AST.months[ym].items.forEach((i) => {
+    const q = +i.qty || 0;
+    if (!q || !i.code) return;
+    const k = `${i.m}:${i.code}`, h = by.get(k) || { m: i.m, code: i.code, name: i.name || i.code, qty: 0 };
+    h.qty += q; by.set(k, h);
+  });
+  return { ym, list: [...by.values()] };
+}
+// 최근 12개월 배당 → 1년 패턴. 매달 주는데 몇 달 빠졌으면 채우고, 분기 배당 3번이면 빠진 1번을 채워요.
+// 한 번만 보통의 8배 넘게 튀면 야후 자료 오류일 때가 많아 보통 크기로 봐요 (fix에 표시).
+// 단 종목 자료의 '최근 1회 배당금'(div_last)과 같으면 진짜로 보고 그대로 둬요
+function dvHist(m, code) {
+  const last = (dvEv(m, code) || {}).div_last;
+  const r = RET[m] && RET[m][code], per = {};
+  (r && Array.isArray(r[6]) ? r[6] : []).forEach(([mo, a]) => { if (mo >= 1 && mo <= 12 && a > 0) per[mo] = (per[mo] || 0) + a; });
+  const ms = Object.keys(per).map(Number);
+  if (!ms.length) return [];
+  const vals = ms.map((k) => per[k]).sort((a, b) => a - b), low = vals[Math.floor((vals.length - 1) / 2)];
+  const fix = new Set();
+  if (ms.length >= 3) ms.forEach((k) => { if (per[k] > low * 8 && !(last && Math.abs(per[k] - last) <= per[k] * 0.05)) { per[k] = low; fix.add(k); } });
+  if (ms.length >= 9) for (let k = 1; k <= 12; k++) if (!per[k]) per[k] = low;
+  if (ms.length === 3 && ms.every((k) => k % 3 === ms[0] % 3)) for (let k = ms[0] % 3 || 3; k <= 12; k += 3) if (!per[k]) per[k] = low;
+  return Object.keys(per).map(Number).sort((a, b) => a - b).map((k) => ({ ex: k, amt: per[k], fix: fix.has(k) }));
+}
+// 배당락 달 → 내 계좌에 들어오는 달까지 몇 달
+function dvLag(h, ex) {
+  if (h.m === "us") {
+    const e = dvEv(h.m, h.code);
+    if (e && e.exdiv && e.paydiv) {
+      const a = dvDay(e.exdiv), b = dvDay(e.paydiv, 2);
+      const g = (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth();
+      if (g >= 0 && g <= 2) return g;
+    }
+    return 0;
+  }
+  if (dvEtf(h.m, h.code, h.name)) return 1;
+  return ex === 12 ? 4 : ex % 3 === 0 ? 2 : 1;
+}
+// 앞으로 12달(이번 달부터): months [{ym, net, gross, rows:[{h, ex, amt, gross, net, sure, fix}]}], none = 배당 기록 없는 종목
+function dvPlan(list) {
+  const n = new Date(), today = TODAY();
+  const months = Array.from({ length: 12 }, (_, k) => ({ ym: ymOf(new Date(n.getFullYear(), n.getMonth() + k, 1)), net: 0, gross: 0, rows: [] }));
+  const none = [];
+  list.forEach((h) => {
+    const hist = dvHist(h.m, h.code);
+    if (!hist.length) { none.push(h); return; }
+    const e = dvEv(h.m, h.code) || {};
+    hist.forEach(({ ex, amt, fix }) => {
+      const rm = ((ex - 1 + dvLag(h, ex)) % 12) + 1, slot = months.find((x) => +x.ym.slice(5) === rm);
+      const gross = amt * h.qty * (h.m === "us" ? dvFx() : 1), net = gross * (1 - DV_TAX[h.m]);
+      // 확정: 앞으로 올 지급일(미장)이 이 칸 달이거나, 앞으로 올 배당락일이 이 배당락 달이면
+      let sure = "";
+      if (e.paydiv && e.paydiv >= today && ymOf(dvDay(e.paydiv, 2)) === slot.ym) sure = `지급 ${dvMd(dvDay(e.paydiv))} 확정`;
+      else if (e.exdiv && e.exdiv >= today && +e.exdiv.slice(5, 7) === ex && e.exdiv.slice(0, 7) <= slot.ym) sure = `배당락 ${dvMd(dvDay(e.exdiv))} 확정`;
+      slot.rows.push({ h, ex, amt, gross, net, sure, fix });
+      slot.gross += gross; slot.net += net;
+    });
+  });
+  months.forEach((x) => x.rows.sort((p, q) => q.net - p.net));
+  return { months, none };
+}
+const dvPer = (h, amt) => (h.m === "us" ? `$${amt.toLocaleString("en-US", { maximumFractionDigits: 3 })}` : astWon(amt));
+function divCalCard() {
+  const head = (on) => `<h2 class="goal-h"><span>💰 배당 달력</span><span class="goal-h-r"><small>${on ? "예상" : "꺼짐"}</small>
+    <button type="button" class="ast-btn dv-sw" data-dv-sw aria-pressed="${on}">${on ? "끄기" : "켜기"}</button></span></h2>`;
+  if (!dvOn) return `<section class="card" id="dv-card">${head(false)}
+    <p class="muted" style="margin:6px 0 0;font-size:13px">꺼 두었어요. 켜면 자산 기록 종목이 언제 배당을 주고 얼마 들어올지 달마다 보여요.</p></section>`;
+  const { ym, list } = dvHold();
+  if (!list.length) return `<section class="card" id="dv-card">${head(true)}
+    <p class="muted" style="margin:6px 0 0;font-size:13px">위 자산 기록에 종목과 주 수를 적으면, 앞으로 12달 언제 배당이 얼마 들어올지 여기 달력에 나와요.</p></section>`;
+  if (!RET.kr || !RET.us) return `<section class="card" id="dv-card">${head(true)}<p class="muted" style="margin:6px 0 0">배당 자료 불러오는 중…</p></section>`;
+  const { months, none } = dvPlan(list);
+  const total = months.reduce((a, x) => a + x.net, 0), max = Math.max(1, ...months.map((x) => x.net));
+  const best = months.reduce((a, x) => (x.net > a.net ? x : a), months[0]);
+  if (dvPick && !months.some((x) => x.ym === dvPick)) dvPick = null;
+  const y0 = months[0].ym.slice(0, 4);
+  const cells = months.map((x, k) => `<button type="button" class="ast-cell dv-cell${x.net ? " has" : ""}${k === 0 ? " now" : ""}" data-dv-m="${x.ym}" aria-pressed="${dvPick === x.ym}">
+      <span class="ast-mn">${+x.ym.slice(5)}월${x.ym.slice(0, 4) !== y0 ? ` <small class="muted">'${x.ym.slice(2, 4)}</small>` : ""}</span>
+      ${x.net ? `<b>${astDivW(x.net)}</b><small class="muted">${x.rows.length}건${x.rows.some((r) => r.sure) ? " · 확정 있음" : ""}</small>
+        <i class="ast-bar" style="width:${Math.max(6, (x.net / max) * 100)}%"></i>` : `<small class="muted">없음</small>`}</button>`).join("");
+  const pick = dvPick && months.find((x) => x.ym === dvPick);
+  const detail = pick ? `<div class="dv-detail"><h3>${ymName(pick.ym)} 들어올 배당 <small class="muted">세후 ${astWon(pick.net)}</small></h3>
+      ${pick.rows.length ? `<ul class="ast-mix">${pick.rows.map((r) => `<li><div class="ast-mix-t"><b>${esc(r.h.name)}</b><span>${astWon(r.net)}</span></div>
+        <small class="muted dv-sub">${astQty(r.h.qty)} × 1주 ${dvPer(r.h, r.amt)}${r.fix ? " (튀는 값이라 보통 크기로 봄)" : ""} · ${r.ex}월 배당락 · <span class="dv-tag${r.sure ? " sure" : ""}">${r.sure || "예상"}</span></small></li>`).join("")}</ul>`
+        : `<p class="muted" style="margin:8px 0 0">이 달엔 들어올 배당이 없어요.</p>`}</div>` : "";
+  return `<section class="card" id="dv-card">${head(true)}
+    <div class="sav-hero ast-hero"><div class="ast-tile dv-tile"><small>앞으로 12달 (세후)</small><b>${astDivW(total)}</b></div>
+      <div class="ast-tile dv-tile"><small>한 달 평균</small><b>${astDivW(total / 12)}</b></div>
+      <div class="ast-tile dv-tile"><small>가장 많은 달</small><b>${best.net ? `${+best.ym.slice(5)}월 ${astDivW(best.net)}` : "-"}</b></div>
+      <div class="ast-tile dv-tile"><small>배당 주는 종목</small><b>${list.length - none.length} / ${list.length}개</b></div></div>
+    <div class="ast-grid">${cells}</div>${detail}
+    ${none.length ? `<p class="muted" style="margin:10px 0 0;font-size:12px">최근 1년 배당 기록 없음: ${none.map((h) => esc(h.name)).join(", ")}</p>` : ""}
+    <p class="muted note" style="margin:10px 0 0">${ymName(ym)} 자산 기록 종목·주 수 기준이에요. 달을 누르면 종목별로 나와요. 최근 1년 배당을 그대로 다시 준다고 보고, 받는 달은 짐작한 거라 '예상'이에요 (국장 12월 배당은 보통 다음 해 4월, 분기 배당은 2달 뒤). 회사가 배당을 바꾸면 달라져요.
+      세후 = 국장 15.4%, 미장 15% 뺀 값 (ISA·연금 계좌는 달라요). 미장은 환율 ${num(dvFx())}원으로 계산. 자료: 야후 파이낸스(무료).</p></section>`;
+}
+function dvRefresh() {
+  const c = $("#dv-card");
+  if (!c) return;
+  c.outerHTML = divCalCard();
+  bindDivCal();
+}
+function bindDivCal() {
+  const card = $("#dv-card");
+  if (!card) return;
+  if (dvOn && (!RET.kr || !RET.us)) loadReturns().then(() => { if (screen === "tools") dvRefresh(); });
+  const redraw = () => { holdHeight(); dvRefresh(); keepTap(); };
+  card.querySelector("[data-dv-sw]").addEventListener("click", () => {
+    dvOn = !dvOn; dvPick = null;
+    remember("divcal_off", dvOn ? "0" : "1");
+    redraw();
+  });
+  card.querySelectorAll("[data-dv-m]").forEach((b) => b.addEventListener("click", () => {
+    dvPick = dvPick === b.dataset.dvM ? null : b.dataset.dvM;
+    redraw();
+  }));
 }
 
 // ---------------------------------------------------------------- 포트폴리오 실험실
