@@ -2,7 +2,7 @@
 
 ## Code map first (save credits)
 
-- Before changing code, read `docs/CODEMAP.md`, then `grep -n` and read only that part (100–200 lines). Never read `site/app.js`, `site/style.css` or big JSON files whole.
+- Before changing code, read `docs/CODEMAP.md`, then `grep -n` and read only that part (100–200 lines). App code is split by screen in `site/js/*.js` (80–830 lines each): open only the file the map names, and in big ones still grep first. Never read `site/style.css` or big JSON files whole.
 - If you add, move or rename a feature, section or script, update `docs/CODEMAP.md` in the same PR.
 
 ## Keep docs/backup in sync

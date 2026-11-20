@@ -1275,6 +1275,15 @@ a.more { text-decoration: none; }
 .ast-tag.up { background: color-mix(in srgb, var(--up) 12%, transparent); color: var(--up); }
 .ast-tag.down { background: color-mix(in srgb, var(--down) 12%, transparent); color: var(--down); }
 .ast-tag.new { background: var(--accent-bg); color: var(--accent-fg); }
+/* 지금 시세로 평가 (켜기·끄기, 2026-11-20). 늘고 줄음은 색 없이 (자산 기록 규칙) */
+.ast-live-sw { margin: 12px 0 0; }
+.ast-live { margin-top: 0; }
+.ast-live > div { background: var(--accent-bg); }
+.ast-live > div small:first-child { color: var(--accent-fg); }
+.ast-live-note { margin: 6px 2px 0; font-size: 12px; line-height: 1.5; }
+.ast-tag.live { background: var(--accent-bg); color: var(--accent-fg); }
+.ast-live-l { margin-top: 2px; }
+.ast-live-l span { color: var(--text-primary); }
 .ast-gone { margin-top: 10px; }
 .ast-gone small { display: block; margin-bottom: 2px; }
 .ast-new { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
@@ -1501,3 +1510,12 @@ details.help-sec .guide-body { padding: 0 0 12px; }
 .past-legend { font-size: 12px; margin: 8px 0 0; }
 .past-pick { margin-top: 6px; }
 .past-pick small { font-size: 11px; opacity: .8; margin-left: 2px; font-variant-numeric: tabular-nums; }
+/* 배당 달력 (도구 → 자산 기록 아래, 2026-11-20) */
+.dv-tile { cursor: default; }
+.dv-cell[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); }
+.dv-cell b { color: var(--good-fg); }
+.dv-detail { margin-top: 14px; }
+.dv-detail h3 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dv-sub { display: block; font-size: 12px; margin-top: 3px; line-height: 1.5; }
+.dv-tag { padding: 1px 6px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); white-space: nowrap; }
+.dv-tag.sure { background: var(--accent-bg); color: var(--accent-fg); }
