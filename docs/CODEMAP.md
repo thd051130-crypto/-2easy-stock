@@ -41,5 +41,6 @@ main.js     서비스워커 등록 + 처음 render/load (맨 마지막)
 - weekly.py → 토 09:30 · fundamentals·fundcheck·symbols·returns·lab·etf_monthly → 토 09:00
 - bot.py(+commands·watchlist·tgfmt·inbox, big_events 호출) → 15분마다 · disclosures.py → 평일 08:10
 - health.py 고장 감시 · keys.py 키 만료 09:00 · report_archive.py 지난 리포트 · themes.py 테마 사전 · all_stocks.py 종목 파일
+- ⏰ 정시 알람: GitHub 예약 실행이 몇 시간 늦어서 cloudflare/feedback-worker.js `JOBS` 표(5분마다)가 workflow_dispatch로 제시간에 돌림. 늦게 온 예약 실행은 sched-gate.yml이 건너뜀. cron 바꾸면 JOBS도 같이 (tests/test_alarm_worker.py)
 
 기능·구역·스크립트를 더하거나 옮기면 같은 PR에서 이 지도도 고치기.

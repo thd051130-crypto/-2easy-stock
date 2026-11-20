@@ -1,0 +1,47 @@
+# 늦게 온 예약 실행 건너뛰기 (다른 워크플로가 불러 써요, 혼자서는 안 돌아요)
+# GitHub 예약 실행(schedule)이 2026-10-28쯤부터 6~10시간씩 늦게 와요. 그래서 클라우드플레어(cloudflare/feedback-worker.js의 정시 알람)가
+# 제시간에 "지금 돌려"(workflow_dispatch)를 보내요. 그게 이미 돌았으면, 몇 시간 뒤 늦게 온 GitHub 예약 실행은 두 번 돌지 않게 건너뛰어요.
+# 클라우드플레어 알람이 멈추면 정시 실행이 없으니 GitHub 예약 실행이 그대로 돌아요(예전처럼 늦게라도).
+name: sched-gate
+
+on:
+  workflow_call:
+    inputs:
+      workflow:
+        description: "이 워크플로 파일 이름 (예: daily.yml)"
+        type: string
+        required: true
+      minutes:
+        description: "이만큼 안에 정시 실행이 있었으면 건너뛰어요"
+        type: number
+        required: true
+      match:
+        description: "정시 실행 이름에 이 글자가 있어야 같은 실행으로 봐요 (예: kr). 비우면 이름 안 봐요"
+        type: string
+        default: ""
+    outputs:
+      skip:
+        value: ${{ jobs.gate.outputs.skip }}
+
+permissions:
+  actions: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    outputs:
+      skip: ${{ steps.g.outputs.skip }}
+    steps:
+      - id: g
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WF: ${{ inputs.workflow }}
+          MIN: ${{ inputs.minutes }}
+          MATCH: ${{ inputs.match }}
+        run: |
+          since=$(date -u -d "-${MIN} minutes" +%Y-%m-%dT%H:%M:%SZ)
+          n=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${WF}/runs?event=workflow_dispatch&per_page=30" \
+            --jq "[.workflow_runs[] | select(.created_at >= \"${since}\") | select(\"${MATCH}\" == \"\" or (.display_title | test(\"${MATCH}|both\")))] | length" || echo 0)
+          echo "최근 ${MIN}분 안 정시 실행: ${n}개 (${since} 이후, 이름: ${MATCH:-아무거나})"
+          if [ "${n:-0}" -gt 0 ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; echo "이미 제시간에 돌았어요. 늦게 온 예약 실행은 건너뛰어요."; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi

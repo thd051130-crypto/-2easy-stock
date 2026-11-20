@@ -3,6 +3,7 @@
   "keys": {
     "DART_API_KEY": {"name": "DART 키", "expires": null, "uses": "공시 알림", "renew": "opendart.fss.or.kr → 로그인 → 인증키 관리"},
     "ECOS_API_KEY": {"name": "ECOS 키", "expires": null, "uses": "국고채 3년·10년 금리", "renew": "ecos.bok.or.kr/api → 로그인 → 인증키 신청/관리"},
-    "KIS_APP_KEY": {"name": "한국투자 앱키", "expires": null, "uses": "실시간 시세 감시 (지금 안 씀)", "renew": "apiportal.koreainvestment.com → KIS Developers → 앱키 재발급"}
+    "KIS_APP_KEY": {"name": "한국투자 앱키", "expires": null, "uses": "실시간 시세 감시 (지금 안 씀)", "renew": "apiportal.koreainvestment.com → KIS Developers → 앱키 재발급"},
+    "GH_TOKEN": {"name": "GitHub 토큰 (클라우드플레어 정시 알람)", "expires": "2027-11-20", "uses": "국장·미장 자료를 제시간에 돌리기 (만료되면 예전처럼 몇 시간 늦게 돌아요)", "renew": "github.com/settings/personal-access-tokens → easystock-alarm → Regenerate → 클라우드플레어 easystock-feedback 설정 → 변수 및 비밀 → GH_TOKEN 값 바꾸기"}
   }
 }
