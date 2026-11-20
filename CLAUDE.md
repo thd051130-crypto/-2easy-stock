@@ -1,12 +1,9 @@
 # Notes for Claude
 
-## Read the code map first (save credits)
+## Code map first (save credits)
 
-`docs/CODEMAP.md` says which file, function and rough line each feature lives in.
-
-- Before changing code, read `docs/CODEMAP.md` first. Then find the exact spot with `grep -n` and read only that part (Read with offset/limit, about 100–200 lines).
-- Never read `site/app.js` (about 7,900 lines) or `site/style.css` whole. Do not open big `paper/` or `data/` JSON files whole either; use `head`, `python -c` or `jq` for the part you need.
-- When you add, move or rename a feature, screen, section or script, update `docs/CODEMAP.md` in the same PR. Small line-number drift is fine.
+- Before changing code, read `docs/CODEMAP.md`, then `grep -n` and read only that part (100–200 lines). Never read `site/app.js`, `site/style.css` or big JSON files whole.
+- If you add, move or rename a feature, section or script, update `docs/CODEMAP.md` in the same PR.
 
 ## Keep docs/backup in sync
 
