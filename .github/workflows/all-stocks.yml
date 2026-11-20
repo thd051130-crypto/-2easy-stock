@@ -3,6 +3,7 @@
 #   국장: 평일 한국시간 16:20쯤 / 미장: 화~토 한국시간 06:20쯤. 저장소에는 커밋하지 않아요 (파일이 커서).
 #   보기 전용이고 매매 규칙·가상계좌 신호는 안 바꿔요. 폰에서 바로 돌려 보기: Actions → all-stocks → Run workflow
 name: all-stocks
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('all-stocks {0}', inputs.market) || 'all-stocks' }}  # 정시 실행 이름에 시장(kr/us)을 붙여 sched-gate가 구분해요
 
 on:
   schedule:
@@ -25,7 +26,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:  # 클라우드플레어 정시 알람이 이미 돌렸으면 늦게 온 GitHub 예약 실행은 건너뛰어요 (sched-gate.yml)
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflows/sched-gate.yml
+    permissions:
+      actions: read
+    with:
+      workflow: all-stocks.yml
+      minutes: 720
+      match: "${{ github.event.schedule == '20 21 * * 1-5' && 'us' || 'kr' }}"
   build:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 60
     strategy:
