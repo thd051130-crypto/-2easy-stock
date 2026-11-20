@@ -1275,6 +1275,15 @@ a.more { text-decoration: none; }
 .ast-tag.up { background: color-mix(in srgb, var(--up) 12%, transparent); color: var(--up); }
 .ast-tag.down { background: color-mix(in srgb, var(--down) 12%, transparent); color: var(--down); }
 .ast-tag.new { background: var(--accent-bg); color: var(--accent-fg); }
+/* 지금 시세로 평가 (켜기·끄기, 2026-11-20). 늘고 줄음은 색 없이 (자산 기록 규칙) */
+.ast-live-sw { margin: 12px 0 0; }
+.ast-live { margin-top: 0; }
+.ast-live > div { background: var(--accent-bg); }
+.ast-live > div small:first-child { color: var(--accent-fg); }
+.ast-live-note { margin: 6px 2px 0; font-size: 12px; line-height: 1.5; }
+.ast-tag.live { background: var(--accent-bg); color: var(--accent-fg); }
+.ast-live-l { margin-top: 2px; }
+.ast-live-l span { color: var(--text-primary); }
 .ast-gone { margin-top: 10px; }
 .ast-gone small { display: block; margin-bottom: 2px; }
 .ast-new { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
