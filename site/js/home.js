@@ -530,6 +530,13 @@ function calRows(list) {
 // 칸엔 일정 표시, 아래엔 그달(또는 고른 날) 목록. 지난 일정은 연하게
 const ECON_NEAR = 6;
 let econMonth = null, econPick = null;
+// 달력 칸 하나에 같이 보여 줄 날: 금요일 칸 = 그 주말까지, 달 첫날이 주말이면 첫 월요일 칸에 그 주말 (같은 달 안에서만).
+// 전에는 금요일 + 1·2일을 글자로 붙여서 달 첫 주말(예: 토요일 1일 한국 수출입 동향)이 어느 칸에도 안 보였어요 (2026-11-20)
+function ecWeek(key) {
+  const t = Date.parse(`${key}T00:00:00Z`), wd = new Date(t).getUTCDay(), dd = Number(key.slice(8));
+  const ks = wd === 5 ? [0, 1, 2] : wd === 1 && dd <= 3 ? [-2, -1, 0] : [0];
+  return ks.map((k) => new Date(t + k * 864e5).toISOString().slice(0, 10)).filter((k) => k.slice(0, 7) === key.slice(0, 7));
+}
 const ymAdd = (ym, k) => { const [y, m] = ym.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + k, 1)); return t.toISOString().slice(0, 7); };
 function calendarCard() {
   const all = ((DATA && DATA.calendar) || []).filter((e) => !STOCK_KINDS.includes(e.kind));
@@ -551,7 +558,7 @@ function calendarCard() {
     const wd = new Date(Date.UTC(y, m - 1, dd)).getUTCDay();
     if (wd === 0 || wd === 6) continue;
     const key = `${econMonth}-${String(dd).padStart(2, "0")}`;
-    const wk = [key, ...(wd === 5 ? [1, 2].map((k) => `${econMonth}-${String(dd + k).padStart(2, "0")}`) : [])];
+    const wk = ecWeek(key);
     const ev = wk.flatMap((k) => byDay[k] || []);
     const marks = [...new Set(ev.map(icon))].slice(0, 3).join("");
     const cls = ["cal-cell", "ec-cell", key < today ? "past" : "", key === today ? "today" : "", ev.some((e) => e.big) ? "big" : "", econPick === key ? "picked" : ""].filter(Boolean).join(" ");
@@ -567,7 +574,7 @@ function calendarCard() {
   }
   const pick = econPick && econPick.startsWith(econMonth) ? econPick : null;
   // 금요일을 누르면 그 주말 일정도 같이
-  const pickDays = pick ? [0, 1, 2].slice(0, new Date(pick + "T00:00:00Z").getUTCDay() === 5 ? 3 : 1).map((k) => `${econMonth}-${String(Number(pick.slice(8)) + k).padStart(2, "0")}`) : null;
+  const pickDays = pick ? ecWeek(pick) : null;
   const pickList = all.filter((e) => (pickDays ? pickDays.includes(e.date) : e.date.startsWith(econMonth)));
   const rows = calRows(pickList);
   return `<section class="card" id="cal-card"><h2>다가오는 일정 <small>${Number(lo.slice(0, 4))}~${Number(hi.slice(0, 4))}년 · 경제 일정</small></h2>
