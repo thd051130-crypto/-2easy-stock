@@ -359,21 +359,24 @@ def summary_html(r):
     return head + "\n" + "\n".join(f"• {tgfmt.esc(x)}" for x in r["headline"]) + "\n" + tgfmt.link("앱에서 보기")
 
 
-def send(r):
-    from realtime_monitor import send_html  # requests가 필요해서 보낼 때만
-
+def send(r, telegram=False):
+    """앱 메시지함에 한 통 남겨요. 텔레그램은 기본으로 안 보내요 (2026-11-20 사용자: 리포트는 텔레그램으로 보내지 말기).
+    --telegram을 붙여 돌릴 때만 텔레그램에도 보내요."""
     import inbox
 
-    parts = tgfmt.compose(summary_html(r), format_text(r))
-    ok = all([send_html(p) for p in parts])
     inbox.add("\n\n".join(tgfmt.compose(summary_html(r), format_text(r), limit=10**9)), "report")
-    return ok
+    if not telegram:
+        return True
+    from realtime_monitor import send_html  # requests가 필요해서 보낼 때만
+
+    return all([send_html(p) for p in tgfmt.compose(summary_html(r), format_text(r))])
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--paper", type=pathlib.Path, default=PAPER)
     parser.add_argument("--dry-run", action="store_true", help="보내지 않고 출력만")
+    parser.add_argument("--telegram", action="store_true", help="텔레그램에도 보내기 (기본은 앱 메시지함에만)")
     args = parser.parse_args()
     r = build(load_inputs(args.paper))
     (args.paper / "report.json").write_text(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
@@ -382,7 +385,7 @@ def main():
     if r.get("story"):
         market_story.append_log(args.paper, r["story"])
     print("\n".join(r["headline"]) + "\n\n" + format_text(r))
-    if not args.dry_run and not send(r):
+    if not args.dry_run and not send(r, args.telegram):
         raise SystemExit("텔레그램 전송 실패 (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 확인)")
 
 
