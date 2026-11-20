@@ -1,11 +1,11 @@
 """클라우드플레어 정시 알람(cloudflare/feedback-worker.js)과 sched-gate가 워크플로 예약 시각과 맞는지 봐요 (node가 없으면 알람 표 확인은 건너뛰어요)."""
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 
 import pytest
-import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 WF = ROOT / ".github" / "workflows"
@@ -15,10 +15,9 @@ def crons():
     """워크플로 파일 → schedule cron 목록 (sched-gate를 쓰는 것만)."""
     out = {}
     for p in sorted(WF.glob("*.yml")):
-        y = yaml.safe_load(p.read_text())
-        on = y.get(True) or y.get("on") or {}
-        if isinstance(on, dict) and on.get("schedule"):
-            out[p.name] = [s["cron"] for s in on["schedule"]]
+        found = re.findall(r'^\s*- cron: "([^"]+)"', p.read_text(), re.M)  # yaml 패키지 없이 읽어요
+        if found:
+            out[p.name] = found
     return out
 
 
