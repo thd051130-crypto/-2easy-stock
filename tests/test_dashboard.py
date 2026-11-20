@@ -132,7 +132,8 @@ def test_fresh_calendar_uses_latest_events_for_big_rows(tmp_path):
                ko="소매판매 전월 대비", group="growth", tier1=False)]
     (tmp_path / "events.json").write_text(json.dumps(dict(events=ev)))
     got = dashboard.fresh_calendar(tmp_path, dt.date(2026, 11, 15))
-    big = [(e["date"], e["title"], e["big"], e["note"]) for e in got if e["kind"] == "big"]
+    # 규칙 일정(ISM·한국 수출입·FOMC 회의록)은 이 기간 밖이에요
+    big = [(e["date"], e["title"], e["big"], e["note"]) for e in got if e["kind"] == "big" and "2026-11-15" <= e["date"] <= "2026-11-30"]
     assert big == [("2026-11-17", "연준 의장 연설", False, "한국시간 02:00 발표"),
                    ("2026-11-17", "소매판매 전월 대비", False, "한국시간 22:30 발표"),
                    ("2026-11-25", "미국 PCE 물가 (연준이 보는 물가)", True, "한국시간 22:30 발표")]

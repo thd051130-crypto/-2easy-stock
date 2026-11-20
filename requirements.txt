@@ -4,3 +4,4 @@ python-dotenv
 pandas
 numpy
 yfinance
+holidays>=0.60

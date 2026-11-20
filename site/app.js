@@ -85,7 +85,7 @@ function toggleWatch(code, m = market) {
   const list = WATCH[m];
   const i = list.indexOf(code);
   if (i >= 0) list.splice(i, 1); else list.push(code);
-  try { localStorage.setItem(`watch_${m}`, JSON.stringify(list)); } catch (e) { /* 이번만 기억 */ }
+  remember(`watch_${m}`, JSON.stringify(list));
 }
 // 텔레그램으로 넣은 종목(data.json의 extras)은 처음 보이면 ★에 자동으로 넣어요. 본 종목은 기억해서, ☆로 빼면 다시 안 넣어요.
 const SEEN = {};
@@ -115,7 +115,7 @@ const SECTOR = { kr: "", us: "" };
 try { Object.assign(SECTOR, JSON.parse(localStorage.getItem("sector") || "{}")); } catch (e) { /* 기본값 */ }
 function pickSector(name) {
   SECTOR[market] = SECTOR[market] === name ? "" : name;
-  try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
+  remember("sector", JSON.stringify(SECTOR));
 }
 let watchSort = "change";
 try { watchSort = localStorage.getItem("watchSort") || "change"; } catch (e) { /* 기본값 */ }
@@ -146,6 +146,8 @@ const TERMS = {
   "FOMC": "미국 중앙은행(연준)의 금리 결정 회의. 1년에 8번. 금리를 올리면 보통 주가에 부담, 내리면 도움이 돼요. 한국시간 새벽에 발표돼요.",
   "금통위": "한국은행 금융통화위원회. 한국 기준금리를 정해요. 1년에 8번, 보통 목요일 오전에 발표해요.",
   "옵션 만기": "선물·옵션 계약이 끝나는 날(국장 매달 둘째 목요일, 미장 셋째 금요일). 큰손들이 계약을 정리하느라 장 막판에 주가가 출렁일 수 있어요.",
+  "네 마녀의 날": "3·6·9·12월 만기일. 주가지수 선물·옵션과 개별 주식 선물·옵션 네 가지가 한꺼번에 끝나서 장 마감 무렵 큰 매매가 몰려요. 미장은 같은 날 S&P 500 리밸런싱도 겹쳐요.",
+  "지수 정기변경": "코스피200·MSCI·S&P 500 같은 지수가 정해진 날 종목을 바꾸는 것. 지수를 따라가는 펀드가 그날 종가에 한꺼번에 사고팔아서, 들어가는 종목은 오르고 빠지는 종목은 내리는 경우가 많아요.",
   "실적 시즌": "회사들이 분기 실적을 몰아서 발표하는 때. 예상보다 나쁘면 하루에 -10%도 나와요.",
   "유상증자": "회사가 새 주식을 찍어 돈을 받는 것. 주식 수가 늘어 내 몫이 줄어서(희석) 주가가 내릴 때가 많아요.",
   "전환사채": "나중에 주식으로 바꿀 수 있는 회사 빚(CB). 주식으로 바뀌면 주식 수가 늘어 주가에 부담이 돼요.",
@@ -211,7 +213,7 @@ const TERMS = {
 };
 // 투자 공부 → 용어집에서 묶어 보여 줄 분야 (여기 없는 말은 '그 밖에')
 const TERM_GROUPS = [
-  ["📈 시장·지수", ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "시가총액", "조정", "약세장", "최대 낙폭", "변동성", "서킷브레이커", "사이드카", "옵션 만기", "공매도", "히트맵"]],
+  ["📈 시장·지수", ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "시가총액", "조정", "약세장", "최대 낙폭", "변동성", "서킷브레이커", "사이드카", "옵션 만기", "네 마녀의 날", "지수 정기변경", "공매도", "히트맵"]],
   ["🏦 금리·경제 지표", ["기준금리", "국채 금리", "장단기 금리 역전", "FOMC", "금통위", "CPI", "근원 물가", "PCE", "비농업 고용", "실업률", "삼 법칙", "GDP", "PMI", "경기 침체", "스태그플레이션", "연착륙", "양적 긴축"]],
   ["💱 환율·원자재", ["환율", "원화 약세", "달러인덱스", "WTI", "안전자산", "구리/금 비율", "하이일드"]],
   ["😨 심리·수급", ["VIX", "패닉 셀", "반대매매", "FOMO", "순매수", "외국인 보유율"]],
@@ -241,7 +243,8 @@ const num = (x) => (x == null ? "-" : Math.round(x).toLocaleString("ko-KR"));
 const px = (m, x) => (x == null ? "-" : m === "kr" ? num(x)
   : x.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
-const shares = (q) => (Number.isInteger(q) ? `${q}주` : `${q.toFixed(3)}주`);
+// 이 폰에 기억하기. 저장소를 못 쓰면(사생활 보호 모드 등) 이번만 기억해요
+function remember(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 이번만 기억 */ } }
 let siteVersion = null;  // 이 화면을 연 뒤 처음 받은 data.json의 화면 버전
 
 // 장중 뉴스: news 워크플로가 30분마다 live 브랜치에 올리는 news.json (앱 배포와 따로라서 data.json보다 자주 바뀌어요)
@@ -347,7 +350,7 @@ async function load() {
     const early = BOOT.data;
     BOOT.data = null;  // 미리 받은 건 처음 한 번만
     data = await (early || fetchData());
-    try { localStorage.setItem("news_url", data.news_url || ""); } catch (e) { /* 다음에 */ }
+    remember("news_url", data.news_url || "");
     // 뉴스는 잠깐만 기다려요. 늦으면 화면을 먼저 그리고, 받은 뉴스는 다음에 그릴 때 보여요 (화면이 튀지 않게)
     const earlyNews = BOOT.news && BOOT.newsUrl === data.news_url ? BOOT.news : null;
     BOOT.news = null;
@@ -385,7 +388,7 @@ function paintNews() {
 
 function selectMarket(m) {
   market = m;
-  try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ }
+  remember("market", m);
   if (screen === "stock") screen = stockFrom;  // 종목 화면은 그 시장 종목이라, 시장을 바꾸면 보던 목록 화면으로
   history.replaceState(history.state, "", hashFor());
   if (DATA) motion = "swap";
@@ -556,7 +559,8 @@ const VIEWS = {
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
   tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
   chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
-  stock: (d) => [stockHeadCard(d), checkCard(d), discloseStockCard(d), stockSectorCard(d), stockChartCard(),
+  // 차트는 머리 칸 바로 아래, 사기 전 체크리스트보다 위 (사용자, 2026-11-19)
+  stock: (d) => [stockHeadCard(d), stockChartCard(), checkCard(d), discloseStockCard(d), stockSectorCard(d),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
   search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
@@ -681,7 +685,7 @@ function render() {
   app.querySelectorAll("[data-hot-fold]").forEach((b) => b.addEventListener("click", () => {
     hotFold = !hotFold;
     if (hotFold) holdHeight();  // 접기 전에 높이를 붙잡아요 (짧은 화면에서 접으면 스크롤이 위로 당겨져서)
-    try { localStorage.setItem("hot_fold", hotFold ? "1" : "0"); } catch (e) { /* 이번만 기억 */ }
+    remember("hot_fold", hotFold ? "1" : "0");
     const card = b.closest(".hot-card");
     card.classList.toggle("folded", hotFold);
     b.setAttribute("aria-expanded", String(!hotFold));
@@ -719,7 +723,7 @@ function render() {
     keepRow($(".perf-tabs", app), "tools");
     app.querySelectorAll("[data-perf-tab]").forEach((b) => b.addEventListener("click", () => {
       perfTabKey = b.dataset.perfTab;
-      try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
+      remember("tools_tab", perfTabKey);
       render();
     }));
     bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab(); bindAsset();
@@ -732,7 +736,7 @@ function render() {
   }));
   app.querySelectorAll("[data-sector-go]").forEach((b) => b.addEventListener("click", () => {
     SECTOR[market] = b.dataset.sectorGo;
-    try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
+    remember("sector", JSON.stringify(SECTOR));
     lastTap = null;  // '화면 그대로' 규칙의 예외: 정책의 호재·악재는 누르면 업종 칸으로 이동해요 (사용자 2026-10-18)
     openMore("sectors");
   }));
@@ -745,7 +749,7 @@ function render() {
   }));
   app.querySelectorAll("[data-pol-r]").forEach((b) => b.addEventListener("click", () => {
     polR = b.dataset.polR;
-    try { localStorage.setItem("pol_r", polR); } catch (e) { /* 이번만 기억 */ }
+    remember("pol_r", polR);
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -790,14 +794,14 @@ function render() {
   }));
   app.querySelectorAll("[data-heat]").forEach((b) => b.addEventListener("click", () => {
     heatP = b.dataset.heat;
-    try { localStorage.setItem("heat_p", heatP); } catch (e) { /* 이번만 기억 */ }
+    remember("heat_p", heatP);
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
   }));
   app.querySelectorAll("[data-world-p]").forEach((b) => b.addEventListener("click", () => {
     worldP = b.dataset.worldP;
-    try { localStorage.setItem("world_p", worldP); } catch (e) { /* 이번만 기억 */ }
+    remember("world_p", worldP);
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -811,11 +815,11 @@ function render() {
   })));
   app.querySelectorAll("[data-world-g]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldG = b.dataset.worldG;
-    try { localStorage.setItem("world_g", worldG); } catch (e) { /* 이번만 기억 */ }
+    remember("world_g", worldG);
   })));
   app.querySelectorAll("[data-world-chart]").forEach((b) => b.addEventListener("click", () => {
     CHART_IDX[market] = b.dataset.worldChart;
-    try { localStorage.setItem("chart_idx", JSON.stringify(CHART_IDX)); } catch (e) { /* 이번만 기억 */ }
+    remember("chart_idx", JSON.stringify(CHART_IDX));
     go("chart");
   }));
   drawWorldGraph();
@@ -823,7 +827,7 @@ function render() {
   app.querySelectorAll("[data-world-tab]").forEach((b) => b.addEventListener("click", keepY(() => {
     worldTab = b.dataset.worldTab;
     worldPicks.clear();
-    try { localStorage.setItem("world_tab", worldTab); } catch (e) { /* 이번만 기억 */ }
+    remember("world_tab", worldTab);
   })));
   // 탭 줄은 옆으로 밀어 둔 자리 그대로 (무엇을 눌러 다시 그려도 '주요' 쪽으로 돌아가지 않게)
   const wtBar = $(".wt-tabs");
@@ -846,7 +850,7 @@ function render() {
     app.querySelectorAll("[data-idx]").forEach((b) => b.addEventListener("click", () => {
       CHART_IDX[market] = b.dataset.idx;
       if (IDX_READY.get(b.dataset.idx) === null) IDX_READY.delete(b.dataset.idx);  // 못 받았던 지수는 다시 받아 봐요
-      try { localStorage.setItem("chart_idx", JSON.stringify(CHART_IDX)); } catch (e) { /* 이번만 기억 */ }
+      remember("chart_idx", JSON.stringify(CHART_IDX));
       const y = window.scrollY;
       render();
       window.scrollTo(0, y);
@@ -856,14 +860,14 @@ function render() {
     bindCompare(d);
     app.querySelectorAll(".period button[data-frame]").forEach((b) => b.addEventListener("click", () => {
       frame = b.dataset.frame;
-      try { localStorage.setItem("frame", frame); } catch (e) { /* 무시 */ }
+      remember("frame", frame);
       app.querySelectorAll(".period button[data-frame]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       drawTrend(d, true);
     }));
   }
   app.querySelectorAll(".chips button[data-ind]").forEach((b) => b.addEventListener("click", () => {
     IND[b.dataset.ind] = !IND[b.dataset.ind];
-    try { localStorage.setItem("ind", JSON.stringify(IND)); } catch (e) { /* 이번만 기억 */ }
+    remember("ind", JSON.stringify(IND));
     render();  // 보던 구간·확대는 그대로 두고 지표만 다시 그려요
   }));
   bindMa(app);
@@ -1147,7 +1151,7 @@ function bindRows(el, d) {
 function bindWatch(d) {
   document.querySelectorAll("[data-scope]").forEach((b) => b.addEventListener("click", () => {
     scrAll = b.dataset.scope === "all";
-    try { localStorage.setItem("scr_all", scrAll ? "1" : "0"); } catch (e) { /* 이번만 기억 */ }
+    remember("scr_all", scrAll ? "1" : "0");
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -1155,7 +1159,7 @@ function bindWatch(d) {
   document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.filter;
     FILTER_ON = FILTER_ON.includes(k) ? FILTER_ON.filter((x) => x !== k) : FILTER_ON.concat(k);
-    try { localStorage.setItem("filters", JSON.stringify(FILTER_ON)); } catch (e) { /* 이번만 기억 */ }
+    remember("filters", JSON.stringify(FILTER_ON));
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -1173,7 +1177,7 @@ function bindWatch(d) {
   }
   document.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => {
     watchSort = b.dataset.sort;
-    try { localStorage.setItem("watchSort", watchSort); } catch (e) { /* 무시 */ }
+    remember("watchSort", watchSort);
     document.querySelectorAll("[data-sort]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     const list = $("#all-list");
     list.innerHTML = allRows(d);
@@ -1402,7 +1406,7 @@ function bindFeedback() {
   const ta = $("#fb-text"), send = $("#fb-send"), n = $("#fb-n"), done = $("#fb-done");
   if (!ta) return;
   const say = (msg, ok) => { done.hidden = false; done.textContent = msg; done.classList.toggle("bad", !ok); };
-  const saveDraft = () => { try { localStorage.setItem("fb_draft", fbText); } catch (e) { /* 이번만 */ } };
+  const saveDraft = () => { remember("fb_draft", fbText); };
   ta.addEventListener("input", () => {
     fbText = ta.value;
     n.textContent = fbText.length;
@@ -1498,7 +1502,7 @@ function inboxHandle(b) {
     b.classList.remove("dragging");
     if (d.moved) {
       y = b.offsetTop / window.innerHeight;
-      try { localStorage.setItem("inbox_y", y.toFixed(4)); } catch (err) { /* 이번만 기억 */ }
+      remember("inbox_y", y.toFixed(4));
       if (out) set(true);  // 옮긴 뒤 4초 다시 세기
       return;
     }
@@ -1769,7 +1773,7 @@ function weeklyCards() {
     ${iss.length ? `<ol class="wk-tl">${iss.map((x) => `<li><time>${x.ongoing ? "지난주<br>부터" : wkDay(x.since || "")}</time><div>${badTag(x)}${x.topic ? `<span class="badge">${esc(x.topic)}</span> ` : ""}${issLink(x)}
       <small>언론 ${x.sources}곳${x.source ? ` · ${esc(x.source)}` : ""}${x.more ? ` · 비슷한 기사 묶음 ${x.more + 1}개` : ""}</small></div></li>`).join("")}</ol>` : `<p class="empty">이번 주엔 여러 언론이 같이 다룬 뉴스가 없어요</p>`}</section>` : "";
   // 6. 다음 주: 요일별 묶음 + 종류 표시
-  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"], risk: ["⚠️ 리스크", "bad"] };
+  const TAG = { big: ["발표", ""], rate: ["금리", "bad"], expiry: ["만기", ""], earn: ["실적", "good"], risk: ["⚠️ 리스크", "bad"], index: ["정기변경", ""], holiday: ["휴장", ""], divday: ["배당락", ""] };
   const items = [...(nx.big || []).map((e) => ({ d: e.date, k: "big", h: `${e.flag || ""} ${esc(e.title)}`, sub: [e.time, e.forecast ? `예상 ${e.forecast}` : ""].filter(Boolean).join(" · ") })),
     ...(nx.cal || []).map((c) => ({ d: c.date, k: c.kind, h: `${REPORT_FLAG[c.market] || ""} ${esc(c.title)}`, sub: c.note || "" })),
     ...(nx.earn || []).filter((c) => c.market === market).slice(0, 8).map((c) => ({ d: c.date, k: "earn", h: `${esc(c.title.replace(/ 실적 발표$/, ""))}${c.mine ? " ⭐" : ""}`, sub: "" }))];
@@ -1813,7 +1817,7 @@ function bindInbox() {
   $("#app").querySelectorAll("details.msg").forEach((el) => el.addEventListener("toggle", () => { if (el.open) inboxOpen = el.dataset.t; }));
   const last = INBOX.length ? INBOX[0].t : "";
   if (last > inboxSeen) {  // 열어 봤으면 읽은 걸로 (지금 보이는 '새' 표시는 다음에 열 때 사라져요)
-    try { localStorage.setItem("inbox_seen", last); } catch (e) { /* 이번만 */ }
+    remember("inbox_seen", last);
     setTimeout(() => { inboxSeen = last; inboxDot(); }, 0);
   }
 }
@@ -2065,7 +2069,7 @@ function bindResults(el) {
   if (el.id === "search-results") el.querySelectorAll("[data-map]").forEach((b) => b.addEventListener("click", () => openMap(b.dataset.map)));
   el.querySelectorAll("[data-open]").forEach((row) => row.addEventListener("click", () => {
     const [m, code] = row.dataset.open.split("/");
-    if (m !== market) { market = m; try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ } }
+    if (m !== market) { market = m; remember("market", m); }
     openStock(code);
   }));
   el.querySelectorAll("[data-wstar]").forEach((b) => b.addEventListener("click", (e) => {
@@ -2086,9 +2090,9 @@ function bindResults(el) {
   }));
   el.querySelectorAll("[data-tsec]").forEach((b) => b.addEventListener("click", () => {
     const [m, name] = b.dataset.tsec.split("/");
-    if (m !== market) { market = m; try { localStorage.setItem("market", m); } catch (e) { /* 무시 */ } }
+    if (m !== market) { market = m; remember("market", m); }
     SECTOR[m] = name;
-    try { localStorage.setItem("sector", JSON.stringify(SECTOR)); } catch (e) { /* 이번만 기억 */ }
+    remember("sector", JSON.stringify(SECTOR));
     openMore("sectors");
   }));
 }
@@ -2743,7 +2747,7 @@ function bindMap() {
   document.querySelectorAll("[data-mapmode]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.mapmode === "spot") mapShuffle(true);  // 누를 때마다 새로 섞어요
     mapMode = b.dataset.mapmode === "spot" ? "spot" : "zoom";
-    try { localStorage.setItem("map_mode", mapMode); } catch (e) { /* 이번만 기억 */ }
+    remember("map_mode", mapMode);
     document.querySelectorAll("[data-mapmode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mapmode === mapMode)));
     svg.classList.toggle("spot", mapMode === "spot");
     const sub = $("#map-sub");
@@ -2757,14 +2761,14 @@ function bindMap() {
   }));
   document.querySelectorAll("[data-mapdays]").forEach((b) => b.addEventListener("click", () => {
     mapDays = Number(b.dataset.mapdays) === 20 ? 20 : 5;
-    try { localStorage.setItem("map_days", String(mapDays)); } catch (e) { /* 이번만 기억 */ }
+    remember("map_days", String(mapDays));
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
   }));
   document.querySelectorAll("[data-mapcolor]").forEach((b) => b.addEventListener("click", () => {
     mapColor = b.dataset.mapcolor;
-    try { localStorage.setItem("map_color", mapColor); } catch (e) { /* 이번만 기억 */ }
+    remember("map_color", mapColor);
     const y = window.scrollY;
     render();
     window.scrollTo(0, y);
@@ -2860,13 +2864,13 @@ function homeMoreCard(d) {
 }
 // 더 보기에서 연 칸 화면: 맨 위 ‹ 더 보기(뒤로) + 원래 칸 그대로
 function moreView(d) {
+  const back = `<div class="more-back"><button type="button" class="back" data-back>‹ ${stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`;
   if (moreKey === "learn" && !learnReady() && DATA.reading_days) {  // 공부 자료를 아직 받는 중
     loadLearn();
-    return [`<div class="more-back"><button type="button" class="back" data-back>‹ ${stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`,
-      `<section class="card"><h2>📚 투자 공부</h2><p class="muted">공부 자료 불러오는 중…</p></section>`];
+    return [back, `<section class="card"><h2>📚 투자 공부</h2><p class="muted">공부 자료 불러오는 중…</p></section>`];
   }
   const r = homeMoreRows(d, moreKey)[0];
-  return [`<div class="more-back"><button type="button" class="back" data-back>‹ ${stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`,
+  return [back,
     r ? r.html : `<section class="card"><p class="empty">이 칸은 지금 ${market === "kr" ? "국장" : "미장"}에 자료가 없어요.</p></section>`];
 }
 
@@ -3562,7 +3566,7 @@ document.addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest("#app [data-learn-go]");
   if (!b || (screen === "more" && moreKey === "learn")) return;
   learnTab = "drivers";
-  try { localStorage.setItem("learn_tab", learnTab); } catch (er) { /* 이번만 기억 */ }
+  remember("learn_tab", learnTab);
   LEARN_OPEN.add(`d:${b.dataset.learnGo}`);
   lastTap = null;
   openMore("learn");
@@ -3574,7 +3578,7 @@ document.addEventListener("click", (e) => {
   if (!b) return;
   const id = b.dataset.caseGo;
   learnTab = "cases"; caseKind = "all";
-  try { localStorage.setItem("learn_tab", learnTab); } catch (er) { /* 이번만 기억 */ }
+  remember("learn_tab", learnTab);
   STORY_OPEN.add(`case:${id}`);
   lastTap = null;
   if (screen === "more" && moreKey === "learn") { lastView = ""; render(); } else openMore("learn");
@@ -3667,7 +3671,7 @@ document.addEventListener("click", (e) => {
   if (!b) return;
   notePat = b.dataset.notePat;
   learnTab = "cases"; caseKind = "all";
-  try { localStorage.setItem("learn_tab", learnTab); } catch (er) { /* 이번만 기억 */ }
+  remember("learn_tab", learnTab);
   lastTap = null;
   if (screen === "more" && moreKey === "learn") { lastView = ""; render(); } else openMore("learn");
   requestAnimationFrame(() => { const x = document.getElementById("case-notes"); if (x) { x.scrollIntoView(); window.scrollBy(0, -70); } });
@@ -3696,7 +3700,7 @@ function bindLearn() {
   app.querySelectorAll("[data-learn-tab]").forEach((b) => b.addEventListener("click", () => {
     const toCope = b.classList.contains("more");  // 아래쪽 '대처법 전부 보기'는 이동하는 버튼이라 맨 위로
     learnTab = b.dataset.learnTab;
-    try { localStorage.setItem("learn_tab", learnTab); } catch (e) { /* 이번만 기억 */ }
+    remember("learn_tab", learnTab);
     if (toCope) { lastTap = null; lastView = ""; window.scrollTo(0, 0); }
     render();
   }));
@@ -3706,7 +3710,7 @@ function bindLearn() {
   // '배우기': 움직이는 이유에서 그 요인을 펼쳐 보여 줘요 (이동하는 버튼이라 '화면 그대로'에서 빼요)
   app.querySelectorAll("[data-learn-go]").forEach((b) => b.addEventListener("click", () => {
     learnTab = "drivers";
-    try { localStorage.setItem("learn_tab", learnTab); } catch (e) { /* 이번만 기억 */ }
+    remember("learn_tab", learnTab);
     LEARN_OPEN.add(`d:${b.dataset.learnGo}`);
     lastTap = null;
     render();
@@ -3715,7 +3719,7 @@ function bindLearn() {
   }));
   app.querySelectorAll("[data-learn-tool]").forEach((b) => b.addEventListener("click", () => {
     perfTabKey = b.dataset.learnTool;
-    try { localStorage.setItem("tools_tab", perfTabKey); } catch (e) { /* 이번만 기억 */ }
+    remember("tools_tab", perfTabKey);
     go("tools");
   }));
   keepRow($(".case-kinds", app), "case-kinds");
@@ -3724,7 +3728,7 @@ function bindLearn() {
   app.querySelectorAll("[data-note-pick]").forEach((b) => b.addEventListener("click", () => { notePat = b.dataset.notePick; render(); }));
   app.querySelectorAll("[data-read-cat]").forEach((b) => b.addEventListener("click", () => {
     readCat = b.dataset.readCat;
-    try { localStorage.setItem("read_cat", readCat); } catch (e) { /* 이번만 기억 */ }
+    remember("read_cat", readCat);
     render();
   }));
   const q = $("#learn-q", app);
@@ -4362,7 +4366,7 @@ function maPanel() {
     <p class="muted note">모든 종목·지수 차트에 같이 적용되고 이 폰에 기억해요. 년봉엔 안 그려요.</p></div>`;
 }
 function saveMa() {
-  try { localStorage.setItem("ma_set", JSON.stringify(MA_SET)); } catch (e) { /* 이번만 기억 */ }
+  remember("ma_set", JSON.stringify(MA_SET));
   render();  // 보던 구간·확대는 그대로 두고 선만 다시 그려요
 }
 function bindMa(root) {
@@ -4871,7 +4875,7 @@ function drawSavings() {
 function bindSavings() {
   const card = $("#sav-card");
   if (!card) return;
-  const save = () => { try { localStorage.setItem("savings", JSON.stringify(SAV)); } catch (e) { /* 이번만 */ } };
+  const save = () => { remember("savings", JSON.stringify(SAV)); };
   // 종목마다 정하기 칸은 입력 중에 다시 그리지 않고 요약·기본값 안내만 바꿔요 (키보드가 안 닫혀요)
   const updEach = () => card.querySelectorAll(".sav-each").forEach((d) => {
     const k = d.dataset.savK, sum = $(".sum", d), rs = $("[data-sav-reset]", d);
@@ -5326,12 +5330,35 @@ function marketStatusCard() {
     ${rows.map((r) => `<div class="mkt-row"><b>${r.name}</b><span class="${r.cls}">${r.state}</span><small class="muted">${r.last ? `${md(r.last)} 종가 기준` : "자료 없음"}</small></div>`).join("")}
     ${warn.length ? `<p class="mkt-warn">⚠️ ${warn.map((r) => `${r.name} 자료가 ${md(r.last)} 거예요`).join(", ")}. 연휴가 아니면 자동 실행이 멈춘 거라, 숫자를 오늘 값으로 보지 마세요.</p>` : ""}</section>`;
 }
+// 오늘·내일 증시 일정 (달력 DATA.calendar와 같은 자료): 만기일·지수 정기변경·휴장·배당락·리스크·금통위,
+// 그리고 위 발표 줄(events.json)에 없는 같은 시각 발표 (한국 수출입처럼). 사용자 2026-11-19 "알아서 채워두도록"
+const BIG_CAL_KINDS = ["expiry", "index", "holiday", "divday", "risk", "rate", "big"];
+function bigCalRows(ev) {
+  const today = TODAY(), tmr = new Date(Date.parse(today) + 864e5).toISOString().slice(0, 10);
+  const kst = (iso) => new Date(Date.parse(iso) + 9 * 3600e3).toISOString();
+  const shown = new Set(ev.map((e) => { const k = kst(e.at); return `${k.slice(0, 10)} ${k.slice(11, 16)}`; }));
+  return ((DATA && DATA.calendar) || []).filter((e) => (e.date === today || e.date === tmr) && BIG_CAL_KINDS.includes(e.kind)
+    && !(e.kind === "rate" && e.market === "us")  // FOMC는 위 발표 줄에 시각까지 있어요
+    && !(e.kind === "big" && shown.has(`${e.date} ${((e.note || "").match(/\d\d:\d\d/) || [""])[0]}`)));
+}
+function bigCalHtml(cal) {
+  if (!cal.length) return "";
+  const today = TODAY(), flag = { kr: "🇰🇷", us: "🇺🇸", world: "🌐" };
+  return ["오늘", "내일"].map((lab, i) => {
+    const day = i ? new Date(Date.parse(today) + 864e5).toISOString().slice(0, 10) : today;
+    const xs = cal.filter((e) => e.date === day);
+    if (!xs.length) return "";
+    return `<li class="big-row big-cal${xs.some((e) => e.big) ? " tier1" : ""}"><div class="big-when"><b>${md(day)} 증시 일정</b> <span class="pill">${lab}</span></div>
+      ${xs.map((e) => `<div class="big-item"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${esc(e.title)}</div>${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div>`).join("")}</li>`;
+  }).join("");
+}
 function bigEventsCard() {
   const data = (DATA && DATA.events) || {};
   const now = Date.now(), H = 3600e3;
   const ev = (data.events || []).filter((e) => { const t = Date.parse(e.at); return t > now - 24 * H && t < now + 48 * H; });
   const shocks = (data.shocks || []).filter((x) => Date.parse(x.at) > now - 24 * H);
-  if (!ev.length && !shocks.length) return "";
+  const cal = bigCalRows(ev);
+  if (!ev.length && !shocks.length && !cal.length) return "";
   const days = "일월화수목금토";
   const when = (iso) => { const k = new Date(Date.parse(iso) + 9 * H); return `${k.getUTCMonth() + 1}.${String(k.getUTCDate()).padStart(2, "0")}(${days[k.getUTCDay()]}) ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`; };
   // 하루 넘게 남으면 한국 날짜로 세요 (달력 D-n과 같게: 일요일 밤 → 화요일 새벽은 '2일 뒤')
@@ -5365,8 +5392,8 @@ function bigEventsCard() {
       <div class="big-item"><div class="name">${esc(x.label)} 1시간 <span class="${x.move > 0 ? "up" : "down"}">${pct(x.move)}</span></div></div>
       ${(x.news || []).slice(0, 2).map((n) => `<div class="meta">📰 ${esc(n.title)} <span class="muted">${esc(n.source || "")}</span></div>`).join("")}</li>`).join("");
   return `<section class="card big-card" id="big-card"><h2>🚨 큰 발표·지수 급변 <small>한국시간 · 참고</small></h2>
-    <ul class="list big-list">${shockRows}${rows}</ul>
-    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표, 📌 그 밖의 발표예요 (다가오는 일정 달력과 같은 기준). 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
+    <ul class="list big-list">${shockRows}${rows}${bigCalHtml(cal)}</ul>
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·금리 결정처럼 지수를 크게 흔드는 발표, 📌 그 밖의 발표예요 (다가오는 일정 달력과 같은 기준). 만기일·지수 정기변경·휴장 같은 오늘·내일 증시 일정도 달력에서 같이 보여 줘요. 텔레그램으로 전날, 1시간 전, 발표 뒤 결과까지 와요.
       실제 값은 FRED(미국 연준 무료 자료)에서 계산해서 공식 발표와 소수 둘째 자리가 다를 수 있어요. 매매 규칙은 그대로예요.</p></section>`;
 }
 
@@ -5374,7 +5401,7 @@ function bigEventsCard() {
 // 실적·배당 칸은 내 관심종목(★)·텔레그램으로 넣은 종목만, 나머지 대형주 실적은 개수만.
 const CAL_DAYS = 14;
 const EARN_DAYS = 30;  // 실적·배당은 한 달 치
-const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰", risk: "⚠️" };
+const CAL_ICON = { big: "🚨", rate: "🏦", expiry: "⏳", season: "📊", earn: "📢", exdiv: "💰", risk: "⚠️", index: "⚖️", holiday: "🛑", divday: "💰" };
 const STOCK_KINDS = ["earn", "exdiv"];
 let calAll = false;
 const calMine = (e) => e.mine || (e.code && WATCH[e.market] && WATCH[e.market].includes(e.code));
@@ -5390,7 +5417,7 @@ function calRows(list) {
     const head = e.date !== last ? `<li class="cal-day${e.date < TODAY() ? " past" : ""}"><b>${md(e.date)} (${days[new Date(e.date + "T00:00:00").getDay()]})</b> <span class="muted">${dday(e.date)}</span></li>` : "";
     last = e.date;
     const tap = e.code && e.market === market ? ` data-stock="${esc(e.code)}"` : "";
-    const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: "옵션 만기", season: "실적 시즌", exdiv: "배당락" }[e.kind];
+    const help = { rate: e.market === "us" ? "FOMC" : "금통위", expiry: e.big ? "네 마녀의 날" : "옵션 만기", season: "실적 시즌", exdiv: "배당락", divday: "배당락", index: "지수 정기변경" }[e.kind];
     const cls = [e.big ? "cal-big" : "", e.kind === "risk" ? "cal-risk" : "", e.date < TODAY() ? "past" : ""].filter(Boolean).join(" ");
     return `${head}<li${tap}${cls ? ` class="${cls}"` : ""}><div class="l"><div class="name">${e.kind === "big" && !e.big ? "📌" : CAL_ICON[e.kind] || ""} ${flag[e.market] || ""} ${help ? term(help, esc(e.title)) : esc(e.title)}${calMine(e) ? " ⭐" : ""}</div>
       ${e.note ? `<div class="meta">${esc(e.note)}</div>` : ""}</div></li>`;
@@ -5447,7 +5474,7 @@ function calendarCard() {
       <button type="button" class="cal-nav" data-ecstep="1" aria-label="다음 달" ${econMonth >= hi ? "disabled" : ""}>›</button></div>
     <div class="cal-grid"><span class="cal-w">월</span><span class="cal-w">화</span><span class="cal-w">수</span><span class="cal-w">목</span><span class="cal-w">금</span>${cells}</div></div>
     <div class="ec-list">${rows ? `<ul class="list cal">${rows}</ul>` : `<p class="empty">${pick ? "이날은 큰 일정이 없어요." : "이달엔 큰 일정이 없어요."}</p>`}</div>
-    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표, 📌 PPI·소매판매, 🏦 금리 결정, ⏳ 만기일, 📊 국장 실적 시즌이에요 (한국시간). 지난 일정은 연하게 보여요.
+    <p class="muted note" style="margin:10px 0 0">🚨 물가(CPI)·고용·PCE·GDP처럼 지수를 크게 흔드는 미국 발표와 네 마녀의 날·MSCI 정기변경, 📌 PPI·소매판매·ISM·FOMC 회의록·한국 수출입, 🏦 금리 결정, ⏳ 만기일, ⚖️ 지수 정기변경(코스피200·MSCI·S&P 500·러셀), 🛑 휴장·조기 폐장, 💰 연말 배당락, ⚠️ ELS 대량 만기 같은 리스크 일정이에요 (한국시간). 지난 일정은 연하게 보여요.
       위 달 버튼은 옆으로 밀면 작년·내년도 볼 수 있고, 지난달~5개월 뒤는 파랗게 표시돼요. 미국 발표·FOMC 날짜는 올라온 해까지만 있어서 먼 달은 비어 있을 수 있어요. 종목 실적·배당 발표는 바로 아래 칸에 따로 있어요.</p></section>`;
 }
 // 일정 화면: 달력(월 제목 + 칸)은 위 막대 바로 아래에 멈춰 있고, 그 아래 일정 목록만 움직여요 (사용자 2026-10-24, 이 화면만 sticky 예외)
@@ -6484,7 +6511,7 @@ let guideAt = -1;
 function guideSeen() { try { return !!localStorage.getItem("guide_v1"); } catch (e) { return true; } }  // 저장소를 못 쓰면 매번 띄우지 않아요
 function guideClose() {
   guideAt = -1;
-  try { localStorage.setItem("guide_v1", "1"); } catch (e) { /* 이번만 */ }
+  remember("guide_v1", "1");
   document.querySelectorAll(".guide-catch, .guide-spot, .guide-card").forEach((x) => x.remove());
   window.removeEventListener("resize", guidePlace);
   document.removeEventListener("keydown", guideKey);
@@ -6903,7 +6930,7 @@ function bindGoal() {
     if (k === "end") GOAL.end = i.value;
     else if (k === "title") { GOAL.title = i.value.slice(0, 30); const h = $("#goal-title"); if (h) h.textContent = goalTitle(); }
     else { const v = parseFloat(i.value.replace(/[,\s]/g, "")); GOAL[k] = Number.isFinite(v) && v >= 0 ? Math.min(v, 1e6) : 0; }
-    try { localStorage.setItem("goal", JSON.stringify(GOAL)); } catch (e) { /* 이번만 */ }
+    remember("goal", JSON.stringify(GOAL));
     const out = $("#goal-out"); if (out) out.innerHTML = goalOut();
   }));
   // 초기화: 실수로 지우지 않게 한 번 누르면 '한 번 더 누르면 초기화'로 바뀌고, 3초 안에 다시 누르면 처음 상태로
@@ -6957,7 +6984,7 @@ const astIds = (x) => AST.accts.map((a) => a.id).concat(x ? x.items.map((i) => i
 const astToSel = (cur, attr) => `<select ${attr}>${astBrokers().map((b) => `<optgroup label="${esc(b)}">${AST.accts.filter((a) => a.broker === b)
   .map((a) => `<option value="${esc(a.id)}" ${a.id === cur ? "selected" : ""}>${esc(b)} · ${esc(a.name)}</option>`).join("")}</optgroup>`).join("")}</select>`;
 let astOpen = null, astQuery = "", astTo = AST.accts[0].id, astAnim = false, astChart = null, astTip = null;
-const astSave = () => { try { localStorage.setItem("assets", JSON.stringify(AST)); } catch (e) { /* 이번만 */ } };
+const astSave = () => { remember("assets", JSON.stringify(AST)); };
 const ymOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 const ymNow = () => ymOf(new Date());
 const ymName = (ym) => { const [y, m] = ym.split("-").map(Number); return `${y}년 ${m}월`; };
@@ -7123,7 +7150,7 @@ let astEditOpen = false;
 // 증권사 칸 접기·펼치기 (사용자 2026-11-08 '화면이 너무 길어'). 처음엔 다 접혀 있고, 펼친 증권사는 이 폰에 기억해요
 const AST_BOPEN = new Set();
 try { JSON.parse(localStorage.getItem("ast_bopen") || "[]").forEach((b) => AST_BOPEN.add(b)); } catch (e) { /* 처음 */ }
-const astBSave = () => { try { localStorage.setItem("ast_bopen", JSON.stringify([...AST_BOPEN])); } catch (e) { /* 이번만 */ } };
+const astBSave = () => { remember("ast_bopen", JSON.stringify([...AST_BOPEN])); };
 function astAcctEdit() {
   const brokers = astBrokers();
   return brokers.map((b, bi) => {
@@ -7558,7 +7585,7 @@ function loadLab() {
     .then((x) => { LABD = x || { months: [], assets: [] }; });
   return labLoading;
 }
-const saveLab = () => { try { localStorage.setItem("lab", JSON.stringify(LAB)); } catch (e) { /* 이번만 */ } };
+const saveLab = () => { remember("lab", JSON.stringify(LAB)); };
 const labSum = (w) => Object.values(w).reduce((a, b) => a + (b || 0), 0);
 // 비율 w(%)로 섞어 한 달씩 굴려요. reb: 매년 12월 말에 처음 비율로 되돌리기. 같은 기간 계산을 위해 시작 달을 받을 수 있어요
 function labRun(w, reb, from) {

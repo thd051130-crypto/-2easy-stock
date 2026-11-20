@@ -4,8 +4,11 @@
 전부 무료예요 (키 필요 없음).
   - FOMC: 연준 홈페이지 일정표 (federalreserve.gov/monetarypolicy/fomccalendars.htm)
   - 금통위: 한국은행 홈페이지 '통화정책방향 결정회의 일정' 표
-  - 만기일: 규칙으로 계산 (국장 매달 둘째 목요일, 미장 매달 셋째 금요일, 3·6·9·12월은 선물까지 같이 만기).
-    거래소 휴일이면 하루 앞당겨질 수 있어요
+  - 만기일: 규칙으로 계산 (국장 매달 둘째 목요일, 미장 매달 셋째 금요일, 3·6·9·12월은 선물까지 같이 만기 = 네 마녀의 날).
+    거래소 휴장일이면 앞 거래일로 당겨요 (휴장일은 holidays 패키지의 한국거래소·뉴욕거래소 달력)
+  - 🛑 휴장·조기 폐장, ⚖️ 지수 정기변경(코스피200·MSCI·S&P 500·나스닥100·러셀), 💰 국장 연말 배당락,
+    FOMC 회의록(회의 3주 뒤)·ISM 지수(매달 첫째·셋째 거래일)·한국 수출입(매달 1일): 전부 규칙으로 계산해요
+    (사용자 2026-11-19 "ELS 만기일처럼 증시에 큰 영향 가는 일 국내·미국 다 반영되는 거야?" → "알아서 채워두도록")
   - 종목 실적 발표일·배당락: fundamentals.py가 매주 받는 야후 자료 (감시 종목·텔레그램으로 넣은 종목)
   - 초대형주 실적 (엔비디아·테슬라 등 감시 종목 밖, BIG_EARN): 야후에서 실적 날짜만 매일 받아요
   - ⚠️ 리스크 일정 (ELS 대량 만기·보호예수 해제처럼 숫자 발표는 아니지만 증시에 부담인 일): paper/risk_events.json에
@@ -48,7 +51,16 @@ FRED_RELEASES = {
     53: ("미국 GDP (경제성장률)", True),
     46: ("미국 생산자물가(PPI)", False),
     9: ("미국 소매판매", False),
+    192: ("미국 구인 건수(JOLTS)", False),
 }
+EASTERN = ZoneInfo("America/New_York")
+# MSCI 분기 리뷰 발표일 (미국 날짜, 장 마감 뒤라 한국시간 다음 날 아침). MSCI가 미리 알린 날만 적어요
+MSCI_ANNOUNCE = ("2026-11-11", "2027-02-09")
+# 수능 날은 국장이 1시간 늦게(10시) 열어요. 교육부가 발표한 날만
+SUNEUNG = ("2025-11-13", "2026-11-19")
+US_HOLIDAY_KO = {"New Year's Day": "새해 첫날", "Martin Luther King Jr. Day": "마틴 루서 킹 데이", "Washington's Birthday": "대통령의 날",
+                 "Good Friday": "성금요일", "Memorial Day": "메모리얼 데이", "Juneteenth National Independence Day": "노예해방기념일",
+                 "Independence Day": "독립기념일", "Labor Day": "노동절", "Thanksgiving Day": "추수감사절", "Christmas Day": "크리스마스"}
 CENTRAL = ZoneInfo("America/Chicago")
 MONTHS = {m: i for i, m in enumerate(calendar.month_name) if m}
 YEARS_BACK = 1   # 작년 1월부터 (앱 달력에서 지난 일정도 연하게 볼 수 있어요)
@@ -176,18 +188,141 @@ def nth_weekday(year, month, weekday, n):
     return first + dt.timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
 
 
-def expiries(start, end):
-    """국장·미장 월물 만기일 (휴일 조정 없음)."""
-    out = []
+def _holidays(market, years):
+    """거래소 휴장일 {date: 이름}. holidays 패키지가 없으면 빈 칸 (만기일은 휴장 조정 없이)."""
+    try:
+        import holidays
+    except ImportError:
+        return {}
+    return dict(holidays.financial_holidays("XKRX" if market == "kr" else "NYSE", years=years))
+
+
+_HOL = {}
+
+
+def closed(market, d):
+    if (market, d.year) not in _HOL:
+        _HOL[(market, d.year)] = _holidays(market, d.year)
+    return d.weekday() >= 5 or d in _HOL[(market, d.year)]
+
+
+def trading_back(market, d):
+    """d가 휴장이면 앞 거래일로."""
+    while closed(market, d):
+        d -= dt.timedelta(days=1)
+    return d
+
+
+def trading_days(market, year, month):
+    """그 달 거래일 목록."""
+    days = calendar.monthrange(year, month)[1]
+    return [x for x in (dt.date(year, month, k) for k in range(1, days + 1)) if not closed(market, x)]
+
+
+def months(start, end):
     y, m = start.year, start.month
     while dt.date(y, m, 1) <= end:
-        quad = m in (3, 6, 9, 12)
-        for market, d, name in (("kr", nth_weekday(y, m, 3, 2), "국장 옵션 만기"), ("us", nth_weekday(y, m, 4, 3), "미장 옵션 만기")):
-            if start <= d <= end:
-                out.append(dict(date=f"{d:%Y-%m-%d}", market=market, kind="expiry",
-                                title=name.replace("옵션", "선물·옵션 동시") if quad else name,
-                                note="만기 날엔 주가가 크게 출렁일 때가 있어요" + (" (분기 동시 만기)" if quad else "")))
+        yield y, m
         y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+
+
+def expiries(start, end):
+    """국장·미장 월물 만기일. 휴장이면 앞 거래일. 3·6·9·12월은 네 마녀의 날(🚨)."""
+    out = []
+    for y, m in months(start, end):
+        quad = m in (3, 6, 9, 12)
+        for market, base, name in (("kr", nth_weekday(y, m, 3, 2), "국장"), ("us", nth_weekday(y, m, 4, 3), "미장")):
+            d = trading_back(market, base)
+            if start <= d <= end:
+                note = ("주가지수 선물·옵션과 개별 주식 선물·옵션이 한꺼번에 끝나는 날이라 장 막판에 크게 출렁일 수 있어요"
+                        if quad else "만기 날엔 주가가 크게 출렁일 때가 있어요")
+                if d != base:
+                    note += f" · {base:%m.%d} 휴장이라 앞당겨졌어요"
+                out.append(dict(date=f"{d:%Y-%m-%d}", market=market, kind="expiry",
+                                title=f"{name} 선물·옵션 동시만기 (네 마녀의 날)" if quad else f"{name} 옵션 만기",
+                                **({"big": True} if quad else {}), note=note))
+    return out
+
+
+def index_events(start, end):
+    """⚖️ 지수 정기변경: 지수를 따라가는 펀드가 그날 종가에 한꺼번에 사고팔아 거래량·주가가 크게 움직여요."""
+    out = []
+
+    def add(d, market, title, note, big=False):
+        if start <= d <= end:
+            out.append(dict(date=f"{d:%Y-%m-%d}", market=market, kind="index", title=title, note=note, **({"big": True} if big else {})))
+
+    for y, m in months(start, end):
+        if m in (6, 12):  # 코스피200·코스닥150: 6·12월 동시만기 다음 거래일부터 새 구성
+            add(trading_back("kr", nth_weekday(y, m, 3, 2)), "kr", "코스피200·코스닥150 정기변경 (오늘 종가 반영)",
+                "지수 펀드가 빠지는 종목을 팔고 새로 들어오는 종목을 장 마감 때 한꺼번에 사요. 다음 거래일부터 새 구성")
+        if m in (2, 5, 8, 11):  # MSCI 분기 리뷰: 그달 마지막 거래일 종가
+            add(trading_days("us", y, m)[-1], "world", "MSCI 지수 정기변경 (오늘 종가 반영)",
+                "외국인 패시브 자금이 장 마감 때 몰려요. 국장은 이날 오후 3시 30분 종가, 미장은 그날 밤 종가", big=True)
+        if m in (3, 6, 9, 12):  # S&P 500 분기 리밸런싱 (+12월 나스닥100 연례 교체): 셋째 금요일 종가
+            add(trading_back("us", nth_weekday(y, m, 4, 3)), "us",
+                "S&P 500 분기 리밸런싱" + (" · 나스닥100 연례 종목 교체" if m == 12 else "") + " (종가 반영)",
+                "네 마녀의 날과 같은 날 종가에 지수 펀드 매매가 겹쳐요")
+        if m == 6 or (m == 12 and y >= 2026):  # 러셀: 6월 넷째 금요일, 2026년부터 12월 둘째 금요일도
+            add(trading_back("us", nth_weekday(y, m, 4, 4 if m == 6 else 2)), "us", "러셀 지수 재구성 (종가 반영)",
+                "미국 중소형주 지수(러셀2000 등) 펀드 매매가 몰려 그날 거래량이 1년 중 손꼽게 커요")
+    for x in MSCI_ANNOUNCE:
+        d = dt.date.fromisoformat(x) + dt.timedelta(days=1)
+        add(d, "world", "MSCI 분기 리뷰 발표 (편입·편출 종목)", "한국시간 아침 6시쯤 · 들어가는 종목은 오르고 빠지는 종목은 내리는 경우가 많아요")
+    return out
+
+
+def holiday_events(start, end):
+    """🛑 휴장·조기 폐장·늦게 여는 날, 💰 국장 연말 배당락."""
+    out = []
+    for y in range(start.year, end.year + 1):
+        for market, name in (("kr", "국장"), ("us", "미장")):
+            for d, why in sorted(_holidays(market, y).items()):
+                if start <= d <= end and d.weekday() < 5:
+                    why = US_HOLIDAY_KO.get(why.replace(" (observed)", ""), why) if market == "us" else why.split(";")[0]
+                    out.append(dict(date=f"{d:%Y-%m-%d}", market=market, kind="holiday", title=f"{name} 휴장 ({why})",
+                                    note="이날은 장이 안 열려요"))
+        # 미장 조기 폐장 (오후 1시 마감): 추수감사절 다음 날, 독립기념일 전날·크리스마스 이브 (평일이고 휴장이 아닐 때)
+        thanks = nth_weekday(y, 11, 3, 4)
+        for d in (thanks + dt.timedelta(days=1), dt.date(y, 7, 3), dt.date(y, 12, 24)):
+            if start <= d <= end and not closed("us", d) and not (d.month == 7 and closed("us", dt.date(y, 7, 4))):
+                at = dt.datetime(d.year, d.month, d.day, 13, tzinfo=EASTERN).astimezone(KST)
+                out.append(dict(date=f"{d:%Y-%m-%d}", market="us", kind="holiday", title="미장 조기 폐장",
+                                note=f"오후 1시(한국시간 {at:%H:%M})에 일찍 끝나요. 거래가 적어 작은 주문에도 출렁일 수 있어요"))
+        kr = [x for m in (12,) for x in trading_days("kr", y, m)]
+        if len(kr) >= 2 and start <= kr[-2] <= end:  # 마지막 거래일이 배당 기준일 → 그 앞 거래일이 배당락
+            out.append(dict(date=f"{kr[-2]:%Y-%m-%d}", market="kr", kind="divday", title="국장 연말 배당락 (12월 결산 배당 기업)",
+                            note="배당 기준일을 연말로 둔 기업은 이날 배당만큼 내려 출발해요. 요즘은 기준일을 2~3월로 옮긴 기업도 많아요"))
+        first = trading_days("kr", y, 1)
+        if first and start <= first[0] <= end:
+            out.append(dict(date=f"{first[0]:%Y-%m-%d}", market="kr", kind="holiday", title="국장 새해 첫 거래일 (10시 개장)",
+                            note="개장식 때문에 평소보다 1시간 늦게 열어요"))
+    for x in SUNEUNG:
+        if f"{start:%Y-%m-%d}" <= x <= f"{end:%Y-%m-%d}":
+            out.append(dict(date=x, market="kr", kind="holiday", title="국장 10시 개장 (수능 날)", note="수능 날은 1시간 늦게 열고 1시간 늦게(16:30) 닫아요"))
+    return out
+
+
+def rule_releases(start, end, fomc=()):
+    """규칙으로 정해지는 큰 발표 (kind big, 📌): FOMC 회의록(회의 3주 뒤 오후 2시), ISM 제조업(첫 거래일)·서비스업(셋째 거래일)
+    오전 10시(미국 동부), 한국 수출입 동향(매달 1일 오전 9시, 주말에도 발표)."""
+    out = []
+
+    def add(at, market, title):
+        k = at.astimezone(KST)
+        if start <= k.date() <= end:
+            out.append(dict(date=f"{k:%Y-%m-%d}", market=market, kind="big", title=title, big=False, note=f"한국시간 {k:%H:%M} 발표"))
+
+    for x in fomc:
+        d = dt.date.fromisoformat(x["date"]) + dt.timedelta(days=21)
+        add(dt.datetime(d.year, d.month, d.day, 14, tzinfo=EASTERN), "us", "FOMC 회의록")
+    for y, m in months(start - dt.timedelta(days=1), end):
+        days = trading_days("us", y, m)
+        for i, name in ((0, "ISM 제조업 지수"), (2, "ISM 서비스업 지수")):
+            if len(days) > i:
+                d = days[i]
+                add(dt.datetime(d.year, d.month, d.day, 10, tzinfo=EASTERN), "us", name)
+        add(dt.datetime(y, m, 1, 9, tzinfo=KST), "kr", "한국 수출입 동향 (반도체 수출)")
     return out
 
 
@@ -262,18 +397,22 @@ def risk_alert(events, today, days=RISK_ALERT_DAYS):
     return "\n".join(["[⚠️ 리스크 일정 미리 알림]", *rows, "증시에 부담이 될 수 있는 일정이에요. 참고용이고 사고팔기 판단은 안 해요."])
 
 
-def big_rows(paper, releases, start, end):
+def big_rows(paper, releases, start, end, fomc=()):
     """큰 발표 줄 (kind big): 이번 주는 events.json(홈 '큰 발표' 칸과 같은 자료), 나머지는 FRED 일정.
     dashboard.py도 배포 때마다 이걸로 다시 만들어요 — 홈 칸과 달력이 늘 같은 이름·시각·등급이 되게
     (사용자 2026-11-15 "연준 발표내용 서로 다른데 통일해")."""
     import big_events
 
     week = big_events.calendar_events(paper, f"{start:%Y-%m-%d}", f"{end:%Y-%m-%d}")
-    return week + release_events(releases, start, end, {(e["date"], e["note"]) for e in week})
+    taken = {(e["date"], e["note"]) for e in week}
+    fred = release_events(releases, start, end, taken)
+    taken |= {(e["date"], e["note"]) for e in fred}
+    # 규칙 일정은 같은 날·같은 시각에 이미 줄이 있으면 빼요 (이번 주는 events.json 이름 그대로)
+    return week + fred + [e for e in rule_releases(start, end, fomc) if (e["date"], e["note"]) not in taken]
 
 
 def sort_key(e):
-    return (e["date"], e["kind"] not in ("risk", "big", "rate"), -(e.get("cap") or 0))
+    return (e["date"], e["kind"] not in ("risk", "big", "rate", "expiry", "index", "holiday", "divday"), -(e.get("cap") or 0))
 
 
 def build(today, fomc, bok, paper, releases=(), earn=()):
@@ -286,8 +425,9 @@ def build(today, fomc, bok, paper, releases=(), earn=()):
     for d in bok:
         if f"{start:%Y-%m-%d}" <= d <= f"{end:%Y-%m-%d}":
             ev.append(dict(date=d, market="kr", kind="rate", title="한국 금리 결정 (금통위)", note="보통 오전 10시쯤 발표"))
-    ev += big_rows(paper, releases, start, end)
-    ev += expiries(start, end) + stock_events(paper, start, end) + risk_events(paper, start, end)
+    ev += big_rows(paper, releases, start, end, fomc)
+    ev += expiries(start, end) + index_events(start, end) + holiday_events(start, end)
+    ev += stock_events(paper, start, end) + risk_events(paper, start, end)
     have = {e.get("code") for e in ev if e["kind"] == "earn"}
     ev += [dict(date=x["date"], market="us", kind="earn", title=f"{x['name']} 실적 발표", code=x["code"], cap=x.get("cap"), mine=False)
            for x in earn if x["code"] not in have and f"{start:%Y-%m-%d}" <= x["date"] <= f"{end:%Y-%m-%d}"]
@@ -308,13 +448,15 @@ def week_text(events, today, limit=EARN_MAX):
     for e in sorted(big + stocks, key=lambda e: e["date"]):
         d = dt.date.fromisoformat(e["date"])
         star = " ⭐" if e.get("mine") else ""
-        mark = "🚨 " if e.get("big") else "⚠️ " if e["kind"] == "risk" else ""
+        mark = "🚨 " if e.get("big") else {"risk": "⚠️ ", "index": "⚖️ ", "holiday": "🛑 ", "divday": "💰 "}.get(e["kind"], "")
         when = f" ({e['note']})" if e["kind"] in ("big", "risk") and e.get("note") else ""
         lines.append(f"- {d:%m.%d}({days[d.weekday()]}) {flag.get(e['market'], '🌐')} {mark}{e['title']}{when}{star}")
     if len(lines) == 2:
         lines.append("- 이번 주엔 큰 일정이 없어요.")
-    if any(e.get("big") for e in big):
+    if any(e.get("big") and e["kind"] in ("big", "rate") for e in big):
         lines.append("🚨 지수가 크게 움직일 수 있는 발표예요. 전날과 발표 뒤에 따로 알려 드려요.")
+    if any(e["kind"] in ("expiry", "index") and e.get("big") for e in big):
+        lines.append("🚨⏳⚖️ 만기·지수 정기변경 날은 장 마감 때 큰 매매가 몰려 출렁일 수 있어요.")
     if any(e["kind"] == "risk" for e in big):
         lines.append("⚠️ 숫자 발표는 아니지만 증시에 부담이 될 수 있는 일정이에요. 7일 전·하루 전에 다시 알려 드려요.")
     if any(e.get("mine") for e in stocks):

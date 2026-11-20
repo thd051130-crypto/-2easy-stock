@@ -43,6 +43,7 @@ import inbox
 import industry_map
 import policies
 import report_archive
+import slim
 import themes
 import watchlist
 from markets import MARKETS
@@ -87,7 +88,7 @@ def fresh_calendar(paper_dir, today=None):
     start = dt.date(today.year - econ_calendar.YEARS_BACK, 1, 1)
     end = dt.date(today.year + econ_calendar.YEARS_AHEAD, 12, 31)
     try:
-        big = econ_calendar.big_rows(paper_dir, cal.get("releases") or [], start, end)
+        big = econ_calendar.big_rows(paper_dir, cal.get("releases") or [], start, end, cal.get("fomc") or [])
     except (KeyError, TypeError, ValueError):
         return ev
     return sorted([e for e in ev if e.get("kind") != "big"] + big, key=econ_calendar.sort_key)
@@ -151,6 +152,7 @@ def site_version(site_dir):
 def stamp_assets(out_dir):
     """index.html이 부르는 app.js·casebook.js·style.css 주소 끝에 내용 해시를 붙여요 (app.js?v=…).
     파일이 바뀌면 주소도 바뀌어서, 폰 브라우저가 메모리에 들고 있던 예전 파일을 다시 쓰지 않아요."""
+    slim.slim_dir(out_dir)  # 배포본만 주석·들여쓰기 빼기 (원본 site/는 그대로)
     index = out_dir / "index.html"
     html = index.read_text(encoding="utf-8")
     for name in ("app.js", "casebook.js", "style.css"):

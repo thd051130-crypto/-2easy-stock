@@ -43,6 +43,43 @@ def test_expiries():
     assert [(e["date"], e["market"]) for e in ex] == [
         ("2026-10-08", "kr"), ("2026-10-16", "us"), ("2026-11-12", "kr"), ("2026-11-20", "us"), ("2026-12-10", "kr"), ("2026-12-18", "us")]
     assert "동시" in ex[-1]["title"] and "동시" not in ex[0]["title"]
+    assert "네 마녀의 날" in ex[-1]["title"] and ex[-1]["big"] and "big" not in ex[0]
+
+
+def test_expiries_move_to_previous_trading_day():
+    """휴장일이면 앞 거래일로: 2025-10-09(한글날, 둘째 목요일)는 추석 연휴라 10-02, 2025-04-18(성금요일)은 04-17."""
+    ex = {(e["market"], e["date"][:7]): e for e in ec.expiries(dt.date(2025, 4, 1), dt.date(2025, 10, 31))}
+    assert ex[("kr", "2025-10")]["date"] == "2025-10-02" and "앞당겨졌어요" in ex[("kr", "2025-10")]["note"]
+    assert ex[("us", "2025-04")]["date"] == "2025-04-17"
+
+
+def test_index_holiday_and_rule_events():
+    """사용자 2026-11-19 "ELS 만기일처럼 증시에 큰 영향 가는 일 국내·미국 다 반영되는 거야?" → 규칙 일정 채우기."""
+    start, end = dt.date(2026, 11, 1), dt.date(2026, 12, 31)
+    idx = {(e["date"], e["title"].split(" (")[0]) for e in ec.index_events(start, end)}
+    assert ("2026-11-30", "MSCI 지수 정기변경") in idx           # 11월 마지막 거래일 종가
+    assert ("2026-12-10", "코스피200·코스닥150 정기변경") in idx  # 12월 동시만기
+    assert ("2026-12-11", "러셀 지수 재구성") in idx              # 2026년부터 12월 둘째 금요일
+    assert ("2026-12-18", "S&P 500 분기 리밸런싱 · 나스닥100 연례 종목 교체") in idx
+    hol = {(e["date"], e["market"], e["title"]) for e in ec.holiday_events(start, end)}
+    assert ("2026-11-26", "us", "미장 휴장 (추수감사절)") in hol and ("2026-11-27", "us", "미장 조기 폐장") in hol
+    assert ("2026-12-31", "kr", "국장 휴장 (연말휴장일)") in hol and ("2026-11-19", "kr", "국장 10시 개장 (수능 날)") in hol
+    div = [e for e in ec.holiday_events(start, end) if e["kind"] == "divday"]
+    assert [e["date"] for e in div] == ["2026-12-29"]  # 폐장일(12-30) 전 거래일
+    rel = {(e["date"], e["title"], e["note"]) for e in ec.rule_releases(start, end, [dict(date="2026-10-28"), dict(date="2026-12-09")])}
+    assert ("2026-11-19", "FOMC 회의록", "한국시간 04:00 발표") in rel   # 10-28 회의 3주 뒤 오후 2시(동부)
+    assert ("2026-12-02", "ISM 제조업 지수", "한국시간 00:00 발표") in rel  # 12-01 첫 거래일 오전 10시
+    assert ("2026-12-04", "ISM 서비스업 지수", "한국시간 00:00 발표") in rel
+    assert ("2026-12-01", "한국 수출입 동향 (반도체 수출)", "한국시간 09:00 발표") in rel
+
+
+def test_big_rows_skips_rule_rows_already_in_events(tmp_path):
+    """이번 주 events.json에 같은 시각 FOMC 회의록이 있으면 규칙 줄은 빼요 (홈 칸과 달력이 같은 이름)."""
+    ev = [dict(id="m", at="2026-11-19T04:00+09:00", date="2026-11-19", country="us", flag="🇺🇸", title="FOMC Meeting Minutes",
+               ko="FOMC 회의록", group="rate", tier1=False)]
+    (tmp_path / "events.json").write_text(json.dumps(dict(events=ev)))
+    rows = ec.big_rows(tmp_path, [], dt.date(2026, 11, 15), dt.date(2026, 11, 22), [dict(date="2026-10-28")])
+    assert [(e["date"], e["title"]) for e in rows] == [("2026-11-19", "FOMC 회의록")]
 
 
 def test_build_and_week_text(tmp_path):
