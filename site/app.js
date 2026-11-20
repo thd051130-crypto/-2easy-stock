@@ -7519,7 +7519,8 @@ function bindAsset() {
   const ed = card.querySelector(".ast-acct-edit");
   if (ed) ed.addEventListener("toggle", () => { astEditOpen = ed.open; });
   const after = () => { astEditOpen = true; astSave(); redraw(); };
-  const val = (f) => String(f.querySelector("input").value || "").trim().slice(0, 20);
+  // 이름 칸이 비어 있으면 그 칸으로 커서를 옮겨요 (전에는 '계좌 추가'를 눌러도 아무 반응이 없었어요)
+  const val = (f) => { const v = String(f.querySelector("input").value || "").trim().slice(0, 20); if (!v) f.querySelector("input").focus({ preventScroll: true }); return v; };
   const addAcct = (broker, name) => {
     if (!broker || !name || AST.accts.some((a) => a.broker === broker && a.name === name)) return;
     const id = astId(), last = AST.accts.map((a) => a.broker).lastIndexOf(broker);
