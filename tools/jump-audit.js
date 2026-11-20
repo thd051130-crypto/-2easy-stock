@@ -208,7 +208,9 @@ async function auditInner(browser, sc, m, res) {
       const s = await page.evaluate((probe) => {
         let top = null;
         if (probe && window.__probe) { const p = window.__probe, again = tapAll(p.sig, p.box)[p.idx]; top = again ? again.getBoundingClientRect().top : null; }
-        return { net: window.__net, k: `${top}|${scrollY}|${typeof screen !== 'undefined' ? screen : ''}|${location.hash}|${document.documentElement.scrollHeight}` };
+        // 지도·도구·의견 화면 파일은 열 때 받아요(core.js LAZY): 받는 동안도 기다려요
+        const lazy = typeof screenReady === 'function' && typeof screen !== 'undefined' && !screenReady(screen);
+        return { net: window.__net + (lazy ? 1 : 0), k: `${top}|${scrollY}|${typeof screen !== 'undefined' ? screen : ''}|${location.hash}|${document.documentElement.scrollHeight}` };
       }, probe);
       if (s.net > 0) { await new Promise((r) => setTimeout(r, 15)); last = null; same = 0; continue; }
       if (spent >= minMs) { if (s.k === last) { if (++same >= 1) return; } else same = 0; }

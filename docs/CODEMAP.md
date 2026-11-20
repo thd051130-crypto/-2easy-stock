@@ -23,11 +23,11 @@ home.js     급락 점검 dropCard · 세계 지수 worldTicker/worldCard(~187) 
             · 큰 발표 bigEventsCard(~458) · 일정 calendarCard/earningsCard(~534) · 히트맵·업종·급등락·수급(~657)
 stock.js    종목 화면 stockHeadCard/bindStock/fundHtml · candleChart(~385)/chartGestures/lineChart
 guide.js    처음 안내·사용법 guideShow/helpCard · 아래 메뉴 resetFolds · 설명 접기 foldNotes
-tools.js    폭락 대비 stressCard(+RET/loadReturns) · 체크리스트 checkCard · 목표 goalCard(~228) · 자산 합계 AST/astSum(~291, 목표가 써서 여기)
+tools.js    폭락 대비 stressCard(+RET/loadReturns) · 체크리스트 checkCard · 목표 goalCard(~246) · 자산 합계·시세 평가 AST/astSum/astEval/savPx(~315, 리포트의 목표 줄이 써서 여기)
 main.js     서비스워커 등록 + 처음 render/load (맨 마지막)
 ★map.js     산업 지도 mapLayout/mapSvg/mapCard/bindMap (지도 화면)
 ★savings.js 적립식 계산기 savingsCard/bindSavings (도구 화면)
-★asset.js   자산 기록 assetCard/astTree/bindAsset (도구 화면)
+★asset.js   자산 기록 assetCard/astTree/bindAsset · 배당 달력 divCalCard(~681) (도구 화면)
 ★lab.js     실험실 labCard · 수익률 달력 retCalendarCard (도구 화면)
 ★feedback.js 의견 보내기 feedbackCard (의견 화면)
 ```
