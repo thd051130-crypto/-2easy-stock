@@ -56,8 +56,8 @@
 - PR #69 (2026-10-17): 신호 화면 부서별 보고 설명 한 줄만, 부서 누르면 전체 펼침(desksCard details.desk, DESK_OPEN).
 - PR #70 (2026-10-17): 관심 화면 배당 달력·예상 배당금 칸 삭제(사용자 요청). 계산기 배당 재투자·배당수익률은 그대로 → [[dividend-receive-calendar-pr49]].
 - PR #72 머지됨 (2026-10-17 17:03 KST): 성과 화면 맨 위 가로 선택 바(묶음 하나씩, perf_tab 기억), 내 규칙표 후보 3개만+접기, 홈 세계 지수 줄 누르면 그래프, 다가오는 일정(경제)과 실적·배당 발표 분리, FRED로 CPI·고용·PCE·GDP 몇 달 치 일정, 산업 흐름 탭 스크롤 유지 → [[perf-cleanup]], [[calendar-split-pr72]].
-- 버튼 누르기 점검 도구 tools/jump-audit.js: 4개 동시·`--changed` 빠른 모드·PR마다 ui-audit 자동(32분→3분 41초, 2026-11-18) → [[jump-audit-tool]].
 - 🗺 코드 지도 docs/CODEMAP.md: 코드 고칠 땐 지도 먼저 → grep → 필요한 부분만 읽기, app.js 통째로 읽지 말기, 구조 바꾸면 같은 PR에서 지도도 갱신 (2026-11-20) → [[code-map]].
+- 버튼 누르기 점검 도구 tools/jump-audit.js: 4개 동시·`--changed` 빠른 모드·PR마다 ui-audit 자동(32분→3분 41초, 2026-11-18; 2차 가짜 시계 232→32초·반응 없음·NaN 글자·깨진 링크·404도 잡기, 2026-11-20) → [[jump-audit-tool]].
 - PR #73 머지됨 (2026-10-17 18:07 KST): 성과 선택 바 sticky 뺌, 앱 전체 버튼 눌러도 화면 위치 그대로(render 같은 화면 scrollY 유지 + keepTap). 사용자 규칙 → [[ui-no-jump-rule]].
 - 예외 (2026-10-24): 더 보기 → 다가오는 일정 화면은 달력을 위에 고정하고 아래 일정 목록만 스크롤 (사용자 요청) → [[ui-no-jump-rule]], [[calendar-split-pr72]].
 - PR #74 머지됨 (2026-10-17 18:15 KST, #75와 같이): 다가오는 일정을 6개월 달력으로(지난 일정 연하게, 날짜 누르면 그날만), 성과 선택 바가 커지던 오류 고침(main grid에 align-content:start) → [[calendar-split-pr72]].
