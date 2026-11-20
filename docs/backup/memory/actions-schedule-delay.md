@@ -11,4 +11,4 @@ metadata:
 - 고친 방법: cloudflare/feedback-worker.js(의견 우체통과 같은 Worker)에 scheduled + JOBS 표. Cron Trigger "*/5 * * * *" 하나로 시각표대로 workflow_dispatch(main). 비밀 값 GH_TOKEN(fine-grained, 이 저장소만, Actions 읽기·쓰기). 실패하면 텔레그램 하루 한 번.
 - .github/workflows/sched-gate.yml(재사용): schedule로 온 실행은 최근 N분 안 같은 워크플로 dispatch(daily·all-stocks는 run-name의 kr/us로 구분)가 있으면 건너뜀. 알람이 멈추면 예약 실행이 예전처럼 대신 돎.
 - tests/test_alarm_worker.py: 워크플로 cron과 JOBS가 같은지 확인. cron 바꾸면 JOBS도.
-**How to apply:** 자료가 늦다는 말이 오면 Actions에서 event가 workflow_dispatch인지 보기(아니면 알람 멈춤 → GH_TOKEN 만료 의심). 토큰 만료일은 사용자에게 받아 [[api-key-expiry]]처럼 기록. [[feedback-page]]
+**How to apply:** 자료가 늦다는 말이 오면 Actions에서 event가 workflow_dispatch인지 보기(아니면 알람 멈춤 → GH_TOKEN 만료 의심). 토큰 만료 2027-11-20 (사용자 답), api_keys.json GH_TOKEN에 적어 keys.yml이 미리 알림 [[api-key-expiry]]. [[feedback-page]]
