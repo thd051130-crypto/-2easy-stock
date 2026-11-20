@@ -20,7 +20,7 @@ Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_
 2100      산업 지도 mapLayout/mapSvg/mapCard/bindMap
 2880      지금 뉴스·핫 뉴스 newsCard/hotCard
 2944      투자 공부 learnView/learn*Cards/storyCard/bindLearn
-3764      지수 차트·이동평균 trendCard/maPanel · 3943 비교 차트 compareCard
+3764      지수 차트 그림 drawTrend/smaOf/rsiOf · 3943 비교 차트 compareCard · 4287 지수 차트 칸 trendCard/maPanel/indChips
 4439      적립식 계산기 savingsCard/bindSavings
 5010      세계 지수 worldTicker/worldCard · 5156 경기 macroCard·정책 policyCard
 5271      공시 · 5299 장 상황 · 5336 큰 발표 bigEventsCard · 5402 일정 달력 calendarCard/earningsCard
