@@ -1,4 +1,5 @@
 import json
+import pathlib
 import re
 
 import pandas as pd
@@ -64,22 +65,43 @@ def test_main_copies_site_and_writes_data(tmp_path, monkeypatch):
 
 
 def test_stamp_assets_versions_script_and_style_urls(tmp_path):
-    html = '<link rel="stylesheet" href="style.css"><script src="app.js"></script>'
+    html = '<link rel="stylesheet" href="style.css"><script src="casebook.js"></script><script src="js/core.js"></script>'
+    (tmp_path / "js").mkdir()
 
-    def stamped(app_js):
+    def stamped(core_js):
         (tmp_path / "index.html").write_text(html)
-        (tmp_path / "app.js").write_text(app_js)
+        (tmp_path / "casebook.js").write_text("const CASES = [];")
+        (tmp_path / "js" / "core.js").write_text(core_js)
+        (tmp_path / "js" / "map.js").write_text("const MAP = 1;")  # 나중에 받는 파일: index.html엔 없고 JSV에만
         (tmp_path / "style.css").write_text("body{}")
         dashboard.stamp_assets(tmp_path)
         return (tmp_path / "index.html").read_text()
 
-    first = stamped("one")
-    assert re.search(r'src="app\.js\?v=[0-9a-f]{10}"', first)
+    first = stamped("const A = 1;")
+    assert re.search(r'src="js/core\.js\?v=[0-9a-f]{10}"', first)
     assert re.search(r'href="style\.css\?v=[0-9a-f]{10}"', first)
-    second = stamped("two")
+    jsv = json.loads(re.search(r"window\.JSV=(\{.*?\});", first).group(1))
+    assert set(jsv) == {"core", "map"}
+    assert first.index("window.JSV") < first.index('src="casebook.js')
+    second = stamped("const A = 2;")
     assert second != first
+    jsv2 = json.loads(re.search(r"window\.JSV=(\{.*?\});", second).group(1))
+    assert jsv2["map"] == jsv["map"] and jsv2["core"] != jsv["core"]  # 바뀐 파일만 새 주소
     assert re.search(r'href="style\.css\?v=[0-9a-f]{10}"', second).group() == \
         re.search(r'href="style\.css\?v=[0-9a-f]{10}"', first).group()
+
+
+def test_app_js_files_listed_in_index_or_lazy_and_service_worker():
+    """화면별 앱 파일(site/js/)은 index.html에 있거나 core.js의 LAZY(나중에 받기)에 있어야 하고, 서비스워커 목록에도 있어야 해요."""
+    root = pathlib.Path(__file__).resolve().parent.parent / "site"
+    names = {p.stem for p in (root / "js").glob("*.js")}
+    index = set(re.findall(r'<script src="js/([a-z]+)\.js"', (root / "index.html").read_text(encoding="utf-8")))
+    core = (root / "js" / "core.js").read_text(encoding="utf-8")
+    lazy = set(re.findall(r'"([a-z]+)"', re.search(r"const LAZY = (\{.*\});", core).group(1)))
+    sw = set(re.findall(r'"([a-z]+)"', re.search(r"const APP_JS = \[(.*)\];", (root / "sw.js").read_text(encoding="utf-8")).group(1)))
+    assert not index & lazy
+    assert index | lazy == names
+    assert sw == names
 
 
 def test_site_version_changes_only_when_site_files_change(tmp_path):

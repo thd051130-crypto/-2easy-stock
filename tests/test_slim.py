@@ -42,6 +42,7 @@ def test_slim_css_keeps_strings():
 
 
 def test_app_files_slim_to_valid_js():
-    for name in ("site/app.js", "site/casebook.js"):
+    import glob
+    for name in sorted(glob.glob("site/js/*.js")) + ["site/casebook.js"]:
         out = slim.slim_js(open(name, encoding="utf-8").read())
         subprocess.run(["node", "--check", "-"], input=out, text=True, check=True, capture_output=True)

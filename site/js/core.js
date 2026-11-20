@@ -374,7 +374,8 @@ async function load() {
   const had = NEWS && NEWS.updated;
   render();
   guideMaybe();  // 처음 연 사람에게만 사용법 안내 한 번
-  setTimeout(loadLearn, 1500);  // 홈이 다 뜬 뒤에 (홈 사진·종목 자료와 다투지 않게)
+  setTimeout(loadLearn, 1500);
+  setTimeout(preloadJs, 2500);  // 지도·도구·의견 화면 파일도 미리  // 홈이 다 뜬 뒤에 (홈 사진·종목 자료와 다투지 않게)
   news.then(() => { if (NEWS && NEWS.updated !== had) paintNews(); });
 }
 // 늦게 도착한 뉴스: 홈 '더 보기'의 지금 뉴스 한 줄만 바꿔요 (칸 화면은 다음에 그릴 때. 보던 화면이 튀지 않게)
@@ -461,3 +462,24 @@ function openMap(name) {
   mapTrail = [];
   go("map");
 }
+
+// ---------------------------------------------------------------- 화면 파일 나중에 받기 (2026-11-20)
+// 산업 지도·도구·의견 화면 파일은 처음 열 때 받아요 (홈을 먼저 빨리 띄우려고). 홈이 뜨고 쉬는 틈에 미리 받아 두니까 보통은 기다리지 않아요.
+// 이 파일들이 쓰는 것 중 다른 화면도 쓰는 것(목표 칸의 자산 합계, 하락장 자료 RET, 지도 고른 산업 mapFocus 등)은 먼저 받는 파일에 있어요.
+// 배포본은 dashboard.py가 window.JSV에 파일마다 버전을 넣어요 (js/map.js?v=…, 서비스워커가 폰에 저장).
+const LAZY = { map: ["map"], tools: ["savings", "asset", "lab"], feedback: ["feedback"] };
+const JS_GOT = new Set(), JS_P = {};
+function needJs(name) {
+  if (JS_GOT.has(name)) return Promise.resolve();
+  return JS_P[name] || (JS_P[name] = new Promise((ok, fail) => {
+    const s = document.createElement("script"), v = (window.JSV || {})[name];
+    s.src = `js/${name}.js${v ? `?v=${v}` : ""}`;
+    s.onload = () => { JS_GOT.add(name); ok(); };
+    s.onerror = () => { delete JS_P[name]; s.remove(); fail(new Error(name)); };
+    document.head.appendChild(s);
+  }));
+}
+// 한 화면의 파일들은 차례대로 받아요 (앞 파일에 있는 걸 뒤 파일이 쓸 수 있게)
+const needScreen = (sc) => (LAZY[sc] || []).reduce((p, n) => p.then(() => needJs(n)), Promise.resolve());
+const screenReady = (sc) => (LAZY[sc] || []).every((n) => JS_GOT.has(n));
+function preloadJs() { Object.keys(LAZY).reduce((p, sc) => p.then(() => needScreen(sc)).catch(() => {}), Promise.resolve()); }

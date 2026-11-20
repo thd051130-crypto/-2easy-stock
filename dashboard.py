@@ -150,16 +150,24 @@ def site_version(site_dir):
 
 
 def stamp_assets(out_dir):
-    """index.html이 부르는 app.js·casebook.js·style.css 주소 끝에 내용 해시를 붙여요 (app.js?v=…).
-    파일이 바뀌면 주소도 바뀌어서, 폰 브라우저가 메모리에 들고 있던 예전 파일을 다시 쓰지 않아요."""
+    """index.html이 부르는 js/*.js·casebook.js·style.css 주소 끝에 내용 해시를 붙여요 (js/core.js?v=…).
+    파일이 바뀌면 주소도 바뀌어서, 폰 브라우저가 메모리에 들고 있던 예전 파일을 다시 쓰지 않아요.
+    화면별로 나눈 앱 파일(2026-11-20)은 바뀐 파일만 새 주소라서, 배포 뒤에도 안 바뀐 파일은 폰에 있던 걸 그대로 써요.
+    나중에 받는 파일(지도·도구·의견)은 index.html에 없어서 window.JSV에 버전을 적어 두면 core.js가 그 주소로 받아요."""
     slim.slim_dir(out_dir)  # 배포본만 주석·들여쓰기 빼기 (원본 site/는 그대로)
     index = out_dir / "index.html"
     html = index.read_text(encoding="utf-8")
-    for name in ("app.js", "casebook.js", "style.css"):
+    jsv = {}
+    for p in sorted((out_dir / "js").glob("*.js")):
+        jsv[p.stem] = hashlib.sha1(p.read_bytes()).hexdigest()[:10]
+        html = html.replace(f'"js/{p.name}"', f'"js/{p.name}?v={jsv[p.stem]}"')
+    for name in ("casebook.js", "style.css"):
         asset = out_dir / name
         if asset.exists():
             digest = hashlib.sha1(asset.read_bytes()).hexdigest()[:10]
             html = html.replace(f'"{name}"', f'"{name}?v={digest}"')
+    if jsv:
+        html = html.replace("<script src=\"casebook.js", f"<script>window.JSV={json.dumps(jsv, separators=(',', ':'))};</script>\n<script src=\"casebook.js", 1)
     index.write_text(html, encoding="utf-8")
 
 

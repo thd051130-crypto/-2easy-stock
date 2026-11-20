@@ -42,7 +42,7 @@ const SCREENS = [
 const SEL = '#app button, #app summary, #app [role=button], #app li[data-stock], #app a, #app input[type=checkbox], #app input[type=radio], #app label';
 
 // ---------------------------------------------------------------- 빠른 점검: 바뀐 코드가 쓰이는 화면 고르기
-// app.js를 맨 왼쪽에서 시작하는 정의(function X / const X = ...)로 나누고, 화면마다 그리는 함수에서 부르는 함수를 따라가요.
+// 앱 코드(site/js/*.js)를 맨 왼쪽에서 시작하는 정의(function X / const X = ...)로 나누고, 화면마다 그리는 함수에서 부르는 함수를 따라가요.
 // 바뀐 줄이 어느 화면에서도 안 쓰이면(또는 render처럼 모든 화면이 쓰는 곳이면) 안전하게 전부 점검해요.
 const HUBS = new Set(['render', 'go', 'back', 'openMore', 'openStock', 'selectMarket', 'openMap', 'keepTap', 'holdHeight', 'releaseHold', 'keepRow', 'tapSig', 'tapBox', 'tapAll']);
 function splitDefs(src) {
@@ -96,15 +96,22 @@ function changedScreens() {
   files = [...new Set(files)];
   const site = files.filter((f) => f.startsWith('site/') || f === 'dashboard.py' || f.startsWith('paper/'));
   if (!site.length) { console.log('화면 코드가 안 바뀌었어요 → 점검할 화면 없음'); return []; }
-  const other = site.filter((f) => f !== 'site/app.js');
-  if (other.length) { console.log(`app.js 말고도 바뀜(${other.join(', ')}) → 전부 점검`); return null; }
-  const src = fs.readFileSync(path.join(ROOT, 'site/app.js'), 'utf8');
+  // 앱 코드는 화면별 파일(site/js/*.js, 2026-11-20)이에요. 파일들을 한 줄로 이어 붙인 것처럼 줄 번호를 매겨요
+  const other = site.filter((f) => !/^site\/js\/[\w-]+\.js$/.test(f));
+  if (other.length) { console.log(`앱 코드(site/js) 말고도 바뀜(${other.join(', ')}) → 전부 점검`); return null; }
+  const jsFiles = fs.readdirSync(path.join(ROOT, 'site/js')).filter((f) => f.endsWith('.js')).sort();
+  const offset = {};
+  let src = '';
+  for (const f of jsFiles) { offset[`site/js/${f}`] = src ? src.split('\n').length : 0; src += (src ? '\n' : '') + fs.readFileSync(path.join(ROOT, 'site/js', f), 'utf8').replace(/\n$/, ''); }
   const { defs } = splitDefs(src);
-  const diff = execSync(`git diff -U0 ${GIT_BASE} -- site/app.js`, { cwd: ROOT }).toString();
   const lines = [];
-  for (const m of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
-    const a = Number(m[1]), n = m[2] == null ? 1 : Number(m[2]);
-    for (let k = 0; k < Math.max(n, 1); k++) lines.push(a + k);  // 지운 줄만 있으면 그 자리 한 줄
+  for (const f of site) {
+    if (!(f in offset)) { console.log(`지운 파일(${f}) → 전부 점검`); return null; }
+    const diff = execSync(`git diff -U0 ${GIT_BASE} -- ${f}`, { cwd: ROOT }).toString();
+    for (const m of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+      const a = Number(m[1]), n = m[2] == null ? 1 : Number(m[2]);
+      for (let k = 0; k < Math.max(n, 1); k++) lines.push(offset[f] + a + k);  // 지운 줄만 있으면 그 자리 한 줄
+    }
   }
   const touched = new Set();
   for (const ln of lines) { const d = defs.find((x) => ln >= x.from && ln <= x.to); if (!d) { console.log(`정의 밖(${ln}번째 줄)이 바뀜 → 전부 점검`); return null; } touched.add(d.name); }

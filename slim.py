@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""배포할 app.js·casebook.js·style.css에서 주석과 줄 앞 들여쓰기를 빼서 폰이 받는 양을 줄여요 (2026-11-18).
+"""배포할 js/*.js(화면별 앱 파일)·casebook.js·style.css에서 주석과 줄 앞 들여쓰기를 빼서 폰이 받는 양을 줄여요 (2026-11-18).
 
 저장소의 원본(site/)은 그대로 두고, dashboard.py가 _site/로 복사한 파일만 줄여요.
 설명 주석은 원본에 남아 있으니 고칠 땐 site/를 보면 돼요.
@@ -166,7 +166,8 @@ def slim_dir(out_dir):
     """_site 안의 앱 파일을 줄여요. 줄인 결과가 이상하면(예외) 원본 그대로 둬요."""
     import pathlib
     out_dir = pathlib.Path(out_dir)
-    for name, fn in (("app.js", slim_js), ("casebook.js", slim_js), ("style.css", slim_css)):
+    files = [("casebook.js", slim_js), ("style.css", slim_css)] + [(p.relative_to(out_dir).as_posix(), slim_js) for p in sorted((out_dir / "js").glob("*.js"))]
+    for name, fn in files:
         path = out_dir / name
         if not path.exists():
             continue

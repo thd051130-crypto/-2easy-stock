@@ -204,6 +204,14 @@ function render() {
     else b.removeAttribute("aria-current");
   });
   if (!DATA) return;
+  if (!screenReady(screen)) {  // 이 화면 파일을 아직 못 받았어요: 받는 동안 한 줄 띄우고, 받으면 다시 그려요
+    const sc = screen, box = $("#app");
+    lastView = "";
+    box.innerHTML = `<section class="card"><p class="muted">화면 불러오는 중이에요…</p></section>`;
+    needScreen(sc).then(() => { if (screen === sc) render(); },
+      () => { if (screen === sc) box.innerHTML = `<section class="card"><p class="muted">화면을 못 받았어요. 인터넷 연결을 확인하고 아래 버튼을 다시 눌러 주세요.</p></section>`; });
+    return;
+  }
   const d = DATA.markets[market];
   const app = $("#app");
   app.classList.remove(...FX);

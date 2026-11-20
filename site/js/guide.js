@@ -156,16 +156,20 @@ document.addEventListener("click", (e) => { if (e.target.closest && e.target.clo
 $(".home-link").addEventListener("click", (e) => { e.preventDefault(); go("home"); });  // 로고·이지스톡 글자 → 홈
 // 맨 위 이지스톡 옆: 산업 지도 전체 보기로 (지도에 있으면 고른 산업을 풀고 맨 위로)
 $(".map-btn").addEventListener("click", () => {
-  if (screen === "map") { mapTrail = []; setMapFocus(""); window.scrollTo(0, 0); } else openMap("");
+  if (screen === "map" && JS_GOT.has("map")) { mapTrail = []; setMapFocus(""); window.scrollTo(0, 0); } else openMap("");
 });
 // 아래 버튼: 펼쳐 둔 칸·자세히를 전부 접고 그 화면의 처음 모습으로 (사용자 2026-10-24: 많이 펼쳐 두면 어지러워서).
 // 고른 탭·시장·기간·이동평균선 같은 설정은 그대로 둬요. 화면 안의 버튼은 지금처럼 '화면 그대로'.
 function resetFolds() {
-  [POL_OPEN, SAV_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN, STORY_OPEN, HELP_OPEN].forEach((x) => x.clear());
+  [POL_OPEN, FOLD_OPEN, LEARN_OPEN, HOT_GRP_OPEN, STORY_OPEN, HELP_OPEN].forEach((x) => x.clear());
   caseKind = "all"; notePat = null;
   worldPicks.clear(); worldTop = null; hotReadOpen = false; for (const k in ROW_X) delete ROW_X[k]; polMore = false; polJump = null; calAll = false;
-  cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null; calPick = null;
-  AST_BOPEN.clear(); astEditOpen = false; try { localStorage.removeItem("ast_bopen"); } catch (e) { /* 이번만 */ }
+  cmpIdxOpen = false; maOpen = false; alertOpen = false; inboxOpen = null; econPick = null;
+  // 도구 화면 파일(나중에 받는 것)을 받았을 때만
+  if (JS_GOT.has("savings")) SAV_OPEN.clear();
+  if (JS_GOT.has("lab")) calPick = null;
+  if (JS_GOT.has("asset")) { AST_BOPEN.clear(); astEditOpen = false; }
+  try { localStorage.removeItem("ast_bopen"); } catch (e) { /* 이번만 */ }
 }
 document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("click", () => {
   resetFolds();

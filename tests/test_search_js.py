@@ -1,4 +1,4 @@
-"""웹앱(site/app.js) 종목 검색이 symbols.py와 같은 결과를 내는지 node로 돌려 봐요 (node가 없으면 건너뛰어요)."""
+"""웹앱(site/js/search.js) 종목 검색이 symbols.py와 같은 결과를 내는지 node로 돌려 봐요 (node가 없으면 건너뛰어요)."""
 
 import json
 import pathlib
@@ -16,7 +16,7 @@ QUERIES = ["kodex 나스닥100", "코덱스 나스닥100", "나스닥100 kodex",
 
 
 def js_search(rows):
-    src = (ROOT / "site/app.js").read_text()
+    src = (ROOT / "site/js/search.js").read_text()
     block = src[src.index("const CORP ="):src.index("const SYM = { kr: null, us: null };")]
     prog = block + """
 const SYM = { kr: [], us: [] };

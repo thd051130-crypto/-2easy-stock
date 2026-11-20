@@ -1,35 +1,35 @@
 # 코드 지도
-지도로 자리 찾기 → `grep -n "function 이름" site/app.js` → 그 줄부터 100~200줄만 읽기. 줄 번호는 대략(2026-11-20).
-새로 뽑기: `grep -n "^// ------" site/app.js` (구역) · `grep -n "^/\*" site/style.css` (디자인)
+지도로 파일 찾기 → `grep -n "function 이름" site/js/<파일>.js` → 그 줄부터 100~200줄만 읽기. 줄 번호는 대략(2026-11-20).
+새로 뽑기: `grep -n "^// ------" site/js/*.js` (구역) · `grep -n "^/\*" site/style.css` (디자인)
 
 ## 흐름
 Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_site/, data.json) + `stock_pages.py` + `industry_map.py` + `slim.py`(주석 빼기) → Pages. 뉴스만 live 브랜치 news.json.
-`site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기. 테스트: `python -m pytest tests/test_<스크립트>.py`.
+`site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기, 새 js 파일은 `APP_JS`에도. 테스트: `python -m pytest tests/test_<스크립트>.py`.
 
-## site/app.js
-화면 → 칸 목록은 `VIEWS`(~552), 버튼 연결은 `render`(~647), 도구 탭은 `PERF_TABS`(~2783), 홈 더 보기는 `homeMoreRows`(~2806).
+## site/js/ (앱 화면 코드, 2026-11-20 app.js에서 나눔)
+`index.html`이 차례대로 부르는 파일 13개 + 그 화면을 열 때 받는 파일 5개(★, `core.js`의 `LAZY`).
+화면 → 칸 목록은 `view.js` `VIEWS`, 버튼 연결은 `view.js` `render`, 도구 탭은 `more.js` `PERF_TABS`, 홈 더 보기는 `more.js` `homeMoreRows`.
+여러 파일이 같이 쓰는 이름은 그냥 전역이에요(모듈 아님). 먼저 받는 파일이 ★ 파일 안의 것을 바로 부르면 안 돼요: 화면 두 곳 이상이 쓰는 건 먼저 받는 파일에 두기.
 ```
-1-455     설정·주소 이동 go/back/openStock·도우미 esc/money/pct·뉴스 저장·load
-457-645   움직임 drawIn/countUp · 화면 고정 keepTap/holdHeight/keepRow
-900       급락 점검 dropCard
-964       관심·전체 종목·조건 검색 watchCard/screenerCard/bindWatch
-1211      종목 이름 검색 scoreOf/loadSymbols
-1370      의견 보내기 feedbackCard
-1450      메시지함·리포트·지난 리포트·주간 reportCards/pastCards/weeklyCards/inboxCard
-1825      문장 검색·테마 searchCard/findStocks/themeCard
-2100      산업 지도 mapLayout/mapSvg/mapCard/bindMap
-2880      지금 뉴스·핫 뉴스 newsCard/hotCard
-2944      투자 공부 learnView/learn*Cards/storyCard/bindLearn
-3764      지수 차트 그림 drawTrend/smaOf/rsiOf · 3943 비교 차트 compareCard · 4287 지수 차트 칸 trendCard/maPanel/indChips
-4439      적립식 계산기 savingsCard/bindSavings
-5010      세계 지수 worldTicker/worldCard · 5156 경기 macroCard·정책 policyCard
-5271      공시 · 5299 장 상황 · 5336 큰 발표 bigEventsCard · 5402 일정 달력 calendarCard/earningsCard
-5519      히트맵·업종·급등락·수급 heatmapCard/moversCard/flowsCard
-5725      종목 화면 stockHeadCard/bindStock/fundHtml · 6108 candleChart/chartGestures/lineChart
-6493      처음 안내·사용법 guideShow/helpCard · 6654 resetFolds · 6698 foldNotes
-6723      폭락 대비 stressCard · 6787 체크리스트 checkCard · 6861 목표 goalCard
-6959      자산 기록 ast*/assetCard/astTree/bindAsset
-7534      실험실 labCard · 7770 수익률 달력 retCalendarCard
+core.js     설정·주소 go/back/openStock/openMap·도우미 esc/money/pct·뉴스 저장·load·나중에 받기 needJs/LAZY(~470)
+view.js     움직임 drawIn/countUp·VIEWS(~97)·화면 고정 keepTap/holdHeight/keepRow·render(~192)
+watch.js    관심·전체 종목·조건 검색 watchCard/screenerCard/bindWatch
+search.js   종목 이름 검색 scoreOf/loadSymbols(~108) · 문장 검색·테마 searchCard/findStocks/themeCard(~160)
+inbox.js    메시지함·리포트·지난 리포트·주간 reportCards/pastCards/weeklyCards/inboxCard · 주간 점검 한 줄 healthLine
+more.js     도구 탭 PERF_TABS · 홈 더 보기 homeMoreRows/moreView · 지금 뉴스·핫 뉴스 newsCard/hotCard
+learn.js    투자 공부 learnView/learn*Cards/storyCard/bindLearn
+chart.js    지수 차트 drawTrend/smaOf/rsiOf · 비교 차트 compareCard(~251) · 지수 칸 trendCard/maPanel(~559)
+home.js     급락 점검 dropCard · 세계 지수 worldTicker/worldCard(~187) · 경기 macroCard·정책 policyCard · 공시 · 장 상황
+            · 큰 발표 bigEventsCard(~458) · 일정 calendarCard/earningsCard(~534) · 히트맵·업종·급등락·수급(~657)
+stock.js    종목 화면 stockHeadCard/bindStock/fundHtml · candleChart(~385)/chartGestures/lineChart
+guide.js    처음 안내·사용법 guideShow/helpCard · 아래 메뉴 resetFolds · 설명 접기 foldNotes
+tools.js    폭락 대비 stressCard(+RET/loadReturns) · 체크리스트 checkCard · 목표 goalCard(~228) · 자산 합계 AST/astSum(~291, 목표가 써서 여기)
+main.js     서비스워커 등록 + 처음 render/load (맨 마지막)
+★map.js     산업 지도 mapLayout/mapSvg/mapCard/bindMap (지도 화면)
+★savings.js 적립식 계산기 savingsCard/bindSavings (도구 화면)
+★asset.js   자산 기록 assetCard/astTree/bindAsset (도구 화면)
+★lab.js     실험실 labCard · 수익률 달력 retCalendarCard (도구 화면)
+★feedback.js 의견 보내기 feedbackCard (의견 화면)
 ```
 
 ## site/style.css
