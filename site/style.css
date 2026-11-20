@@ -1501,3 +1501,12 @@ details.help-sec .guide-body { padding: 0 0 12px; }
 .past-legend { font-size: 12px; margin: 8px 0 0; }
 .past-pick { margin-top: 6px; }
 .past-pick small { font-size: 11px; opacity: .8; margin-left: 2px; font-variant-numeric: tabular-nums; }
+/* 배당 달력 (도구 → 자산 기록 아래, 2026-11-20) */
+.dv-tile { cursor: default; }
+.dv-cell[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); }
+.dv-cell b { color: var(--good-fg); }
+.dv-detail { margin-top: 14px; }
+.dv-detail h3 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dv-sub { display: block; font-size: 12px; margin-top: 3px; line-height: 1.5; }
+.dv-tag { padding: 1px 6px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); white-space: nowrap; }
+.dv-tag.sure { background: var(--accent-bg); color: var(--accent-fg); }
