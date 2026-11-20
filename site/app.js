@@ -6860,7 +6860,8 @@ function fillCheck() {
 
 // ---------------------------------------------------------------- 목표 트래커
 // 목표 이름·날짜·지금 모은 돈·매달 저축·목표를 넣으면 남은 날, 진척도, 그 속도로 그날 얼마인지 세 가지로 보여줘요 (이 폰에만 저장).
-const GOAL_START = { title: "목표", end: "", now: 0, monthly: 50, target: 0 };
+// src: "asset" = 지금 모은 돈을 자산 기록의 마지막 달 총자산으로 자동, "manual" = 직접 입력, "" = 아직 안 고름 (사용자 2026-11-20)
+const GOAL_START = { title: "목표", end: "", now: 0, monthly: 50, target: 0, src: "" };
 const GOAL = { ...GOAL_START };
 // 화살표가 원을 그리는 '처음으로' 아이콘 (사용자 2026-10-24)
 const RESET_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg>`;
@@ -6875,6 +6876,23 @@ function goalRate(p) {
   return r ? (r[1] + r[2]) / 100 : 0.12;
 }
 const goalTitle = () => (GOAL.title || "").trim() || "목표";
+// 자산 기록에서 총자산(투자금+예수금)을 적은 마지막 달
+const goalAstYm = () => Object.keys(AST.months).filter((k) => k <= ymNow() && astFilled(k)).sort().pop() || null;
+// 아직 안 골랐으면: 자산 기록이 있고 직접 넣은 돈이 없을 때 자동으로 시작해요
+const goalSrc = () => (GOAL.src === "asset" || GOAL.src === "manual" ? GOAL.src : goalAstYm() && !(GOAL.now > 0) ? "asset" : "manual");
+// 목표 계산에 쓰는 '지금 모은 돈' (만 원)
+function goalNow() {
+  if (goalSrc() !== "asset") return GOAL.now;
+  const ym = goalAstYm();
+  return ym ? astSum(ym).total / 1e4 : 0;
+}
+function goalAstNote() {
+  const ym = goalAstYm();
+  if (!ym) return `<p class="goal-src-note">자산 기록에 아직 적은 달이 없어요. <button type="button" class="linkish" data-goal-open-ast>자산 기록 열기</button></p>`;
+  const s = astSum(ym), old = ym < ymNow();
+  return `<p class="goal-src-note"><b>${ymName(ym)}</b> 기록 · 투자금 ${astMan(s.cost)} + 예수금 ${astMan(s.cash)} = <b>${astMan(s.total)}</b>
+    ${old ? `<br>이번 달을 기록하면 바로 바뀌어요.` : ""} <span class="muted">산 돈 기준이라 지금 시세와는 달라요.</span></p>`;
+}
 function monthsLeft() {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(GOAL.end)) return null;
   const days = Math.round((Date.parse(GOAL.end) - Date.parse(TODAY())) / 864e5);
@@ -6892,17 +6910,18 @@ function goalOut() {
   const left = monthsLeft();
   if (!left) return `<p class="muted" style="margin:10px 0 0">목표 날짜를 넣으면 계산해요.</p>`;
   if (left.days < 0) return `<p class="good-line">🎉 목표 날짜가 지났어요. 새 날짜를 넣어 보세요.</p>`;
-  const prog = GOAL.target > 0 ? Math.min(1, GOAL.now / GOAL.target) : null;
-  const plans = GOAL_PLANS.map((p) => ({ name: p[0], note: p[2], v: futureValue(GOAL.now, GOAL.monthly, goalRate(p), left.months) }));
+  const now = goalNow();
+  const prog = GOAL.target > 0 ? Math.min(1, now / GOAL.target) : null;
+  const plans = GOAL_PLANS.map((p) => ({ name: p[0], note: p[2], v: futureValue(now, GOAL.monthly, goalRate(p), left.months) }));
   const max = Math.max(GOAL.target || 0, ...plans.map((p) => p.v), 1);
   const need = GOAL.target > 0 ? (() => {
     const r = Math.pow(1 + GOAL_PLANS[0][1], 1 / 12) - 1, n = left.months;
-    const gap = GOAL.target - GOAL.now * Math.pow(1 + r, n);
+    const gap = GOAL.target - now * Math.pow(1 + r, n);
     const k = r ? (Math.pow(1 + r, n) - 1) / r : n;
     return n >= 1 ? Math.max(0, gap / k) : null;
   })() : null;
   return `<div class="goal-top"><div><small>목표일까지</small><b>D-${left.days}</b><small>${Math.floor(left.months)}개월</small></div>
-      <div><small>지금</small><b>${man(GOAL.now)}원</b>${prog != null ? `<small>목표의 ${Math.round(prog * 100)}%</small>` : ""}</div>
+      <div><small>지금</small><b>${man(now)}원</b>${prog != null ? `<small>목표의 ${Math.round(prog * 100)}%</small>` : ""}</div>
       <div><small>매달</small><b>${man(GOAL.monthly)}원</b><small>${GOAL.target ? `목표 ${man(GOAL.target)}원` : "목표 없음"}</small></div></div>
     ${prog != null ? `<div class="goal-prog" role="img" aria-label="목표의 ${Math.round(prog * 100)}%"><i style="width:${prog * 100}%"></i></div>` : ""}
     <h3 class="sav-h">이 속도로 모으면 목표일에</h3>
@@ -6917,7 +6936,10 @@ function goalCard() {
   return `<section class="card" id="goal-card"><h2 class="goal-h"><span id="goal-title">${esc(goalTitle())}</span>
     <span class="goal-h-r"><small>이 폰에만 저장</small><button type="button" class="goal-reset" data-goal-reset aria-label="목표 초기화">${RESET_ICON}<span>한 번 더 누르면 초기화</span></button></span></h2>
     <label class="sav-in goal-name"><span>목표 이름</span><span class="alert-input"><input data-goal="title" type="text" maxlength="30" placeholder="목표" value="${esc(GOAL.title || "")}"></span></label>
-    <div class="sav-grid">${inp("end", "목표 날짜", "", "date")}${inp("target", "목표 금액", "만 원")}${inp("now", "지금 모은 돈", "만 원")}${inp("monthly", "매달 저축", "만 원")}</div>
+    <div class="goal-src"><span>지금 모은 돈</span><div class="period" role="group" aria-label="지금 모은 돈 고르기">
+      <button type="button" data-goal-src="asset" aria-pressed="${goalSrc() === "asset"}">자산 기록에서</button><button type="button" data-goal-src="manual" aria-pressed="${goalSrc() === "manual"}">직접 입력</button></div></div>
+    ${goalSrc() === "asset" ? goalAstNote() : ""}
+    <div class="sav-grid">${inp("end", "목표 날짜", "", "date")}${inp("target", "목표 금액", "만 원")}${goalSrc() === "manual" ? inp("now", "지금 모은 돈", "만 원") : ""}${inp("monthly", "매달 저축", "만 원")}</div>
     <div id="goal-out">${goalOut()}</div>
     <p class="muted note" style="margin:10px 0 0">세 가지 모두 과거 수익률을 그대로 가정한 계산이라 보장이 아니에요. 주식 쪽은 중간에 낙폭이 와도 팔지 않고 버틴다는 가정이에요.
       목표일이 가까우면(1~2년) 쓸 돈은 예금에 두는 게 보수적이에요.</p></section>`;
@@ -6927,6 +6949,7 @@ function bindGoal() {
   if (!card) return;
   card.querySelectorAll("[data-goal]").forEach((i) => i.addEventListener(i.type === "date" ? "change" : "input", () => {
     const k = i.dataset.goal;
+    GOAL.src = goalSrc();  // 직접 넣기 시작하면 지금 고른 쪽으로 굳혀요 (0을 넣어도 자동으로 안 바뀌게)
     if (k === "end") GOAL.end = i.value;
     else if (k === "title") { GOAL.title = i.value.slice(0, 30); const h = $("#goal-title"); if (h) h.textContent = goalTitle(); }
     else { const v = parseFloat(i.value.replace(/[,\s]/g, "")); GOAL[k] = Number.isFinite(v) && v >= 0 ? Math.min(v, 1e6) : 0; }
@@ -6947,12 +6970,22 @@ function bindGoal() {
     holdHeight(); card.outerHTML = goalCard();
     bindGoal(); keepTap();
   });
+  // 지금 모은 돈: 자산 기록에서 자동 | 직접 입력
+  card.querySelectorAll("[data-goal-src]").forEach((b) => b.addEventListener("click", () => {
+    if (goalSrc() === b.dataset.goalSrc) return;
+    GOAL.src = b.dataset.goalSrc;
+    remember("goal", JSON.stringify(GOAL));
+    holdHeight(); card.outerHTML = goalCard();
+    bindGoal(); keepTap();
+  }));
+  const oa = card.querySelector("[data-goal-open-ast]");
+  if (oa) oa.addEventListener("click", () => { const t = document.querySelector('[data-perf-tab="asset"]'); if (t) t.click(); });
 }
 // 홈 리포트 카드에 한 줄 (목표 날짜를 넣었을 때만)
 function goalLine() {
   const left = monthsLeft();
   if (!left || left.days < 0) return "";
-  const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, GOAL.now / GOAL.target) * 100)}%` : "";
+  const prog = GOAL.target > 0 ? ` · 목표의 ${Math.round(Math.min(1, goalNow() / GOAL.target) * 100)}%` : "";
   return `<p class="muted" style="margin:10px 0 0">🎯 ${esc(goalTitle())}까지 <b>D-${left.days}</b>${prog}</p>`;
 }
 
