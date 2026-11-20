@@ -18,7 +18,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gate:  # 클라우드플레어 정시 알람이 이미 돌렸으면 늦게 온 GitHub 예약 실행은 건너뛰어요 (sched-gate.yml)
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflows/sched-gate.yml
+    permissions:
+      actions: read
+    with:
+      workflow: news.yml
+      minutes: 40
   run:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 10
     env:

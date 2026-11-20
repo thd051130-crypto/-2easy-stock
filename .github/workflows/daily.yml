@@ -4,6 +4,7 @@
 # 폰에서 바로 돌려 보기: GitHub 앱/모바일 브라우저 → Actions → daily → Run workflow
 # 필요한 저장소 Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 name: daily
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('daily {0}', inputs.market) || 'daily' }}  # 정시 실행 이름에 시장(kr/us)을 붙여 sched-gate가 구분해요
 
 on:
   schedule:
@@ -26,7 +27,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:  # 클라우드플레어 정시 알람이 이미 돌렸으면 늦게 온 GitHub 예약 실행은 건너뛰어요 (sched-gate.yml)
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflows/sched-gate.yml
+    permissions:
+      actions: read
+    with:
+      workflow: daily.yml
+      minutes: 720
+      match: "${{ github.event.schedule == '30 22 * * 1-5' && 'us' || 'kr' }}"
   daily:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04  # GitHub가 10-19부터 ubuntu-latest를 26으로 바꿔요. 검증된 24.04에 고정
     timeout-minutes: 30
     env:

@@ -26,7 +26,7 @@ Actions가 파이썬을 돌려 `paper/`에 커밋 → `pages.yml`이 `dashboard.
 | `api_keys.json` | 손으로 (만료일만, 키 값 X) | keys.yml | 키 만료 알림 |
 
 ## 예약 실행 (GitHub Actions, cron은 UTC · 한국 = +9시간)
-GitHub 예약이 몇 시간 늦을 때가 있어요 (메모 actions-schedule-delay).
+GitHub 예약이 몇 시간 늦어서 클라우드플레어 정시 알람(`cloudflare/feedback-worker.js` JOBS 표, 5분마다)이 제시간에 workflow_dispatch로 돌리고, 늦게 온 예약 실행은 sched-gate.yml이 건너뛰어요. cron을 바꾸면 JOBS도 같이 (tests/test_alarm_worker.py가 확인).
 | 워크플로 | cron | 한국 시간 |
 |---|---|---|
 | daily.yml | `30 8 * * 1-5` `30 22 * * 1-5` | 국장 17:30 · 미장 07:30 |
@@ -43,6 +43,7 @@ GitHub 예약이 몇 시간 늦을 때가 있어요 (메모 actions-schedule-del
 | pages.yml | 없음 | 위 자료 워크플로가 끝나면 · main에 앱 코드 push |
 | test.yml · ui-audit.yml | 없음 | PR마다 (테스트 · 버튼 누르기 점검) |
 | kis-live-check.yml | 없음 | 손으로만 (한국투자 API, 보류) |
+| sched-gate.yml | 없음 | 다른 워크플로가 불러 씀 (늦은 예약 건너뛰기) |
 
 ## 비밀 키 이름 (Settings → Secrets, 값은 절대 적지 않기)
 `TELEGRAM_BOT_TOKEN` `TELEGRAM_CHAT_ID` 알림 전부 · `DART_API_KEY` 공시 · `ECOS_API_KEY` 국고채 · `KIS_APP_KEY` `KIS_APP_SECRET` 한국투자(보류)
@@ -51,7 +52,7 @@ GitHub 예약이 몇 시간 늦을 때가 있어요 (메모 actions-schedule-del
 - Yahoo 시세: marketdata.py·daily.py·world.py·stock_pages.py 등 거의 전부 · 한국은행 ECOS: world.py · DART 공시: disclosures.py
 - FRED: macro.py·world.py·econ_calendar.py · 네이버: marketdata.py·flows.py·reading.py·symbols.py (둘 다 Actions에서만 됨)
 - 텔레그램 봇: bot.py가 받고, 알림은 tgfmt.py 형식으로 여러 스크립트가 보냄
-- 클라우드플레어 우체통(의견 보내기): `cloudflare/feedback-worker.js` ← `site/js/feedback.js`, 토큰은 클라우드플레어 Secret에만
+- 클라우드플레어 워커 `cloudflare/feedback-worker.js`: 의견 보내기 우체통(← `site/js/feedback.js`) + 정시 알람. 토큰(텔레그램·GH_TOKEN)은 클라우드플레어 Secret에만
 - 앱 주소: GitHub Pages (pages.yml), 뉴스는 raw.githubusercontent.com의 live 브랜치
 
 ## 문서·메모
