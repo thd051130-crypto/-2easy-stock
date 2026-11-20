@@ -97,3 +97,4 @@
 - 📅 지난 리포트 보관함(paper/reports, report_archive.py) + 리포트 화면 '지난 리포트' 달력 탭 (2026-11-17) → [[report-archive]].
 - [stock-chart-top](stock-chart-top.md) — 종목 화면 차트를 사기 전 체크리스트 위로(2026-11-19)
 - [market-events-calendar](market-events-calendar.md) — 일정 달력·홈 큰 발표 칸에 증시 구조 일정 채움(2026-11-19): 네 마녀의 날·지수 정기변경·휴장·연말 배당락·FOMC 회의록·ISM·한국 수출입
+- [asset-live](asset-live.md) — 자산 기록 '지금 시세로 평가' 켜기·끄기(기본 켬, 목표 칸도 평가금액, 2026-11-20)
