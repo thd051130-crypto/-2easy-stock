@@ -7,3 +7,4 @@ data/
 _site/
 node_modules/
 jump-audit.txt
+_screen-diff/

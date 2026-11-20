@@ -1,10 +1,11 @@
 # 코드 지도
+자료 파일·예약 실행·키 이름·밖의 서비스·문서는 `docs/INFOMAP.md`. 지도가 맞는지 점검: `python tools/check.py map`.
 지도로 파일 찾기 → `grep -n "function 이름" site/js/<파일>.js` → 그 줄부터 100~200줄만 읽기. 줄 번호는 대략(2026-11-20).
 새로 뽑기: `grep -n "^// ------" site/js/*.js` (구역) · `grep -n "^/\*" site/style.css` (디자인)
 
 ## 흐름
 Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_site/, data.json) + `stock_pages.py` + `industry_map.py` + `slim.py`(주석 빼기) → Pages. 뉴스만 live 브랜치 news.json.
-`site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기, 새 js 파일은 `APP_JS`에도. 테스트: `python -m pytest tests/test_<스크립트>.py`.
+`site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기, 새 js 파일은 `APP_JS`에도. 점검은 `python tools/check.py` 하나로 (종류: map js test data ui diff, `--help`).
 
 ## site/js/ (앱 화면 코드, 2026-11-20 app.js에서 나눔)
 `index.html`이 차례대로 부르는 파일 13개 + 그 화면을 열 때 받는 파일 5개(★, `core.js`의 `LAZY`).
@@ -24,7 +25,7 @@ home.js     급락 점검 dropCard · 세계 지수 worldTicker/worldCard(~187) 
 stock.js    종목 화면 stockHeadCard/bindStock/fundHtml · candleChart(~385)/chartGestures/lineChart
 guide.js    처음 안내·사용법 guideShow/helpCard · 아래 메뉴 resetFolds · 설명 접기 foldNotes
 tools.js    폭락 대비 stressCard(+RET/loadReturns) · 체크리스트 checkCard · 목표 goalCard(~246) · 자산 합계·시세 평가 AST/astSum/astEval/savPx(~315, 리포트의 목표 줄이 써서 여기)
-main.js     서비스워커 등록 + 처음 render/load (맨 마지막)
+main.js     서비스워커 등록 + 처음 그리기·자료 받기 (맨 마지막)
 ★map.js     산업 지도 mapLayout/mapSvg/mapCard/bindMap (지도 화면)
 ★savings.js 적립식 계산기 savingsCard/bindSavings (도구 화면)
 ★asset.js   자산 기록 assetCard/astTree/bindAsset · 배당 달력 divCalCard(~681) (도구 화면)

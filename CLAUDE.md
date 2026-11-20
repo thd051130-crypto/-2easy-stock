@@ -3,7 +3,9 @@
 ## Code map first (save credits)
 
 - Before changing code, read `docs/CODEMAP.md`, then `grep -n` and read only that part (100–200 lines). App code is split by screen in `site/js/*.js` (80–830 lines each): open only the file the map names, and in big ones still grep first. Never read `site/style.css` or big JSON files whole.
-- If you add, move or rename a feature, section or script, update `docs/CODEMAP.md` in the same PR.
+- For data files, workflows and schedules, secret names, outside services and docs, read `docs/INFOMAP.md` instead of opening workflow or data files.
+- If you add, move or rename a feature, section, script, data file or workflow, update `docs/CODEMAP.md` / `docs/INFOMAP.md` in the same PR. `python tools/check.py map` checks them (CI runs it too).
+- Checks: `python tools/check.py` runs the fast set (map, js, changed tests, data freshness, button audit if screens changed). Pick kinds like `map,js` or `test:all`; `diff` compares screens against main.
 
 ## Keep docs/backup in sync
 

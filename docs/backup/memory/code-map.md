@@ -10,3 +10,5 @@ CLAUDE.md 맨 위 규칙: 지도 먼저 → `grep -n "function 이름"` → 그 
 
 **Why:** 코드 고칠 때 Claude가 전체 코드를 읽느라 크레딧(사용량)을 많이 써서. 사용자 예산은 Claude 구독료뿐.
 **How to apply:** 새 스레드 instructions에 "docs/CODEMAP.md 먼저" 넣기. 기능·화면·구역·스크립트를 더하거나 옮기거나 이름 바꾸면 같은 PR에서 CODEMAP.md도 고치기 (줄 번호 조금 밀리는 건 괜찮음). 관련 [[ui-no-jump-rule]], [[load-speed]].
+
+2026-11-20: 코드 말고 자료·예약·키·서비스·문서는 `docs/INFOMAP.md`, 둘 다 `python tools/check.py map`이 확인 → [[check-tool]].

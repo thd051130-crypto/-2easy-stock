@@ -21,3 +21,5 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pip install pytest matplotlib koreanize-matplotlib
       - run: python -m pytest -v
+      - name: 지도 정확도·앱 코드 문법 (docs/CODEMAP.md·INFOMAP.md가 진짜와 맞는지)
+        run: python tools/check.py map,js
