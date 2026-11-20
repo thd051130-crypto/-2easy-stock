@@ -551,6 +551,8 @@ function bindAsset() {
   const after = () => { astEditOpen = true; astSave(); redraw(); };
   // 이름 칸이 비어 있으면 그 칸으로 커서를 옮겨요 (전에는 '계좌 추가'를 눌러도 아무 반응이 없었어요)
   const val = (f) => { const v = String(f.querySelector("input").value || "").trim().slice(0, 20); if (!v) f.querySelector("input").focus({ preventScroll: true }); return v; };
+  // 저장해도 바뀌는 게 없을 때: 이름 칸 옆에 말풍선으로 알려 줘요 (전에는 눌러도 아무 반응이 없었어요, 2026-11-20)
+  const astSay = (f, msg) => { const i = f.querySelector("input"); i.setCustomValidity(msg); i.reportValidity(); i.addEventListener("input", () => i.setCustomValidity(""), { once: true }); };
   const addAcct = (broker, name) => {
     if (!broker || !name || AST.accts.some((a) => a.broker === broker && a.name === name)) return;
     const id = astId(), last = AST.accts.map((a) => a.broker).lastIndexOf(broker);
@@ -558,22 +560,34 @@ function bindAsset() {
     astTo = id; after();
   };
   card.querySelectorAll("[data-ast-new]").forEach((b) => b.addEventListener("click", () => addAcct(astBrokers()[+b.dataset.astB], b.dataset.astNew)));
-  card.querySelectorAll("form[data-ast-new-go]").forEach((f) => f.addEventListener("submit", (e) => { e.preventDefault(); addAcct(astBrokers()[+f.dataset.astNewGo], val(f)); }));
+  card.querySelectorAll("form[data-ast-new-go]").forEach((f) => f.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const b = astBrokers()[+f.dataset.astNewGo], n = val(f);
+    if (n && AST.accts.some((a) => a.broker === b && a.name === n)) return astSay(f, "이 증권사에 같은 이름 계좌가 있어요");
+    addAcct(b, n);
+  }));
   const addBroker = (n) => { if (n && !astBrokers().includes(n)) addAcct(n, "일반 계좌"); };
   card.querySelectorAll("[data-ast-newb]").forEach((b) => b.addEventListener("click", () => addBroker(b.dataset.astNewb)));
   const nb = card.querySelector("form[data-ast-newb-go]");
-  if (nb) nb.addEventListener("submit", (e) => { e.preventDefault(); addBroker(val(nb)); });
+  if (nb) nb.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const n = val(nb);
+    if (n && astBrokers().includes(n)) return astSay(nb, "이미 있는 증권사예요");
+    addBroker(n);
+  });
   card.querySelectorAll("form[data-ast-brename]").forEach((f) => f.addEventListener("submit", (e) => {
     e.preventDefault();
     const old = astBrokers()[+f.dataset.astBrename], nw = val(f);
-    if (!nw || nw === old || astBrokers().includes(nw)) return;
+    if (!nw) return;
+    if (nw === old || astBrokers().includes(nw)) return astSay(f, nw === old ? "지금 이름과 같아요" : "이미 있는 증권사 이름이에요");
     AST.accts.forEach((a) => { if (a.broker === old) a.broker = nw; });
     after();
   }));
   card.querySelectorAll("form[data-ast-rename]").forEach((f) => f.addEventListener("submit", (e) => {
     e.preventDefault();
     const a = astA(f.dataset.astRename), nw = val(f);
-    if (!a || !nw || AST.accts.some((x) => x !== a && x.broker === a.broker && x.name === nw)) return;
+    if (!a || !nw) return;
+    if (nw === a.name || AST.accts.some((x) => x !== a && x.broker === a.broker && x.name === nw)) return astSay(f, nw === a.name ? "지금 이름과 같아요" : "이 증권사에 같은 이름 계좌가 있어요");
     a.name = nw; after();
   }));
   card.querySelectorAll("[data-ast-drop]").forEach((b) => b.addEventListener("click", () => {

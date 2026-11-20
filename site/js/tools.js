@@ -172,6 +172,7 @@ const GOAL = { ...GOAL_START };
 // 화살표가 원을 그리는 '처음으로' 아이콘 (사용자 2026-10-24)
 const RESET_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg>`;
 try { Object.assign(GOAL, JSON.parse(localStorage.getItem("goal") || "{}")); } catch (e) { /* 처음 */ }
+["now", "monthly", "target"].forEach((k) => { GOAL[k] = Number.isFinite(+GOAL[k]) ? +GOAL[k] : GOAL_START[k]; });  // 깨진 숫자면 처음 값 (NaN 글자 막기)
 const GOAL_PLANS = [
   ["예금", 0.03 * (1 - 0.154), "연 3% 예금 (이자세 15.4% 뗀 뒤)"],
   ["S&P500 그냥 적립", null, "TIGER 미국S&P500 최근 10년 실제 상승률·분배율 (낙폭 -30% 안팎을 견뎌야 해요)"],
@@ -208,6 +209,7 @@ function goalAstNote() {
 function monthsLeft() {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(GOAL.end)) return null;
   const days = Math.round((Date.parse(GOAL.end) - Date.parse(TODAY())) / 864e5);
+  if (!Number.isFinite(days)) return null;  // 2026-13-45처럼 없는 날짜면 'D-NaN' 대신 날짜 없음으로
   return { days, months: Math.max(0, days / 30.44) };
 }
 function futureValue(now, monthly, rate, months) {
