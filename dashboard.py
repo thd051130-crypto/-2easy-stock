@@ -88,7 +88,7 @@ def fresh_calendar(paper_dir, today=None):
     start = dt.date(today.year - econ_calendar.YEARS_BACK, 1, 1)
     end = dt.date(today.year + econ_calendar.YEARS_AHEAD, 12, 31)
     try:
-        big = econ_calendar.big_rows(paper_dir, cal.get("releases") or [], start, end)
+        big = econ_calendar.big_rows(paper_dir, cal.get("releases") or [], start, end, cal.get("fomc") or [])
     except (KeyError, TypeError, ValueError):
         return ev
     return sorted([e for e in ev if e.get("kind") != "big"] + big, key=econ_calendar.sort_key)

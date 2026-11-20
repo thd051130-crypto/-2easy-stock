@@ -29,7 +29,7 @@ from report_desks import FLAGS, KST, MARKET_NAMES, PAPER, BIG_CAP, pct, read_jso
 WEEK_FACTS = ["코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "일본 닛케이225", "원/달러",
               "미국 10년 국채 금리", "한국 국고채 3년 금리", "VIX 공포 지수", "WTI 유가", "금 (온스)", "비트코인"]
 DAY_INDEX = {"kr": "코스피", "us": "S&P500"}
-CAL_KINDS = ("big", "rate", "expiry", "risk")
+CAL_KINDS = ("big", "rate", "expiry", "risk", "index", "holiday", "divday")
 ISSUE_N = 6        # 시장마다 이번 주 이슈 몇 개
 ISSUE_SHARE = 2    # 핵심 낱말이 이만큼 겹치면 같은 사건으로 묶어요 (news.HOT_SHARE와 같게)
 

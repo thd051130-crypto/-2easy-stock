@@ -144,7 +144,7 @@ def test_run_writes_and_calendar_shows_big(tmp_path, monkeypatch):
     assert be.run(tmp_path, send=lambda t, silent: sent.append(t), now=dt.datetime(2026, 10, 13, 16, 7, tzinfo=KST))
     assert sent and json.loads((tmp_path / "events.json").read_text())["events"]
     ev = ec.build(dt.date(2026, 10, 12), [dict(date="2026-10-28", sep=False)], [], tmp_path)
-    big = [e for e in ev if e["kind"] == "big"]
+    big = [e for e in ev if e["kind"] == "big" and e["date"] >= "2026-10-12"]
     assert big[0]["date"] == "2026-10-14" and big[0]["big"] and "CPI" in big[0]["title"] and "21:30" in big[0]["note"]
     text = ec.week_text(ev, dt.date(2026, 10, 12))
     assert "🚨" in text and "21:30" in text
