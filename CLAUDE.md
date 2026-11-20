@@ -1,5 +1,10 @@
 # Notes for Claude
 
+## Code map first (save credits)
+
+- Before changing code, read `docs/CODEMAP.md`, then `grep -n` and read only that part (100–200 lines). Never read `site/app.js`, `site/style.css` or big JSON files whole.
+- If you add, move or rename a feature, section or script, update `docs/CODEMAP.md` in the same PR.
+
 ## Keep docs/backup in sync
 
 `docs/backup/` is a copy of the Claude project memory and project documents, kept so they survive outside Claude.
