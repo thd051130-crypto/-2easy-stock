@@ -4,7 +4,7 @@
 새로 뽑기: `grep -n "^// ------" site/js/*.js` (구역) · `grep -n "^/\*" site/style.css` (디자인)
 
 ## 흐름
-Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_site/, data.json) + `stock_pages.py` + `industry_map.py` + `slim.py`(주석 빼기) → Pages. 뉴스만 live 브랜치 news.json.
+Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_site/, data.json + learn.json·charts.json은 따로, 주소 v=내용 해시) + `stock_pages.py` + `industry_map.py` + `slim.py`(주석 빼기) → Pages. 뉴스만 live 브랜치 news.json.
 `site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기, 새 js 파일은 `APP_JS`에도. 점검은 `python tools/check.py` 하나로 (종류: map js test data ui diff, `--help`).
 
 ## site/js/ (앱 화면 코드, 2026-11-20 app.js에서 나눔)
@@ -12,7 +12,7 @@ Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_
 화면 → 칸 목록은 `view.js` `VIEWS`, 버튼 연결은 `view.js` `render`, 도구 탭은 `more.js` `PERF_TABS`, 홈 더 보기는 `more.js` `homeMoreRows`.
 여러 파일이 같이 쓰는 이름은 그냥 전역이에요(모듈 아님). 먼저 받는 파일이 ★ 파일 안의 것을 바로 부르면 안 돼요: 화면 두 곳 이상이 쓰는 건 먼저 받는 파일에 두기.
 ```
-core.js     설정·주소 go/back/openStock/openMap·도우미 esc/money/pct·뉴스 저장·load·나중에 받기 needJs/LAZY(~470)
+core.js     설정·주소 go/back/openStock/openMap·도우미 esc/money/pct·뉴스 저장·load·공부 자료 loadLearn·지수 일봉 loadCharts/chartsReady·나중에 받기 needJs/LAZY(~490)
 view.js     움직임 drawIn/countUp·VIEWS(~97)·화면 고정 keepTap/holdHeight/keepRow·render(~192)
 watch.js    관심·전체 종목·조건 검색 watchCard/screenerCard/bindWatch
 search.js   종목 이름 검색 scoreOf/loadSymbols(~108) · 문장 검색·테마 searchCard/findStocks/themeCard(~160)

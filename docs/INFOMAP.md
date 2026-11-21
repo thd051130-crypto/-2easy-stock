@@ -6,6 +6,7 @@ Actions가 파이썬을 돌려 `paper/`에 커밋 → `pages.yml`이 `dashboard.
 | 파일 | 만드는 것 | 워크플로 | 앱에서 |
 |---|---|---|---|
 | `paper/kr/daily.json` `paper/us/daily.json` | daily.py (+movers·sectors·quiet_volume) | daily.yml | 홈 지수·급등락·히트맵 |
+| (위 daily의 지수 5년 일봉) | dashboard.py split_charts | pages.yml | 차트 화면·수익률 달력 (`_site/charts.json`, 홈 뜬 뒤 받기) |
 | `paper/kr/flows.json` | flows.py | daily.yml | 수급 |
 | `paper/report.json` `paper/story_log.json` | report_desks.py (+market_story·analyst_view) | daily.yml | 리포트·연결 고리 |
 | `paper/reports/` | report_archive.py | daily.yml | 지난 리포트 (`_site/reports/index.json`) |

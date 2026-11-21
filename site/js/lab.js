@@ -269,6 +269,10 @@ const calColor = (r) => {
 };
 function compound(list) { return list.reduce((a, r) => a * (1 + r), 1) - 1; }
 function retCalendarCard(d) {
+  if (!chartsReady()) {  // 지수 일봉(charts.json)을 받는 중 — 받으면 다시 그려요
+    loadCharts();
+    return `<section class="card"><h2>수익률 달력</h2><p class="muted">지수 기록 불러오는 중…</p></section>`;
+  }
   const srcs = calSources(d);
   if (!srcs.length) return "";
   if (!srcs.some((s) => s[0] === calSrc)) calSrc = srcs[0][0];

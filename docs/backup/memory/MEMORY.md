@@ -99,6 +99,7 @@
 - 🔑 API 키 만료 미리 알림·막힘 감지(keys.py 매일 09:00, 만료일은 api_keys.json, 2026-11-15) → [[api-key-expiry]].
 - [screen-fit](screen-fit.md) — 화면 크기 자동 맞춤(2026-11-15): 넓은 화면 두 줄, 폰 가로 막대 얇게, 좁은 폰 숫자 잘림
 - [load-speed](load-speed.md) — 첫 화면 로딩 빠르게(2026-11-18): 대기화면+가로 진행률, data.json 미리 받기, learn.json 분리, 서비스워커 캐시
+- [optimize-audit-2026-11-21](optimize-audit-2026-11-21.md) — 자료 다이어트(2026-11-21): 지수 일봉 charts.json 분리, learn.json 내용 해시 버전, 다음 후보 글꼴
 - 📅 지난 리포트 보관함(paper/reports, report_archive.py) + 리포트 화면 '지난 리포트' 달력 탭 (2026-11-17) → [[report-archive]].
 - [stock-chart-top](stock-chart-top.md) — 종목 화면 차트를 사기 전 체크리스트 위로(2026-11-19)
 - [market-events-calendar](market-events-calendar.md) — 일정 달력·홈 큰 발표 칸에 증시 구조 일정 채움(2026-11-19): 네 마녀의 날·지수 정기변경·휴장·연말 배당락·FOMC 회의록·ISM·한국 수출입
