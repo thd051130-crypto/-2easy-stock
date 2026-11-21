@@ -104,4 +104,3 @@
 - [market-events-calendar](market-events-calendar.md) — 일정 달력·홈 큰 발표 칸에 증시 구조 일정 채움(2026-11-19): 네 마녀의 날·지수 정기변경·휴장·연말 배당락·FOMC 회의록·ISM·한국 수출입
 - [asset-live](asset-live.md) — 자산 기록 '지금 시세로 평가' 켜기·끄기(기본 켬, 목표 칸도 평가금액, 2026-11-20)
 - [bug-hunt-2026-11-20](bug-hunt-2026-11-20.md) — 앱 전체 버그 찾기(2026-11-20): 일정 달력 첫 주말 일정·자산 기록 같은 이름 무반응·목표 D-NaN 고침, 검수 대기
-- [backtest-tool](backtest-tool.md) — 백테스트 backtest.py·backtest.yml(2026-11-21): 일봉 캐시·새 날짜만, 요약 몇 줄만 읽어 토큰 절약, 폰에서 Actions로 실행

@@ -15,9 +15,3 @@
 - When you add a document (.md) to the project's shared files, copy it into `docs/backup/files/<folder>/`. Skip images.
 - This repository is public. Before copying, remove secret values (tokens, passwords, account numbers, chat ids, bot handles) and sentences about the user's personal situation (job, status, life plans, which cards or accounts they have). Keep the app facts and the user's decisions about the app.
 - New memory files in `docs/backup/memory/` can be read first by a new Claude session that has lost the project memory.
-
-## Backtests (save tokens)
-
-- Run `python backtest.py [name|--mix "sp500:60,usmid:40"]` and read only its printed summary (about 10 lines), or `backtest/LATEST.md`. Never open `backtest/prices/*.csv` or whole `backtest/results/*.json`; if you need one number, pick it with a one-line `python -c` / `jq`.
-- Daily prices are cached in `backtest/prices/` and only new days are downloaded. Heavy runs go to the `backtest` workflow (workflow_dispatch). Errors print the last 3 lines; the full trace is in `backtest/last_error.log`.
-- It is a study tool, not a trading signal: don't show it in the app as buy/sell advice.
