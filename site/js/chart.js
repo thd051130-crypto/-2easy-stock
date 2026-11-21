@@ -4,6 +4,7 @@
 function drawTrend(d, reset) {
   const r = d.daily ? chartIdx(d) : null;
   if (r && r.sym !== OWN_IDX[market]) { drawOtherIndex(r, reset); return; }
+  if (!chartsReady()) return;  // 일봉 받는 중 (받으면 화면을 다시 그려요)
   const c = d.daily && d.daily.candles;
   if (c && c.dates.length) {
     const f = frameCandles(c, frame);
@@ -560,6 +561,10 @@ function trendCard(d) {
   if (!d.daily) return "";
   const r = chartIdx(d);
   if (r.sym !== OWN_IDX[market]) return otherIndexCard(d, r);
+  if (!chartsReady()) {  // 지수 일봉(charts.json)을 받는 중 — 받으면 다시 그려요 (보통 홈에서 이미 받아 둬요)
+    loadCharts();
+    return `<section class="card">${idxChips(d)}<h2>${esc(d.index_name)} 추세</h2><div class="chart" id="trend-chart"><p class="muted">차트 불러오는 중…</p></div></section>`;
+  }
   const cd = d.daily.candles;
   const buttons = FRAMES.map(([key, label]) =>
     `<button type="button" data-frame="${key}" aria-pressed="${key === frame}">${label}</button>`).join("");

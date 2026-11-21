@@ -323,19 +323,42 @@ function undoBar(ids) {
 // 홈을 그린 뒤 뒤에서 받아 두고, 공부 화면을 먼저 열면 받는 동안 '불러오는 중'을 보여요 (2026-11-18 로딩 빠르게)
 const LEARN_KEYS = ["learn_cases", "reading", "story_log"];
 let LEARN = null, learnP = null;
-const learnReady = () => !!(LEARN && DATA && LEARN.built === DATA.built);
+// 주소의 v=는 내용 해시(learn_v)라서, 내용이 그대로면 배포가 몇 번 돼도 폰에 받아 둔 걸 써요 (2026-11-21)
+const learnV = () => DATA && (DATA.learn_v || DATA.built);
+const learnReady = () => !!(LEARN && DATA && (LEARN.v || LEARN.built) === learnV());
 function loadLearn() {
   if (!DATA || !DATA.reading_days || learnReady()) return Promise.resolve();
   if (learnP) return learnP;
-  const built = DATA.built;
-  learnP = fetch(`learn.json?v=${encodeURIComponent(built)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((x) => {
+  const v = learnV();
+  learnP = fetch(`learn.json?v=${encodeURIComponent(v)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((x) => {
     learnP = null;
-    if (!x || !DATA || DATA.built !== built) return;
+    if (!x || !DATA || learnV() !== v) return;
     LEARN = x;
     for (const k of LEARN_KEYS) DATA[k] = x[k];
     if (screen === "more" && moreKey === "learn") { lastView = ""; render(); }  // 기다리던 공부 화면
   });
   return learnP;
+}
+// 지수 5년 일봉(차트 화면·실험실만 씀)은 charts.json으로 따로 와요. 홈을 그리자마자 뒤에서 받아 두고,
+// 차트 화면을 먼저 열면 받는 동안 '불러오는 중'을 보여요 (자료 다이어트 2026-11-21, data.json 약 3분의 1)
+let CHARTS = null, chartsP = null;
+const chartsReady = () => !DATA || !DATA.charts_v || !!(CHARTS && CHARTS.v === DATA.charts_v);
+function adoptCharts() {
+  if (!CHARTS || !DATA || CHARTS.v !== DATA.charts_v) return;
+  for (const [k, c] of Object.entries(CHARTS.markets || {})) { const m = DATA.markets[k]; if (m && m.daily) m.daily.candles = c; }
+}
+function loadCharts() {
+  if (chartsReady()) return Promise.resolve();
+  if (chartsP) return chartsP;
+  const v = DATA.charts_v;
+  chartsP = fetch(`charts.json?v=${encodeURIComponent(v)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((x) => {
+    chartsP = null;
+    if (!x || !DATA || DATA.charts_v !== v) return;
+    CHARTS = x;
+    adoptCharts();
+    if (screen === "chart" || (screen === "tools" && perfTabKey === "cal")) { lastView = ""; render(); }  // 기다리던 화면만
+  });
+  return chartsP;
 }
 // index.html이 app.js를 받는 동안 미리 받기 시작한 data.json·뉴스 (예전엔 app.js가 다 온 뒤에야 받기 시작했어요)
 const BOOT = window.BOOT || {};
@@ -369,11 +392,14 @@ async function load() {
   if (DATA && DATA.built !== data.built) { STOCK_DATA.clear(); STOCK_READY.clear(); INBOX = null; inboxLoading = null; }  // 새로 배포됐으면 종목 자료도 새로
   DATA = data;
   if (learnReady()) for (const k of LEARN_KEYS) DATA[k] = LEARN[k];
+  adoptCharts();
   adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   const had = NEWS && NEWS.updated;
-  render();
+  // 그리기 중 오류가 나도 대기화면(99%)에 멈추지 않게: 칸은 view.js paintCards가 하나씩 지키고, 그 밖의 오류는 여기서 받아요
+  try { render(); } catch (e) { if (window.console) console.error("화면 그리기 오류", e); if ($("#app .boot")) $("#app").innerHTML = cardFail(e); }
   guideMaybe();  // 처음 연 사람에게만 사용법 안내 한 번
+  setTimeout(loadCharts, 300);  // 홈 그림이 먼저 (차트 화면을 바로 열면 그때 받기 시작)
   setTimeout(loadLearn, 1500);
   setTimeout(preloadJs, 2500);  // 지도·도구·의견 화면 파일도 미리  // 홈이 다 뜬 뒤에 (홈 사진·종목 자료와 다투지 않게)
   news.then(() => { if (NEWS && NEWS.updated !== had) paintNews(); });

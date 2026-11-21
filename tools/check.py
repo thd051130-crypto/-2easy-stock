@@ -12,10 +12,14 @@
   data  자료 신선도: paper/*.json·live 브랜치 news.json이 예약대로 새로 만들어졌는지 (늦으면 경고)
   ui    버튼 누르기 점검(tools/jump-audit.js). 빠르게는 --changed, :all이면 전부
   diff  화면 비교: main 코드와 지금 코드로 같은 자료를 그려 화면 사진을 비교 (tools/screen-diff.js)
-옵션: --base origin/main (비교 기준) · --strict (자료 늦음도 실패로)
+  shots 검수 사진: 고른 화면을 라이트·다크로 찍어 폴더에 저장 (Claude는 안 열어 봐요, 사용자 검수용)
+        python tools/check.py shots --out /mnt/project-files/x-preview/ --screens home:kr,tools:asset:kr
+옵션: --base origin/main (비교 기준) · --strict (자료 늦음도 실패로) · --fresh (지난 결과 안 쓰고 다시)
 끝나면 종류별 한 줄 요약. 실패가 하나라도 있으면 종료 코드 1.
+토큰 아끼기: 통과한 종류는 파일이 하나도 안 바뀌었으면 다음번엔 안 돌리고 지난 결과를 써요 (.check-cache.json, data 빼고).
 """
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -29,6 +33,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 KST = dt.timezone(dt.timedelta(hours=9))
 KINDS = ["map", "js", "test", "data", "ui", "diff"]
+CACHE = ROOT / ".check-cache.json"
+NO_CACHE = {"data", "shots"}  # 시간 따라 달라지거나 파일을 만드는 것
 FAST = ["map", "js", "test", "data"]
 
 
@@ -43,6 +49,25 @@ def changed_files(base):
     if r.returncode:
         return None
     return sorted(set((r.stdout + w.stdout + u.stdout).split()))
+
+
+def fingerprint(base):
+    """지금 코드 상태 한 줄 요약: HEAD + 안 올린 변경 + 새 파일 + 비교 기준. 같으면 점검 결과도 같아요."""
+    h = hashlib.sha256()
+    for cmd in (["git", "rev-parse", "HEAD", base], ["git", "diff", "HEAD", "--binary"]):
+        h.update(subprocess.run(cmd, cwd=ROOT, capture_output=True).stdout)
+    for f in sorted(sh(["git", "ls-files", "--others", "--exclude-standard"]).stdout.split()):
+        p = ROOT / f
+        if p.is_file() and p != CACHE:
+            h.update(f.encode() + b"\0" + p.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def load_cache():
+    try:
+        return json.loads(CACHE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
 
 
 # ---------------------------------------------------------------- map: 지도 정확도
@@ -203,7 +228,7 @@ def run_test(full, base):
         if ch is not None and not any(f in ("requirements.txt", "conftest.py") or f.startswith("tests/conftest") for f in ch):
             pick = set()
             for f in ch:
-                m = re.match(r"(?:tests/test_)?([a-z_]+)\.py$", f)
+                m = re.match(r"(?:tests/test_|tools/)?([a-z_]+)\.py$", f)
                 if m and (ROOT / f"tests/test_{m.group(1)}.py").exists():
                     pick.add(f"tests/test_{m.group(1)}.py")
                 if f.startswith("site/js/search") and (ROOT / "tests/test_search_js.py").exists():
@@ -353,24 +378,47 @@ def run_diff(full, base):
         sh(["git", "worktree", "remove", "--force", str(wt)])
     lines = [l for l in r.stdout.strip().split("\n") if l.strip()]
     for l in lines[:-1]:
-        print("  ", l)
+        if not l.startswith("같음"):  # 같은 화면은 안 찍어요 (토큰)
+            print("  ", l)
     return r.returncode == 0, (lines[-1] if lines else r.stderr.strip()[-200:])
 
 
-RUN = {"map": run_map, "js": run_js, "test": run_test, "data": run_data, "ui": run_ui, "diff": run_diff}
+def run_shots(full, base, out=None, screens=None):
+    if not out:
+        return False, "--out 폴더를 적어 주세요 (예: --out /mnt/project-files/x-preview/)"
+    srv, url = build_and_serve()
+    try:
+        cmd = ["node", "tools/screen-diff.js", "--shots", url, out] + ([screens] if screens else [])
+        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    finally:
+        srv.terminate()
+    lines = [l for l in r.stdout.strip().split("\n") if l.strip()]
+    for l in lines[:-1]:
+        if l.startswith("ERR"):
+            print("  ", l)
+    return r.returncode == 0, (lines[-1] if lines else r.stderr.strip()[-200:])
+
+
+RUN = {"map": run_map, "js": run_js, "test": run_test, "data": run_data, "ui": run_ui, "diff": run_diff, "shots": run_shots}
 
 
 def main(argv):
     if "-h" in argv or "--help" in argv:
         print(__doc__)
         return 0
-    base, strict, picks = "origin/main", False, []
+    base, strict, fresh, picks, out, screens = "origin/main", False, False, [], None, None
     it = iter(argv)
     for a in it:
         if a == "--base":
             base = next(it)
         elif a == "--strict":
             strict = True
+        elif a == "--fresh":
+            fresh = True
+        elif a == "--out":
+            out = next(it)
+        elif a == "--screens":
+            screens = next(it)
         else:
             picks += [x for x in a.split(",") if x]
     if not picks:
@@ -389,15 +437,35 @@ def main(argv):
                 return 2
             jobs.append((k, mode == "all"))
     summary, fail = [], False
+    cache, fp = load_cache(), fingerprint(base)
     for k, full in jobs:
-        t0 = time.time()
+        t0, key = time.time(), f"{k}:{'all' if full else 'fast'}"
+        hit = cache.get(key)
+        if not fresh and k not in NO_CACHE and hit and hit.get("fp") == fp:
+            mins = (time.time() - hit["at"]) / 60
+            summary.append(f"✅ {k:<5}   지난번 통과 {mins:.0f}분 전, 그 뒤 바뀐 파일 없음 → 건너뜀  {hit['msg']}")
+            continue
         print(f"▶ {k}{' (전체)' if full else ''}")
         try:
-            ok, msg = RUN[k](full, base, strict) if k == "data" else RUN[k](full, base)
+            if k == "data":
+                ok, msg = RUN[k](full, base, strict)
+            elif k == "shots":
+                ok, msg = RUN[k](full, base, out, screens)
+            else:
+                ok, msg = RUN[k](full, base)
         except Exception as e:  # 점검 도구가 깨져도 나머지는 계속
             ok, msg = False, f"점검 실패: {e}"
         fail |= not ok
+        if k not in NO_CACHE:
+            if ok:
+                cache[key] = dict(fp=fp, at=time.time(), msg=msg)
+            else:
+                cache.pop(key, None)
         summary.append(f"{'✅' if ok else '❌'} {k:<5} {time.time() - t0:5.1f}초  {msg}")
+    try:
+        CACHE.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
     print("\n" + "\n".join(summary))
     return 1 if fail else 0
 

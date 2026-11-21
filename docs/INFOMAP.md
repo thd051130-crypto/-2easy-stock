@@ -6,6 +6,7 @@ Actions가 파이썬을 돌려 `paper/`에 커밋 → `pages.yml`이 `dashboard.
 | 파일 | 만드는 것 | 워크플로 | 앱에서 |
 |---|---|---|---|
 | `paper/kr/daily.json` `paper/us/daily.json` | daily.py (+movers·sectors·quiet_volume) | daily.yml | 홈 지수·급등락·히트맵 |
+| (위 daily의 지수 5년 일봉) | dashboard.py split_charts | pages.yml | 차트 화면·수익률 달력 (`_site/charts.json`, 홈 뜬 뒤 받기) |
 | `paper/kr/flows.json` | flows.py | daily.yml | 수급 |
 | `paper/report.json` `paper/story_log.json` | report_desks.py (+market_story·analyst_view) | daily.yml | 리포트·연결 고리 |
 | `paper/reports/` | report_archive.py | daily.yml | 지난 리포트 (`_site/reports/index.json`) |
@@ -61,4 +62,5 @@ GitHub 예약이 몇 시간 늦어서 클라우드플레어 정시 알람(`cloud
 - 프로젝트 공유 폴더(Claude 쪽, 저장소 밖): `*-preview/` 미리보기 사진 · `docs/v2*/` V2 설계 · `business/` 수익화 진단 · `tools/` 점검 도구 사본
 
 ## 점검 (한 명령으로 종류별)
-`python tools/check.py` 빠른 점검 · 종류: `map` `js` `test` `data` `ui` · `all` 전부 · `--help` 설명
+`python tools/check.py` 빠른 점검 · 종류: `map` `js` `test` `data` `ui` `diff` `shots`(검수 사진 라이트·다크) · `all` 전부 · `--help` 설명
+토큰 아끼기: 통과한 종류는 파일이 안 바뀌었으면 다음엔 건너뜀(.check-cache.json 파일, `--fresh`로 다시) · diff는 달라진 곳만 자른 `_screen-diff/<화면>-crop.png` · 큰 파일은 `python tools/peek.py`로 필요한 부분만

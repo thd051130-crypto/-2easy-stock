@@ -170,7 +170,26 @@ def test_split_learn_moves_learn_only_data_out_of_data_json():
                 learn_cases=dict(kr=[1]), story_log=dict(kr=[2]))
     learn = dashboard.split_learn(data)
     # 공부 화면 전용 자료는 learn.json으로, 홈 '오늘 리포트 N개'는 날짜별 개수만 남아요
-    assert set(learn) == {"learn_cases", "reading", "story_log", "built"} and learn["built"] == data["built"]
+    assert set(learn) == {"learn_cases", "reading", "story_log", "v"} and learn["v"] == data["learn_v"]
     assert not any(k in data for k in dashboard.LEARN_KEYS)
     assert data["reading_days"] == {"2026-11-18": 2, "2026-11-17": 1}
     assert data["learn_notes"] == [1]  # 용어 '?' 버튼에 쓰는 노트는 그대로
+
+
+def test_learn_version_follows_content_not_build_time():
+    # 배포 시각만 바뀌면 learn.json 주소(v=)도 그대로라서 폰이 다시 안 받아요 (2026-11-21)
+    mk = lambda built, cases: dict(built=built, markets={}, reading={}, learn_cases=cases, story_log={})
+    a, b, c = mk("2026-11-21T09:00", {"kr": [1]}), mk("2026-11-21T10:00", {"kr": [1]}), mk("2026-11-21T10:00", {"kr": [2]})
+    for x in (a, b, c):
+        dashboard.split_learn(x)
+    assert a["learn_v"] == b["learn_v"] != c["learn_v"]
+
+
+def test_split_charts_moves_index_candles_out_of_data_json():
+    candles = dict(dates=["2026-11-20"], o=[1], h=[1], l=[1], c=[1], v=[1])
+    data = dict(markets=dict(kr=dict(daily=dict(candles=candles, series={"x": 1})), us=dict(daily=None)))
+    charts = dashboard.split_charts(data)
+    assert charts["markets"] == {"kr": candles} and charts["v"] == data["charts_v"]
+    assert "candles" not in data["markets"]["kr"]["daily"] and data["markets"]["kr"]["daily"]["series"] == {"x": 1}
+    again = dict(markets=dict(kr=dict(daily=dict(candles=dict(candles)))))
+    assert dashboard.split_charts(again)["v"] == charts["v"]  # 내용이 같으면 버전도 같아요

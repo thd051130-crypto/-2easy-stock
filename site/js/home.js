@@ -194,7 +194,9 @@ function worldTicker() {
 function spinTicker() {
   clearInterval(tickTimer);
   tickTimer = setInterval(() => {
-    const el = $(".wtick .wk-item"), list = tickItems();
+    const el = $(".wtick .wk-item");  // 바가 없으면(자료 오류로 못 그렸을 때도) 멈춰요. 3초마다 오류가 나지 않게 먼저 봐요
+    let list = [];
+    try { list = el ? tickItems() : []; } catch (e) { list = []; }
     if (!el || !list.length || screen !== "home") { clearInterval(tickTimer); return; }
     if (document.hidden) return;
     tickAt = (tickAt + 1) % list.length;
