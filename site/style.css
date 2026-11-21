@@ -1254,6 +1254,14 @@ a.more { text-decoration: none; }
 .ast-memo textarea, .ast-backup textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary);
   font: inherit; font-size: 15px; line-height: 1.5; padding: 10px 12px; resize: vertical; }
 .ast-backup textarea { font-size: 12px; margin-top: 8px; }
+.bk-p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; }
+.bk-p:empty { display: none; }
+.bk-at { display: block; margin-top: 2px; color: var(--text-secondary); font-weight: 600; }
+.bk-ask { display: grid; gap: 4px; margin-top: 10px; padding: 12px; border-radius: var(--radius-s); background: var(--surface-1); border: 1px solid var(--border); }
+.bk-ask small { font-size: 12px; }
+.bk-ask .ast-new { margin-top: 6px; }
+.bk-txt { margin-top: 10px; }
+.bk-txt summary { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
 .ast-copy { margin-top: 8px; }
 .ast-grp { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 10px; }
 .ast-gh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
