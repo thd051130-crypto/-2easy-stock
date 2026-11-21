@@ -49,7 +49,12 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python disclosures.py --days "${{ inputs.days || '1' }}"
+      - name: 공시 받기
+        env:
+          DAYS: ${{ inputs.days || '1' }}  # 손으로 넣는 값은 env로만 받아요 (run 안에 바로 넣으면 명령이 끼어들 수 있어요)
+        run: |
+          case "$DAYS" in ''|*[!0-9]*) echo "days는 숫자만 돼요: $DAYS"; exit 1;; esac
+          python disclosures.py --days "$DAYS"
       - name: commit
         id: commit
         run: |
