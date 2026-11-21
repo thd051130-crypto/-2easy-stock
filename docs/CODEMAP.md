@@ -5,7 +5,7 @@
 
 ## 흐름
 Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_site/, data.json) + `stock_pages.py` + `industry_map.py` + `slim.py`(주석 빼기) → Pages. 뉴스만 live 브랜치 news.json.
-`site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기, 새 js 파일은 `APP_JS`에도. 점검은 `python tools/check.py` 하나로 (종류: map js test data ui diff, `--help`).
+`site/sw.js` 껍데기 바꾸면 `CACHE` 번호 올리기, 새 js 파일은 `APP_JS`에도. 점검은 `python tools/check.py` 하나로 (종류: map js test data ui diff shots, `--help`, 통과·안 바뀜이면 건너뜀). 함수 하나·JSON 모양만 보기: `python tools/peek.py`.
 
 ## site/js/ (앱 화면 코드, 2026-11-20 app.js에서 나눔)
 `index.html`이 차례대로 부르는 파일 13개 + 그 화면을 열 때 받는 파일 5개(★, `core.js`의 `LAZY`).
