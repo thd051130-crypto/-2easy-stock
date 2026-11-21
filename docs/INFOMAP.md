@@ -62,4 +62,4 @@ GitHub 예약이 몇 시간 늦어서 클라우드플레어 정시 알람(`cloud
 
 ## 점검 (한 명령으로 종류별)
 `python tools/check.py` 빠른 점검 · 종류: `map` `js` `test` `data` `ui` `diff` `shots`(검수 사진 라이트·다크) · `all` 전부 · `--help` 설명
-토큰 아끼기: 통과한 종류는 파일이 안 바뀌었으면 다음엔 건너뜀(`.check-cache.json`, `--fresh`로 다시) · diff는 달라진 곳만 자른 `_screen-diff/<화면>-crop.png` · 큰 파일은 `python tools/peek.py`로 필요한 부분만
+토큰 아끼기: 통과한 종류는 파일이 안 바뀌었으면 다음엔 건너뜀(.check-cache.json 파일, `--fresh`로 다시) · diff는 달라진 곳만 자른 `_screen-diff/<화면>-crop.png` · 큰 파일은 `python tools/peek.py`로 필요한 부분만
