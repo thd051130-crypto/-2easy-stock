@@ -896,20 +896,23 @@ button.hm:active .hm-t > b { color: var(--accent); }
 /* 홈 화면 편집 (#kr/more/edit): 칸마다 자리(홈·더 보기·숨김) + ▲▼ 순서 */
 .home-edit { display: flex; justify-content: center; padding: 4px 0 8px; }
 .he-open { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary); font: inherit; font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 999px; min-height: 40px; cursor: pointer; }
-.he-list { list-style: none; margin: 8px 0 0; padding: 0; }
-.he-row { padding: 10px 0; border-top: 1px solid var(--border); }
+.he-p { font-size: 13px; margin: 0; }
+.he-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.he-row { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 3px 0; border-top: 1px solid var(--border); }
 .he-row:first-child { border-top: 0; }
-.he-top { display: flex; align-items: center; gap: 10px; }
-.he-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.he-name b { font-size: 15px; font-weight: 600; }
-.he-name small { font-size: 12px; color: var(--text-muted); }
-.he-off .he-top .hm-ico, .he-off .he-name { opacity: .5; }
-.he-move { display: flex; gap: 4px; flex: none; }
-.he-move button { width: 40px; height: 40px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-1); color: var(--text-secondary); font-size: 13px; cursor: pointer; }
-.he-move button:disabled { opacity: .3; cursor: default; }
-.he-mode { margin: 8px 0 0 42px; }
-.he-mode button { padding: 6px 14px; min-height: 34px; font-size: 13px; }
-.he-foot { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.he-box .he-name { font-weight: 700; }
+.he-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.he-name small { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.he-off .he-name { opacity: .45; }
+.he-mode { display: inline-flex; flex: none; background: var(--surface-0); border-radius: 999px; padding: 2px; }
+.he-mode button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 600; padding: 0 9px; min-height: 30px; border-radius: 999px; cursor: pointer; }
+.he-mode button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.he-fixed { font-size: 12px; color: var(--text-muted); padding: 0 10px; min-height: 30px; align-items: center; background: none; }
+.he-move { display: flex; gap: 2px; flex: none; }
+.he-move button { width: 30px; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.he-move button:active { background: var(--surface-0); }
+.he-move button:disabled { opacity: .25; cursor: default; }
+.he-foot { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--border); }
 .he-reset { border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; font-weight: 600; padding: 6px 0; min-height: 36px; cursor: pointer; }
 .he-reset:disabled { color: var(--text-muted); cursor: default; }
 /* 🔥 핫 뉴스 (읽기 전까지 남아요) */

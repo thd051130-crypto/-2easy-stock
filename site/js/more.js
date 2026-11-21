@@ -148,21 +148,20 @@ function homeCards(d) {
   return out;
 }
 
-const HE_MODES = [["home", "홈"], ["more", "더 보기"], ["off", "숨김"]];
+const HE_MODES = [["home", "홈"], ["more", "더보기"], ["off", "숨김"]];
 function homeEditCard() {
   const L = homeLayout(), n = L.order.length;
+  // 한 칸 = 한 줄: 아이콘·이름 · 자리(홈|더보기|숨김) · ▲▼ (사용자 2026-11-22 "작고 콤팩트하게, 한 기능을 한 줄로")
   const row = (k, i) => {
     const it = HOME_ITEM[k], m = L.mode[k];
-    const note = k === "more" ? "더 보기로 보낸 칸이 이 안에 이 순서로 들어가요" : it.card ? "홈 위쪽 칸" : it.krOnly ? "국장만 있는 칸" : "";
-    return `<li class="he-row${m === "off" ? " he-off" : ""}">
-      <div class="he-top"><span class="hm-ico" aria-hidden="true">${it.icon}</span>
-        <span class="he-name"><b>${esc(it.title)}</b>${note ? `<small>${note}</small>` : ""}</span>
-        <span class="he-move"><button type="button" data-he-move="${k}:-1" aria-label="${esc(it.title)} 위로" ${i ? "" : "disabled"}>▲</button><button type="button" data-he-move="${k}:1" aria-label="${esc(it.title)} 아래로" ${i < n - 1 ? "" : "disabled"}>▼</button></span></div>
-      ${it.can.length > 1 ? `<div class="period he-mode" role="group" aria-label="${esc(it.title)} 자리">${HE_MODES.filter(([v]) => it.can.includes(v)).map(([v, label]) =>
-        `<button type="button" data-he-mode="${k}:${v}" aria-pressed="${m === v}">${label}</button>`).join("")}</div>` : ""}</li>`;
+    return `<li class="he-row${m === "off" ? " he-off" : ""}${k === "more" ? " he-box" : ""}">
+      <span class="he-name"><span aria-hidden="true">${it.icon}</span> ${esc(it.title)}${it.krOnly ? " <small>국장</small>" : ""}</span>
+      ${it.can.length > 1 ? `<span class="he-mode" role="group" aria-label="${esc(it.title)} 자리">${HE_MODES.filter(([v]) => it.can.includes(v)).map(([v, label]) =>
+        `<button type="button" data-he-mode="${k}:${v}" aria-pressed="${m === v}">${label}</button>`).join("")}</span>` : `<span class="he-mode he-fixed">항상 홈</span>`}
+      <span class="he-move"><button type="button" data-he-move="${k}:-1" aria-label="${esc(it.title)} 위로" ${i ? "" : "disabled"}>▲</button><button type="button" data-he-move="${k}:1" aria-label="${esc(it.title)} 아래로" ${i < n - 1 ? "" : "disabled"}>▼</button></span></li>`;
   };
-  return `<section class="card home-edit-card"><h2>✏️ 홈 화면 편집 <small>이 폰에만 저장</small></h2>
-    <p class="muted">칸마다 <b>홈</b>(홈에 펼쳐 보기) · <b>더 보기</b>(더 보기 칸에 한 줄) · <b>숨김</b>을 고르고, ▲▼로 순서를 바꿔요.</p>
+  return `<section class="card home-edit-card"><h2>✏️ 홈 화면 편집 <small>이 폰 · 백업 파일에도</small></h2>
+    <p class="muted he-p"><b>홈</b> 펼쳐 보기 · <b>더보기</b> 더 보기 칸에 한 줄 · ▲▼ 순서. 더 보기 칸 안도 이 순서예요.</p>
     <ol class="he-list">${L.order.map(row).join("")}</ol>
     <div class="he-foot"><button type="button" class="he-reset" data-he-reset ${homeIsDefault(L) ? "disabled" : ""}>처음 상태로 되돌리기</button></div></section>`;
 }
