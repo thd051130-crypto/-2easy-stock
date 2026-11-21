@@ -31,8 +31,10 @@ function homeMoreRows(d, only) {
   const s = d.daily || {};
   const rows = [];
   // 칸 HTML은 함수로 받아서, 칸 화면(only)을 열 땐 그 칸만 만들어요 (예전엔 홈·칸 화면마다 13칸을 전부 만들었어요)
+  // only: 칸 하나(글자) 또는 여러 칸(Set, 홈 편집에서 '홈에 펼치기'로 고른 칸들)
+  const want = !only ? () => true : typeof only === "string" ? (k) => k === only : (k) => only.has(k);
   const add = (key, icon, title, sum, html) => {
-    if (only && key !== only) return;
+    if (!want(key)) return;
     const h = html();
     if (h) rows.push({ key, icon, title, sum, html: h });
   };
@@ -79,16 +81,115 @@ function homeMoreRows(d, only) {
   add("macro", "🌡️", "경기 국면", m ? `${esc(m.regime)} · 경고 ${m.score}/${m.total}개` : "", () => macroCard());
   return rows;
 }
-function homeMoreCard(d) {
-  const rows = homeMoreRows(d);
-  if (!rows.length) return "";
+function homeMoreCard(d, rows) {
+  rows = rows || homeMoreRows(d);
   return `<section class="card home-more"><h2>더 보기 <small>누르면 넘어가요</small></h2>${rows.map((r) =>
     `<button type="button" class="hm" data-more="${r.key}"><span class="hm-ico" aria-hidden="true">${r.icon}</span>
-      <span class="hm-t"><b>${r.title}</b>${r.sum ? `<span class="hm-s">${r.sum}</span>` : ""}</span><span class="hm-arrow" aria-hidden="true">›</span></button>`).join("")}</section>`;
+      <span class="hm-t"><b>${r.title}</b>${r.sum ? `<span class="hm-s">${r.sum}</span>` : ""}</span><span class="hm-arrow" aria-hidden="true">›</span></button>`).join("") ||
+    `<p class="muted">더 보기에 넣은 칸이 없어요.</p>`}</section>`;
 }
+
+// ---------------------------------------------------------------- 홈 화면 편집 (사용자 2026-11-22 "화면 편집 기능을 만들자")
+// 홈 칸마다 어디에 둘지(홈에 펼치기 · 더 보기 한 줄 · 숨기기)와 순서를 고르고, 이 폰에 기억해요 (home_layout)
+// [키, 아이콘, 이름, 고를 수 있는 자리, 홈에 그릴 칸(맨 위 칸만), 국장만]
+// 더 보기 줄의 아이콘·이름은 homeMoreRows의 add()와 같게 맞춰 두기
+const HOME_ITEMS = [
+  ["big", "🚨", "큰 발표·지수 급변", "home off", () => bigEventsCard(), false],
+  ["status", "🕒", "장 상황", "home off", () => marketStatusCard(), false],
+  ["world", "🌏", "세계 지수·환율", "home off", () => worldHomeCard(), false],
+  ["more", "📂", "더 보기 칸", "home", null, false],
+  ["report", "📰", "오늘의 리포트", "home off", () => homeReportCard(), false],
+  ["news", "📰", "지금 뉴스"], ["learn", "📚", "투자 공부"], ["drop", "⚠️", "급락 점검"], ["cal", "📅", "다가오는 일정"],
+  ["earn", "📢", "실적·배당 발표"], ["watch", "⭐", "관심종목"], ["movers", "❓", "왜 움직였나"], ["heat", "🟥", "시장 히트맵"],
+  ["sectors", "🏭", "업종별 호재·악재"], ["policy", "🏛️", "정부 정책"], ["flows", "🏦", "외국인·기관 수급", "home more off", null, true],
+  ["disclose", "📄", "최근 공시", "home more off", null, true], ["quiet", "🔍", "주가 그대로·거래량 급증"], ["macro", "🌡️", "경기 국면"],
+].map(([key, icon, title, can = "home more off", card = null, krOnly = false]) => ({ key, icon, title, can: can.split(" "), card, krOnly }));
+const HOME_ITEM = Object.fromEntries(HOME_ITEMS.map((x) => [x.key, x]));
+const homeDefMode = (it) => (it.can.includes("more") ? "more" : "home");
+// 저장된 순서·자리 + 새로 생긴 칸(기본 자리, 기본 순서의 앞 칸 바로 뒤)
+function homeLayout() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem("home_layout") || "null"); } catch (e) { /* 처음 */ }
+  const order = ((saved && saved.order) || []).filter((k) => HOME_ITEM[k]);
+  HOME_ITEMS.forEach((it, i) => {
+    if (order.includes(it.key)) return;
+    const prev = i ? order.indexOf(HOME_ITEMS[i - 1].key) : -1;
+    order.splice(prev + 1, 0, it.key);
+  });
+  const mode = {};
+  order.forEach((k) => { const m = saved && saved.mode && saved.mode[k]; mode[k] = HOME_ITEM[k].can.includes(m) ? m : homeDefMode(HOME_ITEM[k]); });
+  return { order, mode };
+}
+function saveHomeLayout(L) { remember("home_layout", JSON.stringify(L)); }
+const homeIsDefault = (L) => HOME_ITEMS.every((it, i) => L.order[i] === it.key && L.mode[it.key] === homeDefMode(it));
+
+// 홈 화면 칸들: 편집에서 고른 순서대로. 펼친 칸은 원래 칸 그대로, 더 보기 칸 안은 고른 순서대로 한 줄씩
+function homeCards(d) {
+  const L = homeLayout();
+  const homeRows = new Set(L.order.filter((k) => !HOME_ITEM[k].card && k !== "more" && L.mode[k] === "home"));
+  const moreRows = new Set(L.order.filter((k) => L.mode[k] === "more"));
+  let open = {}, rows = [];
+  const pick = () => {  // 줄 요약·칸은 한 번만 만들어요
+    if (rows.length || !(homeRows.size + moreRows.size)) return;
+    const all = homeMoreRows(d, new Set([...homeRows, ...moreRows]));
+    open = Object.fromEntries(all.filter((r) => homeRows.has(r.key)).map((r) => [r.key, r.html]));
+    const at = Object.fromEntries(all.map((r) => [r.key, r]));
+    rows = L.order.filter((k) => moreRows.has(k) && at[k]).map((k) => at[k]);
+  };
+  const out = [];
+  for (const k of L.order) {
+    const it = HOME_ITEM[k];
+    if (L.mode[k] !== "home") continue;
+    if (it.card) out.push(it.card);
+    else if (k === "more") out.push(() => { pick(); return homeMoreCard(d, rows); });
+    else out.push(() => { pick(); return open[k] || ""; });
+  }
+  out.push(`<div class="home-edit"><button type="button" class="he-open" data-more="edit">✏️ 홈 화면 편집</button></div>`);
+  return out;
+}
+
+const HE_MODES = [["home", "홈"], ["more", "더 보기"], ["off", "숨김"]];
+function homeEditCard() {
+  const L = homeLayout(), n = L.order.length;
+  const row = (k, i) => {
+    const it = HOME_ITEM[k], m = L.mode[k];
+    const note = k === "more" ? "더 보기로 보낸 칸이 이 안에 이 순서로 들어가요" : it.card ? "홈 위쪽 칸" : it.krOnly ? "국장만 있는 칸" : "";
+    return `<li class="he-row${m === "off" ? " he-off" : ""}">
+      <div class="he-top"><span class="hm-ico" aria-hidden="true">${it.icon}</span>
+        <span class="he-name"><b>${esc(it.title)}</b>${note ? `<small>${note}</small>` : ""}</span>
+        <span class="he-move"><button type="button" data-he-move="${k}:-1" aria-label="${esc(it.title)} 위로" ${i ? "" : "disabled"}>▲</button><button type="button" data-he-move="${k}:1" aria-label="${esc(it.title)} 아래로" ${i < n - 1 ? "" : "disabled"}>▼</button></span></div>
+      ${it.can.length > 1 ? `<div class="period he-mode" role="group" aria-label="${esc(it.title)} 자리">${HE_MODES.filter(([v]) => it.can.includes(v)).map(([v, label]) =>
+        `<button type="button" data-he-mode="${k}:${v}" aria-pressed="${m === v}">${label}</button>`).join("")}</div>` : ""}</li>`;
+  };
+  return `<section class="card home-edit-card"><h2>✏️ 홈 화면 편집 <small>이 폰에만 저장</small></h2>
+    <p class="muted">칸마다 <b>홈</b>(홈에 펼쳐 보기) · <b>더 보기</b>(더 보기 칸에 한 줄) · <b>숨김</b>을 고르고, ▲▼로 순서를 바꿔요.</p>
+    <ol class="he-list">${L.order.map(row).join("")}</ol>
+    <div class="he-foot"><button type="button" class="he-reset" data-he-reset ${homeIsDefault(L) ? "disabled" : ""}>처음 상태로 되돌리기</button></div></section>`;
+}
+function bindHomeEdit(app) {
+  const change = (fn) => { const L = homeLayout(); fn(L); saveHomeLayout(L); render(); };
+  app.querySelectorAll("[data-he-mode]").forEach((b) => b.addEventListener("click", () => {
+    const [k, v] = b.dataset.heMode.split(":");
+    change((L) => { L.mode[k] = v; });
+  }));
+  app.querySelectorAll("[data-he-move]").forEach((b) => b.addEventListener("click", () => {
+    const [k, dir] = b.dataset.heMove.split(":");
+    change((L) => {
+      const i = L.order.indexOf(k), j = i + Number(dir);
+      if (i < 0 || j < 0 || j >= L.order.length) return;
+      [L.order[i], L.order[j]] = [L.order[j], L.order[i]];
+    });
+  }));
+  app.querySelectorAll("[data-he-reset]").forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.removeItem("home_layout"); } catch (e) { /* 괜찮아요 */ }
+    render();
+  }));
+}
+
 // 더 보기에서 연 칸 화면: 맨 위 ‹ 더 보기(뒤로) + 원래 칸 그대로
 function moreView(d) {
-  const back = `<div class="more-back"><button type="button" class="back" data-back>‹ ${stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`;
+  const back = `<div class="more-back"><button type="button" class="back" data-back>‹ ${moreKey === "edit" ? "홈" : stockFrom === "home" ? "더 보기" : "뒤로"}</button></div>`;
+  if (moreKey === "edit") return [back, homeEditCard()];
   if (moreKey === "learn" && !learnReady() && DATA.reading_days) {  // 공부 자료를 아직 받는 중
     loadLearn();
     return [back, `<section class="card"><h2>📚 투자 공부</h2><p class="muted">공부 자료 불러오는 중…</p></section>`];
