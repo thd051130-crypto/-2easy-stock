@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,7 +67,26 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      # GitHub가 방금 올린 화면 묶음을 바로 못 찾는 일이 있어요(2026-11-20·21 세 번, "Found 0 artifact(s)").
+      # 목록에 보일 때까지 최대 2분 기다리고, 그래도 실패하면 30초 뒤 한 번 더 올려요.
+      - name: 화면 묶음이 보일 때까지 기다리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 24); do
+            n=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?name=github-pages" --jq '.total_count' || echo 0)
+            [ "${n:-0}" -gt 0 ] && { echo "화면 묶음 보임 (${i}번째 확인)"; exit 0; }
+            sleep 5
+          done
+          echo "2분 기다려도 목록에 안 보여요. 그래도 올려 볼게요."
       - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: 한 번 더 올리기 전 30초 쉬기
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - id: deployment2
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
       - name: 고장 알림
         if: failure()
