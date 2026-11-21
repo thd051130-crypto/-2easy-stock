@@ -13,7 +13,7 @@ Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_
 여러 파일이 같이 쓰는 이름은 그냥 전역이에요(모듈 아님). 먼저 받는 파일이 ★ 파일 안의 것을 바로 부르면 안 돼요: 화면 두 곳 이상이 쓰는 건 먼저 받는 파일에 두기.
 ```
 core.js     설정·주소 go/back/openStock/openMap·도우미 esc/money/pct·뉴스 저장·load·나중에 받기 needJs/LAZY(~470)
-view.js     움직임 drawIn/countUp·VIEWS(~97)·화면 고정 keepTap/holdHeight/keepRow·render(~192)
+view.js     움직임 drawIn/countUp·칸 오류 막기 paintCards/cardFail·VIEWS(~117)·화면 고정 keepTap/holdHeight/keepRow·render(~192)
 watch.js    관심·전체 종목·조건 검색 watchCard/screenerCard/bindWatch
 search.js   종목 이름 검색 scoreOf/loadSymbols(~108) · 문장 검색·테마 searchCard/findStocks/themeCard(~160)
 inbox.js    메시지함·리포트·지난 리포트·주간 reportCards/pastCards/weeklyCards/inboxCard · 주간 점검 한 줄 healthLine

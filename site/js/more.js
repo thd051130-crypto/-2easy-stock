@@ -12,7 +12,9 @@ const PERF_TABS = [
 ];
 let perfTabKey = "sav";
 try { perfTabKey = localStorage.getItem("tools_tab") || "sav"; } catch (e) { /* 처음 */ }
-const perfTabList = (d) => PERF_TABS.filter(([k, , cards]) => k === "sav" || cards(d).some(Boolean)).map(([k, label, cards]) => ({ k, label, cards }));
+// 묶음 칸이 오류 나도 탭은 보여요 (그 칸 자리에 오류 안내가 떠요, view.js paintCards)
+const tabHas = (cards, d) => { try { return cards(d).some(Boolean); } catch (e) { return true; } };
+const perfTabList = (d) => PERF_TABS.filter(([k, , cards]) => k === "sav" || tabHas(cards, d)).map(([k, label, cards]) => ({ k, label, cards }));
 function perfTab(d) {
   const list = perfTabList(d);
   return list.find((t) => t.k === perfTabKey) || list[0];

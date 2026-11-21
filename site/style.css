@@ -288,6 +288,7 @@ details li { margin: 4px 0; }
 }
 .more span { font-size: 20px; line-height: 1; color: var(--text-muted); }
 .caution { font-size: 13px; color: var(--wait-fg); background: var(--wait-bg); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
+.card-err p { margin: 0; }  /* 자료 오류로 못 그린 칸 (view.js paintCards) */
 .big { font-size: 28px; font-weight: 750; letter-spacing: -0.035em; line-height: 1.2; margin: 0; font-variant-numeric: tabular-nums; }
 .tile { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .nowrap { white-space: nowrap; }

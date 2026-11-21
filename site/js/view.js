@@ -94,27 +94,46 @@ function countUp(root) {
   setTimeout(finish, dur + 400);  // 화면이 가려져 그리기가 멈춰도 최종 숫자는 꼭 보여요
 }
 
+// 칸 하나가 이상한 자료로 오류가 나도 나머지 칸은 그려요 (2026-11-21). 예전엔 한 칸 오류로 화면 전체가 멈췄고,
+// 처음 열 때면 대기화면 99%에서 멈췄어요. 그래서 VIEWS의 칸은 바로 부르지 않고 함수로 넘겨서 paintCards가 하나씩 불러요.
+// 칸 함수는 글자 하나 또는 글자 목록을 돌려줘요. 오류 난 칸은 CARD_ERR에 남겨요 (나중에 오류 알림에 쓰려고).
+const CARD_ERR = [];
+function cardFail(e) {
+  CARD_ERR.push({ screen, at: Date.now(), msg: String((e && e.message) || e).slice(0, 200) });
+  if (CARD_ERR.length > 20) CARD_ERR.shift();
+  if (window.console) console.error("칸 그리기 오류", e);
+  return `<section class="card card-err" role="alert"><p class="muted">⚠️ 이 칸은 자료가 이상해서 못 그렸어요. 다른 칸은 그대로 볼 수 있어요. 자료가 새로 오면 다시 보여요.</p></section>`;
+}
+function paintCards(list) {
+  const out = [];
+  for (const c of list) {
+    if (typeof c !== "function") { out.push(c); continue; }
+    try { const r = c(); out.push(...(Array.isArray(r) ? r : [r])); } catch (e) { out.push(cardFail(e)); }
+  }
+  return out.join("");
+}
+
 const VIEWS = {
   // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 세계 지수 → 더 보기 → 오늘의 리포트 요약.
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
   // 맨 위 얇은 지수 바는 세계 지수가 돌아가며 보이고, 누르면 세계 지수 화면(한 겹 위)이 열려요 (사용자 2026-10-24)
-  home: (d) => [worldTicker(), bigEventsCard(), marketStatusCard(), worldHomeCard(), homeMoreCard(d), homeReportCard()],
-  report: (d) => [rpTabsBar(), ...(rpTabNow() === "past" ? pastCards(d) : rpTabNow() === "week" ? weeklyCards() : reportCards(d))],
-  watch: (d) => [watchCard(d), screenerCard(d), allStocksCard(d)],
+  home: (d) => [worldTicker, bigEventsCard, marketStatusCard, worldHomeCard, () => homeMoreCard(d), homeReportCard],
+  report: (d) => [rpTabsBar, () => (rpTabNow() === "past" ? pastCards(d) : rpTabNow() === "week" ? weeklyCards() : reportCards(d))],
+  watch: (d) => [() => watchCard(d), () => screenerCard(d), () => allStocksCard(d)],
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
-  tools: (d) => [perfTabsBar(d), ...perfTab(d).cards(d)],
-  chart: (d) => [trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, compareCard(d)],
+  tools: (d) => [() => perfTabsBar(d), () => perfTab(d).cards(d)],
+  chart: (d) => [() => trendCard(d) || `<section class="card"><p class="empty">아직 지수 기록이 없어요.</p></section>`, () => compareCard(d)],
   // 차트는 머리 칸 바로 아래, 사기 전 체크리스트보다 위 (사용자, 2026-11-19)
-  stock: (d) => [stockHeadCard(d), stockChartCard(), checkCard(d), discloseStockCard(d), stockSectorCard(d),
+  stock: (d) => [() => stockHeadCard(d), stockChartCard, () => checkCard(d), () => discloseStockCard(d), () => stockSectorCard(d),
     market === "kr" ? `<section class="card" id="flow-card"><h2>외국인·기관 수급</h2><p class="muted">불러오는 중이에요…</p></section>` : "",
     `<section class="card" id="fund-card"><h2>재무제표</h2><p class="muted">불러오는 중이에요…</p></section>`],
-  search: () => [searchCard(), `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard()],
-  map: () => [mapCard(), `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
-  inbox: () => [inboxHeadCard(), briefCard(), inboxCard()],
-  world: () => [worldCard()],
-  feedback: () => [feedbackCard()],
-  help: () => [helpCard()],
-  more: (d) => moreView(d),
+  search: () => [searchCard, () => `<div id="search-results" class="stack">${searchResults()}</div>`, glossaryCard],
+  map: () => [mapCard, () => `<div id="map-detail" class="stack">${mapDetailCard()}</div>`],
+  inbox: () => [inboxHeadCard, briefCard, inboxCard],
+  world: () => [worldCard],
+  feedback: () => [feedbackCard],
+  help: () => [helpCard],
+  more: (d) => [() => moreView(d)],
 };
 
 let lastView = "", holdH = 0;
@@ -221,7 +240,7 @@ function render() {
   // 다시 그리는 동안 차트·재무제표가 잠깐 비어 화면이 짧아지면 위치가 밀려요. 그동안만 높이를 붙잡아 둬요
   if (keepAt != null) holdHeight();
   else { clearTimeout(holdH); app.style.minHeight = ""; holdReady = false; }  // 다른 화면은 붙잡은 높이 없이
-  app.innerHTML = VIEWS[screen](d).join("");
+  app.innerHTML = paintCards(VIEWS[screen](d));
   if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
   app.querySelectorAll("[data-more]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.learnSet) learnTab = b.dataset.learnSet;  // 검색 화면 용어 사전 → 투자 공부 용어집
