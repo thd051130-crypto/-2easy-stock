@@ -17,7 +17,7 @@ view.js     움직임 drawIn/countUp·칸 오류 막기 paintCards/cardFail·VIE
 watch.js    관심·전체 종목·조건 검색 watchCard/screenerCard/bindWatch
 search.js   종목 이름 검색 scoreOf/loadSymbols(~108) · 문장 검색·테마 searchCard/findStocks/themeCard(~160)
 inbox.js    메시지함·리포트·지난 리포트·주간 reportCards/pastCards/weeklyCards/inboxCard · 주간 점검 한 줄 healthLine
-more.js     도구 탭 PERF_TABS · 홈 더 보기 homeMoreRows/moreView · 홈 화면 편집 HOME_ITEMS/homeCards/homeEditCard(more/edit) · 지금 뉴스·핫 뉴스 newsCard/hotCard
+more.js     도구 탭 PERF_TABS · 홈 더 보기 homeMoreRows/moreView · 홈 화면 편집 HOME_ITEMS/homeCards/homeEditCard(주소 끝 edit) · 지금 뉴스·핫 뉴스 newsCard/hotCard
 learn.js    투자 공부 learnView/learn*Cards/storyCard/bindLearn
 chart.js    지수 차트 drawTrend/smaOf/rsiOf · 비교 차트 compareCard(~251) · 지수 칸 trendCard/maPanel(~559)
 home.js     급락 점검 dropCard · 세계 지수 worldTicker/worldCard(~187) · 경기 macroCard·정책 policyCard · 공시 · 장 상황
