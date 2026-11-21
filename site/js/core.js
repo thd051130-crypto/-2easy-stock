@@ -372,7 +372,8 @@ async function load() {
   adoptExtras();
   $("#updated").textContent = `화면 데이터 갱신: ${DATA.built.replace("T", " ").slice(0, 16)} (한국시간)`;
   const had = NEWS && NEWS.updated;
-  render();
+  // 그리기 중 오류가 나도 대기화면(99%)에 멈추지 않게: 칸은 view.js paintCards가 하나씩 지키고, 그 밖의 오류는 여기서 받아요
+  try { render(); } catch (e) { if (window.console) console.error("화면 그리기 오류", e); if ($("#app .boot")) $("#app").innerHTML = cardFail(e); }
   guideMaybe();  // 처음 연 사람에게만 사용법 안내 한 번
   setTimeout(loadLearn, 1500);
   setTimeout(preloadJs, 2500);  // 지도·도구·의견 화면 파일도 미리  // 홈이 다 뜬 뒤에 (홈 사진·종목 자료와 다투지 않게)
