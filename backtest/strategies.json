@@ -1,0 +1,11 @@
+{
+  "_help": "전략 적는 곳. assets는 lab.py 자산 키(kospi sp500 nasdaq schd krbond usmid uslong gold cash kosdaq dev em small reit corp tips usshort) 또는 야후 기호. rebalance M·Q·Y·N. filter는 n일 이동평균 아래면 그 몫을 to로. 자세한 건 backtest.py 맨 위.",
+  "sp500": {"desc": "S&P500만 그대로", "assets": {"sp500": 100}, "rebalance": "N"},
+  "kospi": {"desc": "코스피200만 그대로", "assets": {"kospi": 100}, "rebalance": "N", "bench": "sp500"},
+  "60-40": {"desc": "미국 주식 60 · 중기 국채 40", "assets": {"sp500": 60, "usmid": 40}, "rebalance": "Q", "bench": "sp500"},
+  "kr-us-half": {"desc": "국장 반 · 미장 반", "assets": {"kospi": 50, "sp500": 50}, "rebalance": "Y", "bench": "sp500"},
+  "all-weather": {"desc": "주식 30 · 장기채 40 · 중기채 15 · 금 15", "assets": {"sp500": 30, "uslong": 40, "usmid": 15, "gold": 15}, "rebalance": "Q", "bench": "sp500"},
+  "permanent": {"desc": "주식·장기채·금·단기채 25씩", "assets": {"sp500": 25, "uslong": 25, "gold": 25, "usshort": 25}, "rebalance": "Y", "bench": "sp500"},
+  "sp500-ma200": {"desc": "S&P500, 200일선 아래면 단기채로 (달말에만 봄)", "assets": {"sp500": 100}, "rebalance": "N", "filter": {"ma": 200, "to": "usshort"}, "bench": "sp500"},
+  "kospi-ma200": {"desc": "코스피200, 200일선 아래면 단기채로 (달말에만 봄)", "assets": {"kospi": 100}, "rebalance": "N", "filter": {"ma": 200, "to": "cash"}, "bench": "kospi"}
+}

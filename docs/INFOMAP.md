@@ -23,6 +23,7 @@ Actions가 파이썬을 돌려 `paper/`에 커밋 → `pages.yml`이 `dashboard.
 | `news.json` (live 브랜치) | news.py | news.yml | 지금 뉴스·핫 뉴스 (앱이 바로 읽음) |
 | 전 종목 차트 (`_site/stocks/`) | all_stocks.py → Actions 파일 stocks-kr/us 7일 | all-stocks.yml → pages.yml | 종목 화면 |
 | `_site/themes.json` `_site/industry.json` | themes.py · industry_map.py | pages.yml | 문장 검색·산업 지도 |
+| `backtest/prices/` `backtest/results/` `backtest/LATEST.md` | backtest.py (전략은 손으로 `backtest/strategies.json`) | backtest.yml | 앱엔 없음 (공부용, Actions 요약에서 봄) |
 | `api_keys.json` | 손으로 (만료일만, 키 값 X) | keys.yml | 키 만료 알림 |
 
 ## 예약 실행 (GitHub Actions, cron은 UTC · 한국 = +9시간)
@@ -42,6 +43,7 @@ GitHub 예약이 몇 시간 늦어서 클라우드플레어 정시 알람(`cloud
 | keys.yml | `0 0 * * *` | 매일 09:00 |
 | pages.yml | 없음 | 위 자료 워크플로가 끝나면 · main에 앱 코드 push |
 | test.yml · ui-audit.yml | 없음 | PR마다 (테스트 · 버튼 누르기 점검) |
+| backtest.yml | 없음 | 손으로만 (Actions → backtest → Run workflow) |
 | kis-live-check.yml | 없음 | 손으로만 (한국투자 API, 보류) |
 | sched-gate.yml | 없음 | 다른 워크플로가 불러 씀 (늦은 예약 건너뛰기) |
 
@@ -49,7 +51,7 @@ GitHub 예약이 몇 시간 늦어서 클라우드플레어 정시 알람(`cloud
 `TELEGRAM_BOT_TOKEN` `TELEGRAM_CHAT_ID` 알림 전부 · `DART_API_KEY` 공시 · `ECOS_API_KEY` 국고채 · `KIS_APP_KEY` `KIS_APP_SECRET` 한국투자(보류)
 
 ## 밖의 서비스 (전부 무료)
-- Yahoo 시세: marketdata.py·daily.py·world.py·stock_pages.py 등 거의 전부 · 한국은행 ECOS: world.py · DART 공시: disclosures.py
+- Yahoo 시세: backtest.py·marketdata.py·daily.py·world.py·stock_pages.py 등 거의 전부 · 한국은행 ECOS: world.py · DART 공시: disclosures.py
 - FRED: macro.py·world.py·econ_calendar.py · 네이버: marketdata.py·flows.py·reading.py·symbols.py (둘 다 Actions에서만 됨)
 - 텔레그램 봇: bot.py가 받고, 알림은 tgfmt.py 형식으로 여러 스크립트가 보냄
 - 클라우드플레어 워커 `cloudflare/feedback-worker.js`: 의견 보내기 우체통(← `site/js/feedback.js`) + 정시 알람. 토큰(텔레그램·GH_TOKEN)은 클라우드플레어 Secret에만

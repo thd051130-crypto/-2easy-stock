@@ -41,6 +41,7 @@ main.js     서비스워커 등록 + 처음 그리기·자료 받기 (맨 마지
 - macro.py, econ_calendar.py, policies.py → macro.yml 06:50 · world.py → world.yml 07:05 · news.py → 30분마다
 - weekly.py → 토 09:30 · fundamentals·fundcheck·symbols·returns·lab·etf_monthly → 토 09:00
 - bot.py(+commands·watchlist·tgfmt·inbox, big_events 호출) → 15분마다 · disclosures.py → 평일 08:10
+- backtest.py 백테스트(공부용, 손으로·backtest.yml): 일봉 쌓기 prices/merge/despike · 계산 run/stats · 요약 summary/table
 - health.py 고장 감시 · keys.py 키 만료 09:00 · report_archive.py 지난 리포트 · themes.py 테마 사전 · all_stocks.py 종목 파일
 - ⏰ 정시 알람: GitHub 예약 실행이 몇 시간 늦어서 cloudflare/feedback-worker.js `JOBS` 표(5분마다)가 workflow_dispatch로 제시간에 돌림. 늦게 온 예약 실행은 sched-gate.yml이 건너뜀. cron 바꾸면 JOBS도 같이 (tests/test_alarm_worker.py)
 
