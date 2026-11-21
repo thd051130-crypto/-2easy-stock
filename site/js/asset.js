@@ -107,7 +107,20 @@ const BK_KEYS = ["assets", "ast_bopen", "ast_live", "chart_idx", "cmp_f", "cmp_l
   "goal", "guide_v1", "heat_p", "hot_fold", "hot_news", "hot_read", "inbox_seen", "inbox_y", "ind", "lab", "learn_tab", "ma_set", "map_color",
   "map_days", "map_mode", "market", "news_url", "pol_r", "read_cat", "savings", "scr_all", "sector", "tools_tab", "watchSort", "world_g", "world_p", "world_tab"];
 const bkMine = (k) => BK_KEYS.includes(k) || /^(watch|seen_extras)_(kr|us)$/.test(k);
-let bkWait = null;  // 불러온 파일 (덮어쓰기를 누르기 전까지)
+// JSON으로 저장하는 값은 열리는지·모양이 맞는지 봐요 (깨진 값이 들어가 앱이 안 열리는 일 막기). 글자 값(frame·market 등)은 그대로
+const BK_JSON = { assets: "obj", ast_bopen: "arr", chart_idx: "obj", compare: "obj", filters: "arr", goal: "obj", hot_news: "obj", hot_read: "obj",
+  ind: "obj", lab: "obj", ma_set: "any", savings: "any", sector: "obj" };
+function bkOk(k, v) {
+  const want = /^(watch|seen_extras)_/.test(k) ? "arr" : BK_JSON[k];
+  if (!want) return true;
+  let j; try { j = JSON.parse(v); } catch (e) { return false; }
+  if (want === "arr") return Array.isArray(j);
+  if (want === "obj") return !!j && typeof j === "object" && !Array.isArray(j) && (k !== "assets" || (!!j.months && typeof j.months === "object"));
+  return true;
+}
+let bkWait = null;
+let bkDone = "";  // 방금 불러와서 새로 열렸으면 무엇을 불러왔는지 (칸을 펼쳐 알려 줘요)
+try { bkDone = sessionStorage.getItem("bk_done") || ""; sessionStorage.removeItem("bk_done"); } catch (e) { /* 없음 */ }  // 불러온 파일 (덮어쓰기를 누르기 전까지)
 function bkMake() {
   const keys = {};
   try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (bkMine(k)) keys[k] = localStorage.getItem(k); } } catch (e) { /* 아래 자산만 */ }
@@ -123,8 +136,8 @@ function bkRead(text) {
     return { at: null, keys: { assets: JSON.stringify({ accts: x.accts, months: x.months, year: x.year }) } };
   if (x.app !== "easystock-backup" || !x.keys || typeof x.keys !== "object") return null;
   const keys = {};
-  for (const [k, v] of Object.entries(x.keys)) if (bkMine(k) && typeof v === "string" && v.length < 500000) keys[k] = v;
-  if (keys.assets) { try { const a = JSON.parse(keys.assets); if (!a || typeof a.months !== "object") return null; } catch (e) { return null; } }
+  for (const [k, v] of Object.entries(x.keys)) if (bkMine(k) && typeof v === "string" && v.length < 500000 && bkOk(k, v)) keys[k] = v;
+  if (x.keys.assets && !keys.assets) return null;  // 자산 기록이 깨진 파일은 통째로 거절
   return Object.keys(keys).length ? { at: x.at || null, keys } : null;
 }
 function bkCount(keys) {
@@ -137,7 +150,7 @@ const bkDay = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : `${d.ge
 function bkAsk() {
   if (!bkWait) return "";
   const c = bkCount(bkWait.keys);
-  const what = [c.months ? `자산 기록 ${c.months}달` : "자산 기록 없음", c.watch ? `관심 종목 ${c.watch}개` : ""].filter(Boolean).join(" · ");
+  const what = [bkWait.keys.assets ? `자산 기록 ${c.months}달` : "자산 기록 없음(지금 것 그대로)", c.watch ? `관심 종목 ${c.watch}개` : ""].filter(Boolean).join(" · ");
   return `<div class="bk-ask"><b>이 파일로 덮어쓸까요?</b>
     <small>${bkWait.at ? `${esc(bkDay(bkWait.at))} 저장 · ` : ""}${esc(what)}</small>
     <small class="muted">지금 이 폰의 기록은 파일 내용으로 바뀌고, 앱이 한 번 새로 열려요.</small>
@@ -146,13 +159,15 @@ function bkAsk() {
 function bkBox() {
   let at = "";
   try { at = localStorage.getItem("bk_at") || ""; } catch (e) { /* 처음 */ }
-  return `<details class="sav-mine ast-backup"${bkWait ? " open" : ""}><summary>백업 파일 · 폰 바꿀 때</summary>
-      <p class="muted bk-p">자산 기록·관심 종목·설정은 이 폰 브라우저에만 있어요. 폰을 바꾸거나 방문 기록을 지우면 사라지니 가끔 파일로 저장해 두세요.
-        <b class="bk-at">${at ? `마지막 저장 ${esc(bkDay(at))}` : "아직 저장한 적 없어요"}</b></p>
+  const done = bkDone;
+  const ago = at ? Math.floor((Date.now() - new Date(at)) / 864e5) : null;
+  const st = ago == null ? "아직 안 함" : ago < 1 ? "오늘 저장" : `${ago}일 전 저장`;
+  return `<details class="sav-mine ast-backup"${bkWait || done ? " open" : ""}><summary>백업 파일 · 폰 바꿀 때 <small class="bk-st${ago == null || ago > 30 ? " old" : ""}">${st}</small></summary>
+      <p class="muted bk-p">자산 기록·관심 종목·설정은 이 폰 브라우저에만 있어요. 폰을 바꾸거나 방문 기록을 지우면 사라지니 가끔 파일로 저장하고, 카톡 나에게 보내기나 클라우드에도 올려 두세요.</p>
       <div class="ast-new"><button type="button" class="ast-btn" data-bk-save>파일로 저장</button><button type="button" class="ast-btn" data-bk-open>파일 불러오기</button></div>
-      <input type="file" id="bk-file" accept=".json,application/json,text/plain" hidden>
+      <input type="file" id="bk-file" hidden>
       <div id="bk-ask">${bkAsk()}</div>
-      <p class="muted bk-p" id="ast-bk-msg" aria-live="polite"></p>
+      <p class="muted bk-p" id="ast-bk-msg" aria-live="polite">${done ? `불러왔어요 · ${esc(done)}` : ""}</p>
       <details class="bk-txt"><summary>파일이 안 되면 글자로 옮기기</summary>
         <p class="muted bk-p">카톡 안 브라우저처럼 파일 저장이 막히면, 아래 글자를 복사해 나에게 보내기로 저장했다가 붙여 넣고 '불러오기'를 눌러요.</p>
         <textarea id="ast-json" rows="3" spellcheck="false" aria-label="백업 글자"></textarea>
@@ -161,11 +176,11 @@ function bkBox() {
 function bindBk(card) {
   const bm = $("#ast-bk-msg", card), bj = $("#ast-json", card), fi = $("#bk-file", card), ask = $("#bk-ask", card);
   if (!bm) return;
-  const say = (t) => { bm.textContent = t; };
+  const say = (t) => { bm.textContent = t; bkDone = ""; };
   const saved = () => {
     const now = new Date().toISOString();
     remember("bk_at", now);
-    const a = $(".bk-at", card); if (a) a.textContent = `마지막 저장 ${bkDay(now)}`;
+    const t = $(".bk-st", card); if (t) { t.textContent = "오늘 저장"; t.classList.remove("old"); }
   };
   const showAsk = () => { ask.innerHTML = bkAsk(); bindAsk(); };
   const take = (text) => {
@@ -180,6 +195,8 @@ function bindBk(card) {
       try {
         for (const [k, v] of Object.entries(bkWait.keys)) localStorage.setItem(k, v);
         localStorage.setItem("tools_tab", "asset");
+        const c = bkCount(bkWait.keys);
+        try { sessionStorage.setItem("bk_done", [`자산 기록 ${c.months}달`, c.watch ? `관심 종목 ${c.watch}개` : ""].filter(Boolean).join(" · ")); } catch (e) { /* 문구만 빠짐 */ }
       } catch (e) { say("이 브라우저에 저장할 수 없어요 (비공개 모드인지 확인해 주세요)"); return; }
       say("불러왔어요. 새로 여는 중…");
       location.reload();
@@ -187,13 +204,21 @@ function bindBk(card) {
   }
   bindAsk();
   $("[data-bk-save]", card).addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(bkMake())], { type: "application/json" });
-    const a = document.createElement("a"), url = URL.createObjectURL(blob);
-    a.href = url; a.download = `easystock-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const name = `easystock-backup-${new Date().toISOString().slice(0, 10)}.json`, text = JSON.stringify(bkMake());
+    // 아이폰 '홈 화면에 추가'한 앱은 다운로드가 조용히 안 돼서 공유 창(파일에 저장·카톡)으로 보내요
+    let file = null;
+    try { file = new File([text], name, { type: "application/json" }); } catch (e) { /* 옛 브라우저 */ }
+    if (navigator.standalone && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] }).then(() => { saved(); say("보냈어요. '파일에 저장'이나 나에게 보내기로 남겨 두세요."); },
+        (e) => say(e && e.name === "AbortError" ? "저장하지 않았어요" : "공유 창이 안 열려요. 아래 '글자로 옮기기'를 써 주세요."));
+      return;
+    }
+    const a = document.createElement("a"), url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    a.href = url; a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     saved();
-    say("다운로드(파일 앱)에 저장했어요. 나에게 보내기나 클라우드에도 올려 두면 더 안전해요.");
+    say(`${name} 저장을 시작했어요. 다운로드 폴더(아이폰은 파일 앱)에서 확인해 주세요. 안 보이면 아래 '글자로 옮기기'를 써요.`);
   });
   $("[data-bk-open]", card).addEventListener("click", () => { fi.value = ""; fi.click(); });
   fi.addEventListener("change", () => {
