@@ -87,3 +87,32 @@ def test_bad_news():
     assert news.bad("'9천피'에 발행된 ELS, 내달 만기 도래…원금 손실 우려")
     assert news.bad("외국인, 한국 주식 193억 달러 팔았다…AI 투자 불안에 흔들리는 코스피")
     assert not news.bad("AI 특수에 ICT 수출 703억달러…증가율 202% '역대 최고'")
+
+
+def test_main_retries_whole_round_when_nothing_came(tmp_path, monkeypatch):
+    """구글 뉴스가 잠깐 503을 줘서 하나도 못 받으면 쉬었다가 전체를 한 번 더 받아요."""
+    calls = []
+
+    def fake_build(prev=None):
+        calls.append(1)
+        n = 1 if len(calls) > 1 else 0
+        item = [dict(title="t", source="s", at=None, link="")] * n
+        return dict(updated="x", kr=item, us=item, hot={"kr": [], "us": []})
+
+    monkeypatch.setattr(news, "build", fake_build)
+    monkeypatch.setattr(news.time, "sleep", lambda s: None)
+    out = tmp_path / "news.json"
+    monkeypatch.setattr("sys.argv", ["news.py", "--out", str(out)])
+    news.main()
+    assert len(calls) == 2 and out.exists()
+
+
+def test_main_stops_after_last_round(tmp_path, monkeypatch):
+    monkeypatch.setattr(news, "build", lambda prev=None: dict(updated="x", kr=[], us=[], hot={"kr": [], "us": []}))
+    monkeypatch.setattr(news.time, "sleep", lambda s: None)
+    out = tmp_path / "news.json"
+    monkeypatch.setattr("sys.argv", ["news.py", "--out", str(out)])
+    import pytest
+    with pytest.raises(SystemExit):
+        news.main()
+    assert not out.exists()

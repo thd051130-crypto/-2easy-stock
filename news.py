@@ -67,6 +67,8 @@ TOPICS = [
 BAD = (r"급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|"
        r"스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|"
        r"\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign")
+ROUNDS = 2      # 한 번도 못 받으면 전체를 다시 받는 횟수
+ROUND_WAIT = 90  # 다시 받기 전에 쉬는 초 (워크플로 제한 10분 안)
 WORKERS = 6     # 동시에 받을 개수 (너무 많으면 구글이 막아요)
 
 
@@ -223,8 +225,14 @@ def main():
             prev = json.loads(args.prev.read_text())
         except (OSError, ValueError):
             print("지난 뉴스 파일이 없어서 핫 뉴스를 새로 시작해요")
-    data = build(prev=prev)
-    got = {m: len(data[m]) for m in MARKET_QUERIES}
+    for round_ in range(ROUNDS):
+        data = build(prev=prev)
+        got = {m: len(data[m]) for m in MARKET_QUERIES}
+        if any(got.values()) or round_ == ROUNDS - 1:
+            break
+        # 구글 뉴스가 잠깐 503(서버 바쁨)을 주면 검색이 한꺼번에 다 막혀요 → 조금 쉬고 한 번 더 (2026-11-22)
+        print(f"뉴스를 하나도 못 받아서 {ROUND_WAIT}초 쉬고 다시 받아요")
+        time.sleep(ROUND_WAIT)
     print(f"사건 뉴스 국장 {got['kr']}개, 미장 {got['us']}개, 핫 뉴스 국장 {len(data['hot']['kr'])}개·미장 {len(data['hot']['us'])}개 ({data['updated']})")
     for m in MARKET_QUERIES:
         for x in data["hot"][m]:
