@@ -117,7 +117,8 @@ const VIEWS = {
   // 홈 맨 위는 큰 발표·지수 급변 강조 칸(있을 때만), 그 아래는 세계 지수 → 더 보기 → 오늘의 리포트 요약.
   // 나머지(급락 점검 포함)는 '더 보기' 칸에 한 줄씩 접어 둬요. 매매 신호·가상계좌는 없앴어요 (사용자 2026-10-24)
   // 맨 위 얇은 지수 바는 세계 지수가 돌아가며 보이고, 누르면 세계 지수 화면(한 겹 위)이 열려요 (사용자 2026-10-24)
-  home: (d) => [worldTicker, bigEventsCard, marketStatusCard, worldHomeCard, () => homeMoreCard(d), homeReportCard],
+  // 칸 순서·자리는 사용자가 홈 화면 편집(#kr/more/edit)에서 고르고 이 폰에 기억해요 (more.js homeCards, 2026-11-22)
+  home: (d) => [worldTicker, ...homeCards(d)],
   report: (d) => [rpTabsBar, () => (rpTabNow() === "past" ? pastCards(d) : rpTabNow() === "week" ? weeklyCards() : reportCards(d))],
   watch: (d) => [() => watchCard(d), () => screenerCard(d), () => allStocksCard(d)],
   // 도구: 맨 위 가로로 미는 선택 바에서 고른 묶음 하나만 아래에 보여요 (사용자가 정함, 2026-10-17). 묶음은 PERF_TABS
@@ -242,6 +243,7 @@ function render() {
   else { clearTimeout(holdH); app.style.minHeight = ""; holdReady = false; }  // 다른 화면은 붙잡은 높이 없이
   app.innerHTML = paintCards(VIEWS[screen](d));
   if (keepAt != null) { window.scrollTo(0, keepAt); keepTap(); }
+  if (screen === "more" && moreKey === "edit") bindHomeEdit(app);
   app.querySelectorAll("[data-more]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.learnSet) learnTab = b.dataset.learnSet;  // 검색 화면 용어 사전 → 투자 공부 용어집
     openMore(b.dataset.more);

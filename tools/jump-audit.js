@@ -33,7 +33,7 @@ const ROOT = path.join(__dirname, '..');
 
 const SCREENS = [
   ['home', 'kr'], ['home', 'us'],
-  ...['news', 'learn', 'drop', 'cal', 'earn', 'watch', 'movers', 'heat', 'sectors', 'policy', 'flows', 'disclose', 'quiet', 'macro'].map((k) => ['more:' + k, 'kr']),
+  ...['news', 'learn', 'drop', 'cal', 'earn', 'watch', 'movers', 'heat', 'sectors', 'policy', 'flows', 'disclose', 'quiet', 'macro', 'edit'].map((k) => ['more:' + k, 'kr']),
   ['more:sectors', 'us'], ['more:heat', 'us'], ['report', 'kr'], ['watch', 'kr'], ['watch', 'us'],
   ['tools:asset', 'kr'], ['tools:sav', 'kr'], ['tools:lab', 'kr'], ['tools:lab', 'us'], ['tools:cal', 'kr'], ['tools:stress', 'kr'], ['tools:goal', 'kr'],
   ['chart', 'kr'], ['chart', 'us'], ['search', 'kr'], ['map', 'kr'], ['inbox', 'kr'], ['world', 'kr'], ['help', 'kr'], ['feedback', 'kr'],

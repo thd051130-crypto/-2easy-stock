@@ -9,7 +9,7 @@ Actions → 파이썬 → `paper/*.json` → pages.yml: `dashboard.py`(site/→_
 
 ## site/js/ (앱 화면 코드, 2026-11-20 app.js에서 나눔)
 `index.html`이 차례대로 부르는 파일 13개 + 그 화면을 열 때 받는 파일 5개(★, `core.js`의 `LAZY`).
-화면 → 칸 목록은 `view.js` `VIEWS`, 버튼 연결은 `view.js` `render`, 도구 탭은 `more.js` `PERF_TABS`, 홈 더 보기는 `more.js` `homeMoreRows`.
+화면 → 칸 목록은 `view.js` `VIEWS`, 버튼 연결은 `view.js` `render`, 도구 탭은 `more.js` `PERF_TABS`, 홈 더 보기는 `more.js` `homeMoreRows`, 홈 칸 순서·자리는 `more.js` `homeCards`(사용자 편집, localStorage home_layout).
 여러 파일이 같이 쓰는 이름은 그냥 전역이에요(모듈 아님). 먼저 받는 파일이 ★ 파일 안의 것을 바로 부르면 안 돼요: 화면 두 곳 이상이 쓰는 건 먼저 받는 파일에 두기.
 ```
 core.js     설정·주소 go/back/openStock/openMap·도우미 esc/money/pct·뉴스 저장·load·공부 자료 loadLearn·지수 일봉 loadCharts/chartsReady·나중에 받기 needJs/LAZY(~490)
@@ -17,7 +17,7 @@ view.js     움직임 drawIn/countUp·칸 오류 막기 paintCards/cardFail·VIE
 watch.js    관심·전체 종목·조건 검색 watchCard/screenerCard/bindWatch
 search.js   종목 이름 검색 scoreOf/loadSymbols(~108) · 문장 검색·테마 searchCard/findStocks/themeCard(~160)
 inbox.js    메시지함·리포트·지난 리포트·주간 reportCards/pastCards/weeklyCards/inboxCard · 주간 점검 한 줄 healthLine
-more.js     도구 탭 PERF_TABS · 홈 더 보기 homeMoreRows/moreView · 지금 뉴스·핫 뉴스 newsCard/hotCard
+more.js     도구 탭 PERF_TABS · 홈 더 보기 homeMoreRows/moreView · 홈 화면 편집 HOME_ITEMS/homeCards/homeEditCard(주소 끝 edit) · 지금 뉴스·핫 뉴스 newsCard/hotCard
 learn.js    투자 공부 learnView/learn*Cards/storyCard/bindLearn
 chart.js    지수 차트 drawTrend/smaOf/rsiOf · 비교 차트 compareCard(~251) · 지수 칸 trendCard/maPanel(~559)
 home.js     급락 점검 dropCard · 세계 지수 worldTicker/worldCard(~187) · 경기 macroCard·정책 policyCard · 공시 · 장 상황
@@ -34,7 +34,7 @@ main.js     서비스워커 등록 + 처음 그리기·자료 받기 (맨 마지
 ```
 
 ## site/style.css
-1-120 색 토큰(다크 ~40·~74) · 265 아래 메뉴 · 283 홈 · 411 종목 · 511 산업 지도 · 663 적립식 · 798 목표 · 861 큰 발표 · 895 핫 뉴스 · 942 세계 지수 · 968 일정 · 1051 주간 · 1111 실험실 · 1220 자산 기록
+1-120 색 토큰(다크 ~40·~74) · 265 아래 메뉴 · 283 홈(편집 .he-* ~896) · 411 종목 · 511 산업 지도 · 663 적립식 · 798 목표 · 861 큰 발표 · 895 핫 뉴스 · 942 세계 지수 · 968 일정 · 1051 주간 · 1111 실험실 · 1220 자산 기록
 
 ## 파이썬 (만드는 것 · 언제)
 - daily.py(+movers·sectors·quiet_volume·marketdata), flows.py, report_desks.py(+market_story·analyst_view), learn_cases.py, reading.py → daily.yml 국장 17:30·미장 07:30

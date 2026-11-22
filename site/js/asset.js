@@ -104,11 +104,11 @@ function astGrid() {
 // 이 폰에만 저장된 값(자산 기록·관심 종목·설정)을 파일 하나로 내보내고, 다른 폰에서 그 파일로 되살려요. 로그인·서버 없음.
 // github.io 주소는 다른 저장소 페이지와 저장소를 같이 써서, 이 앱이 쓰는 이름만 담아요 (remember(...)로 새 값을 만들면 여기에도)
 const BK_KEYS = ["assets", "ast_bopen", "ast_live", "chart_idx", "cmp_f", "cmp_line", "compare", "divcal_off", "fb_draft", "filters", "frame",
-  "goal", "guide_v1", "heat_p", "hot_fold", "hot_news", "hot_read", "inbox_seen", "inbox_y", "ind", "lab", "learn_tab", "ma_set", "map_color",
+  "goal", "guide_v1", "heat_p", "home_layout", "hot_fold", "hot_news", "hot_read", "inbox_seen", "inbox_y", "ind", "lab", "learn_tab", "ma_set", "map_color",
   "map_days", "map_mode", "market", "news_url", "pol_r", "read_cat", "savings", "scr_all", "sector", "tools_tab", "watchSort", "world_g", "world_p", "world_tab"];
 const bkMine = (k) => BK_KEYS.includes(k) || /^(watch|seen_extras)_(kr|us)$/.test(k);
 // JSON으로 저장하는 값은 열리는지·모양이 맞는지 봐요 (깨진 값이 들어가 앱이 안 열리는 일 막기). 글자 값(frame·market 등)은 그대로
-const BK_JSON = { assets: "obj", ast_bopen: "arr", chart_idx: "obj", compare: "obj", filters: "arr", goal: "obj", hot_news: "obj", hot_read: "obj",
+const BK_JSON = { assets: "obj", ast_bopen: "arr", chart_idx: "obj", compare: "obj", filters: "arr", goal: "obj", home_layout: "obj", hot_news: "obj", hot_read: "obj",
   ind: "obj", lab: "obj", ma_set: "any", savings: "any", sector: "obj" };
 function bkOk(k, v) {
   const want = /^(watch|seen_extras)_/.test(k) ? "arr" : BK_JSON[k];
@@ -150,7 +150,7 @@ const bkDay = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : `${d.ge
 function bkAsk() {
   if (!bkWait) return "";
   const c = bkCount(bkWait.keys);
-  const what = [bkWait.keys.assets ? `자산 기록 ${c.months}달` : "자산 기록 없음(지금 것 그대로)", c.watch ? `관심 종목 ${c.watch}개` : ""].filter(Boolean).join(" · ");
+  const what = [bkWait.keys.assets ? `자산 기록 ${c.months}달` : "자산 기록 없음(지금 것 그대로)", c.watch ? `관심 종목 ${c.watch}개` : "", bkWait.keys.home_layout ? "홈 화면 편집" : ""].filter(Boolean).join(" · ");
   return `<div class="bk-ask"><b>이 파일로 덮어쓸까요?</b>
     <small>${bkWait.at ? `${esc(bkDay(bkWait.at))} 저장 · ` : ""}${esc(what)}</small>
     <small class="muted">지금 이 폰의 기록은 파일 내용으로 바뀌고, 앱이 한 번 새로 열려요.</small>
