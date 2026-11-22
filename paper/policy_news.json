@@ -1,5 +1,5 @@
 {
- "day": "2026-11-22",
+ "day": "2026-11-23",
  "items": {
   "us-fed": [
    {
@@ -45,16 +45,16 @@
   ],
   "world-oil": [
    {
-    "title": "“이란, 유가 하락하자 호르무즈 유조선 공격 강화…하루 한 건 꼴”",
-    "source": "KBS 뉴스",
+    "title": "\"이란, 유가 하락하자 호르무즈 유조선 공격 강화…하루 1건꼴\"",
+    "source": "연합뉴스",
     "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBPTzhUc2RVLUZtdGRGVGFEYm5GNS1YcFJSQ1BTMGRZWERhZGVWY19DQU1XOXJTRlBoZmJmNWt1RHRUbDJPUlJQdFBqcFItZWp3QUdDc1pVMkRFYTA?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTFBSMldkcG5UXzJzQ0FrNXB4ZzNFcnlNcHNDeWlaMWlWbGJzME1PY1QyelBmbjZyYU4xUEtMVkp3Mlk3RGF2OTdWYThyNVBVNzNVNWlzSElWMW5TVXJoV050adIBYEFVX3lxTFBSMldkcG5UXzJzQ0FrNXB4ZzNFcnlNcHNDeWlaMWlWbGJzME1PY1QyelBmbjZyYU4xUEtMVkp3Mlk3RGF2OTdWYThyNVBVNzNVNWlzSElWMW5TVXJoV050aQ?oc=5"
    },
    {
-    "title": "Oil Prices Settle More Than 1% Higher, Log Strongest Month Since March",
+    "title": "Hormuz Reopening Could be OPEC’s Undoing: Bousso",
     "source": "EnergyNow.com",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMikAFBVV95cUxPa1hxYUNYOVNkdlVySWM0cDd2VnBIOFY5MU56eWRhTzZvSjNBNDFjYzhzSnB2TS03V01tTUtRMU9pZURsaVdUR3BGa0VIS3VwMTA3QVR6ZWdEOGtyT1BNRUxqUXNyRnBsU2J1Mk10bjZtazlFelZCek8zSy1obXN5VzBGQlU3bnhzWHU2QU1xdGM?oc=5"
+    "date": "2026-11-18",
+    "link": "https://news.google.com/rss/articles/CBMigwFBVV95cUxNNU1BTkRDTWgwMEJBYkYwNzZ2c2NyZHEtaldfdlZzNjdUbS0zZEFmWW9zYzZma1pFc1FtclZTUnZSYnhRd1FwZTRIYXgtcUpEQzBwM1MxY1pyek9ZOXBSbzF1dmYzNGdRMmphWlNqc2RqLTBSTWgyV0dZWTFhOGJJaE13aw?oc=5"
    }
   ],
   "world-us-china": [
@@ -73,38 +73,38 @@
   ],
   "kr-budget-ai": [
    {
-    "title": "경기도, 2027년 `민생사수 예산`총 3조 494억 원 마련",
-    "source": "광역행정신문",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiREFVX3lxTFBvQWpBODB5WmppYzU0RzV4blctMC1MVng4NVI5LXpEQUVqa3lSMXdmdVhrUmdwN2REUDZWV3lIaTItTEg5?oc=5"
-   },
-   {
     "title": "전남광주교육청, 2027년 예산 7조7418억원…AI·반도체 인재 양성",
     "source": "더파워",
     "date": "2026-11-16",
     "link": "https://news.google.com/rss/articles/CBMifkFVX3lxTE5yd05CR2owc2NoNGZBNGlFR0FTTHhacG9ZR0MzR004b2lXQ3Vsang1VDE4Y3JtZnZ2ckltM0RERzQ1YmNaREhRbDh3LUhTNjVkMFN4OVpHQnR6ZXozVy1Nb1ZVemFxakYyTUwteUpFeV93S1lCTldFRjRycjJxUQ?oc=5"
+   },
+   {
+    "title": "[2027년 예산] 슈퍼 예산에 증액 남발 심사…\"반도체 추가 세수 3년이면 끝?\"",
+    "source": "이코노미톡뉴스",
+    "date": "2026-11-17",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBoVDhyOG16T1NOaW9JRnV6OUhUN0Q1WmtmRlBpY0NIeS10eUJCMmlVR2RRaDRmX3N5UWlQTm1qSXdBVWVSUG5XYWx1SWFZQlExMUdDRExsMGNIQmo1UXZqeU0yMXZFZmR2eDdibA?oc=5"
    }
   ],
   "kr-buyback": [
-   {
-    "title": "자사주 소각 의무화 시대, 소각 기업을 어떻게 볼 것인가",
-    "source": "네이버 프리미엄콘텐츠",
-    "date": "2026-11-18",
-    "link": "https://news.google.com/rss/articles/CBMigwFBVV95cUxObkwzbVBhaVZRZ1FrLWRkYnp3VnppMlZPUkRoOFpOaXZ6aGxnS1ZWNVEtaVBqVEo0eHpyUW5xR2NOZ085NjM3YUl2SFFYRjdBSFVWaDNESFVTYnZleDM3QUNQRWxoWVhNM3dXbjR4VUJTR3JvMlRGLTRUTlVRSmUtX0dFcw?oc=5"
-   },
    {
     "title": "[허정수칼럼] 증권사 자사주 소각, 그 후를 묻다",
     "source": "블로터",
     "date": "2026-11-18",
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBRSDFOZlVIQ2I1aWdsV3loMkMzeFhKOVd3OWFMM0lrQVN1REV1RFlwRFpoQzBKNXAtQVFHVUFiVUE0WW5kLWd1TGRTeWZvNGQwb25qN2tHR1oxSmREZDJJYXJGekVsQTA3RjNqStIBbEFVX3lxTFBRSDFOZlVIQ2I1aWdsV3loMkMzeFhKOVd3OWFMM0lrQVN1REV1RFlwRFpoQzBKNXAtQVFHVUFiVUE0WW5kLWd1TGRTeWZvNGQwb25qN2tHR1oxSmREZDJJYXJGekVsQTA3RjNqSg?oc=5"
+   },
+   {
+    "title": "주총 문화 바뀔까…개정 상법 앞두고 드러난 과제들",
+    "source": ":: 위즈경제 ::",
+    "date": "2026-11-17",
+    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE55U3dlOUhLa3hfU21EcUluVGplRmtqQTl1VGtXYmtxMUd0WlZfd3oxMWk5YlR5QnRPQ2xoTGYzNkh2N2pXSW9vdUJrbnNYbk5tNWplXw?oc=5"
    }
   ],
   "us-chip-tariff": [
    {
-    "title": "[K-수출 1조달러] \"쾌거 속 반도체 착시…낙수효과 한계·통상 리스크 과제\" |",
-    "source": "연합인포맥스",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTFBwazdEMVVqT3k3S0NwbTNTT1NCTjZXbXBKbHVkUUR1UlFESGx4OXJ2MzlLUGUtVFpBZ1lDRjU1SGVmSGZwaDRPbnZTeFVaaGZ2VkNNaVloQzAwS0RrTTVPYVY2bm1EbktwV0xvRmtpNUNwVDVq?oc=5"
+    "title": "2026 미국 중간선거 결과와 한미 통상 현안 전망",
+    "source": "법률신문",
+    "date": "2026-11-16",
+    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE9MTmJXdk5la3dfNl9ZUEFWNWJVSDRuTFNDTGlVYzVHdFlJWW14N0RlengxNE9Rd0NKSlVDNXBZdFZzSnFhSF80anc2ZUZMbm9rc043dUNFRFdiQjB5dFh4WlAwQ0ZKYU1lQXFEWUNn0gFyQVVfeXFMT3psODVOV3IzN2RsS21oN2w1c0xUX3JrUmF3OTBOVlI0WGxheDZhWHVVVzhtNF9NVGlyckNYRWpVam5pZzQyOTFXN1JlZXlGRzM3U242eldqUkJfbE95Q1hBeHVaQnBjemZJUkM1NnhOdVln?oc=5"
    },
    {
     "title": "Semiconductor Foundry: U.S. Chip Tariffs and Production",
@@ -143,16 +143,16 @@
   ],
   "kr-dividend-tax": [
    {
-    "title": "하락장의 역설 … 배당률 5% 넘긴 곳 두배 쑥",
-    "source": "매일경제 마켓",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiUkFVX3lxTFB6SUZMdUk4VkNvSzlwY2R0NF85REVuQ1RxaEtrZmRwMXQ0S1FWSnR4QzZ6XzBKQkdfekYtM3otMG9HZGdWYjhVRHVJMGhXdTdJd0E?oc=5"
-   },
-   {
     "title": "아모레퍼시픽홀딩스, 연결 40% 배당에 감액분 얼마나 담길까",
     "source": "한국M&A경제신문",
     "date": "2026-11-17",
     "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE8xVk5SV2JoR0pMSWllQ1B0bHVGTDRYZEM5NTJzRzE3Z0NIQkR5YkR4dGZ6RERxdmt1Z053c0JEOFFWampZRUkwSUtqMU5nVUFGUEI2b1F4RnlPU240ZVVjTThCUEVkQXQyTGc?oc=5"
+   },
+   {
+    "title": "하락장의 역설 … 배당률 5% 넘긴 곳 두배 쑥",
+    "source": "매일경제",
+    "date": "2026-11-16",
+    "link": "https://news.google.com/rss/articles/CBMiUkFVX3lxTE9HYjI3LXo5S3luNWIzbC1PNFFTdmVKdmFiSGZwaHBfYXV5WmlFcDN5cjh5eVJGVDVNMzBBU0puSzB3UFJoWms2cU13aDc5MTM1b1E?oc=5"
    }
   ],
   "kr-budget-future": [],
