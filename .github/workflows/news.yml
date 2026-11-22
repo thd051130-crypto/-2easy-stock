@@ -61,4 +61,4 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python health.py fail --workflow news
+        run: python health.py fail --workflow news --market-days  # 장 쉬는 날(주말·공휴일)엔 안 보내요
