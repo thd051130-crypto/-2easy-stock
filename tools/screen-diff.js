@@ -41,6 +41,7 @@ async function shoot(browser, base, sc, m, scheme = 'light', scale = 1) {
   await page.evaluate(([s, arg, m]) => {
     if (market !== m) selectMarket(m);
     if (s === 'tools' && arg) perfTabKey = arg;
+    if (s === 'report' && arg) rpTab = arg;
     if (s === 'stock') openStock(arg); else if (s === 'more') openMore(arg); else { if (screen === s) { lastView = ''; render(); } else go(s); }
   }, [s, arg, m]);
   await settle(s === 'stock' ? 4000 : 2500);
