@@ -1391,6 +1391,15 @@ a.more { text-decoration: none; }
 .ast-mix-leg i.c { background: color-mix(in srgb, var(--ast-g) 30%, var(--text-muted)); opacity: .55; }
 .ast-total { margin: 8px 2px 0; font-size: 14px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .ast-total b { color: var(--text-primary); font-size: 16px; }
+.ast-total-b { display: block; width: calc(100% - 4px); text-align: left; background: none; border: 1px solid transparent; border-radius: var(--radius-s); padding: 6px 8px; margin: 6px 2px 0; font: inherit; font-size: 14px; cursor: pointer; }
+.ast-total-b[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); }
+.ast-total-b .ast-tile-g { display: inline; margin-left: 6px; }
+.ast-hero .ast-tile small.up { color: var(--up); } .ast-hero .ast-tile small.down { color: var(--down); }
+.ast-date { display: flex; align-items: flex-end; gap: 8px; margin-top: 12px; }
+.ast-date label { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.ast-date input { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary); font: inherit; padding: 8px 10px; min-height: 40px; color-scheme: light dark; }
+.ast-since { margin: 8px 2px 0; font-size: 13px; color: var(--text-secondary); }
+.ast-since b { color: var(--text-primary); }
 .ast-cash { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
 .ast-cash > span:first-child { flex: none; width: 52px; }
 .ast-cash .alert-input { padding: 0 10px; }
