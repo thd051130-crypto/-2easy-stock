@@ -4,6 +4,8 @@
 알림이 안 온 날이 "쉬는 날"인지 "고장"인지 구분할 수 있게 하려는 거예요.
   - 워크플로가 실패하면 마지막 단계에서 `python health.py fail`이 "[고장]" 알림을 보내요.
     15분마다 도는 telegram-bot처럼 같은 실패가 이어지면 처음 한 번만 보내요 (바로 전 실행도 실패였으면 조용히).
+    `--market-days`를 붙인 워크플로(장중 뉴스)는 국장·미장이 둘 다 쉬는 날(주말·공휴일)엔 알림을 안 보내요
+    (사용자 2026-11-22 "주말같이 장이 안열리는 날에는 보내지마").
   - 매일 자료를 만들기 전에 check_data()로 시세 데이터를 점검해요 (daily.py가 불러요).
     대형주 30% 넘게 시세가 비었거나 지수가 없으면 그날 자료를 만들지 않고 "[고장]"으로 알려요.
   - `python health.py weekly`: 지난 7일 워크플로 실행 결과를 세서 "[주간 점검]"을 보내고 paper/health.json에 남겨요
@@ -45,6 +47,12 @@ WORKFLOWS = {
     "news": ("장중 뉴스", None),
     "keys": ("API 키 점검", None),
 }
+
+
+def market_closed(d):
+    """한국 날짜 d에 국장·미장이 둘 다 쉬면 True (주말, 두 거래소 모두 휴장인 날)."""
+    from econ_calendar import closed
+    return closed("kr", d) and closed("us", d)
 
 
 # ---------------------------------------------------------------- 시세 데이터 점검
@@ -215,6 +223,7 @@ def main():
     f.add_argument("--workflow", required=True)
     f.add_argument("--step", help="실패한 단계 이름 (알면)")
     f.add_argument("--always", action="store_true", help="바로 전 실행이 실패였어도 보내기 (실행 자체는 성공한 부분 실패)")
+    f.add_argument("--market-days", action="store_true", help="국장·미장이 둘 다 쉬는 날(한국 날짜)엔 알림 안 보내기")
     w = sub.add_parser("weekly", help="지난 7일 실행 결과 점검")
     w.add_argument("--dry-run", action="store_true")
     w.add_argument("--out", type=pathlib.Path, default=PATH)
@@ -222,6 +231,9 @@ def main():
 
     repo, token = os.getenv("GITHUB_REPOSITORY"), os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     if args.cmd == "fail":
+        if args.market_days and market_closed(dt.datetime.now(KST).date()):
+            print("오늘은 국장·미장이 둘 다 쉬는 날이라 고장 알림을 보내지 않아요.")
+            return
         run_id = os.getenv("GITHUB_RUN_ID", "0")
         url = f"{os.getenv('GITHUB_SERVER_URL', 'https://github.com')}/{repo}/actions/runs/{run_id}"
         try:
