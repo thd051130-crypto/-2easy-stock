@@ -335,9 +335,7 @@ function weeklyCards() {
     ${items.length ? Object.keys(byDay).sort().map((d) => `<div class="wk-dayg"><p class="wk-dh">${wkDay(d)}</p><ul>${byDay[d].map((x) =>
       `<li><span class="badge ${TAG[x.k] ? TAG[x.k][1] : ""}">${TAG[x.k] ? TAG[x.k][0] : "일정"}</span><div>${x.h}${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</div></li>`).join("")}</ul></div>`).join("")
     : `<p class="empty">아직 잡힌 큰 일정 없음</p>`}</section>`;
-  return [head, secCard, evCard, issCard, nxCard, restCard,
-    `<section class="card"><p class="muted" style="margin:0">토요일 아침에 한 주를 묶어 텔레그램으로도 보내요. 공개 자료로 만든 참고용이고 사고팔기 판단은 안 해요.
-      위 국장·미장 탭으로 업종을 바꿔 봐요.</p></section>`];
+  return [head, secCard, evCard, issCard, nxCard, restCard];
 }
 function bindRpTabs() {
   $("#app").querySelectorAll("[data-rp-tab]").forEach((b) => b.addEventListener("click", () => { rpTab = b.dataset.rpTab; render(); }));

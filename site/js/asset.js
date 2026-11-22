@@ -8,7 +8,7 @@ const astBrokers = () => AST.accts.map((a) => a.broker).filter((b, k, all) => al
 const astIds = (x) => AST.accts.map((a) => a.id).concat(x ? x.items.map((i) => i.acct).concat(Object.keys(x.cash || {})) : []).filter((a, k, all) => all.indexOf(a) === k);
 const astToSel = (cur, attr) => `<select ${attr}>${astBrokers().map((b) => `<optgroup label="${esc(b)}">${AST.accts.filter((a) => a.broker === b)
   .map((a) => `<option value="${esc(a.id)}" ${a.id === cur ? "selected" : ""}>${esc(b)} · ${esc(a.name)}</option>`).join("")}</optgroup>`).join("")}</select>`;
-let astOpen = null, astQuery = "", astTo = AST.accts[0].id, astAnim = false, astChart = null, astTip = null;
+let astOpen = null, astQuery = "", astTo = AST.accts[0].id, astAnim = false, astChart = null, astTip = null, astSumK = null;
 const astSave = () => { remember("assets", JSON.stringify(AST)); };
 const astPrevYm = (ym) => Object.keys(AST.months).filter((k) => k < ym && astFilled(k)).sort().pop() || null;
 const astKey = (i) => `${i.acct}|${i.m}:${i.code}`;
@@ -57,6 +57,31 @@ function astLiveLine(ym) {
   return `<p class="ast-total ast-live-l">지금 시세로 <b>${savWon(e.total)}</b>${e.pct != null ? ` <span>${astWonD(e.gain)} (${astPct(e.pct)})</span>` : ""} <small class="muted">· ${esc(astDay(e.day))}</small></p>`;
 }
 
+// 기록한 날짜 (사용자 2026-11-22 "기록 한 날짜도 옆에 쓸 수 있는 칸, 달력 선택해서"). 안 적은 달은 그 달 1일로 셈
+const astEnd = (ym) => { const [y, m] = ym.split("-").map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
+const astRecDay = (ym) => (AST.months[ym] && AST.months[ym].date) || `${ym}-01`;
+const astToday = () => { const d = new Date(); return `${ymOf(d)}-${String(d.getDate()).padStart(2, "0")}`; };
+const astDot = (ds) => `${ds.slice(2, 4)}.${ds.slice(5, 7)}.${ds.slice(8)}`;
+const astFirstYm = () => Object.keys(AST.months).filter(astFilled).sort()[0] || null;
+// a → b 가 몇 달 며칠인지 (b가 앞이면 null)
+function astSince(a, b) {
+  const [ay, am, ad] = a.split("-").map(Number), [by, bm, bd] = b.split("-").map(Number);
+  let m = (by - ay) * 12 + (bm - am);
+  if (bd < ad) m--;
+  if (m < 0) return null;
+  const mid = new Date(ay, am - 1 + m, ad), end = new Date(by, bm - 1, bd);
+  return { m, d: Math.round((end - mid) / 864e5) };
+}
+// 첫 기록 후 한 달이 지나면 표시 (사용자 2026-11-22 "첫 기록 이후 한달 경과하면 표시해줘")
+function astSinceLine(to) {
+  const f = astFirstYm();
+  if (!f) return "";
+  const s = astSince(astRecDay(f), to);
+  if (!s || s.m < 1) return "";
+  const y = Math.floor(s.m / 12), mm = s.m % 12;
+  const t = `${y ? `${y}년 ` : ""}${mm ? `${mm}달` : ""}${s.d ? ` ${s.d}일` : ""}`.trim();
+  return `<p class="ast-since">📅 첫 기록(${astDot(astRecDay(f))}) 후 <b>${t}</b> 지났어요</p>`;
+}
 function assetCard() {
   return `<section class="card" id="ast-card"><h2 class="goal-h"><span>월별 자산 기록</span>
     <span class="goal-h-r"><small>이 폰에만 저장</small></span></h2>${astOpen ? astDetail(astOpen) : astGrid()}</section>`;
@@ -95,7 +120,7 @@ function astGrid() {
       ${astChart ? `<div id="ast-chart">${astChartHtml(y)}</div>` : ""}` : "";
   return `<div class="ast-year"><button type="button" class="ast-nav" data-ast-y="-1" aria-label="작년">‹</button><b>${y}년</b>
       <button type="button" class="ast-nav" data-ast-y="1" aria-label="다음 해" ${y >= new Date().getFullYear() ? "disabled" : ""}>›</button></div>
-    ${astLastYm() ? astLiveSw() + astLiveBox() : ""}${sum}<div class="ast-grid">${cells}</div>
+    ${astSinceLine(astToday())}${astLastYm() ? astLiveSw() + astLiveBox() : ""}${sum}<div class="ast-grid">${cells}</div>
     <p class="muted note" style="margin:10px 0 0">달을 누르면 크게 열려요. 총자산 = 투자금(산 돈) + 예수금. 위 4칸을 누르면 달마다 그래프가 나와요.</p>
     ${bkBox()}`;
 }
@@ -104,11 +129,11 @@ function astGrid() {
 // 이 폰에만 저장된 값(자산 기록·관심 종목·설정)을 파일 하나로 내보내고, 다른 폰에서 그 파일로 되살려요. 로그인·서버 없음.
 // github.io 주소는 다른 저장소 페이지와 저장소를 같이 써서, 이 앱이 쓰는 이름만 담아요 (remember(...)로 새 값을 만들면 여기에도)
 const BK_KEYS = ["assets", "ast_bopen", "ast_live", "chart_idx", "cmp_f", "cmp_line", "compare", "divcal_off", "fb_draft", "filters", "frame",
-  "goal", "guide_v1", "heat_p", "hot_fold", "hot_news", "hot_read", "inbox_seen", "inbox_y", "ind", "lab", "learn_tab", "ma_set", "map_color",
+  "goal", "guide_v1", "heat_p", "home_layout", "hot_fold", "hot_news", "hot_read", "inbox_seen", "inbox_y", "ind", "lab", "learn_tab", "ma_set", "map_color",
   "map_days", "map_mode", "market", "news_url", "pol_r", "read_cat", "savings", "scr_all", "sector", "tools_tab", "watchSort", "world_g", "world_p", "world_tab"];
 const bkMine = (k) => BK_KEYS.includes(k) || /^(watch|seen_extras)_(kr|us)$/.test(k);
 // JSON으로 저장하는 값은 열리는지·모양이 맞는지 봐요 (깨진 값이 들어가 앱이 안 열리는 일 막기). 글자 값(frame·market 등)은 그대로
-const BK_JSON = { assets: "obj", ast_bopen: "arr", chart_idx: "obj", compare: "obj", filters: "arr", goal: "obj", hot_news: "obj", hot_read: "obj",
+const BK_JSON = { assets: "obj", ast_bopen: "arr", chart_idx: "obj", compare: "obj", filters: "arr", goal: "obj", home_layout: "obj", hot_news: "obj", hot_read: "obj",
   ind: "obj", lab: "obj", ma_set: "any", savings: "any", sector: "obj" };
 function bkOk(k, v) {
   const want = /^(watch|seen_extras)_/.test(k) ? "arr" : BK_JSON[k];
@@ -150,7 +175,7 @@ const bkDay = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : `${d.ge
 function bkAsk() {
   if (!bkWait) return "";
   const c = bkCount(bkWait.keys);
-  const what = [bkWait.keys.assets ? `자산 기록 ${c.months}달` : "자산 기록 없음(지금 것 그대로)", c.watch ? `관심 종목 ${c.watch}개` : ""].filter(Boolean).join(" · ");
+  const what = [bkWait.keys.assets ? `자산 기록 ${c.months}달` : "자산 기록 없음(지금 것 그대로)", c.watch ? `관심 종목 ${c.watch}개` : "", bkWait.keys.home_layout ? "홈 화면 편집" : ""].filter(Boolean).join(" · ");
   return `<div class="bk-ask"><b>이 파일로 덮어쓸까요?</b>
     <small>${bkWait.at ? `${esc(bkDay(bkWait.at))} 저장 · ` : ""}${esc(what)}</small>
     <small class="muted">지금 이 폰의 기록은 파일 내용으로 바뀌고, 앱이 한 번 새로 열려요.</small>
@@ -249,16 +274,20 @@ const AST_CHART = {
   chg: { title: "그 달 늘어난 돈", bar: "그 달 증감", line: "쌓인 증감" },
   div: { title: "그 달 받은 배당", bar: "배당", line: "쌓인 배당" },
   cash: { title: "예수금", bar: "예수금", line: "현금 비중", pct: true },
+  // 펼친 달 요약 칸용 (사용자 2026-11-22 "여기도 칸 누르면 그래프")
+  cost: { title: "총 투자금", bar: "투자금", line: "총자산" },
+  n: { title: "종목 수", bar: "종목 수", line: "" },
 };
 let astMode = "trend";
-function astSeries(y, k) {
-  const end = String(y) === ymNow().slice(0, 4) ? ymNow() : `${y}-12`;
+function astSeries(y, k, endYm) {
+  const end = endYm || (String(y) === ymNow().slice(0, 4) ? ymNow() : `${y}-12`);
   const yms = Array.from({ length: 12 }, (_, i) => ymAdd(end, i - 11));
   let acc = 0, accD = 0;
   const pts = yms.map((ym) => {
     if (!astFilled(ym)) return { ym, bar: null, line: null };
     const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
-    if (k === "total") return { ym, bar: s.cost, line: s.total, s };
+    if (k === "total" || k === "cost") return { ym, bar: s.cost, line: s.total, s };
+    if (k === "n") return { ym, bar: s.n, line: null, s };
     if (k === "chg") { const d = ps ? s.total - ps.total : 0; acc += d; return { ym, bar: d, line: acc, s }; }
     if (k === "div") { accD += s.div; return { ym, bar: s.div, line: accD, s }; }
     return { ym, bar: s.cash, line: s.total ? (s.cash / s.total) * 100 : 0, s };
@@ -266,20 +295,21 @@ function astSeries(y, k) {
   const first = pts.findIndex((p) => p.bar != null);
   return first < 0 ? [] : pts.slice(Math.max(0, Math.min(first, 6)));
 }
-const astFmt = (k, v) => (k === "div" ? astDivW(v) : k === "chg" ? `${v > 0 ? "+" : v < 0 ? "-" : ""}${astWon(Math.abs(v))}` : astWon(v));
-function astChartHtml(y) {
-  const k = astChart, cfg = AST_CHART[k], pts = astSeries(y, k), has = pts.filter((p) => p.bar != null);
+const astFmt = (k, v) => (k === "n" ? `${v}개` : k === "div" ? astDivW(v) : k === "chg" ? `${v > 0 ? "+" : v < 0 ? "-" : ""}${astWon(Math.abs(v))}` : astWon(v));
+// k·end를 주면 펼친 달 요약 칸 그래프 (그 달까지 12달)
+function astChartHtml(y, k = astChart, end) {
+  const cfg = AST_CHART[k], pts = astSeries(y, k, end), has = pts.filter((p) => p.bar != null);
   if (!has.length) return "";
   const sel = has.find((p) => p.ym === astTip) || has[has.length - 1];
   const head = k === "total" ? sel.line : sel.bar;
-  const sub = `${+sel.ym.slice(5)}월 · ${k === "total" ? cfg.bar : cfg.line} ${k === "total" ? savWon(sel.bar) : cfg.pct ? `${Math.round(sel.line)}%` : k === "chg" ? astWonD(sel.line) : astMan(sel.line)}`;
+  const sub = k === "n" ? `${+sel.ym.slice(5)}월 기록 기준` : `${+sel.ym.slice(5)}월 · ${k === "total" ? cfg.bar : cfg.line} ${k === "total" ? savWon(sel.bar) : cfg.pct ? `${Math.round(sel.line)}%` : k === "chg" ? astWonD(sel.line) : astMan(sel.line)}`;
   const tabs = `<div class="period ast-mode" role="group" aria-label="그래프 보기"><button type="button" data-ast-mode="trend" aria-pressed="${astMode === "trend"}">추이</button><button type="button" data-ast-mode="mix" aria-pressed="${astMode === "mix"}">구성</button></div>`;
   const top = `<div class="ast-ch-top"><div><small>${esc(cfg.title)}</small><b class="${cfg.sign ? astCls(head) : ""}">${astFmt(k, head)}</b><span class="muted">${sub}</span></div>
-    <div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span><span><i class="l"></i>${cfg.line}</span></div></div>`;
-  if (astMode === "mix") return `<div class="ast-chart">${top}${k === "div" ? astDivMix(sel.ym) : astMix(sel.ym)}${tabs}</div>`;
+    <div class="ast-leg"><span><i class="b${cfg.sign ? " sign" : ""}"></i>${cfg.bar}</span>${cfg.line ? `<span><i class="l"></i>${cfg.line}</span>` : ""}</div></div>`;
+  if (k === "n") { /* 종목 수는 추이만 */ } else if (astMode === "mix") return `<div class="ast-chart">${top}${k === "div" ? astDivMix(sel.ym) : astMix(sel.ym)}${tabs}</div>`;
   const n = pts.length, W = 340, H = 172, L = 6, Rr = 6, T = 16, B = 24, iw = W - L - Rr, ih = H - T - B;
   // 막대와 선은 같은 눈금 (현금 비중 %만 따로 0~100%)
-  const vals = has.flatMap((p) => (cfg.pct ? [p.bar] : [p.bar, p.line]));
+  const vals = has.flatMap((p) => (cfg.pct || p.line == null ? [p.bar] : [p.bar, p.line]));
   let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
   if (hi === lo) hi = lo + 1;
   hi += (hi - lo) * 0.06;
@@ -305,7 +335,7 @@ function astChartHtml(y) {
     + lp.map((q) => `<circle class="ast-cd${q.on ? " on" : ""}" cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${q.on ? 5.5 : 4}"/>`).join("");
   const base = `<line class="ast-gl z" x1="${L}" x2="${W - Rr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
   return `<div class="ast-chart">${top}
-    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대와 ${esc(cfg.line)} 선 그래프">${base}${bars}${line}</svg>${tabs}</div>`;
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(cfg.bar)} 막대${cfg.line ? `와 ${esc(cfg.line)} 선` : ""} 그래프">${base}${bars}${lp.length ? line : ""}</svg>${k === "n" ? "" : tabs}</div>`;
 }
 // 배당 구성: 고른 달에 어느 종목(어느 증권사·계좌)에서 얼마 받았는지 (사용자 2026-11-08)
 function astDivMix(ym) {
@@ -361,6 +391,10 @@ function astDetail(ym) {
     <div class="ast-dh"><button type="button" class="back" data-ast-close>‹ 달력</button>
       <span class="ast-dm"><button type="button" class="ast-nav" data-ast-step="-1" aria-label="지난달">‹</button><b>${esc(ymName(ym))}</b>
       <button type="button" class="ast-nav" data-ast-step="1" aria-label="다음 달" ${ym >= now ? "disabled" : ""}>›</button></span></div>
+    <div class="ast-date"><label><span class="muted">기록한 날짜</span>
+      <input type="date" data-ast-date value="${esc(x.date || "")}" min="${ym}-01" max="${[astToday(), astEnd(ym)].sort()[0]}" aria-label="${esc(ymName(ym))} 기록한 날짜 (달력에서 고르기)"></label>
+      ${ym === now ? `<button type="button" class="ast-btn ast-btn-s" data-ast-today>오늘</button>` : ""}</div>
+    <div id="ast-since">${astFilled(ym) && ym !== astFirstYm() ? astSinceLine(x.date || (ym === now ? astToday() : astEnd(ym))) : ""}</div>
     <div id="ast-sum">${astSumHtml(ym)}</div>
     <label class="ast-memo"><span class="muted">메모</span><textarea data-ast-memo rows="3" maxlength="2000" placeholder="이번 달 있었던 일, 산 이유, 다음 달 계획…">${esc(x.memo)}</textarea></label>
     <h3 class="sav-h">증권사 · 계좌별 예수금·종목 <small class="muted">${x.items.length}종목</small></h3>
@@ -383,12 +417,18 @@ function astSumHtml(ym) {
   const s = astSum(ym), p = astPrevYm(ym), ps = p ? astSum(p) : null;
   const vs = (d, f) => (ps ? `<small class="${astCls(d)}">${d ? f(d) : "그대로"}</small>` : `<small class="muted">첫 기록</small>`);
   const pn = p ? `${p.slice(0, 4) !== ym.slice(0, 4) ? `${p.slice(2, 4)}년 ` : ""}${+p.slice(5)}월` : "";
+  // 칸을 누르면 바로 아래에 그 값의 달마다 그래프 (다시 누르면 닫혀요)
+  const on = (k) => astSumK === k, g = (k) => `<span class="ast-tile-g" aria-hidden="true">${on(k) ? "그래프 닫기 ▴" : "그래프 ▾"}</span>`;
+  const tile = (k, label, val, more) => `<button type="button" class="ast-tile" data-ast-sk="${k}" aria-pressed="${on(k)}"><small>${label}</small><b>${val}</b>${more}${g(k)}</button>`;
+  const ch = astSumK && astFilled(ym) ? astChartHtml(+ym.slice(0, 4), astSumK, ym) : "";
   return `<div class="sav-hero ast-hero">
-    <div><small>총 투자금</small><b>${savWon(s.cost)}</b>${vs(s.cost - (ps ? ps.cost : 0), astWonD)}</div>
-    <div><small>예수금</small><b>${savWon(s.cash)}</b>${vs(s.cash - (ps ? ps.cash : 0), astWonD)}</div>
-    <div><small>종목 수</small><b>${s.n}개</b>${vs(s.n - (ps ? ps.n : 0), (d) => `${d > 0 ? "+" : "-"}${Math.abs(d)}개`)}</div>
-    <div><small>이번 달 배당</small><b>${astDivW(s.div)}</b>${s.div ? "" : `<small class="muted">없음</small>`}</div></div>
-    <p class="ast-total">총자산 <b>${savWon(s.total)}</b>${ps ? ` <span class="${astCls(s.total - ps.total)}">${s.total - ps.total ? astWonD(s.total - ps.total) : "그대로"}</span> <small class="muted">· ${pn} 기록과 비교</small>` : ` <small class="muted">· 첫 기록</small>`}</p>
+    ${tile("cost", "총 투자금", savWon(s.cost), vs(s.cost - (ps ? ps.cost : 0), astWonD))}
+    ${tile("cash", "예수금", savWon(s.cash), vs(s.cash - (ps ? ps.cash : 0), astWonD))}
+    ${tile("n", "종목 수", `${s.n}개`, vs(s.n - (ps ? ps.n : 0), (d) => `${d > 0 ? "+" : "-"}${Math.abs(d)}개`))}
+    ${tile("div", "이번 달 배당", astDivW(s.div), s.div ? "" : `<small class="muted">없음</small>`)}</div>
+    <button type="button" class="ast-total ast-total-b" data-ast-sk="total" aria-pressed="${on("total")}">총자산 <b>${savWon(s.total)}</b>${ps ? ` <span class="${astCls(s.total - ps.total)}">${s.total - ps.total ? astWonD(s.total - ps.total) : "그대로"}</span> <small class="muted">· ${pn} 기록과 비교</small>` : ` <small class="muted">· 첫 기록</small>`}
+      <span class="ast-tile-g" aria-hidden="true">${on("total") ? "▴" : "그래프 ▾"}</span></button>
+    ${ch ? `<div id="ast-schart">${ch}</div>` : ""}
     ${astLiveLine(ym)}${astQtyList(ym)}`;
 }
 
@@ -586,14 +626,50 @@ function bindAsset() {
   bindBk(card);
   if (!astOpen) return;
   const ym = astOpen;
+  // 펼친 달 요약 칸·총자산 줄 누르면 그래프 열기·닫기, 막대·추이/구성은 그래프만 (#ast-sum은 입력 중에도 그대로라 여기에 한 번만 걸어요)
+  const sumBox = $("#ast-sum", card);
+  if (sumBox) sumBox.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-ast-sk]"), h = e.target.closest("[data-ast-tip]"), m = e.target.closest("[data-ast-mode]");
+    if (t) {
+      const k = t.dataset.astSk;
+      astSumK = astSumK === k ? null : k; astTip = null;
+      holdHeight();
+      sumBox.innerHTML = astSumHtml(ym);
+      keepTap();
+      const svg = $("#ast-schart svg");
+      if (svg && !calm()) {
+        drawIn(svg, { x0: 6, w: 328, sel: ".ast-cl", late: ".ast-cd", px: svg.getBoundingClientRect().width });
+        svg.querySelectorAll(".ast-b").forEach((r, i) => r.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 420, delay: i * 35, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }));
+      }
+      return;
+    }
+    if (!h && !m) return;
+    const sc = $("#ast-schart");
+    if (!sc) return;
+    if (h) astTip = h.dataset.astTip;
+    if (m) { if (astMode === m.dataset.astMode) return; astMode = m.dataset.astMode; holdHeight(); }
+    sc.innerHTML = astChartHtml(+ym.slice(0, 4), astSumK, ym);
+    if (m) keepTap();
+  });
   // 펼친 달 화면
   card.querySelector("[data-ast-close]").addEventListener("click", () => { AST.year = +ym.slice(0, 4); astOpen = null; astSave(); lastTap = null; redraw(); });
   card.querySelectorAll("[data-ast-step]").forEach((b) => b.addEventListener("click", () => { astOpen = ymAdd(ym, +b.dataset.astStep); redraw(); }));
   const memo = card.querySelector("[data-ast-memo]");
   memo.addEventListener("input", () => { month(ym).memo = memo.value; astSave(); });
+  const dt = card.querySelector("[data-ast-date]");
+  const setDate = (v) => {
+    if (v && v.slice(0, 7) === ym) month(ym).date = v; else delete month(ym).date;
+    dt.value = month(ym).date || "";
+    astSave();
+    const sn = $("#ast-since"); if (sn) sn.innerHTML = astFilled(ym) && ym !== astFirstYm() ? astSinceLine(month(ym).date || (ym === ymNow() ? astToday() : astEnd(ym))) : "";
+  };
+  dt.addEventListener("change", () => setDate(dt.value));
+  const td = card.querySelector("[data-ast-today]");
+  if (td) td.addEventListener("click", () => setDate(astToday()));
   const live = () => {  // 입력하는 동안엔 요약·그림·비교만 바꿔요 (키보드가 안 닫혀요)
     const s = $("#ast-sum"); if (s) s.innerHTML = astSumHtml(ym);
     const t = $("#ast-tree"); if (t) t.innerHTML = astTree(ym);
+    const sn = $("#ast-since"); if (sn) { const d = month(ym).date; sn.innerHTML = astFilled(ym) && ym !== astFirstYm() ? astSinceLine(d || (ym === ymNow() ? astToday() : astEnd(ym))) : ""; }
     card.querySelectorAll(".ast-row").forEach((r) => { const it = month(ym).items.find((i) => i.id === r.dataset.astId), d = $(".ast-delta", r); if (it && d) d.innerHTML = astDeltaAll(ym, it); });
     const gh = card.querySelectorAll(".ast-grp");
     gh.forEach((g) => { const a = g.dataset.astG, its = month(ym).items.filter((i) => i.acct === a); $(".ast-gh small", g).textContent = its.length ? `${its.length}종목 · ${savWon(its.reduce((v, i) => v + (+i.cost || 0), 0))}` : "종목 없음"; });

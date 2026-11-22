@@ -313,7 +313,7 @@ function goalLine() {
 // 달마다 내 금융자산(계좌 → 종목·주 수·투자금·받은 배당)과 메모를 적어 두고, 지난 기록과 비교해요.
 // 이 폰에만 저장해요 (localStorage 'assets'). 백업 파일(asset.js bkBox, 관심 종목·설정까지)로 다른 폰에 옮겨요 (사용자 2026-11-08·11-21)
 // 단계: 증권사 → 계좌 → 종목 (사용자 2026-11-08). accts = [{ id, broker, name }] (순서 = 화면 순서, 같은 증권사끼리 붙여 둬요)
-// months["2026-11"] = { memo, items: [{ id, acct(계좌 id), m, code, name, qty, cost(원), div(원) }], cash: { 계좌 id: 예수금(원) } }
+// months["2026-11"] = { memo, date?(기록한 날 "2026-11-22"), items: [{ id, acct(계좌 id), m, code, name, qty, cost(원), div(원) }], cash: { 계좌 id: 예수금(원) } }
 const AST = { accts: [], months: {}, year: new Date().getFullYear() };
 try { Object.assign(AST, JSON.parse(localStorage.getItem("assets") || "{}")); } catch (e) { /* 처음 */ }
 const astFix = () => {
@@ -323,7 +323,8 @@ const astFix = () => {
     .filter((a) => a && a.id).map((a) => ({ id: String(a.id), broker: String(a.broker || "내 증권사").slice(0, 20), name: String(a.name || "계좌").slice(0, 20) }));
   if (!AST.accts.length) AST.accts = [{ id: "a0", broker: "내 증권사", name: "일반 계좌" }];
   if (!AST.months || typeof AST.months !== "object") AST.months = {};
-  Object.values(AST.months).forEach((x) => { if (!Array.isArray(x.items)) x.items = []; if (typeof x.memo !== "string") x.memo = ""; if (!x.cash || typeof x.cash !== "object") x.cash = {}; });
+  Object.values(AST.months).forEach((x) => { if (!Array.isArray(x.items)) x.items = []; if (typeof x.memo !== "string") x.memo = ""; if (!x.cash || typeof x.cash !== "object") x.cash = {};
+    if (x.date != null && !/^\d{4}-\d{2}-\d{2}$/.test(x.date)) delete x.date; });
   if (!Number.isFinite(+AST.year)) AST.year = new Date().getFullYear();
 };
 astFix();
