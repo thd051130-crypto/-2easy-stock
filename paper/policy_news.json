@@ -1,5 +1,5 @@
 {
- "day": "2026-11-23",
+ "day": "2026-11-24",
  "items": {
   "us-fed": [
    {
@@ -9,33 +9,27 @@
     "link": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxPM3ZveEtXbE1jSTdUcFM4UDZaSzNrVDNDcHUxdnhQVW5lTWZfcTQxYW5sa1JaVGgzLVdQTEl2Qi0wd3lScWo5MjdJRGJJNXU0NjBfUUJ0blBlX1h4TkZhdV96anBlVmZsVXc2Y1lYcmlxTHhsemdzRHdDRXhoOXpqTTBDVzd0VUto?oc=5"
    },
    {
-    "title": "J.P. Morgan sees Fed rate hikes at next three meetings as inflation persists",
+    "title": "Fed's Cook says rate hikes needed to lower high inflation",
     "source": "Reuters",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNWkZwc3MzeGxPMldOWGxwZnk4UFBSWGtfVC1pTnBnQXVRZzBrNTBzdGxCc05WSU5KNjVoTk1XSm82Q2UxSms1WnhkT05tTG5xU3JULWRtUTVOSlpmeXgyNTFWRVVOX1BTS3ZNaDZEendqbkJJNXlMSndLb0JiQjJ0dEhnMWs3bm5RX0hDNTZ4SVlaamJTU2ZDZVJ1VG8ycVpNdXR3NFdKMHhDVjdlUWMyWmhwVQ?oc=5"
+    "date": "2026-11-20",
+    "link": "https://news.google.com/rss/articles/CBMinwFBVV95cUxNV0pwMURCc1diYXRGTmtCaC0tNnZac3RIMEtTT1BCMGxpZ093OTRFdVJpRGx4TW5YRENNTWxpN0dYLTZpQ0ZXOC1sby1jNUtYbVNseHFWN2J3MGFuQjNwa3lOR2F4S1JicENRMzQ1ZWlDMkRyRzk5eG5IcVFpQXkyS0kzYU15a1RCWXNwWERBVFRmbUFZbE80WHhKUmVoejA?oc=5"
    }
   ],
   "kr-rate": [
+   {
+    "title": "물가·성장 모두 ↑…시장은 힘겨워도 \"한은 금리는 올라간다\"",
+    "source": "조선일보",
+    "date": "2026-11-22",
+    "link": "https://news.google.com/rss/articles/CBMijgFBVV95cUxOTWZGaHVHRTRqSnNobWNmeXYwS2p0YUMxaVladDh4eXFLNFBMRURKcU1xeWxMODZrdnhxeHlzVGJIa1BrVkdNTUNkYkU2cTlWMXBVb3dTN3BQVURrbFRBTGZsd1dhQ3ppVUhvYnBJQnA1Szc4M2djOUZaaUJPRVF0c0Z5RWdHZmZheWRyQ0tn?oc=5"
+   },
    {
     "title": "한은, 이달 기준금리 0.25%p 인상 가능성 커져",
     "source": "한겨레",
     "date": "2026-11-16",
     "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5BRGR2dWo0VlNOSFlZcTk3ZXN3MmJXZ1MxczRibTFKRWc5WXptQnJBM1NoRmZnYm9Wa1ZkaGRwZFd2Q29YSVVhSVRZM25MelpiWGFIalo1SWxFMEJBY1hOTDZSenJMQV9aenZfNkVldTNUZw?oc=5"
-   },
-   {
-    "title": "[다음주 경제] 숨 고르기 한 기준금리, 인상할까…한은 성장률 전망은",
-    "source": "연합뉴스",
-    "date": "2026-11-20",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE52cUt2Wi0yWDlZN2VObUxMZUdhN3FlWUN4MjA1bmN0WGV4MlZtMElPaXRuUW1fZnN4U1lRcVFwbF9RdWh1bmRpbGdYM0h3YlVuRXZlWTVLam9UVGvSAWBBVV95cUxObENidGxwYjlpZnNjWXZfWkdTUk93anp6c3d4X0NSRFRlUms2cktEbnExN01BMG9VT1BtT25BUVVxVVRfby1MdXRQWXJHWXJxLXY4VHpZOG0yTmhZeXh1WEI?oc=5"
    }
   ],
   "kr-us-deal": [
-   {
-    "title": "관세 15% 방어·텍사스발전소 1호 투자… 실익 확보엔 '글쎄' [한미 팩트시트 1년]",
-    "source": "파이낸셜뉴스",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE9MSHYtcTliY0FhM2REZXBfWnZNQ1N6OF9hUUctQVRLdy1sVnJBTE11cVJkOFJmaHFRUkJQNThYT0VtMEpCckNYa0hZRE51YzBIZFZYYUN2SW9XQQ?oc=5"
-   },
    {
     "title": "[대미투자 리셋③] 필리조선 20척 키운다…의회가 변수",
     "source": "자본시장뉴스",
@@ -45,10 +39,10 @@
   ],
   "world-oil": [
    {
-    "title": "\"이란, 유가 하락하자 호르무즈 유조선 공격 강화…하루 1건꼴\"",
-    "source": "연합뉴스",
+    "title": "“이란, 유가 하락하자 호르무즈 유조선 공격 강화…하루 한 건 꼴”",
+    "source": "KBS 뉴스",
     "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTFBSMldkcG5UXzJzQ0FrNXB4ZzNFcnlNcHNDeWlaMWlWbGJzME1PY1QyelBmbjZyYU4xUEtMVkp3Mlk3RGF2OTdWYThyNVBVNzNVNWlzSElWMW5TVXJoV050adIBYEFVX3lxTFBSMldkcG5UXzJzQ0FrNXB4ZzNFcnlNcHNDeWlaMWlWbGJzME1PY1QyelBmbjZyYU4xUEtMVkp3Mlk3RGF2OTdWYThyNVBVNzNVNWlzSElWMW5TVXJoV050aQ?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBPTzhUc2RVLUZtdGRGVGFEYm5GNS1YcFJSQ1BTMGRZWERhZGVWY19DQU1XOXJTRlBoZmJmNWt1RHRUbDJPUlJQdFBqcFItZWp3QUdDc1pVMkRFYTA?oc=5"
    },
    {
     "title": "Hormuz Reopening Could be OPEC’s Undoing: Bousso",
@@ -73,38 +67,38 @@
   ],
   "kr-budget-ai": [
    {
-    "title": "전남광주교육청, 2027년 예산 7조7418억원…AI·반도체 인재 양성",
-    "source": "더파워",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMifkFVX3lxTE5yd05CR2owc2NoNGZBNGlFR0FTTHhacG9ZR0MzR004b2lXQ3Vsang1VDE4Y3JtZnZ2ckltM0RERzQ1YmNaREhRbDh3LUhTNjVkMFN4OVpHQnR6ZXozVy1Nb1ZVemFxakYyTUwteUpFeV93S1lCTldFRjRycjJxUQ?oc=5"
-   },
-   {
     "title": "[2027년 예산] 슈퍼 예산에 증액 남발 심사…\"반도체 추가 세수 3년이면 끝?\"",
     "source": "이코노미톡뉴스",
     "date": "2026-11-17",
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBoVDhyOG16T1NOaW9JRnV6OUhUN0Q1WmtmRlBpY0NIeS10eUJCMmlVR2RRaDRmX3N5UWlQTm1qSXdBVWVSUG5XYWx1SWFZQlExMUdDRExsMGNIQmo1UXZqeU0yMXZFZmR2eDdibA?oc=5"
+   },
+   {
+    "title": "전남광주교육청, 7조7418억원 편성…AI·반도체 인재 육성",
+    "source": "매일일보",
+    "date": "2026-11-17",
+    "link": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE9zTk5jY2Jha21WYmJ0WkZpaEY5WU11VjJqck44WjlqNS1panBtTzNreVhxYkkzV3NtalJIMFJ0aEJmZmMtSWVwTFVUb2R1cWwxaXR5Q3h6YTJxT2hmMm94NkdLTmg?oc=5"
    }
   ],
   "kr-buyback": [
    {
+    "title": "자사주 소각 100조원 시대…내년 증시 상승 동력 될까[전예진의 마켓 인사이트]",
+    "source": "한경매거진",
+    "date": "2026-11-19",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBuSzVkVkMtV3EwZ3pFLXNXTEJRSW56ZTVSSDRQRXhMMUE4WkRUbkFOcVRONGk3eW5Mb1dGWFJhX0JxRG5pTUM0V0VpdmV1djd5YWhVQ2Z1WXNGR3UxQlZGNmgwMXpuSUlTV1Q0Yg?oc=5"
+   },
+   {
     "title": "[허정수칼럼] 증권사 자사주 소각, 그 후를 묻다",
     "source": "블로터",
     "date": "2026-11-18",
-    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBRSDFOZlVIQ2I1aWdsV3loMkMzeFhKOVd3OWFMM0lrQVN1REV1RFlwRFpoQzBKNXAtQVFHVUFiVUE0WW5kLWd1TGRTeWZvNGQwb25qN2tHR1oxSmREZDJJYXJGekVsQTA3RjNqStIBbEFVX3lxTFBRSDFOZlVIQ2I1aWdsV3loMkMzeFhKOVd3OWFMM0lrQVN1REV1RFlwRFpoQzBKNXAtQVFHVUFiVUE0WW5kLWd1TGRTeWZvNGQwb25qN2tHR1oxSmREZDJJYXJGekVsQTA3RjNqSg?oc=5"
-   },
-   {
-    "title": "주총 문화 바뀔까…개정 상법 앞두고 드러난 과제들",
-    "source": ":: 위즈경제 ::",
-    "date": "2026-11-17",
-    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE55U3dlOUhLa3hfU21EcUluVGplRmtqQTl1VGtXYmtxMUd0WlZfd3oxMWk5YlR5QnRPQ2xoTGYzNkh2N2pXSW9vdUJrbnNYbk5tNWplXw?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE5CMlFwYUp2cVpDcWM0ZWtFTmZzQ3NWRkItOU1ZaWdDOVlJdjIycE9OT1J1eUZnUnFyVTBOTGw1RmxabGROTFlTWTZ3bXprLVZzaGc4TVpvV01rR0dGN2ZBdkZJRkRnZHVa0gFsQVVfeXFMUFFIMU5mVUhDYjVpZ2xXeWgyQzN4WEo5V3c5YUwzSWtBU3VERXVEWXBEWmhDMEo1cC1BUUdVQWJVQTRZbmQtZ3VMZFN5Zm80ZDBvbmo3a0dHWjFKZERkMklhckZ6RWxBMDdGM2pK?oc=5"
    }
   ],
   "us-chip-tariff": [
    {
-    "title": "2026 미국 중간선거 결과와 한미 통상 현안 전망",
-    "source": "법률신문",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE9MTmJXdk5la3dfNl9ZUEFWNWJVSDRuTFNDTGlVYzVHdFlJWW14N0RlengxNE9Rd0NKSlVDNXBZdFZzSnFhSF80anc2ZUZMbm9rc043dUNFRFdiQjB5dFh4WlAwQ0ZKYU1lQXFEWUNn0gFyQVVfeXFMT3psODVOV3IzN2RsS21oN2w1c0xUX3JrUmF3OTBOVlI0WGxheDZhWHVVVzhtNF9NVGlyckNYRWpVam5pZzQyOTFXN1JlZXlGRzM3U242eldqUkJfbE95Q1hBeHVaQnBjemZJUkM1NnhOdVln?oc=5"
+    "title": "[K-수출 1조달러] \"쾌거 속 반도체 착시…낙수효과 한계·통상 리스크 과제\"",
+    "source": "연합인포맥스",
+    "date": "2026-11-19",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE1WS054VTBzYmNuUXNzY3lrZ2hmQkx3WDBDNWwxS2s4UDZaQUt1NVIyVFFvUHhpVXdiMi1lRXlkZnFaOE4teGtWeV9NTXJDTWJwOHdFYUZxcWFKbUJiVVhyOEZhRHNxMGpCb21wbkQ0VkU?oc=5"
    },
    {
     "title": "Semiconductor Foundry: U.S. Chip Tariffs and Production",
@@ -115,10 +109,10 @@
   ],
   "us-301": [
    {
-    "title": "美무역대표 \"301조 조사 연말 마무리\"…한국 추가 관세 여부 주목",
-    "source": "연합뉴스TV",
-    "date": "2026-11-20",
-    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE45LS01cVI4X0p5TGM4dzJXZ0ExTkdyTW5RaW11d3Z3c3VoVXdITlBrcGpEQlRBOTIyc0xfU1ZualM1OU5BREtkZFo4X0RiRks3WjNkZ2FmOWxSWThuVlNWRV91d0hDRjQ?oc=5"
+    "title": "“미, 한국·EU·호주 디지털 규제 겨냥 301조 조사 검토”···강제노동·과잉생산 이어 세 번째 조사 나서나",
+    "source": "경향신문",
+    "date": "2026-11-22",
+    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE1vN2V1V3lHYTZJd2tRWFI3ZUlTdXVORmVMNFpHYkY3QlIxVUF2MHIzZllILVY4YTN6anhvRG1OMW9EVFZwQUlLRlhSUy0zYVNjN1ZwSm1hRU5Xd9IBX0FVX3lxTE83ZDFpWFNRWkt0dXFYdmZTc24yczFqZVNiUk9DaEpmNzI3WTdiUHU4QnRkb2RBM0dIb2FrN0VLaVl2TjlpVVI3cmpRQkNnRzVwV25wMU5BTUFDODl4di1N?oc=5"
    },
    {
     "title": "Tariff Repeal Options Would Have Very Different Price Effects",
@@ -135,33 +129,33 @@
     "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1maUZ4UVQ4RThSYVZ1RE11NmNIWnlfRjdURlhhQXllRW5BcGl3Y19PX0Fnb1ZtQU5SNl9fcHVWZFZkMnZ1THUzVHJ1NWRDRmVsS3ZtY3BJZXRmSUdZWVZEMzNVNA?oc=5"
    },
    {
-    "title": "Updates on the evolving tariff landscape for pharmaceutical and medical device companies",
-    "source": "PwC",
-    "date": "2026-11-21",
-    "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxOYl9YTmtiX3NGZ194OHZsblVEenZxN1hUYjhyZ2V3cE5pV25fY0x4bnBKNzB3WHhWUlhlNU5vSW5nd3pCS2VTblM2dlFCdWU1ZC1aQXI3UEdlTU45OThMQ3RfREduc2ZFdk1PRXpQRnhyaUp2c3RTaF83ZExBZ3Q2TjBuQ2FvQ0ZOZkgycWlQcUZiUXBaYm91NUJXRXM0UGtwMmhoSDBPOW5IQ1dUbFRTQw?oc=5"
+    "title": "Trump Pulls Overton's FDA Nomination Ahead of Senate HELP Vote",
+    "source": "Pharmaceutical Commerce",
+    "date": "2026-11-18",
+    "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxPcUtkN2YybnVlV1poazNsWDRtbGNBZlJJQlRwREdDd1ctTG9nbVY4dkU5Q1l1YkdxOVh3bk01cmZQNVgtZGxOLVV5Qmk4dnBHZDNYQkVlaXBERU1CM3Jyc191WG9vM3RRWVVrakZ2R1FlNzQzWFBGWWdPM09BSVJySnI0cUJ4SUs1dmNhOS1UQXRZZ1diNTgwNTlBdmc0c1hmb2J1bEY4dU1YZw?oc=5"
    }
   ],
   "kr-dividend-tax": [
    {
-    "title": "아모레퍼시픽홀딩스, 연결 40% 배당에 감액분 얼마나 담길까",
-    "source": "한국M&A경제신문",
-    "date": "2026-11-17",
-    "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE8xVk5SV2JoR0pMSWllQ1B0bHVGTDRYZEM5NTJzRzE3Z0NIQkR5YkR4dGZ6RERxdmt1Z053c0JEOFFWampZRUkwSUtqMU5nVUFGUEI2b1F4RnlPU240ZVVjTThCUEVkQXQyTGc?oc=5"
+    "title": "고배당기업 배당소득 분리과세, '신청'이 곧 '절세'는 아니다 - 머니투데이",
+    "source": "머니투데이",
+    "date": "2026-11-23",
+    "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE81U2lEcGVMVThETlBjMDlUN1VLLVRmUTNHSFpsM3VDeDV1Qm4zN0NkWVllQ3ozcW5OOTlEeS1Fcm1Ob2JxUmdCenNmWlVydWdMR0tRQUw1WEFhYWd4Mm5lLXFXUTEtOXBlaC1v0gFwQVVfeXFMTWxEWEhQVzdfOWpzQnhUcGd6UGtTaXphTkMtMm5kd2hnVFFsQkQ2RFpUcGFPbTFROHlVQjhUYmdOZ0JDWE16c3ZmZjRVQjY3d0dWYkVKLUpFQ3hXOG82aWJmVU9mTXBvZXlLSDlUSzJxRA?oc=5"
    },
    {
-    "title": "하락장의 역설 … 배당률 5% 넘긴 곳 두배 쑥",
-    "source": "매일경제",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiUkFVX3lxTE9HYjI3LXo5S3luNWIzbC1PNFFTdmVKdmFiSGZwaHBfYXV5WmlFcDN5cjh5eVJGVDVNMzBBU0puSzB3UFJoWms2cU13aDc5MTM1b1E?oc=5"
+    "title": "이준석, 코스피 급락에 제도 개선 3대 제안…“반대매매 기준 통일해야”",
+    "source": "뉴스코리아",
+    "date": "2026-11-23",
+    "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE1XVnBuaVNyRjAwMTlTZHFSOXZlWlpZSXB5a2d2TG9XTmhnNVQ0aDhWOUZsWFNqaTd2UzF2WllVbTZmV1RmRzBLOXVqQWhWT3k3TktRbW9qeE5LZnRiYU5JRkJ4aGlMSHBGYjBsNkZ3?oc=5"
    }
   ],
   "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "세계 최저 실질금리 경고한 일본은행 매파…조기 인상 촉구 속내",
-    "source": "글로벌이코노믹",
-    "date": "2026-11-16",
-    "link": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxNWmZHTzZ1eHVQQ3MweDl6UlVDbTlIU2xVaHNxOURFcElvT3hVWk5QZ1JDci1JdW81b2tyOXBrRUE4Ujl6MUpDeWFSRkJPdWZ2TVpQRU5pNTlkQ2c5Y3UzdU12S25CcEh5VFJmY2F5aERfUzFzdlQzZ1dDNUVZeTBOYnI0SWtuSFVq?oc=5"
+    "title": "미 증시는 사상 최고치…일본 금리는 17년 만의 최고 수준",
+    "source": ":: 위즈경제 ::",
+    "date": "2026-11-19",
+    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTFBKYTliSVFOcFFmd3F0S2hCbXRvUWVvQUFjZm12TTBJSWZVbF9vR1l0QkZYdnRCNGtNMDJSRGVlNTdaa2lZeTNkMXpYbkU1YldsbmQxbQ?oc=5"
    },
    {
     "title": "Bank of Japan to raise interest rates in December and again by end-March, economists say",
