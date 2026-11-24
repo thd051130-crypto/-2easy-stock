@@ -287,8 +287,13 @@ function stashHot(x) {
   saveHot();
 }
 // 악재로 읽히는 제목 (사용자 2026-11-15 "증시에 악영향이 가는 뉴스를 강조해서"). news.py BAD와 같게 맞춰요
-const BAD_NEWS = /급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign/i;
-const isBad = (n) => n.bad === true || BAD_NEWS.test(n.title || "");
+const BAD_NEWS = /급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|반토막|검은 월요일|블랙 ?먼데이|휘청|출렁|위험 신호|매도세|후폭풍|스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign/i;
+// 악재 낱말이 있어도 풀렸다는 뜻이면 빼고, 풀리는 일이 실패·지연이면 다시 악재 (사용자 2026-11-24). news.py GOOD·NOT_GOOD와 같게
+const GOOD_NEWS = /완화|해소|진정|반등|회복|벗어나|벗어난|안도|불식|딛고|극복|일단락|철회|타결|휴전|\bease[sd]?\b|rebound|recover|rall(y|ies|ied)/i;
+const NOT_GOOD_NEWS = /(완화|해소|진정|반등|회복|안도|타결|휴전|극복)[^,.…·]{0,6}(실패|무산|불발|지연|좌절|결렬|난망|어려|못|멀어|제한적|역부족|불투명|에도)/i;
+const badTitle = (t) => BAD_NEWS.test(t) && (!GOOD_NEWS.test(t) || NOT_GOOD_NEWS.test(t));
+// 서버가 정한 악재(핫 뉴스는 같은 사건 기사 절반 이상이 악재일 때)를 먼저 믿고, 없을 때만 제목으로
+const isBad = (n) => (typeof n.bad === "boolean" && n.bads != null ? n.bad : badTitle(n.title || ""));
 const badTag = (n) => (isBad(n) ? `<span class="badge bad">⚠️ 악재</span> ` : "");
 // 안 읽은 핫 뉴스: 악재 먼저 (그 안에선 원래 순서)
 const hotOf = (m) => { const H = HOT[m].filter((n) => !HOT_READ.has(hotId(n))); return [...H.filter(isBad), ...H.filter((n) => !isBad(n))]; };
