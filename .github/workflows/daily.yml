@@ -63,11 +63,15 @@ jobs:
         if: contains(env.MARKETS, 'kr')
         continue-on-error: true
         run: python flows.py
-      # 리포트 부서 다섯 팀 → 오늘의 리포트 한 통 (paper/report.json + 텔레그램 + 앱 메시지함)
+      # 리포트 부서 (뉴스팀 + 다섯 팀) → 오늘의 리포트 한 통 (paper/report.json + 텔레그램 + 앱 메시지함)
+      # 뉴스팀 자료: live 브랜치의 핫 뉴스 (news.py, 30분마다). 못 받아도 리포트는 나가요 (뉴스 칸만 비어요)
+      - name: news for report
+        continue-on-error: true
+        run: git fetch -q --depth=1 origin live && git show FETCH_HEAD:news.json > "$RUNNER_TEMP/news.json" || echo "뉴스 없음"
       - name: report
         id: report
         continue-on-error: true
-        run: python report_desks.py
+        run: python report_desks.py --news "$RUNNER_TEMP/news.json"
       # 투자 공부: 오늘 사례 일지 한 줄 + 증권사 무료 리포트 목록 (못 해도 위 기록은 저장해요)
       - name: learn cases
         continue-on-error: true

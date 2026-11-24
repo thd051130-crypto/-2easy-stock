@@ -8,7 +8,7 @@ Actions가 파이썬을 돌려 `paper/`에 커밋 → `pages.yml`이 `dashboard.
 | `paper/kr/daily.json` `paper/us/daily.json` | daily.py (+movers·sectors·quiet_volume) | daily.yml | 홈 지수·급등락·히트맵 |
 | (위 daily의 지수 5년 일봉) | dashboard.py split_charts | pages.yml | 차트 화면·수익률 달력 (`_site/charts.json`, 홈 뜬 뒤 받기) |
 | `paper/kr/flows.json` | flows.py | daily.yml | 수급 |
-| `paper/report.json` `paper/story_log.json` | report_desks.py (+market_story·analyst_view) | daily.yml | 리포트·연결 고리 |
+| `paper/report.json` `paper/story_log.json` | report_desks.py (+market_story·analyst_view, --news live news.json) | daily.yml | 리포트·뉴스팀·연결 고리 |
 | `paper/reports/` | report_archive.py | daily.yml | 지난 리포트 (`_site/reports/index.json`) |
 | `paper/learn_cases.json` `paper/reading.json` | learn_cases.py · reading.py | daily.yml | 투자 공부 (`_site/learn.json`) |
 | `paper/macro.json` `paper/calendar.json` `paper/policy_news.json` | macro.py · econ_calendar.py · policies.py --news | macro.yml | 경기·일정 달력·큰 발표·정책 |
