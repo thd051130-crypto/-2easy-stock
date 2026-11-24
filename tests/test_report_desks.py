@@ -90,3 +90,31 @@ def test_build_with_empty_files(tmp_path):
 def test_fact_text_rate_in_points():
     f = dict(name="미국 10년 국채 금리", kind="rate", last=4.99, d1=0.04, m1=-0.13)
     assert rd.fact_text(f) == "미국 10년 국채 금리 4.99% (+0.04%p, 1달 -0.13%p)"
+
+
+NOW = dt.datetime(2026, 11, 24, 17, 30, tzinfo=rd.KST)
+NEWS = dict(hot=dict(
+    kr=[dict(title="옛 사건", sources=40, at="2026-11-20T10:00+09:00", key=["옛", "사건"]),
+        dict(title="젠슨 황 복귀 코스피 폭등", sources=21, at="2026-11-24T17:00+09:00", key=["젠슨", "복귀", "코스피"]),
+        dict(title="젠슨 황 복귀 반도체 질주", sources=5, at="2026-11-24T16:00+09:00", key=["젠슨", "복귀", "반도체"]),
+        dict(title="금통위 금리 인상", sources=10, at="2026-11-24T15:00+09:00", key=["금리", "인상"])],
+    us=[dict(title="젠슨 황 복귀 뉴욕 급등", sources=31, at="2026-11-24T08:00+09:00", key=["젠슨", "복귀", "뉴욕"])]))
+
+
+def test_news_desk_picks_big_fresh_events():
+    n = rd.news_desk(NEWS, NOW)
+    assert [x["title"] for x in n["kr"]] == ["젠슨 황 복귀 코스피 폭등", "금통위 금리 인상"]  # 오래된 것·같은 사건은 빼요
+    assert n["us"][0]["sources"] == 31
+
+
+def test_report_headline_has_big_news_once(tmp_path):
+    r = rd.build(dict(rd.load_inputs(tmp_path), news=NEWS), today=NOW.date(), now=NOW)
+    news_lines = [x for x in r["headline"] if x.startswith("📰")]
+    assert news_lines == ["📰 🇰🇷 큰 뉴스: 젠슨 황 복귀 코스피 폭등 (언론 21곳)"]  # 미장도 같은 사건이라 한 줄만
+    assert "[뉴스팀]" in rd.format_text(r)
+
+
+def test_fact_text_marks_old_close():
+    f = dict(name="코스피", kind="idx", last=4708.5, d1=-0.0331, m1=-0.15, day="2026-11-23")
+    assert rd.fact_text(f, "2026-11-24").endswith("· 11-23 종가")
+    assert "종가" not in rd.fact_text(f, "2026-11-23")
