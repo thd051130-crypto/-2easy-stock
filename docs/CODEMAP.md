@@ -37,7 +37,7 @@ main.js     서비스워커 등록 + 처음 그리기·자료 받기 (맨 마지
 1-120 색 토큰(다크 ~40·~74) · 265 아래 메뉴 · 283 홈(편집 .he-* ~896) · 411 종목 · 511 산업 지도 · 663 적립식 · 798 목표 · 861 큰 발표 · 895 핫 뉴스 · 942 세계 지수 · 968 일정 · 1051 주간 · 1111 실험실 · 1220 자산 기록
 
 ## 파이썬 (만드는 것 · 언제)
-- daily.py(+movers·sectors·quiet_volume·marketdata), flows.py, report_desks.py(+market_story·analyst_view), learn_cases.py, reading.py → daily.yml 국장 17:30·미장 07:30
+- daily.py(+movers·sectors·quiet_volume·marketdata), flows.py, report_desks.py(+market_story·analyst_view, 뉴스팀은 live news.json 핫 뉴스), learn_cases.py, reading.py → daily.yml 국장 17:30·미장 07:30
 - macro.py, econ_calendar.py, policies.py → macro.yml 06:50 · world.py → world.yml 07:05 · news.py → 30분마다
 - weekly.py → 토 09:30 · fundamentals·fundcheck·symbols·returns·lab·etf_monthly → 토 09:00
 - bot.py(+commands·watchlist·tgfmt·inbox, big_events 호출) → 15분마다 · disclosures.py → 평일 08:10

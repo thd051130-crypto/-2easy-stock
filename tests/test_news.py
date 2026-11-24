@@ -89,6 +89,30 @@ def test_bad_news():
     assert not news.bad("AI 특수에 ICT 수출 703억달러…증가율 202% '역대 최고'")
 
 
+def test_bad_news_eased_is_not_bad():
+    """풀렸다는 뜻이면 악재 아님, 풀리는 일이 실패면 다시 악재 (사용자 2026-11-24)."""
+    assert not news.bad("미중 갈등 우려 완화에 코스피 상승")
+    assert not news.bad("코스피, 장 초반 급락 딛고 반등")
+    assert not news.bad("Stocks rebound after sell-off")
+    assert news.bad("코스피 반등 실패…외국인 순매도 계속")
+    assert news.bad("경기 침체 우려 속 회복 지연")
+    assert news.bad("중동 휴전 협상 결렬…유가 급등 우려")
+    assert news.bad("엔비디아 반등에도 달러 강세는 위험 신호")
+
+
+def test_hot_bad_by_group_share():
+    """핫 뉴스 악재는 대표 제목 하나가 아니라 같은 사건 기사 절반 이상으로."""
+    mk = lambda ts: [dict(title=t, source=f"언론{i}", at=f"2026-11-24T1{i}:00+09:00", link="https://x") for i, t in enumerate(ts)]  # noqa: E731
+    h = news.hot(mk(["엔비디아 실적 발표 시장 주목", "엔비디아 실적 쇼크 급락", "엔비디아 실적 우려 확산"]))
+    assert h[0]["bad"] and h[0]["bads"] == 2 and h[0]["n"] == 3
+    h = news.hot(mk(["엔비디아 실적 발표 시장 주목", "엔비디아 실적 호조 기대", "엔비디아 실적 우려 일부"]))
+    assert not h[0]["bad"]
+    # build의 tag가 묶음 판정을 제목 판정으로 덮지 않아요
+    data = news.build(fetch=lambda q, lang, n: mk(["엔비디아 실적 발표 시장 주목", "엔비디아 실적 쇼크 급락", "엔비디아 실적 우려 확산"]),
+                      now=dt.datetime(2026, 11, 24, 16, 0, tzinfo=news.KST))
+    assert data["hot"]["kr"][0]["bad"] is True
+
+
 def test_main_retries_whole_round_when_nothing_came(tmp_path, monkeypatch):
     """구글 뉴스가 잠깐 503을 줘서 하나도 못 받으면 쉬었다가 전체를 한 번 더 받아요."""
     calls = []

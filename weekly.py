@@ -117,7 +117,7 @@ def issue_desk(news, mon, fri):
                 same["more"] += 1
                 same["since"] = min(same["since"], x.get("since") or x.get("at") or "")
                 continue
-            keep.append(dict(title=x["title"], source=x.get("source"), link=x.get("link"), topic=newsmod.topic(x["title"]), bad=newsmod.bad(x["title"]),  # 주제·악재는 지금 규칙으로 다시
+            keep.append(dict(title=x["title"], source=x.get("source"), link=x.get("link"), topic=newsmod.topic(x["title"]), bad=x["bad"] if "bads" in x else newsmod.bad(x["title"]),  # 주제는 지금 규칙으로 다시, 악재는 묶음 판정이 있으면 그대로
                              sources=x.get("sources") or 0, since=x.get("since") or x.get("at"), at=x.get("at"),
                              key=list(k), more=0))
         for y in keep:  # 지난주부터 이어진 사건은 이번 주 월요일로 놓고 '지난주부터' 표시

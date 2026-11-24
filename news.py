@@ -65,8 +65,17 @@ TOPICS = [
 ]
 # 증시에 악재로 읽히는 낱말 (사용자 2026-11-15 "악영향이 가는 뉴스를 강조해서"). 앱 site/app.js BAD_NEWS와 같게 맞춰요
 BAD = (r"급락|폭락|추락|붕괴|쇼크|위기|공포|패닉|경고|빨간불|적신호|손실|우려|불안|리스크|악재|투매|이탈|순매도|매도 폭탄|"
+       r"반토막|검은 월요일|블랙 ?먼데이|휘청|출렁|위험 신호|매도세|후폭풍|"
        r"스캔들|사임|퇴진|사퇴|수사|기소|구속|제재|디폴트|파산|부도|침체|전쟁|공습|미사일|셧다운|"
        r"\bcrash|plunge|tumble|sell-?off|recession|default|scandal|resign")
+# 악재 낱말이 있어도 풀렸다는 뜻이면 악재가 아니에요 ("우려 완화", "급락 후 반등") (사용자 2026-11-24 "차선책 진행해")
+# 앱 core.js GOOD_NEWS·NOT_GOOD_NEWS와 같게 맞춰요
+GOOD = (r"완화|해소|진정|반등|회복|벗어나|벗어난|안도|불식|딛고|극복|일단락|철회|타결|휴전|"
+        r"\bease[sd]?\b|rebound|recover|rall(y|ies|ied)")
+# 그런데 풀리는 일이 실패·지연이면 다시 악재 ("반등 실패", "회복 지연", "휴전 협상 결렬")
+NOT_GOOD = (r"(완화|해소|진정|반등|회복|안도|타결|휴전|극복)[^,.…·]{0,6}"
+            r"(실패|무산|불발|지연|좌절|결렬|난망|어려|못|멀어|제한적|역부족|불투명|에도)")
+BAD_SHARE = 0.5  # 핫 뉴스 묶음에서 악재 기사가 이 비율 이상이면 악재 (대표 제목 하나로만 정하지 않게)
 ROUNDS = 2      # 한 번도 못 받으면 전체를 다시 받는 횟수
 ROUND_WAIT = 90  # 다시 받기 전에 쉬는 초 (워크플로 제한 10분 안)
 WORKERS = 6     # 동시에 받을 개수 (너무 많으면 구글이 막아요)
@@ -129,8 +138,10 @@ def topic(title):
 
 
 def bad(title):
-    """제목이 악재로 읽히면 True."""
-    return bool(re.search(BAD, title, re.I))
+    """제목이 악재로 읽히면 True. 악재 낱말이 있어도 '완화·반등'처럼 풀렸다는 뜻이면 False ('반등 실패'는 다시 True)."""
+    if not re.search(BAD, title, re.I):
+        return False
+    return not re.search(GOOD, title, re.I) or bool(re.search(NOT_GOOD, title, re.I))
 
 
 def fresh(items, now, hours=MAX_HOURS):
@@ -174,7 +185,9 @@ def hot(items, n=HOT_N):
         key = sorted(common, key=lambda w: (-common[w], w))[:4]
         best = max(g, key=lambda i: (len(ws[i] & set(key)), items[i]["at"] or ""))  # 핵심 낱말이 가장 많이 든 최신 기사
         first = min(items[i]["at"] or "9" for i in g)
-        out.append(dict(items[best], sources=len(srcs), key=key, since=first))
+        bads = sum(bad(items[i]["title"]) for i in g)  # 같은 사건 기사 중 악재로 쓴 기사 수
+        out.append(dict(items[best], sources=len(srcs), key=key, since=first,
+                        bad=bads >= len(g) * BAD_SHARE, bads=bads, n=len(g)))
     out.sort(key=lambda x: (x["sources"], x["at"] or ""), reverse=True)  # 언론 많은 것, 같으면 새 것부터
     return out[:n]
 
@@ -200,7 +213,8 @@ def build(fetch=fetch, now=None, prev=None):
     with concurrent.futures.ThreadPoolExecutor(WORKERS) as pool:
         jobs = {m: [pool.submit(fetch, q, lang, QUERY_N) for q, lang in qs] for m, qs in MARKET_QUERIES.items()}
     got = {m: [fresh(f.result(), now) for f in fs] for m, fs in jobs.items()}
-    tag = lambda x: dict(x, topic=topic(x["title"]), bad=bad(x["title"]))  # noqa: E731
+    # 핫 뉴스 묶음은 hot()이 기사 전체로 정한 악재(bads 있음)를 그대로, 나머지는 제목 하나로
+    tag = lambda x: dict(x, topic=topic(x["title"]), bad=x["bad"] if "bads" in x else bad(x["title"]))  # noqa: E731
     out = {m: [tag(x) for x in merge(ls)] for m, ls in got.items()}
     # 핫 뉴스는 같은 기사가 여러 검색어에 걸려도 한 번만 세요 (merge로 같은 제목 하나로)
     new_hot = {m: hot(merge(ls, n=10**6)) for m, ls in got.items()}

@@ -55,9 +55,10 @@ def pct(x, digits=1):
     return "-" if x is None else f"{x:+.{digits}%}"
 
 
-def load_inputs(paper=PAPER):
+def load_inputs(paper=PAPER, news=None):
     paper = pathlib.Path(paper)
     return dict(
+        news=(read_json(pathlib.Path(news)) if news else None) or {},  # live 브랜치 news.json (워크플로가 꺼내 줘요)
         world=read_json(paper / "world.json") or {}, macro=read_json(paper / "macro.json") or {},
         events=(read_json(paper / "events.json") or {}).get("events") or [],
         calendar=(read_json(paper / "calendar.json") or {}).get("events") or [],
@@ -99,7 +100,8 @@ def market_desk(world, macro):
     for name in ("코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체", "원/달러", "미국 10년 국채 금리", "VIX 공포 지수", "WTI 유가", "금 (온스)"):
         it = items.get(name)
         if it:
-            out["facts"].append(dict(name=name, last=it.get("last"), kind=it.get("kind"), d1=it.get("d1"), m1=it.get("m1")))
+            out["facts"].append(dict(name=name, last=it.get("last"), kind=it.get("kind"), d1=it.get("d1"), m1=it.get("m1"),
+                                     day=it.get("day")))  # 언제 종가인지 (아침 리포트의 국장 값은 전날 종가)
     for s in macro.get("signals") or []:
         if s.get("warn"):
             out["warns"].append(dict(key=s["key"], name=s["name"], now=s.get("now")))
@@ -228,9 +230,52 @@ def stock_desk(sectors, signals, flows, funds, per_sector=2):
     return out
 
 
+# ---------------------------------------------------------------- 0. 뉴스팀
+# 2026-11-24 사용자: "젠슨 황 복귀로 시장이 폭등했는데 리포트에 싹 빠져 있다".
+# 다른 팀은 숫자만 봐서 '왜' 움직였는지(사건)를 몰랐어요. 뉴스팀이 news.py의 핫 뉴스(언론 3곳 이상이 다룬 사건)를
+# 언론 수 순으로 골라 리포트 맨 위에 올려요.
+
+NEWS_HOURS = 30   # 이만큼 지난 핫 뉴스는 빼요 (아침 리포트가 전날 낮 국장 소식까지 보게)
+NEWS_TOP = 3      # 시장마다 몇 건
+NEWS_SHARE = 2    # 핵심 낱말이 이만큼 겹치면 같은 사건 (news.HOT_SHARE와 같게)
+
+
+def _at(x):
+    try:
+        t = dt.datetime.fromisoformat(x)
+        return t if t.tzinfo else t.replace(tzinfo=KST)
+    except (TypeError, ValueError):
+        return None
+
+
+def news_desk(news, now=None, hours=NEWS_HOURS, top=NEWS_TOP):
+    now = now or dt.datetime.now(KST)
+    out = {}
+    for mk in ("kr", "us"):
+        rows = []
+        for h in sorted((news.get("hot") or {}).get(mk) or [], key=lambda h: -(h.get("sources") or 0)):
+            t = _at(h.get("at"))
+            if not h.get("title") or not t or (now - t).total_seconds() > hours * 3600:
+                continue
+            key = set(h.get("key") or [])
+            if any(len(key & set(r["key"])) >= NEWS_SHARE for r in rows):
+                continue
+            rows.append(dict(title=h["title"], sources=h.get("sources") or 0, source=h.get("source"), at=h.get("at"),
+                             link=h.get("link"), topic=h.get("topic"), key=sorted(key)))
+            if len(rows) >= top:
+                break
+        out[mk] = rows
+    return out
+
+
 # ---------------------------------------------------------------- 5. 편집팀
 
-def fact_text(f):
+def fact_text(f, day=None):
+    tail = f" · {f['day'][5:]} 종가" if day and f.get("day") and f["day"] != day else ""
+    return _fact_text(f) + tail
+
+
+def _fact_text(f):
     if f["kind"] == "rate":  # 금리는 등락률 대신 %p (world.py)
         return f"{f['name']} {f['last']:.2f}% ({f['d1']:+.2f}%p, 1달 {f['m1']:+.2f}%p)" if f.get("m1") is not None else f"{f['name']} {f['last']:.2f}%"
     if f["kind"] == "krw":
@@ -240,8 +285,13 @@ def fact_text(f):
     return f"{f['name']} {val} ({pct(f['d1'], 2)}, 1달 {pct(f['m1'])})"
 
 
-def headline(market, policy, sectors, stocks, story=None):
-    lines = []
+def headline(market, policy, sectors, stocks, story=None, news=None):
+    lines, seen = [], set()
+    for mk in ("kr", "us"):
+        n = (news or {}).get(mk)
+        if n and len(seen & set(n[0]["key"])) < NEWS_SHARE:  # 두 장이 같은 사건이면 한 줄만
+            seen |= set(n[0]["key"])
+            lines.append(f"📰 {FLAGS[mk]} 큰 뉴스: {n[0]['title']} (언론 {n[0]['sources']}곳)")
     for mk in ("kr", "us"):
         s = (story or {}).get(mk)
         if s and s.get("title"):
@@ -267,11 +317,13 @@ def headline(market, policy, sectors, stocks, story=None):
     return lines
 
 
-def chain(market, policy, sectors, stocks, story=None):
+def chain(market, policy, sectors, stocks, story=None, news=None):
     """자료가 팀 사이로 넘어간 흐름을 한 줄씩."""
     m = market["markets"]
     warn = ", ".join(w["name"] for w in market["warns"]) or "경기 경고 없음"
-    lines = [f"시장팀 → 국장 {m['kr']['tone']}, 미장 {m['us']['tone']}, {warn}"]
+    lines = [f"뉴스팀 {FLAGS[mk]} → 언론이 많이 다룬 사건 {len(n)}건 ({n[0]['title'][:30]}…)"
+             for mk, n in (news or {}).items() if n]
+    lines.append(f"시장팀 → 국장 {m['kr']['tone']}, 미장 {m['us']['tone']}, {warn}")
     for mk, rows in policy["sectors"].items():
         good = [f"{r['sector']}(+{r['score']})" for r in rows if r["score"] > 0][:2]
         bad = [f"{r['sector']}({r['score']})" for r in rows[::-1] if r["score"] < 0][:2]
@@ -289,8 +341,9 @@ def chain(market, policy, sectors, stocks, story=None):
     return lines
 
 
-def build(inputs, today=None):
-    today = today or dt.datetime.now(KST).date()
+def build(inputs, today=None, now=None):
+    now = now or dt.datetime.now(KST)
+    today = today or now.date()
     market = market_desk(inputs["world"], inputs["macro"])
     policy = policy_desk(market, inputs["events"], inputs["calendar"], inputs["policies"], today)
     sectors = sector_desk(policy, inputs["signals"])
@@ -300,15 +353,20 @@ def build(inputs, today=None):
     except Exception as e:  # 분석팀이 고장 나도 리포트는 나가요
         print(f"분석팀 건너뜀: {e!r}")
         story = {}
-    return dict(day=today.isoformat(), generated=dt.datetime.now(KST).isoformat(timespec="minutes"),
-                headline=headline(market, policy, sectors, stocks, story), chain=chain(market, policy, sectors, stocks, story),
-                market=market, policy=policy, sectors=sectors, stocks=stocks, story=story)
+    news = news_desk(inputs.get("news") or {}, now)
+    return dict(day=today.isoformat(), generated=now.isoformat(timespec="minutes"),
+                headline=headline(market, policy, sectors, stocks, story, news), chain=chain(market, policy, sectors, stocks, story, news),
+                news=news, market=market, policy=policy, sectors=sectors, stocks=stocks, story=story)
 
 
 def format_text(r):
     """텔레그램용 보통 글. [제목] 줄마다 tgfmt가 눌러서 펼치는 칸으로 만들어요."""
-    out = [f"[시장팀] 지수·환율·경기"]
-    out += [f"- {fact_text(f)}" for f in r["market"]["facts"]]
+    out = []
+    for mk, rows in (r.get("news") or {}).items():
+        if rows:
+            out += [f"[뉴스팀] {FLAGS[mk]} 언론이 많이 다룬 사건"] + [f"- {x['title']} (언론 {x['sources']}곳)" for x in rows] + [""]
+    out.append("[시장팀] 지수·환율·경기")
+    out += [f"- {fact_text(f, r['day'])}" for f in r["market"]["facts"]]
     if r["market"]["regime"]:
         out.append(f"- 경기 판정 {r['market']['regime']} (경고 {r['market']['macro_score']})"
                    + "".join(f"\n- ⚠️ {w['name']}: {w['now']}" for w in r["market"]["warns"]))
@@ -376,9 +434,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--paper", type=pathlib.Path, default=PAPER)
     parser.add_argument("--dry-run", action="store_true", help="보내지 않고 출력만")
+    parser.add_argument("--news", type=pathlib.Path, help="live 브랜치 news.json (뉴스팀 자료, 없으면 뉴스 칸만 비어요)")
     parser.add_argument("--telegram", action="store_true", help="텔레그램에도 보내기 (기본은 앱 메시지함에만)")
     args = parser.parse_args()
-    r = build(load_inputs(args.paper))
+    r = build(load_inputs(args.paper, args.news if args.news and args.news.exists() else None))
     (args.paper / "report.json").write_text(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     # 지난 리포트 보관함: 한 장씩 따로 남겨 앱 '📅 지난 리포트' 달력에서 다시 봐요 (MARKETS = 이번에 새로 받은 장)
     report_archive.save(args.paper, "daily", r, os.environ.get("MARKETS", ""))
