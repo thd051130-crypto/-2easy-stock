@@ -92,7 +92,7 @@ function msgDay(t) {
   return `${Number(t.slice(5, 7))}.${Number(t.slice(8, 10))}(${"일월화수목금토"[wd]})`;
 }
 // 오늘의 리포트 (report_desks.py, paper/report.json): 다섯 팀이 앞 팀 자료를 넘겨받아 만든 한 장.
-// 시장팀 → 일정·정책팀 → 업종팀 → 종목팀 → 편집팀. 사고팔기 판단은 안 해요 (사용자 2026-10-24).
+// 뉴스팀 → 시장팀 → 일정·정책팀 → 업종팀 → 종목팀 → 편집팀. 사고팔기 판단은 안 해요 (사용자 2026-10-24).
 const REPORT_FLAG = { kr: "🇰🇷", us: "🇺🇸" };
 const rpChg = (x, d = 1) => (x == null ? "-" : `<span class="${sign(x)}">${pct(x, d)}</span>`);
 const rpTone = (t) => `<span class="badge${t === "강함" ? " good" : t === "약함" ? " bad" : ""}">${esc(t)}</span>`;
@@ -121,7 +121,8 @@ function reportCards(d) {
     <details class="brief-more"><summary>자료가 팀 사이로 넘어간 흐름</summary>
       <ol class="rp-chain">${(r.chain || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ol></details></section>`;
   const facts = (m.facts || []).map((f) => f.kind === "rate" ? `<b>${esc(f.name)}</b> ${f.last.toFixed(2)}% <small class="muted">${f.d1 > 0 ? "+" : ""}${(f.d1 || 0).toFixed(2)}%p · 1달 ${f.m1 == null ? "-" : `${f.m1 > 0 ? "+" : ""}${f.m1.toFixed(2)}%p`}</small>` : `<b>${esc(f.name)}</b> ${f.kind === "krw" ? `${num(f.last)}원` : (f.last || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}
-    ${rpChg(f.d1, 2)} <small class="muted">1달 ${pct(f.m1)}</small>`);
+    ${rpChg(f.d1, 2)} <small class="muted">1달 ${pct(f.m1)}</small>`)
+    .map((x, i) => { const f = m.facts[i]; return f.day && f.day !== r.day ? `${x} <small class="muted">· ${md(f.day)} 종가</small>` : x; });
   if (tone) facts.unshift(`${flag} ${market === "kr" ? "국장" : "미장"} 분위기 ${rpTone(tone.tone)} <small class="muted">${esc(tone.index)} 1주 ${pct(tone.w1)} · 1달 ${pct(tone.m1)}</small>`);
   if (m.regime) facts.push(`경기 판정 <b>${esc(m.regime)}</b> <small class="muted">경고 ${esc(m.macro_score)}</small>`);
   (m.warns || []).forEach((w) => facts.push(`⚠️ <b>${esc(w.name)}</b> <small class="muted">${esc(w.now)} → 일정·정책팀에 넘김</small>`));
@@ -138,7 +139,10 @@ function reportCards(d) {
   const stocks = st ? [...st.picks.map((x) => `<span data-stock="${esc(x.code)}" role="button"><b>${esc(x.name)}</b></span> <small class="muted">${esc(x.sector)}</small>
       ${rpChg(x.r5)}${x.notes.length ? `<br><small class="muted">${esc(x.notes.join(" · "))}</small>` : ""}`),
     ...st.quiet.map((q) => `🔍 <b>${esc(q.name)}</b> <small class="muted">주가 그대로(${pct(q.r5)})인데 거래량 ${q.ratio.toFixed(1)}배</small>`)] : [];
-  return [head, storyCard("report"),
+  // 뉴스팀 (2026-11-24 사용자 "젠슨 황 복귀로 폭등했는데 리포트에 싹 빠져 있다"): 언론이 많이 다룬 사건, 왜 움직였나
+  const news = ((r.news || {})[market] || []).map((x) => `${/^https:\/\//.test(x.link || "") ? `<a href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b></a>` : `<b>${esc(x.title)}</b>`}
+    <small class="muted">언론 ${x.sources}곳${x.topic ? ` · ${esc(x.topic)}` : ""}</small>`);
+  return [head, rpSection("📰", "0. 뉴스팀", `${flag} 언론이 많이 다룬 사건 → 분석팀`, news), storyCard("report"),
     rpSection("🌏", "1. 시장팀", "지수·환율·경기 → 일정·정책팀", facts),
     rpSection("🗓", "2. 일정·정책팀", "7일 일정·업종 점수 → 업종팀", plan),
     rpSection("🏭", "3. 업종팀", `${flag} 5일 흐름과 정책 비교 → 종목팀`, secs),

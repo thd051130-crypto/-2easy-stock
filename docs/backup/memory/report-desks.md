@@ -14,4 +14,6 @@ metadata:
 **Why:** 사용자는 매매 판단보다 서로 이어진 한 장짜리 리포트를 원함.
 **How to apply:** 매매 신호·가상계좌를 다시 만들지 말 것(사용자가 다시 요청할 때만). 새 자료는 리포트 팀 중 하나의 입력으로 넣기. 옛 메모 [[departments-pr12]], [[paper-trading-log]], [[learner-pr43]], [[user-rulebook]]는 기록용.
 
-- 2026-11-20 사용자 "텔레그램으로 리포트 보내지마": report_desks.py·weekly.py send()는 앱 메시지함(inbox)에만 남기고 텔레그램은 안 보냄. --telegram 붙여야 보냄. 경기 리포트(macro.py)·일정·공시·키 만료 등 다른 알림은 그대로. 사용자 "올리고 머지"(11-20).
+- 2026-11-20 사용자 "텔레그램으로 리포트 보내지마": report_desks.py·weekly.py send()는 앱 메시지함(inbox)에만 남기고 텔레그램은 안 보냄. --telegram 붙여야 보냄. 경기 리포트(macro.py)·일정·공시·키 만료 등 다른 알림은 그대로. PR #144 머지(11-20 19:4x KST).
+
+- 2026-11-24 사용자 "젠슨 황 복귀로 폭등했는데 리포트에 싹 빠져 있다, 앞으로 잘 확인하고 보내": 원인은 리포트가 숫자만 쓰고 뉴스를 안 읽음(수치는 Yahoo 종가와 일치). → 뉴스팀 news_desk(live news.json 핫 뉴스 30시간·언론 수 순·3건, 헤드라인 맨 위 '📰 큰 뉴스'), 시장팀 값이 전날 종가면 'MM-DD 종가' 표시. 브랜치 claude/project-thread-wq89ec, 미리보기 /mnt/project-files/report-news-preview/, 검수 대기.
