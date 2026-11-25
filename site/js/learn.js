@@ -558,13 +558,20 @@ document.addEventListener("toggle", (e) => {
   if (x.open) { STORY_OPEN.add(k); STORY_OPEN.delete(`${k}:x`); } else { STORY_OPEN.delete(k); STORY_OPEN.add(`${k}:x`); }
 }, true);
 // 연결 그림: 칸 → (이유) → 칸 → … → 갈라진 결과 칸들
-function flowHtml(nodes, why, ends) {
+// cause: 출발점의 원인 뉴스 (market_story.causes_of) — 없으면 칸 없음, null이면 '못 찾음'
+function causeHtml(c) {
+  if (c === undefined) return "";
+  if (!c) return `<div class="flow-cause none">📰 원인 뉴스 못 찾음 <small>그날 모은 뉴스에 같은 주제 제목이 없어요</small></div>`;
+  const t = /^https:\/\//.test(c.link || "") ? `<a href="${esc(c.link)}" target="_blank" rel="noopener">${esc(c.title)}</a>` : esc(c.title);
+  return `<div class="flow-cause">📰 <span class="flow-cause-t">${t}</span><small>${c.sources > 1 ? `언론 ${c.sources}곳 · ` : c.source ? `${esc(c.source)} · ` : ""}뉴스 제목으로 짝지은 것, 확정 원인은 아니에요</small></div>`;
+}
+function flowHtml(nodes, why, ends, cause) {
   const n = (x) => `<div class="flow-n${x.s > 0 ? " up-b" : x.s < 0 ? " down-b" : ""}"><b>${esc(x.t)}</b>${x.v ? ` <span class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${esc(x.v)}</span>` : ""}</div>`;
   const a = (w) => `<div class="flow-a"><span class="flow-arr" aria-hidden="true">↓</span>${w ? `<span class="flow-why">${esc(w)}</span>` : ""}</div>`;
   const okText = (e) => (e.ok === true ? "✓ 예상대로" : e.ok === false ? "✗ 반대로" : e.ok === null && e.want != null ? "· 거의 그대로" : "");
   const e = (x) => `<div class="flow-e${x.ok === true ? " ok" : x.ok === false ? " no" : ""}"><span class="flow-et">${esc(x.t)}</span>
     <b class="${x.s > 0 ? "up" : x.s < 0 ? "down" : ""}">${esc(x.v || (x.s > 0 ? "▲" : x.s < 0 ? "▼" : ""))}</b>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}${okText(x) ? `<em>${okText(x)}</em>` : ""}</div>`;
-  return `<div class="flow">${nodes.map((x, i) => n(x) + a(why[i])).join("")}<div class="flow-ends">${ends.map(e).join("")}</div></div>`;
+  return `<div class="flow">${nodes.map((x, i) => n(x) + (i ? "" : causeHtml(cause)) + a(why[i])).join("")}<div class="flow-ends">${ends.map(e).join("")}</div></div>`;
 }
 // 분석가 시각 (analyst_view.py): 쉽게 말하면 → 오늘의 성격 → 해석(주인공·조연·엇박자·함정) → 확인할 것 → 시나리오 → 내일 볼 것
 function proBox(s, where) {
@@ -595,7 +602,7 @@ function storyCard(where) {
     const key = `${where}:${s.day}:${c.key}`, open = STORY_OPEN.has(key) || (i === 0 && !STORY_OPEN.has(`${key}:x`));
     return `<details class="lesson story-chain" data-story-open="${esc(key)}"${open ? " open" : ""}><summary><span class="story-no">${"①②③④"[i]}</span>
       <span class="hm-t"><b>${esc(c.title)}</b> <span class="badge ${vc}">${esc(vt)}</span></span></summary>
-      <div class="lesson-body">${flowHtml(c.nodes, c.why, c.ends)}
+      <div class="lesson-body">${flowHtml(c.nodes, c.why, c.ends, c.cause)}
         ${c.leaders ? `<div class="story-lead"><b>🏃 ${esc(c.leaders.sector)} ${c.leaders.stocks.reduce((a, x) => a + x.r1, 0) >= 0 ? "앞장선 종목" : "가장 많이 빠진 종목"}</b><div class="story-lead-row">${c.leaders.stocks.map((x) =>
           `<span class="story-lead-s" data-stock="${esc(x.code)}" role="button"><span>${esc(x.name)}</span><b class="${sign(x.r1)}">${pct(x.r1)}</b><small>20일 ${pct(x.r20)}</small></span>`).join("")}</div>
           ${c.leaders.text ? `<p class="learn-why1">${esc(c.leaders.text)}</p>` : ""}</div>` : ""}
