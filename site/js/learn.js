@@ -607,14 +607,11 @@ function storyCard(where) {
         <p class="learn-why1">📌 ${esc(c.lesson)}</p>
         ${CASE_GO[c.kind] ? `<button type="button" class="hot-ok story-learn" data-learn-go="${CASE_GO[c.kind]}">이 경로 배우기</button>` : ""}</div></details>`;
   };
-  const ex = (s.expect || []).map((x) => `<li><div class="l"><div class="name">${x.code ? `<span data-stock="${esc(x.code)}" role="button">${esc(x.name)}</span>` : esc(x.name)}
-      <b class="${sign(x.r1)}">${pct(x.r1)}</b> <span class="badge">${esc(x.title)}</span></div><div class="meta">${x.sector && x.code ? `${esc(x.sector)} · ` : ""}${esc(x.text)}</div></div></li>`).join("");
   const sim = (s.similar || []).map(caseById).filter(Boolean);
   return `<section class="card story" id="story-${where}"><h2>🧠 오늘의 연결 고리 <small>${md(s.day)} · 분석팀</small></h2>
     <p class="story-title">${esc(s.title)}</p>${proBox(s, where)}
     <h3 class="brief-h">🔗 무엇이 무엇으로 이어졌나</h3>
     ${(s.chains || []).length ? s.chains.map(chainBox).join("") : `<p class="empty">금리·환율·반도체·유가·해외 증시가 모두 평소 크기였어요. 이런 날은 업종·종목 소식이 주인공이에요.</p>`}
-    ${ex ? `<h3 class="brief-h">🎯 기대와 반영 <small class="muted">이미 가격에 들어 있던 기대</small></h3><ul class="list">${ex}</ul>` : ""}
     ${sim.length ? `<h3 class="brief-h">📚 닮은 과거 사례</h3><div class="story-sim">${sim.map((c) => `<button type="button" class="learn-tag" data-case-go="${esc(c.id)}">${esc(c.date.slice(0, 4))} ${esc(c.title.split(" · ")[0])}</button>`).join("")}</div>` : ""}
     <p class="muted note" style="margin:10px 0 0">시장이 잘 알려진 길(금리 → 성장주, 반도체 → 코스피, 환율 → 외국인…)로 움직였는지 숫자로 맞춰 봤어요.
       업종은 지수보다 더(덜) 움직였는지로 봐요. ✓는 '그 방향으로 움직였다'는 뜻이지 원인 증명은 아니에요. 사고팔기 신호가 아니에요.</p></section>`;
