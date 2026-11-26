@@ -89,3 +89,26 @@ def test_track_counts_same_nature_days():
     inp["story_log"] = {"kr": [dict(day=d, d1=0.02, nature=labels) for d in days[-20:-10]]}
     h = ms.build(inp)["kr"]["pro"]["history"]
     assert h and h["n"] >= 3 and "5거래일" in h["text"]
+
+
+def test_cause_news_from_collected_headlines():
+    inp = make_inputs()
+    day = inp["signals"]["kr"]["day"]
+    at = f"{day}T08:50+09:00"
+    inp["news"] = dict(kr=[dict(title="코스피 4% 급등 마감", at=at)],  # 결과(우리 지수) 기사는 뒤로
+                       us=[dict(title="비트코인 급등…반도체 기대", at=at)],  # 다른 자산이 주인공이면 빼요
+                       hot=dict(us=[dict(title="엔비디아 급등…AI 수요 기대에 반도체 강세 - 연합", source="연합", sources=9,
+                                         link="https://x.test/a", at=at)]))
+    c = next(c for c in ms.build_market(inp, "kr")["chains"] if c["kind"] == "chip")
+    assert c["cause"]["title"] == "엔비디아 급등…AI 수요 기대에 반도체 강세" and c["cause"]["sources"] == 9
+
+
+def test_cause_none_when_no_match_and_absent_without_news():
+    inp = make_inputs()
+    day = inp["signals"]["kr"]["day"]
+    inp["news"] = dict(us=[dict(title="엔비디아 급락…반도체 약세", at=f"{day}T08:50+09:00")])  # 방향이 반대
+    c = next(c for c in ms.build_market(inp, "kr")["chains"] if c["kind"] == "chip")
+    assert c["cause"] is None
+    inp["news"] = dict(us=[dict(title="엔비디아 급등", at="2020-01-01T08:50+09:00")])  # 그날 뉴스가 아니면 칸 없음
+    c = next(c for c in ms.build_market(inp, "kr")["chains"] if c["kind"] == "chip")
+    assert "cause" not in c

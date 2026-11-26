@@ -1460,6 +1460,11 @@ details.ast-brk:not([open]) { border-left-color: var(--border); }
 .flow-a { display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 14px; min-height: 26px; }
 .flow-arr { flex: none; font-size: 15px; color: var(--accent); font-weight: 700; }
 .flow-why { font-size: 12.5px; line-height: 1.4; color: var(--text-secondary); }
+.flow-cause { margin: 6px 0 0 2px; padding: 4px 0 4px 10px; border-left: 3px solid var(--border); font-size: 13px; line-height: 1.45; }
+.flow-cause a, .flow-cause-t { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
+.flow-cause small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--text-secondary); }
+.flow-cause.none { color: var(--text-secondary); }
+.flow-cause.none small { display: inline; margin: 0 0 0 4px; }
 .flow-ends { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 6px; }
 .flow-e { display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 8px 10px; background: var(--surface-1); }
 .flow-et { font-size: 12.5px; color: var(--text-secondary); line-height: 1.35; }

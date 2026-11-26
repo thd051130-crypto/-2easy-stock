@@ -579,6 +579,7 @@ def build_market(inputs, market, tilt=None):
         leaders_of(b, c)
     if chains and chains[0]["verdict"] == "확인":
         spill_of(b, chains[0])
+    causes_of(chains, inputs.get("news"), b.day, market)
     expect = expectations(b, tilt)
     title, lines = summary(b, chains, expect)
     own = b.move(INDEXES[market][0][0])
@@ -643,6 +644,124 @@ def spill_of(b, c):
                           text=(f"{e['sec']}의 {'강세' if want > 0 else '약세'}가 연결 산업 {len(out)}곳 중 {n}곳으로 번졌어요 (지수 대비). "
                                 + ("여러 곳으로 번질수록 하루 이야기보다 '테마'에 가까워져요." if n >= 2 else
                                    "아직 연결 산업으로 크게 번지진 않았어요. 오늘 이야기는 그 업종 안에 머물렀어요.")))
+
+
+# ---------------------------------------------------------------- 2-1. 원인 뉴스
+# 2026-11-25 사용자: "필라델피아 반도체 지수가 빠진 이유가 궁금한거야", "다른 이슈들에도 이유가 있는데 그냥 이거때문에 빠졌어요라고만 하니".
+# 사슬 출발점(숫자)마다 그날 모은 뉴스(news.py, live 브랜치 news.json)에서 같은 주제·같은 방향 제목을 찾아 붙여요.
+# 지어내지 않아요: 맞는 제목이 없으면 cause=None → 앱에 '원인 뉴스 못 찾음'. 뉴스 파일이 없거나 그날 것이 아니면(지난날 채우기) 칸 자체를 안 붙여요.
+
+KST = dt.timezone(dt.timedelta(hours=9))
+CAUSE_WORDS = {
+    "chip": ["반도체", "엔비디아", "nvidia", "칩", "ai주", "ai 기술주", "메모리", "hbm", "마이크론", "브로드컴", "amd", "tsmc", "필라델피아", "sox", "삼전닉스", "하이닉스"],
+    "rate": ["미 국채", "美 국채", "미국채", "미국 국채", "10년물", "연준", "파월", "fed", "미 금리", "美 금리", "트레저리"],  # 사슬이 미국 10년 금리라 국고채 기사는 빼요
+    "fx": ["환율", "원화", "원·달러", "원/달러", "원달러", "외환", "달러인덱스", "달러화", "달러 강세", "달러 약세", "달러 가치"],  # 맨 '달러'는 값 단위(3500달러)라 빼요
+    "oil": ["유가", "원유", "wti", "브렌트", "opec", "산유", "호르무즈", "석유"],
+    "fear": ["vix", "공포", "변동성", "패닉", "투매", "검은"],
+    "global": ["뉴욕증시", "나스닥", "s&p", "다우", "월가", "미 증시", "미국 증시", "뉴욕 증시"],
+    "yen": ["엔화", "엔캐리", "일본은행", "boj", "엔저", "엔고"],
+    "infl": ["cpi", "pce", "소비자물가", "물가상승률", "물가 지표", "인플레"],
+    "jobs": ["고용 보고서", "고용지표", "비농업", "실업률", "일자리"],
+    "cb": ["fomc", "금통위", "기준금리", "금리 결정", "금리 동결", "금리 인상", "금리 인하"],
+}
+CAUSE_LOCAL = {"kr": ["코스피", "코스닥", "국내 증시", "외국인", "증안펀드", "사이드카"], "us": ["뉴욕증시", "s&p", "다우", "나스닥", "월가"]}
+WORD_UP = ["급등", "상승", "강세", "반등", "랠리", "폭등", "↑", "오른", "올라", "치솟", "최고", "뛰", "회복"]
+WORD_DOWN = ["급락", "하락", "약세", "반락", "붕괴", "충격", "폭락", "추락", "↓", "내린", "내려", "무너", "꺾", "반납", "증발", "털썩"]
+WORD_WHY = ["우려", "차익", "실망", "공포", "쇼크", "탓", "여파", "發", "때문", "이유", "경고", "전망", "불안", "기대", "부각", "직격탄", "에 "]
+# 방향을 안 보는 경로: 큰 발표는 제목에 '오른다/내린다'가 섞여 나와요. 대신 발표 전 미리보기 기사는 빼요
+CAUSE_ANY_DIR = {"infl", "jobs", "cb"}
+WORD_BEFORE = ["앞두고", "전망", "예상", "d-", "관전", "주목"]
+CAUSE_FLIP = {"fear"}
+CAUSE_OFF = ["비트코인", "암호화폐", "가상자산", "코인", "금값", "국제 금", "베트남"]  # 다른 자산이 주인공인 제목 ('비트코인 상승…연준 우려')  # 공포 지수가 오른 날 기사는 '주가 급락'이라고 써요
+# 결과 쪽 낱말: 출발점의 원인이 아니라 사슬 끝(우리 지수)이 움직였다는 기사라 뒤로 미뤄요 (국내 해외발 사슬만)
+CAUSE_EFFECT = {"kr": ["코스피", "코스닥"], "us": []}
+
+
+def _news_at(x):
+    try:
+        t = dt.datetime.fromisoformat(x)
+        return t if t.tzinfo else t.replace(tzinfo=KST)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clean(title, source):
+    t = (title or "").strip()
+    if source and t.endswith(" - " + source):
+        t = t[: -len(source) - 3].strip()
+    return t.split(" > ")[0].strip()  # '제목 > 사이트 이름/게시판' 꼬리
+
+
+def news_pool(news, day):
+    """그날 해설에 쓸 만한 뉴스: 국장·미장 목록 + 핫 뉴스, 그날 전날 정오 ~ 다음 날 정오(한국 시간) 사이."""
+    try:
+        d = dt.date.fromisoformat(day)
+    except (TypeError, ValueError):
+        return []
+    lo = dt.datetime.combine(d - dt.timedelta(days=1), dt.time(12), KST)
+    hi = dt.datetime.combine(d + dt.timedelta(days=1), dt.time(12), KST)
+    seen, out = set(), []
+    for mk in ("kr", "us"):
+        rows = [(x, True) for x in ((news or {}).get("hot") or {}).get(mk) or []] + [(x, False) for x in (news or {}).get(mk) or []]
+        for x, hot in rows:
+            t = _news_at(x.get("at"))
+            title = _clean(x.get("title"), x.get("source"))
+            if not title or not t or not (lo <= t <= hi) or title in seen:
+                continue
+            seen.add(title)
+            out.append(dict(title=title, link=x.get("link") if str(x.get("link") or "").startswith("https://") else None,
+                            source=x.get("source"), sources=x.get("sources") or 1 if hot else 1, at=x.get("at"), low=title.lower()))
+    return out
+
+
+def _dir_of(c):
+    for n in c["nodes"]:
+        if n.get("s"):
+            return n["s"]
+    return 0
+
+
+def cause_of(c, pool, market, used=()):
+    """사슬 출발점과 같은 주제(낱말)·같은 방향인 제목 중 언론이 많이 다루고 '왜'가 들어 있는 것 하나."""
+    words = CAUSE_LOCAL[market] if c["kind"] == "local" else CAUSE_WORDS.get(c["kind"]) or []
+    if c["kind"] == "global":
+        words = words + CAUSE_WORDS["chip"][:6]  # 미국 증시가 크게 움직인 날은 대형 기술주 소식이 원인인 때가 많아요
+    up = _dir_of(c)
+    best, score = None, 0
+    for x in pool:
+        hit = sum(w in x["low"] for w in words)
+        if not hit or x["title"] in used or any(w in x["low"] for w in CAUSE_OFF):
+            continue
+        if c["kind"] in CAUSE_ANY_DIR:
+            if any(w in x["low"] for w in WORD_BEFORE) or x["title"].rstrip("?").endswith(("나", "까")) or x["title"].endswith("?"):
+                continue
+        elif up:
+            d = -up if c["kind"] in CAUSE_FLIP else up
+            want, other = (WORD_UP, WORD_DOWN) if d > 0 else (WORD_DOWN, WORD_UP)
+            low = x["low"].replace("상승률", "")  # '물가상승률'은 방향이 아니에요
+            a, o = sum(w in low for w in want), sum(w in low for w in other)
+            last = max(((low.rfind(w), w in want) for w in want + other if w in low), default=(-1, False))[1]
+            if not a or a < o or (a == o and not last):  # 반대 낱말이 더 많거나, 같으면 마지막 낱말(결국 어떻게 됐나)로
+                continue
+        sc = hit * 2 + sum(w in x["title"] for w in WORD_WHY) + min(x["sources"], 30) ** 0.5
+        if c["kind"] != "local" and any(w in x["low"] for w in CAUSE_EFFECT[market]):
+            sc -= 4
+        if sc > score:
+            best, score = x, sc
+    return best and {k: best[k] for k in ("title", "link", "source", "sources", "at")}
+
+
+def causes_of(chains, news, day, market):
+    if not news:
+        return
+    pool = news_pool(news, day)
+    if not pool:
+        return
+    used = set()
+    for c in chains:
+        c["cause"] = cause_of(c, pool, market, used)
+        if c["cause"]:
+            used.add(c["cause"]["title"])
 
 
 def build(inputs, policy=None):
