@@ -1,5 +1,5 @@
 {
- "day": "2026-11-26",
+ "day": "2026-11-27",
  "items": {
   "us-fed": [
    {
@@ -17,19 +17,26 @@
   ],
   "kr-rate": [
    {
-    "title": "물가·성장 모두 ↑…시장은 힘겨워도 \"한은 금리는 올라간다\"",
-    "source": "조선일보",
-    "date": "2026-11-22",
-    "link": "https://news.google.com/rss/articles/CBMijgFBVV95cUxOTWZGaHVHRTRqSnNobWNmeXYwS2p0YUMxaVladDh4eXFLNFBMRURKcU1xeWxMODZrdnhxeHlzVGJIa1BrVkdNTUNkYkU2cTlWMXBVb3dTN3BQVURrbFRBTGZsd1dhQ3ppVUhvYnBJQnA1Szc4M2djOUZaaUJPRVF0c0Z5RWdHZmZheWRyQ0tn?oc=5"
+    "title": "한은, 기준금리 0.25%p 인상…2년 만에 연 3.25%",
+    "source": "한겨레",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE9kaWJkTjM5bmJlYUh1RFVHbWdhSTdLOVRLY2oxTDZhNFE0QTJMTzlLV0VoSGVpRmg3NVZoYUR2dWVra0VIdnEtakJTUFR1N0IwbzBETlBNNXRMMTlRYUlmUFcyb2xsVGJXMWhjbWVDM09tZw?oc=5"
    },
    {
-    "title": "이코노미스트 23명 중 21명 “한국은행 기준금리 인상”｜Global Money Club",
-    "source": "중앙일보",
-    "date": "2026-11-24",
-    "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE9QOElwUzIyd1hpejMzUF9rcDRyY3l4RGpSTVhXYk9WYUhtQ0xQenhnajRiWE9lN0lGcC1qRGxLcjVkbHBFTlNhWktraHVCWkhudFZvZzQzcV8wcWM?oc=5"
+    "title": "한은 금통위, 기준금리 3.25%로 인상…성장률 전망 크게 올려",
+    "source": "조선일보",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMijgFBVV95cUxObWt5aUFEV1RlNTY0dWxuSnFlQ01Xdl96QkZKSnd6eXdDSlRYSDVMeFZNem16MjBiSERxa0YwMVFtYms3NWd4cmdsa2oza2JKSU9RaGxUaTVRNlN3bktKZEYtdXNvVy1TNHlMYk81eTZKTXFlOC1sUUJfVGlSdFpMaVk1SnEyV3BnZkJSeGN3?oc=5"
    }
   ],
-  "kr-us-deal": [],
+  "kr-us-deal": [
+   {
+    "title": "[사설]美압박 재개 속 통상라인 안 보인다 - 머니투데이",
+    "source": "머니투데이",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBkZ2xFaFFKWm9TYjhNMlBoWnNqV01tSHloWjNjMEFoWjZmZk5PY2YyWk01UnpvSndmTUZXQ2hBMFVjWDgyM25BZThuM3RaRjJENmxYVmhlNmxiSE9rWVYzUkR1b1BfVFFLanN3WE5JX1HSAXBBVV95cUxQZGdsRWhRSlpvU2I4TTJQaFpzaldNbUh5aFozYzBBaFo2ZmZOT2NmMlpNNVJ6b0p3Zk1GV0NoQTBVY1g4MjNuQWU4bjN0WkYyRDZsWFZoZTZsYkhPa1lWM1JEdW9QX1RRS2pzd1hOSV9R?oc=5"
+   }
+  ],
   "world-oil": [
    {
     "title": "호르무즈 해협 선박 피격에 국제유가 상승 전환",
@@ -38,18 +45,18 @@
     "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFB4NngwNzVheFpzR0x0MXhyLUxvVXJQS3FyUWFUNl9zdTdwckRhWElEWGJNd3BJX2hXZnZSeVkwVmVGaHlrUkZfWVlmX2wzQXZ4bW03SXlMdFNjLVhNT2ZJQ0xpQ3pOUE1GOVgxetIBcEFVX3lxTE8zS1dnRllMbnprUk1aUmQzaHhfTFh3b2tLZG5lWUoxRDBDdGRURk4wSDRndHF5a3dZOWtXR2Fac1EzOVRySUR4TjllUkl1RTR0OXNTZkhpX090bnFWRWg4aTYzZTVscTlMN2dWM01qWnc?oc=5"
    },
    {
-    "title": "Oil prices rise after Houthis claim attack on Saudi refinery",
-    "source": "Reuters",
-    "date": "2026-11-25",
-    "link": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxOVGl4Nzdfc01ReTB5TnAxUkVLTXlaRVFvbGM5aTZDOEtVUXlrVDQtMHJwcWh2WldoMnVyb0QxU1pEQUoyN09sNU1SZXR3NVUzdTZXeWpkdGNTZW95MUtmdjV3dWFxTEZsRW5WUlF1djVTTWZxUGVxcHhPNEptMnBEcmZ0MURhX0JxTDFqc19HblpWd2hLSEs5SXRYTXB6bzFwNzZqOUFTc1ZOM3ItVDFZWmM2a0R5YkxsdnlsMTZWQ1ZEUQ?oc=5"
+    "title": "Oil Prices Settle More Than 1% Higher, Log Strongest Month Since March",
+    "source": "EnergyNow.com",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMikAFBVV95cUxPa1hxYUNYOVNkdlVySWM0cDd2VnBIOFY5MU56eWRhTzZvSjNBNDFjYzhzSnB2TS03V01tTUtRMU9pZURsaVdUR3BGa0VIS3VwMTA3QVR6ZWdEOGtyT1BNRUxqUXNyRnBsU2J1Mk10bjZtazlFelZCek8zSy1obXN5VzBGQlU3bnhzWHU2QU1xdGM?oc=5"
    }
   ],
   "world-us-china": [
    {
-    "title": "미중, 무역휴전 연장·희토류-AI 합의할까…'관계안정 쇼' 전망 우세",
-    "source": "뉴시스",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE95ZDdsOXVHVlI2a3NlVFZBNWhrbG03MTJxd3lXV1p6TzNlTVlfRTB1bng2ak5WWGlvNm9tc05ZdmhXOVNhUkVmQ0k5Vl9yWVB1ZmkwLW1MblZZWVJncDdZZ9IBeEFVX3lxTE1uRzRiQUNsU0J4ajFPR1FoSmZfWVVYaVBCXzFUY3BTVC1TNlpwYTdsclJ4djlOVzlyZk1UMUlvbXgzdlcxSmJpWDREdjJJaERSN0l0ZEVzcExkNkthcDFPamhJbVl4SHRDMGhmai1KRklBMVhmUVBGLQ?oc=5"
+    "title": "美 과잉생산 관세에 中 반발…미중 무역휴전 다시 '시험대'",
+    "source": "연합뉴스",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE5YN3RzRmpXNm05NHQzVzd2YXEyc0VxU0x4R1lELVBiRFpPVDY2bnFHRXV3U0FTS3daTGZJUUtrRGVrUTQwTDZMZFpCRk93NFlNVEZZb3h0S1ZleUhOdHBXNtIBYEFVX3lxTE5YN3RzRmpXNm05NHQzVzd2YXEyc0VxU0x4R1lELVBiRFpPVDY2bnFHRXV3U0FTS3daTGZJUUtrRGVrUTQwTDZMZFpCRk93NFlNVEZZb3h0S1ZleUhOdHBXNg?oc=5"
    },
    {
     "title": "China extends pause in controls on critical mineral exports to US",
@@ -60,10 +67,10 @@
   ],
   "kr-budget-ai": [
    {
-    "title": "2027년 예산, 민생과 양극화 극복 초석 되길",
-    "source": "매일일보",
-    "date": "2026-11-23",
-    "link": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE1GYWd5SXlGOExwWWV2RWdxa29HVUtDcUh1NjlJZVhsRmttLWpnRnhERUV2Qi00ZkwtMmg0N1FsNGl3TlFQSThxekhLUlV6OVJNUlVOY2NUemZ4c2ZTMDRERjJCenI?oc=5"
+    "title": "[2027예산안심사⓷] AI·첨단산업 21조 투자…사업중복·성과검증 글쎄",
+    "source": "한스경제",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE42QVNEalc3cFZYS19sY19POWZ0V280R1djcTRCc1lpNkNGblNxVEpEUk5ZSlpCenQtZkxXUzNNSXNzalhMQTk4dTlXTEw2YmpGQnE5VkhrTlJhQzloeGl3a256VTZsckUyQnRsLdIBb0FVX3lxTE9NRmdxTVhqR2l2OG9mbTJtRzE1bzFVaTRtV1NIa0dDZkplRU51b1JvVmJMbTRMcHEwQlJ4U1BNY0xJeFhDZHNjSzFEbWFWa2w0OG1kTjJLN1EzNlItSWxua0lWRFljRG56dXdlLTlmaw?oc=5"
    },
    {
     "title": "천안시, 내년 예산 2조 6700억 편성…민생·AI·반도체에 집중 투자",
@@ -80,38 +87,38 @@
     "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9mSFB6a0djOWxwZnRrSlRBUUVEYUxTUUh3SGQtMTdyRnhTTE5kOEhROHNrcXhMV1c5azFaX2xHejR2a2JtVzdmSzg4N3ZFREllNjBTdk52SjI3eVhWNE5UQ2g4THNJaFNLSWFzSHFhNWzSAXRBVV95cUxPUUl1ZlNQV3YxR3lFbms3TjZGbVZBRmluQ0F6MHdmYmo1MVRyOHZHTi1MYVhxbzJpMi1JdjBzdXZSUUZTOUZnZ3MyRXNFWDhwWEltdHlVbkdVUHBGZjdxbmREbjFYQWEtd2VxcUI1VGlrSHliYw?oc=5"
    },
    {
-    "title": "자사주 소각 100조원 시대…내년 증시 상승 동력 될까[전예진의 마켓 인사이트]",
-    "source": "한경매거진",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBuSzVkVkMtV3EwZ3pFLXNXTEJRSW56ZTVSSDRQRXhMMUE4WkRUbkFOcVRONGk3eW5Mb1dGWFJhX0JxRG5pTUM0V0VpdmV1djd5YWhVQ2Z1WXNGR3UxQlZGNmgwMXpuSUlTV1Q0Yg?oc=5"
+    "title": "상법 개정에 대응하는 벤처캐피털…자사주 정리 온도차",
+    "source": "톱데일리",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE1hM0l3c1dSZTdOZmM4OERNZTNJM2F0RkU2d1VydU8xQ3ZVWlhaclEwZkwxZXZoM2Vvc2p4UnZOOTk5NjRObVZHdHZhZ3IxSDdr?oc=5"
    }
   ],
   "us-chip-tariff": [
    {
-    "title": "트럼프 행정부, 한국 등 14개국 ‘과잉생산’ 불공정 판정…한국산 최대 15% 관세 제안",
-    "source": "VOA 한국어 홈페이지",
-    "date": "2026-11-25",
-    "link": "https://news.google.com/rss/articles/CBMiU0FVX3lxTE9Fb2gzR3EyMk5Kd0JEdVhUakJvZ19mSW01d3BfSzd0RV91X3BGd3g4bVlPNWRrc0QzLXZQdlg4TGNNcnNUdl9WX3RTOWFfOW51Q0pJ0gFTQVVfeXFMT0VvaDNHcTIyTkp3QkR1WFRqQm9nX2ZJbTV3cF9LN3RFX3VfcEZ3eDhtWU81ZGtzRDMtdlB2WDhMY01yc1R2X1ZfdFM5YV85bnVDSkk?oc=5"
+    "title": "[美 과잉생산 관세]반도체·車, '과잉생산' 지목됐지만 이번 관세선 빠져…부담은 비(非)232조 품목으로",
+    "source": "전자신문",
+    "date": "2026-11-26",
+    "link": "https://news.google.com/rss/articles/CBMiTkFVX3lxTE5vUGgtWWhRWmMzM3ZrVXN6N0g1UTlDdHhHTS1GZjlmUDdfMVB0ZTRIZUEyanhmb2RRbTk0VmFfakRPTUJEMW52OVMzRkZmQQ?oc=5"
    },
    {
-    "title": "Legislative Update: China, Clothing, Enforcement, Semiconductors, Exports, Product Safety",
-    "source": "Sandler, Travis & Rosenberg, P.A.",
-    "date": "2026-11-23",
-    "link": "https://news.google.com/rss/articles/CBMi6wFBVV95cUxQQXFKcHM1MzBmczFMcVdMaXhFc2w2UHJHOXF5cTMzM0RBMElvdWtFVW5rR1JlUE1PVDlraEsxMXlwNHBBcmF5b3Q3ZHF5R0ZEQmFSbW84c2J4RU9xX0lFR0QwQUVRd2ZGbTJXQnQyWmpGd1BtdVh1ZEZUaWhNeFVNY0I4cjVoS2xfZ1VHM1FzYVg1OFJJcldvd0dwVVE0alNKTGlmUFhndG80Z293NnJhbmQ3MUJsNGFwQ2hDNEY5dUZuQno0RWtmZWlzOGt1aTdEdDZQNEFxUFZhSnpzcURZcHYtMWlxZmhzcEtj?oc=5"
+    "title": "Taiwan says it is confident of keeping previously agreed tariffs with US",
+    "source": "Reuters",
+    "date": "2026-11-25",
+    "link": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxPcG1xdFN1WlF6MWxzVDZhdVZhOUpVMGprdUVpSE1hbUxZRjB2Q0RuTE9JOVRmX1pJYlVDUDJYdW1hVGk2UmRJVWxwbVNYOUlSOWlJb2NpRnRsSlppc1RoUUpONl9ndEQzTVYwY3RKdm1RZFNGX2xEemFBcVN1M2dWSUU3cXB6UWRZU1l3eWp2dTZQQ25Lcm8tX0hObGVneWFZR3V1ZlJoOXctQUZmdGREb1hjS3htWlhNRHN6UjRXTkxQUQ?oc=5"
    }
   ],
   "us-301": [
    {
-    "title": "“미, 한국·EU·호주 디지털 규제 겨냥 301조 조사 검토”···강제노동·과잉생산 이어 세 번째 조사 나서나",
-    "source": "경향신문",
-    "date": "2026-11-22",
-    "link": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE1vN2V1V3lHYTZJd2tRWFI3ZUlTdXVORmVMNFpHYkY3QlIxVUF2MHIzZllILVY4YTN6anhvRG1OMW9EVFZwQUlLRlhSUy0zYVNjN1ZwSm1hRU5Xd9IBX0FVX3lxTE83ZDFpWFNRWkt0dXFYdmZTc24yczFqZVNiUk9DaEpmNzI3WTdiUHU4QnRkb2RBM0dIb2FrN0VLaVl2TjlpVVI3cmpRQkNnRzVwV25wMU5BTUFDODl4di1N?oc=5"
+    "title": "美, ‘과잉 생산’ 관세 추가... “한국엔 15% 상한 유지”",
+    "source": "조선일보",
+    "date": "2026-11-25",
+    "link": "https://news.google.com/rss/articles/CBMihAFBVV95cUxQMUlKVjBiYmt3X0FQUEIyXzFmVzBfUTVsWGRxTmNXZHBEQUZvX1RheDM5NW1iYVAzZk8temN1NnY2MzlYeG1zRk5WelF3Vm5IZjdEU1FiRmY5QWFZdUpfUzgxZXN1dXhleFI4NUluS19qN0ZMaWI1WDAzcmNOQnV2UHRmNnE?oc=5"
    },
    {
-    "title": "Section 301 Tariffs of 15 to 40 Percent Proposed on 14 Trading Partners",
-    "source": "Sandler, Travis & Rosenberg, P.A.",
+    "title": "USTR Announces Affirmative Section 301 Determinations and Proposes New Tariffs on 14 Trading Partners to Address Structural Excess Capacity",
+    "source": "Wiley Rein",
     "date": "2026-11-25",
-    "link": "https://news.google.com/rss/articles/CBMi2wFBVV95cUxOakdGSXJJZVdmUFBmbUZmWjI0VmtlQjhGMTlpY1d3eDhwZkdaV0dzdUdOQ3BJRWp4VEIyWG1PdHl2TTNhTDg5UkhJNW41Z3NzWkdYMWpVdkk2cmVFU1F6c3lvSFU4NnFwck1IX3Zmdkw5c0paUEkzelNXSGxaeWtsejhERjYwNlEybEZqVE4zQW1GNXVfOWRYWC1laC14eU1HRFBSUEtSYnI3bF95Y1JIYTdsWXRTcll0RXZ0MmljUjBwUXNJUzk5bUlkbEVvcW43eDJERzNrbVU2Q2c?oc=5"
+    "link": "https://news.google.com/rss/articles/CBMi-wFBVV95cUxQMk5kTElfNzJrdXRxYWxJVTFIQ2xLcE5VNFB1aGZHei1NTERyVW9EY0JFZXdjbV93dU5POGNHaWpOa1RPY3IzVHZBSjFKb2hMa0kwbEYzcXNocEJFYW01bXAyZmswNDdaY3NiNzJXZUVaVHZrRUhid21BUHowU0I3TVJkTjFfNEJvMHJyVnFEMThlek13T1dMeGJBcDdrMXA0VzlxV0ZsMlNDb3BLemhVLWEzc043c3FmS2RjZkI3RnFIenpGTk9NNkpwX3l2M3RyaHFRdGxkbjdrQ014WU9Melk2c3JUVEpSNW9jeXZGVzdGWVJYWnZxT0wxNA?oc=5"
    }
   ],
   "us-pharma": [
@@ -132,7 +139,7 @@
    {
     "title": "고배당기업 배당소득 분리과세, '신청'이 곧 '절세'는 아니다 - 머니투데이",
     "source": "머니투데이",
-    "date": "2026-11-25",
+    "date": "2026-11-23",
     "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE81U2lEcGVMVThETlBjMDlUN1VLLVRmUTNHSFpsM3VDeDV1Qm4zN0NkWVllQ3ozcW5OOTlEeS1Fcm1Ob2JxUmdCenNmWlVydWdMR0tRQUw1WEFhYWd4Mm5lLXFXUTEtOXBlaC1v0gFwQVVfeXFMTWxEWEhQVzdfOWpzQnhUcGd6UGtTaXphTkMtMm5kd2hnVFFsQkQ2RFpUcGFPbTFROHlVQjhUYmdOZ0JDWE16c3ZmZjRVQjY3d0dWYkVKLUpFQ3hXOG82aWJmVU9mTXBvZXlLSDlUSzJxRA?oc=5"
    },
    {
@@ -145,16 +152,16 @@
   "kr-budget-future": [],
   "world-boj": [
    {
-    "title": "일본은행 우에다 총재 \"3분기 소비 0.3% 줄었지만 금리 올린다\" 이유는?",
-    "source": "글로벌이코노믹",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxQejBsQ1BfYTZpQkc3LXVxTGlWUlNjNEhwSXcxd3hoaXRwMlp3YTc2VllsSWVuVFAzMHdjeFRRNTNtSWFfT24wTkpIZk9PN3BWTTRjaXBObGNkckJPd0FkWUlGNlVPODBzWGthb21mQl9qTzNiTHJLT1pKVzNsdjU3bUJHV2JNUU85?oc=5"
+    "title": "시장이 일본은행의 금리 인상 경로를 재평가함에 따라 일본 국채 수익률 곡선이 가팔라지고 있다",
+    "source": "TradingView",
+    "date": "2026-11-25",
+    "link": "https://news.google.com/rss/articles/CBMid0FVX3lxTE5tU3dlRW81NkpTX09qdTNwQnZXT1I0TjkzelVxakxfeHFfQ0xLZVQ1WkVhUlNLWEhraFZGNzVSdlNZeTRRV3hUSXpVWHdRNXJTNnlNcWNqY3ROLUxwWEJrZUV6blpObXZ0UE5NLTVfQXMyRUJOX3dB?oc=5"
    },
    {
-    "title": "Bank of Japan to raise interest rates in December and again by end-March, economists say",
+    "title": "BOJ's ambiguity on rate hike path could tempt yen bears",
     "source": "Reuters",
-    "date": "2026-11-19",
-    "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxNd2tVS3ktQThQZmhzbFBGVmwzRDlycmtudVhLTk1vLWpJeDlQMFBqV1J3bFZXNGtTT0VfRGJaWUxBeWNWck0tblgzbTJsQmM4SXNRbUVXZEo1Nk1UdWpONURjY1I5RnJsVmRuRzdra2VFSVlyYnJUTnhjUXNjNUJKU2YtWDBfQkZuWFV2d3FJZTdFSzZKdHgyM242QzVReUJENE52TEtXaWlfMnNlNGZkejlzRGR3TnM?oc=5"
+    "date": "2026-11-20",
+    "link": "https://news.google.com/rss/articles/CBMipwFBVV95cUxNY0J6NDQ5LVFYcXhIRWVSVmstMzNMUldQS2JUai1YNlVKWHVnd09WVzBKVXhNX21jc3pLNGw3R01lT21paGZKWUNiZ1gzUmsxb1h2b3BCX2FjaC1NTzZNYlRiTUxjUUR5TmhlVFIybE1SZm1ZamdwRVhIT3BBV2E4RFpUdGRIOGNuOVpENWcxZFpsTWtUT0NjaWctY2p6aWdReENwNUdfNA?oc=5"
    }
   ]
  }
