@@ -179,6 +179,8 @@ document.querySelectorAll(".nav button").forEach((b) => b.addEventListener("clic
   render();
 }));
 window.addEventListener("popstate", () => {
+  // 떠 있는 창(배당 계산기 종목 창 등)이 있으면 폰 뒤로 가기는 그 창만 닫아요 (화면은 그대로)
+  if (sheetBack) { const f = sheetBack; sheetBack = null; f(); return; }
   const h = fromHash();
   if (h.s === "stock" && h.code) stockCode = h.code;
   if (h.s === "map") mapFocus = h.code || "";

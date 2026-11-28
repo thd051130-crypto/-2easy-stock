@@ -430,6 +430,8 @@ function selectMarket(m) {
 // 그래서 폰의 뒤로 가기를 누르면 종목 → 보던 화면 → 홈 순서로 돌아오고, 앱이 바로 꺼지지 않아요.
 // (예전 버전이 남긴 기록 {screen}은 1층으로 쳐요)
 const depth = () => { const st = history.state; return st ? (st.depth ?? (st.screen ? 1 : 0)) : 0; };
+// 떠 있는 창이 열 때 기록을 하나 쌓고 여기에 닫는 함수를 둬요. 폰 뒤로 가기(popstate)가 이걸 먼저 불러요 (guide.js)
+let sheetBack = null;
 function go(s, fromBack) {
   if (!SCREENS.includes(s) || (s === "stock" && !stockCode) || (s === "more" && !moreKey)) s = "home";
   const prev = screen;
