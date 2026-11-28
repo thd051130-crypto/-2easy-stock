@@ -15,6 +15,8 @@ fundamentals 워크플로(매주 토요일)에서 symbols.py 다음에 돌려요
 한 줄: 코드 → [시작 "YYYY-MM", 주가 상승 %/년, 배당 %/년, 최대 낙폭 %, 계산에 쓴 햇수,
               [하락장별 [낙폭 %, 회복 개월(아직이면 null)] 또는 그때 상장 전이면 null] × 3,
               [[배당락 달(1~12), 1주당 배당금], ...] 최근 12개월]
+배당 계산기 종목 창용 최근 10년 배당 내역은 <시장>_divs.json에 따로 둬요 ({코드: [["YYYY-MM", 1주당 배당], ...]}).
+배포 때 stock_pages.py·all_stocks.py가 종목 파일(stocks/<시장>/<코드>.json)의 "divs"로 넣어요 (한 파일로는 커서 앱이 통째로 받지 않게).
 지수(코스피·S&P500)의 하락장 숫자는 "idx"에 따로 둬요 (상장 전 종목은 앱이 지수로 대신 계산해요).
 
 사용법:
@@ -80,8 +82,14 @@ def div_months(rows):
     return [[int(m[0][5:7]), round(m[3], 2)] for m in rows[-12:] if len(m) > 3 and ok(m[3])]
 
 
+def div_hist(months, years=10):
+    """최근 10년 배당 내역: [["YYYY-MM", 1주당 배당금]] 오래된 순 (없으면 [])."""
+    return [[m[0], round(m[3], 4)] for m in months[-(years * 12):] if len(m) > 3 and ok(m[3])]
+
+
 def stats(months):
-    """[(연월, 종가, 수정 종가, 배당[, 최저가])] 오래된 순 → [시작, 주가 %, 배당 %, 낙폭 %, 햇수, 하락장 3개, 최근 배당].
+    """[(연월, 종가, 수정 종가, 배당[, 최저가])] 오래된 순 → [시작, 주가 %, 배당 %, 낙폭 %, 햇수, 하락장 3개, 최근 배당,
+    그 전 1년 배당(13~24달 전, 배당 계산기의 '직전 대비' — 1년에 한 번 주는 종목도 비교돼요)].
     짧거나 이상하면 None."""
     rows = [m for m in months if m[1] and m[1] > 0 and not math.isnan(m[1])]
     if len(rows) < MIN_MONTHS + 1:
@@ -99,7 +107,7 @@ def stats(months):
     if not (-0.99 < price < 3 and 0 <= div < 1):  # 액면분할 누락 같은 이상한 값
         return None
     return [rows[0][0], round(price * 100, 1), round(div * 100, 2), round(mdd * 100), round(years, 1),
-            crises(rows), div_months(rows)]
+            crises(rows), div_months(rows), div_months(rows[:-12])]
 
 
 def fetch(tickers, retries=2):
@@ -132,9 +140,11 @@ def fetch(tickers, retries=2):
     return out
 
 
-def build(market, rows, old=None, fetch=fetch, pause=1.0):
-    """검색 목록 줄들 → {코드: 숫자}. 못 받은 종목은 old 값을 써요."""
+def build(market, rows, old=None, fetch=fetch, pause=1.0, divs=None, old_divs=None):
+    """검색 목록 줄들 → {코드: 숫자}. 못 받은 종목은 old 값을 써요.
+    divs에 dict를 주면 {코드: 최근 10년 배당 내역}도 채워요 (못 받은 종목은 old_divs 값)."""
     old = old or {}
+    old_divs = old_divs or {}
     by_t = {ticker(market, r): r[0] for r in rows}
     out, todo = {}, list(by_t)
     for i in range(0, len(todo), BATCH):
@@ -142,6 +152,10 @@ def build(market, rows, old=None, fetch=fetch, pause=1.0):
         for t in todo[i:i + BATCH]:
             s = stats(got[t]) if t in got else None
             code = by_t[t]
+            if divs is not None:
+                h = div_hist(got[t]) if t in got else old_divs.get(code)
+                if h:
+                    divs[code] = h
             if s:
                 out[code] = s
             elif code in old and t not in got:
@@ -168,7 +182,10 @@ def main():
         path = FOLDER / f"{m}_returns.json"
         prev = json.loads(path.read_text()) if path.exists() else {}
         old = prev.get("s", {})
-        s = build(m, rows, old)
+        dpath = FOLDER / f"{m}_divs.json"
+        old_divs = (json.loads(dpath.read_text()) if dpath.exists() else {}).get("s", {})
+        divs = {}
+        s = build(m, rows, old, divs=divs, old_divs=old_divs)
         print(f"{m} 수익률 {len(s)}/{len(rows)}종목")
         if len(s) < len(rows) * 0.5 and len(old) > len(s):
             raise SystemExit("절반도 못 받아서 지난번 파일을 그대로 둬요")
@@ -177,6 +194,8 @@ def main():
         path.write_text(json.dumps(dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), s=s, idx=idx,
                                         crises=[c[0] for c in CRISES]),
                                    ensure_ascii=False, separators=(",", ":")) + "\n")
+        dpath.write_text(json.dumps(dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), s=divs),
+                                    ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
 if __name__ == "__main__":

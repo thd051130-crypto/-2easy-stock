@@ -130,7 +130,7 @@ function astGrid() {
 // github.io 주소는 다른 저장소 페이지와 저장소를 같이 써서, 이 앱이 쓰는 이름만 담아요 (remember(...)로 새 값을 만들면 여기에도)
 const BK_KEYS = ["assets", "ast_bopen", "ast_live", "chart_idx", "cmp_f", "cmp_line", "compare", "divcal_off", "fb_draft", "filters", "frame",
   "goal", "guide_v1", "heat_p", "home_layout", "hot_fold", "hot_news", "hot_read", "inbox_seen", "inbox_y", "ind", "lab", "learn_tab", "ma_set", "map_color",
-  "map_days", "map_mode", "market", "news_url", "pol_r", "read_cat", "savings", "scr_all", "sector", "tools_tab", "watchSort", "world_g", "world_p", "world_tab"];
+  "divcalc", "map_days", "map_mode", "market", "news_url", "pol_r", "read_cat", "savings", "scr_all", "sector", "tools_tab", "watchSort", "world_g", "world_p", "world_tab"];
 const bkMine = (k) => BK_KEYS.includes(k) || /^(watch|seen_extras)_(kr|us)$/.test(k);
 // JSON으로 저장하는 값은 열리는지·모양이 맞는지 봐요 (깨진 값이 들어가 앱이 안 열리는 일 막기). 글자 값(frame·market 등)은 그대로
 const BK_JSON = { assets: "obj", ast_bopen: "arr", chart_idx: "obj", compare: "obj", filters: "arr", goal: "obj", home_layout: "obj", hot_news: "obj", hot_read: "obj",

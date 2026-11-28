@@ -1,7 +1,7 @@
 // 홈 화면 앱용 서비스워커: 열 때마다 서버에 새 버전이 있는지 확인해서 띄우고, 오프라인이면 마지막으로 받은 화면·데이터를 보여줘요.
-const CACHE = "easystock-v8";
+const CACHE = "easystock-v9";
 // 앱 파일은 화면별로 나눠져 있어요 (site/js/, 2026-11-20). 새 파일을 만들면 여기에도 넣어요 (tests/test_dashboard.py가 확인해요)
-const APP_JS = ["core", "view", "watch", "search", "inbox", "more", "learn", "chart", "home", "stock", "guide", "tools", "main", "map", "feedback", "savings", "asset", "lab"];
+const APP_JS = ["core", "view", "watch", "search", "inbox", "more", "learn", "chart", "home", "stock", "guide", "tools", "main", "map", "feedback", "savings", "asset", "lab", "divcalc"];
 const SHELL = ["./", "index.html", "style.css", "fonts/pretendard.css", "casebook.js", ...APP_JS.map((n) => `js/${n}.js`), "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png"];
 
 // 쿼리(?t=…)는 빼고 저장해요. 안 그러면 data.json을 열 때마다 캐시가 하나씩 쌓여요.
