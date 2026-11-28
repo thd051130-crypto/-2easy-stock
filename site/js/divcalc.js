@@ -4,7 +4,7 @@
 // 목표 배당금(선택, 켜기): 보유 종목만으로 '지금 비중 그대로 늘리기' 또는 '모자란 만큼 같은 돈씩 사기'로 몇 주 더 필요한지.
 // 자료: symbols/<시장>_returns.json r[6] 최근 12개월·r[7] 그 전 12개월 [배당락 달, 1주당 배당] (야후 무료, 매주 토요일) + 종가(_quotes.json).
 // 배당 달력(asset.js dvHold·dvHist·DV_TAX)을 같이 써요. 주 수·설정은 이 폰에만 저장 (localStorage divcalc).
-let DC = { q: {}, net: true, goal: false, amt: "", per: "m", way: "keep" };
+let DC = { q: {}, net: true, goal: false, amt: "", per: "m", way: "keep", frac: false };
 try { DC = { ...DC, ...JSON.parse(localStorage.getItem("divcalc") || "{}") }; } catch (e) { /* 처음 */ }
 const dcSave = () => remember("divcalc", JSON.stringify(DC));
 const dcKey = (h) => `${h.m}:${h.code}`;
@@ -120,7 +120,7 @@ function dcHero(xs) {
 const dcOut = (x) => { const q = dcQty(x.h); return x.lastD ? `1회 ${astDivW(x.once * q)} · 1년 <b>${astDivW(x.year * q)}</b>` : "최근 1년 배당 없음"; };
 function divCalcCard() {
   const tx = DC.net ? "세후" : "세전";
-  const head = `<h2 class="goal-h"><span>🧮 배당 계산기</span><span class="goal-h-r"><small>최근 배당 기준</small></span></h2>`;
+  const head = `<h2 class="goal-h"><span>🧮 배당 계산기</span><span class="goal-h-r"><small>최근 배당 기준</small><button type="button" class="goal-reset" data-dc-clear aria-label="자산 기록 주 수로 초기화">${RESET_ICON}<span>한 번 더 누르면 자산 기록대로</span></button></span></h2>`;
   if (typeof dvHold !== "function") return `<section class="card" id="dc-card">${head}<p class="muted" style="margin:6px 0 0">불러오는 중…</p></section>`;
   const { ym, list } = dvHold();
   if (!list.length) return `<section class="card" id="dc-card">${head}
@@ -144,7 +144,6 @@ function divCalcCard() {
     return g.length ? `<div class="dc-sec"><h3 class="dc-sec-h"><span>${t} <small class="muted">${g.length}종목</small></span><small data-dc-sec="${m}">${dcSecSum(g)}</small></h3>
       <ul class="ast-mix dc-list">${g.map(row).join("")}</ul></div>` : "";
   }).join("");
-  const changed = xs.some((x) => dcQty(x.h) !== x.h.qty);
   const goal = DC.goal ? `<div class="dc-goal"><div class="dc-goal-in"><span class="alert-input"><input data-dc-amt type="text" inputmode="numeric" value="${esc(DC.amt)}" placeholder="예: 300000" aria-label="목표 배당금"><span>원</span></span>
         <nav class="chips"><button type="button" data-dc-per="m" aria-pressed="${DC.per === "m"}">한 달</button><button type="button" data-dc-per="y" aria-pressed="${DC.per === "y"}">1년</button></nav></div>
       <nav class="chips"><button type="button" data-dc-way="keep" aria-pressed="${DC.way === "keep"}">지금 비중 그대로</button><button type="button" data-dc-way="same" aria-pressed="${DC.way === "same"}">모자란 만큼 같은 돈씩</button></nav>
@@ -154,7 +153,6 @@ function divCalcCard() {
     <nav class="chips"><button type="button" data-dc-tax="0" aria-pressed="${!DC.net}">세전</button><button type="button" data-dc-tax="1" aria-pressed="${DC.net}">세후</button></nav>
     <div class="sav-hero ast-hero" data-dc-hero>${dcHero(xs)}</div>
     ${rows}
-    ${changed ? `<button type="button" class="ast-btn" data-dc-reset style="margin-top:10px">보유 주 수로 되돌리기</button>` : ""}
     <button type="button" class="alert-toggle dc-goal-sw" data-dc-goal aria-expanded="${DC.goal}"><span>🎯 목표 배당금으로 포트폴리오 짜기</span><b>${DC.goal ? "끄기" : "켜기"}</b></button>
     ${goal}
     <p class="muted note" style="margin:10px 0 0">${ymName(ym)} 자산 기록 종목 기준. 1년 배당 = 가장 최근 1회 배당 × 1년에 주는 횟수 × 주 수예요. 회사가 배당을 바꾸면 달라지고, 받을 돈을 약속하는 숫자가 아니에요.
@@ -172,6 +170,14 @@ function bindDivCalc() {
   if (!card) return;
   if (!RET.kr || !RET.us || !QUOTES.kr || !QUOTES.us)  // 배당 자료·종가(배당률·목표에 쓰는 가격)
     Promise.all([loadReturns(), loadQuotes("kr"), loadQuotes("us")]).then(() => { if (screen === "tools" && $("#dc-card")) dcRefresh(); });
+  // 초기화: 바꿔 본 주 수를 전부 자산 기록에 적힌 보유 주 수로 (사용자 2026-11-28). 세전/세후·목표 설정은 그대로.
+  // 실수로 누르지 않게 한 번 누르면 '한 번 더 누르면 초기화', 3초 안에 다시
+  const cb = card.querySelector("[data-dc-clear]");
+  if (cb) cb.addEventListener("click", () => {
+    if (!cb.classList.contains("armed")) { cb.classList.add("armed"); setTimeout(() => cb.classList.remove("armed"), 3000); return; }
+    DC.q = {};
+    dcSave(); holdHeight(); dcRefresh(); keepTap();
+  });
   if (!card.querySelector("[data-dc-goal]")) return;  // 불러오는 중·종목 없음
   const redraw = () => { dcSave(); holdHeight(); dcRefresh(); keepTap(); };
   const xsNow = () => dvHold().list.map(dcInfo);
@@ -202,8 +208,6 @@ function bindDivCalc() {
     if (x) dcPopOpen(x);
   }));
   card.querySelectorAll("[data-dc-tax]").forEach((b) => b.addEventListener("click", () => { DC.net = b.dataset.dcTax === "1"; redraw(); }));
-  const rs = card.querySelector("[data-dc-reset]");
-  if (rs) rs.addEventListener("click", () => { DC.q = {}; redraw(); });
   card.querySelector("[data-dc-goal]").addEventListener("click", () => { DC.goal = !DC.goal; redraw(); });
   const amt = card.querySelector("[data-dc-amt]");
   if (amt) amt.addEventListener("input", () => { DC.amt = amt.value.replace(/[^0-9]/g, ""); soft(); });
