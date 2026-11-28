@@ -112,3 +112,12 @@ def test_cause_none_when_no_match_and_absent_without_news():
     inp["news"] = dict(us=[dict(title="엔비디아 급등", at="2020-01-01T08:50+09:00")])  # 그날 뉴스가 아니면 칸 없음
     c = next(c for c in ms.build_market(inp, "kr")["chains"] if c["kind"] == "chip")
     assert "cause" not in c
+
+
+def test_cause_skips_other_country_money():
+    inp = make_inputs()
+    day = inp["signals"]["kr"]["day"]
+    at = f"{day}T08:50+09:00"
+    inp["news"] = dict(us=[dict(title="영국 파운드화 상승…엔비디아 강세", at=at)])
+    c = next(c for c in ms.build_market(inp, "kr")["chains"] if c["kind"] == "chip")
+    assert c["cause"] is None

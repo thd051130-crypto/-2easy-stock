@@ -672,7 +672,10 @@ WORD_WHY = ["우려", "차익", "실망", "공포", "쇼크", "탓", "여파", "
 CAUSE_ANY_DIR = {"infl", "jobs", "cb"}
 WORD_BEFORE = ["앞두고", "전망", "예상", "d-", "관전", "주목"]
 CAUSE_FLIP = {"fear"}
-CAUSE_OFF = ["비트코인", "암호화폐", "가상자산", "코인", "금값", "국제 금", "베트남"]  # 다른 자산이 주인공인 제목 ('비트코인 상승…연준 우려')  # 공포 지수가 오른 날 기사는 '주가 급락'이라고 써요
+CAUSE_OFF = ["비트코인", "암호화폐", "가상자산", "코인", "금값", "국제 금", "베트남"]  # 다른 자산이 주인공인 제목 ('비트코인 상승…연준 우려')
+# 다른 나라 돈·중앙은행이 주인공인 제목 (2026-11-28 '영국 파운드화 상승…연준 금리 인상 기대 상쇄'가 미국 금리 급등 원인으로 붙음).
+# 달러 사슬(fx)은 유로·파운드가 달러인덱스를 움직이니 남겨요
+CAUSE_FOREIGN = ["파운드", "영란은행", "유로화", "유럽중앙은행", "ecb", "캐나다", "호주", "뉴질랜드", "위안", "스위스", "맥클렘"]
 # 결과 쪽 낱말: 출발점의 원인이 아니라 사슬 끝(우리 지수)이 움직였다는 기사라 뒤로 미뤄요 (국내 해외발 사슬만)
 CAUSE_EFFECT = {"kr": ["코스피", "코스닥"], "us": []}
 
@@ -731,6 +734,8 @@ def cause_of(c, pool, market, used=()):
     for x in pool:
         hit = sum(w in x["low"] for w in words)
         if not hit or x["title"] in used or any(w in x["low"] for w in CAUSE_OFF):
+            continue
+        if c["kind"] != "fx" and any(w in x["low"] for w in CAUSE_FOREIGN):
             continue
         if c["kind"] in CAUSE_ANY_DIR:
             if any(w in x["low"] for w in WORD_BEFORE) or x["title"].rstrip("?").endswith(("나", "까")) or x["title"].endswith("?"):
