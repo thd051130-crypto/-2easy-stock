@@ -1601,6 +1601,14 @@ details.help-sec .guide-body { padding: 0 0 12px; }
 /* 종목 창 (화면 위에 떠요, 뒤 화면 위치 그대로) */
 .dc-pop { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; justify-content: center; }
 .dc-pop-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); }
+.dc-pop-bg { animation: dc-fade .2s ease-out; }
+.dc-pop-box { animation: dc-up .24s cubic-bezier(.2, .8, .2, 1); }
+.dc-pop.closing { pointer-events: none; }
+.dc-pop.closing .dc-pop-bg { opacity: 0; transition: opacity .2s; }
+.dc-pop.closing .dc-pop-box { transform: translateY(100%); transition: transform .2s ease-in; }
+@keyframes dc-up { from { transform: translateY(100%); } }
+@keyframes dc-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dc-pop-bg, .dc-pop-box { animation: none; } }
 .dc-pop-box { position: relative; width: 100%; max-width: 560px; max-height: 86vh; overflow-y: auto; overscroll-behavior: contain; background: var(--surface-1);
   border-radius: var(--radius) var(--radius) 0 0; box-shadow: var(--pop-shadow); padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); }
 .dc-pop-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
