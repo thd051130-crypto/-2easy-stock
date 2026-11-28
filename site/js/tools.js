@@ -183,7 +183,7 @@ function goalRate(p) {
   return r ? (r[1] + r[2]) / 100 : 0.12;
 }
 const goalTitle = () => (GOAL.title || "").trim() || "목표";
-// 자산 기록에서 총자산(투자금+예수금)을 적은 마지막 달
+// 자산 기록에서 총자산(투자금+예수금)을 적은 마지막 기록 (날짜 열쇠)
 const goalAstYm = () => astLastYm();
 // 아직 안 골랐으면: 자산 기록이 있고 직접 넣은 돈이 없을 때 자동으로 시작해요
 const goalSrc = () => (GOAL.src === "asset" || GOAL.src === "manual" ? GOAL.src : goalAstYm() && !(GOAL.now > 0) ? "asset" : "manual");
@@ -196,14 +196,14 @@ function goalNow() {
 }
 function goalAstNote() {
   const ym = goalAstYm();
-  if (!ym) return `<p class="goal-src-note">자산 기록에 아직 적은 달이 없어요. <button type="button" class="linkish" data-goal-open-ast>자산 기록 열기</button></p>`;
-  const s = astSum(ym), old = ym < ymNow();
+  if (!ym) return `<p class="goal-src-note">자산 기록에 아직 남긴 기록이 없어요. <button type="button" class="linkish" data-goal-open-ast>자산 기록 열기</button></p>`;
+  const s = astSum(ym), old = ym.slice(0, 7) < ymNow();
   if (AST_LIVE) {
     const e = astEval(ym);
-    return `<p class="goal-src-note" id="goal-src-note"><b>${ymName(ym)}</b> 기록을 ${astReady() ? esc(astDay(e.day)) : "지금 시세"}로 평가 · 주식 ${astMan(e.val)} + 예수금 ${astMan(e.cash)} = <b>${astMan(e.total)}</b>
+    return `<p class="goal-src-note" id="goal-src-note"><b>${astDayName(ym)}</b> 기록을 ${astReady() ? esc(astDay(e.day)) : "지금 시세"}로 평가 · 주식 ${astMan(e.val)} + 예수금 ${astMan(e.cash)} = <b>${astMan(e.total)}</b>
       ${old ? `<br>이번 달을 기록하면 바로 바뀌어요.` : ""} <span class="muted">산 돈 기준 ${astMan(s.total)}. 자산 기록에서 시세 평가를 끄면 산 돈으로 계산해요.</span></p>`;
   }
-  return `<p class="goal-src-note" id="goal-src-note"><b>${ymName(ym)}</b> 기록 · 투자금 ${astMan(s.cost)} + 예수금 ${astMan(s.cash)} = <b>${astMan(s.total)}</b>
+  return `<p class="goal-src-note" id="goal-src-note"><b>${astDayName(ym)}</b> 기록 · 투자금 ${astMan(s.cost)} + 예수금 ${astMan(s.cash)} = <b>${astMan(s.total)}</b>
     ${old ? `<br>이번 달을 기록하면 바로 바뀌어요.` : ""} <span class="muted">산 돈 기준이라 지금 시세와는 달라요.</span></p>`;
 }
 function monthsLeft() {
@@ -313,7 +313,7 @@ function goalLine() {
 // 달마다 내 금융자산(계좌 → 종목·주 수·투자금·받은 배당)과 메모를 적어 두고, 지난 기록과 비교해요.
 // 이 폰에만 저장해요 (localStorage 'assets'). 백업 파일(asset.js bkBox, 관심 종목·설정까지)로 다른 폰에 옮겨요 (사용자 2026-11-08·11-21)
 // 단계: 증권사 → 계좌 → 종목 (사용자 2026-11-08). accts = [{ id, broker, name }] (순서 = 화면 순서, 같은 증권사끼리 붙여 둬요)
-// months["2026-11"] = { memo, date?(기록한 날 "2026-11-22"), items: [{ id, acct(계좌 id), m, code, name, qty, cost(원), div(원) }], cash: { 계좌 id: 예수금(원) } }
+// months["2026-11-22"] = { memo, items: [{ id, acct(계좌 id), m, code, name, qty, cost(원), div(원) }], cash: { 계좌 id: 예수금(원) } }
 const AST = { accts: [], months: {}, year: new Date().getFullYear() };
 try { Object.assign(AST, JSON.parse(localStorage.getItem("assets") || "{}")); } catch (e) { /* 처음 */ }
 const astFix = () => {
@@ -325,11 +325,26 @@ const astFix = () => {
   if (!AST.months || typeof AST.months !== "object") AST.months = {};
   Object.values(AST.months).forEach((x) => { if (!Array.isArray(x.items)) x.items = []; if (typeof x.memo !== "string") x.memo = ""; if (!x.cash || typeof x.cash !== "object") x.cash = {};
     if (x.date != null && !/^\d{4}-\d{2}-\d{2}$/.test(x.date)) delete x.date; });
+  // 원하는 날마다 기록 (사용자 2026-11-28 "매달 기록 말고 기록 하고 싶은 날"): 열쇠가 달("2026-11") → 날("2026-11-22").
+  // 예전 달 기록은 적어 둔 '기록한 날짜'로, 안 적었으면 그 달 1일로 옮겨요 (백업 파일을 불러와도 다시 불러올 때 여기서 옮겨요)
+  Object.keys(AST.months).forEach((k) => {
+    const x = AST.months[k];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) {
+      delete AST.months[k];
+      if (!/^\d{4}-\d{2}$/.test(k)) return;
+      const d = x.date && x.date.slice(0, 7) === k ? x.date : `${k}-01`;
+      if (!AST.months[d]) AST.months[d] = x;
+    }
+    delete x.date;
+  });
   if (!Number.isFinite(+AST.year)) AST.year = new Date().getFullYear();
 };
 astFix();
 const ymOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 const ymNow = () => ymOf(new Date());
+const astToday = () => { const d = new Date(); return `${ymOf(d)}-${String(d.getDate()).padStart(2, "0")}`; };
+// 기록 열쇠("2026-11-22") → "2026년 11월 22일"
+const astDayName = (k) => `${+k.slice(0, 4)}년 ${+k.slice(5, 7)}월 ${+k.slice(8, 10)}일`;
 const ymName = (ym) => { const [y, m] = ym.split("-").map(Number); return `${y}년 ${m}월`; };
 const astCashOf = (x) => (x && x.cash ? Object.values(x.cash).reduce((a, v) => a + (+v || 0), 0) : 0);
 const astFilled = (ym) => { const x = AST.months[ym]; return !!(x && (x.items.length || astCashOf(x) > 0)); };
@@ -340,8 +355,8 @@ const astSum = (ym) => {
   return { cost, cash, total: cost + cash, qty: items.reduce((a, i) => a + (+i.qty || 0), 0),
     div: items.reduce((a, i) => a + (+i.div || 0), 0), n: items.length };
 };
-// 마지막으로 적은 달 (이번 달까지). 지금 시세 평가·목표 칸이 이 달 기록을 써요
-const astLastYm = () => Object.keys(AST.months).filter((k) => k <= ymNow() && astFilled(k)).sort().pop() || null;
+// 마지막으로 남긴 기록 (오늘까지). 지금 시세 평가·목표 칸·배당 계산기가 이 기록을 써요
+const astLastYm = () => Object.keys(AST.months).filter((k) => k <= astToday() && astFilled(k)).sort().pop() || null;
 
 // 지금 시세로 평가 (사용자 2026-11-20 "온오프 기능 만들어놔, 필요 없는 사람은 없앨 수 있게"). 기본은 켬, 끄면 산 돈 기준 화면 그대로.
 // 마지막으로 적은 달의 종목 × 매일 받는 전 종목 종가(stocks/<시장>/_quotes.json, 미장은 환율로) + 예수금. 지난 달들은 그때 산 돈 그대로 둬요
