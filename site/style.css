@@ -1395,6 +1395,16 @@ a.more { text-decoration: none; }
 .ast-total-b[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); }
 .ast-total-b .ast-tile-g { display: inline; margin-left: 6px; }
 .ast-hero .ast-tile small.up { color: var(--up); } .ast-hero .ast-tile small.down { color: var(--down); }
+/* 이 달에 남긴 기록 칩 (날마다 기록, 2026-11-28) */
+.ast-days { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.ast-days > span { font-size: 12px; margin-right: 2px; }
+.ast-day { display: inline-flex; align-items: center; gap: 3px; box-sizing: border-box; font: inherit; font-size: 13px; font-weight: 600; min-height: 34px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-1); color: var(--text-primary); cursor: pointer; }
+.ast-day small { font-weight: 400; color: var(--text-secondary); }
+.ast-day[aria-current="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent-fg); }
+.ast-day-add { border-style: dashed; color: var(--text-secondary); }
+.ast-cnt { font-size: 10px; font-weight: 600; color: var(--text-secondary); }
+.ast-date-msg { margin: 4px 0 0; font-size: 12px; min-height: 0; }
+.ast-date-msg:empty { display: none; }
 .ast-date { display: flex; align-items: flex-end; gap: 8px; margin-top: 12px; }
 .ast-date label { display: grid; gap: 4px; flex: 1; min-width: 0; }
 .ast-date input { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface-0); color: var(--text-primary); font: inherit; padding: 8px 10px; min-height: 40px; color-scheme: light dark; }
