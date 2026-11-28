@@ -5,6 +5,7 @@
 여기서 야후(무료)를 묶음으로 받아 가볍게 만들어요. 그래서 검색에서 아무 종목이나 눌러 차트를 보고 ☆로 관심종목에 넣을 수 있어요.
   - <out>/<코드>.json : 최근 2년 일봉 + 자료 시작(보통 상장)부터 월봉 (앱이 월봉·년봉은 월봉으로, 일봉·주봉은 일봉으로 그려요)
                         + 적립식 계산기 숫자(paper/symbols/<시장>_returns.json의 그 종목 줄, 있으면)
+                        + 최근 10년 배당 내역 divs(paper/symbols/<시장>_divs.json, 있으면)
   - <out>/_quotes.json : 종목마다 [종가, 전일 대비, 3개월 등락, 200일선 대비, 52주 고점 대비, RSI14] (조건 검색 '전 종목'용)
 all-stocks 워크플로가 장 마감 뒤 돌려서 아티팩트(stocks-<시장>)로 올리면, pages 워크플로가 받아서 _site/stocks/<시장>/에 풀어요.
 대시보드 종목은 그다음 stock_pages.py가 상장일부터 받은 파일로 덮어써요. (보기 전용).
@@ -69,9 +70,10 @@ def quote(c):
     return [c["c"][-1], d1, c3, st.get("ma200"), st.get("hi52"), st.get("rsi14")]
 
 
-def build(market, rows, out, rets=None, fetch=download, pause=1.0):
+def build(market, rows, out, rets=None, fetch=download, pause=1.0, divs=None):
     """종목마다 파일 하나 + 조건 검색용 시세 요약. 반환: (만든 수, 요약 dict, 가장 늦은 날짜)."""
     rets = rets or {}
+    divs = divs or {}
     out.mkdir(parents=True, exist_ok=True)
     by_t = {ticker(market, r): r for r in rows}
     todo, made, quotes, day = list(by_t), 0, {}, None
@@ -88,6 +90,8 @@ def build(market, rows, out, rets=None, fetch=download, pause=1.0):
                 c["monthly"] = m
             payload = dict(code=row[0], name=row[1], market=market, exch=row[2], kind=row[3], lite=True, candles=c,
                            fund=None, flows=None, ret=rets.get(row[0]))
+            if divs.get(row[0]):
+                payload["divs"] = divs[row[0]]  # 최근 10년 배당 내역 (returns.py, 배당 계산기 종목 창)
             (out / f"{row[0]}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
             quotes[row[0]] = quote(c)
             day = max(day or "", c["dates"][-1])
@@ -108,7 +112,9 @@ def main():
         rows = rows[:args.limit]
     ret_path = FOLDER / f"{args.market}_returns.json"
     rets = json.loads(ret_path.read_text()).get("s", {}) if ret_path.exists() else {}
-    made, quotes, day = build(args.market, rows, args.out, rets)
+    div_path = FOLDER / f"{args.market}_divs.json"
+    divs = json.loads(div_path.read_text()).get("s", {}) if div_path.exists() else {}
+    made, quotes, day = build(args.market, rows, args.out, rets, divs=divs)
     (args.out / "_quotes.json").write_text(json.dumps(
         dict(updated=dt.datetime.now(KST).isoformat(timespec="minutes"), day=day, q=quotes),
         ensure_ascii=False, separators=(",", ":")))

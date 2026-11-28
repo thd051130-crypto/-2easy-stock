@@ -102,6 +102,7 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
     until = (read_json(paper / market / "daily.json") or {}).get("day")
     extra = watchlist.extras(market, paper)
     rets = (read_json(paper / "symbols" / f"{market}_returns.json") or {}).get("s", {})
+    divs = (read_json(paper / "symbols" / f"{market}_divs.json") or {}).get("s", {})
     names = {code: e.get("name") or code for code, e in extra.items()}
     names.update({code: name for code, name in fundamentals.stocks(market, extras=False).items() if code not in extra})
     folder = out / "stocks" / market
@@ -126,6 +127,8 @@ def build(out, market, paper=pathlib.Path("paper"), fetch=daily, pause=0.3, budg
             payload = dict(code=code, name=name, market=market, candles=c, fund=f, flows=fl)
             if rets.get(code):
                 payload["ret"] = rets[code]  # 10년 주가 상승률·배당률·최대 낙폭 (returns.py, 종목 화면 '오래 들고 있었다면' 칸)
+            if divs.get(code):
+                payload["divs"] = divs[code]  # 최근 10년 배당 내역 (returns.py, 배당 계산기 종목 창)
             (folder / f"{code}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
             full += c is not None
             only_fund += c is None

@@ -201,7 +201,8 @@ def main():
     shutil.copytree(args.site, args.out)
     stamp_assets(args.out)
     if (args.paper / "symbols").is_dir():  # 검색용 전체 종목 목록
-        shutil.copytree(args.paper / "symbols", args.out / "symbols")
+        # *_divs.json(10년 배당 내역)은 종목 파일에 나눠 넣으니 통째로는 안 올려요
+        shutil.copytree(args.paper / "symbols", args.out / "symbols", ignore=shutil.ignore_patterns("*_divs.json"))
     # 문장 검색용 테마 사전 ('전력 관련 종목 찾아줘')
     (args.out / "themes.json").write_text(json.dumps(themes.build(args.paper / "symbols", args.paper / "sectors.json"),
                                                      ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

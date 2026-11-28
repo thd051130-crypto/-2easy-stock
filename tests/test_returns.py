@@ -69,3 +69,18 @@ def test_stats_adds_crises_and_dividend_months():
     assert len(s) == 8 and s[5] == [None, None, None]  # 2000년 시작이라 하락장 기간 자료 없음
     assert len(s[6]) == 12 and s[6][0][0] == int(months(30)[-12][0][5:7])
     assert len(s[7]) == 12 and s[7][-1][0] == int(months(30)[-13][0][5:7])  # 그 전 1년 (직전 배당 비교용)
+
+
+def test_div_hist_keeps_ten_years_with_dates():
+    ms = months(150, div=0.01)
+    h = rt.div_hist(ms)
+    assert len(h) == 120 and h[-1][0] == ms[-1][0] and h[0][0] == ms[-120][0]
+    assert rt.div_hist(months(30)) == []  # 배당 없음
+
+
+def test_build_fills_divs_and_keeps_old_when_missing():
+    rows = [["AAA", "A", "N", "s"], ["BBB", "B", "N", "s"]]
+    got = {"AAA": months(30, div=0.01)}
+    divs = {}
+    rt.build("us", rows, old={}, fetch=lambda t: got, pause=0, divs=divs, old_divs={"BBB": [["2020-01", 1.0]]})
+    assert len(divs["AAA"]) == 30 and divs["BBB"] == [["2020-01", 1.0]]

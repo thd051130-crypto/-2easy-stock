@@ -26,7 +26,7 @@ function dcSeries(m, code) {
 function dcInfo(h) {
   const s = dcSeries(h.m, h.code), fx = h.m === "us" ? dvFx() : 1;
   const tax = DC.net ? 1 - DV_TAX[h.m] : 1;
-  const freq = dvHist(h.m, h.code).length;
+  const hist = dvHist(h.m, h.code), freq = hist.length;
   const lastD = s[s.length - 1] || null, prevD = s.length > 1 ? s[s.length - 2] : null;
   const p = savPx(h);
   // 최근 1회가 평소(그 전 배당들 가운데 값)의 3배 넘으면 특별 배당일 수 있어 1년 계산은 평소 크기로 해요 (최근 값은 그대로 보여 줘요)
@@ -36,7 +36,7 @@ function dcInfo(h) {
     if (base > mid * 3) { odd = base / mid; base = mid; }
   }
   const year = base * freq * fx * tax;
-  return { h, lastD, prevD, freq, base, odd, once: base * fx * tax, year, px: p ? p.won : null };
+  return { h, lastD, prevD, freq, months: hist.map((x) => x.ex), base, odd, once: base * fx * tax, year, px: p ? p.won : null };
 }
 const dcPer1 = (h, amt) => (h.m === "us" ? `$${amt.toLocaleString("en-US", { maximumFractionDigits: 3 })}` : astWon(amt));
 // 직전 대비: ↑ 3.1% / ↓ / 같음 (빨강·파랑 안 써요)
@@ -47,7 +47,14 @@ function dcChg(x) {
   const t = Math.abs(d) < 0.005 ? "→ 같음" : `${d > 0 ? "↑" : "↓"} ${Math.abs(d * 100).toFixed(1)}%`;
   return `<span class="dc-chg">${t}</span> <span class="muted">직전 ${x.prevD.mo}월 ${dcPer1(x.h, x.prevD.amt)}</span>`;
 }
-const dcWhen = (f) => (f >= 12 ? "매달" : f === 4 ? "분기마다" : f === 2 ? "반년마다" : f === 1 ? "1년에 한 번" : `1년에 ${f}번`);
+// 1년에 몇 번 주는지 한눈에: 매달 📅 · 분기 🍀(잎 4장) · 반년 🌗(반달) · 1년 1번 🎁
+const DC_FREQ = { 12: ["📅", "매달"], 4: ["🍀", "분기"], 2: ["🌗", "반년"], 1: ["🎁", "1년 1번"] };
+function dcFreqTag(f) {
+  if (!f) return `<span class="dc-freq none">배당 없음</span>`;
+  const [e, t] = DC_FREQ[f >= 12 ? 12 : f] || ["🔹", `1년 ${f}번`];
+  return `<span class="dc-freq f${f >= 12 ? 12 : f}"><span aria-hidden="true">${e}</span> ${t}</span>`;
+}
+const dcSecSum = (g) => `1년 ${astDivW(g.reduce((a, x) => a + x.year * dcQty(x.h), 0))}`;
 
 // 목표: 1년 T원 받으려면 (보유 종목만, 팔지는 않아요)
 // keep = 지금 주 수 비율 그대로 늘리기, same = 모자란 만큼을 종목마다 같은 돈씩 사기 (가격 아는 종목만)
@@ -101,15 +108,21 @@ function divCalcCard() {
     <p class="muted" style="margin:6px 0 0;font-size:13px">'자산 기록' 탭에 종목과 주 수를 적으면, 그 종목들로 배당을 계산해요.</p></section>`;
   if (!RET.kr || !RET.us) return `<section class="card" id="dc-card">${head}<p class="muted" style="margin:6px 0 0">배당 자료 불러오는 중…</p></section>`;
   const xs = list.map(dcInfo).sort((a, b) => b.year * b.h.qty - a.year * a.h.qty);
-  const rows = xs.map((x) => {
+  const row = (x) => {
     const k = dcKey(x.h);
-    return `<li class="dc-row"><div class="ast-mix-t"><b>${esc(x.h.name)}</b><small class="muted">${x.h.m === "kr" ? "국장" : "미장"}${x.freq ? ` · ${dcWhen(x.freq)}` : ""}</small></div>
-      ${x.lastD ? `<small class="dv-sub">최근 ${x.lastD.mo}월 1주 <b>${dcPer1(x.h, x.lastD.amt)}</b>${x.lastD.fix ? " (튀는 값이라 보통 크기로 봄)" : ""}${x.odd ? ` <span class="muted">(평소의 ${Math.round(x.odd)}배라 특별 배당일 수 있어요. 1년 계산은 평소 ${dcPer1(x.h, x.base)})</span>` : ""} ${dcChg(x)}${x.px && x.year ? ` · <span class="muted">배당률 ${(x.year / (DC.net ? 1 - DV_TAX[x.h.m] : 1) / x.px * 100).toFixed(1)}%</span>` : ""}</small>` : ""}
+    return `<li class="dc-row"><div class="dc-row-h"><button type="button" class="dc-name" data-dc-open="${k}"><b>${esc(x.h.name)}</b><span aria-hidden="true">›</span></button>${dcFreqTag(x.freq)}</div>
+      ${x.lastD ? `<small class="dv-sub">최근 ${x.lastD.mo}월 1주 <b>${dcPer1(x.h, x.lastD.amt)}</b>${x.lastD.fix ? " (튀는 값이라 보통 크기로 봄)" : ""}${x.odd ? ` <span class="muted">(특별 배당일 수 있어 1년 계산은 평소 ${dcPer1(x.h, x.base)})</span>` : ""} ${dcChg(x)}</small>` : ""}
       <div class="dc-qty"><button type="button" class="ast-btn dc-pm" data-dc-pm="${k}" data-d="-1" aria-label="1주 빼기">−</button>
         <span class="alert-input"><input data-dc-q="${k}" type="text" inputmode="decimal" value="${dcQty(x.h)}" aria-label="${esc(x.h.name)} 주 수"><span>주</span></span>
         <button type="button" class="ast-btn dc-pm" data-dc-pm="${k}" data-d="1" aria-label="1주 더하기">+</button></div>
       <small class="dc-out" data-dc-out="${k}">${dcOut(x)}</small>
       <small class="muted dc-have">보유 ${astQty(x.h.qty)}</small></li>`;
+  };
+  // 국장·미장 구역을 나눠요 (구역 제목에 그 시장 1년 배당 합)
+  const rows = [["kr", "🇰🇷 국장"], ["us", "🇺🇸 미장"]].map(([m, t]) => {
+    const g = xs.filter((x) => x.h.m === m);
+    return g.length ? `<div class="dc-sec"><h3 class="dc-sec-h"><span>${t} <small class="muted">${g.length}종목</small></span><small data-dc-sec="${m}">${dcSecSum(g)}</small></h3>
+      <ul class="ast-mix dc-list">${g.map(row).join("")}</ul></div>` : "";
   }).join("");
   const changed = xs.some((x) => dcQty(x.h) !== x.h.qty);
   const goal = DC.goal ? `<div class="dc-goal"><div class="dc-goal-in"><span class="alert-input"><input data-dc-amt type="text" inputmode="numeric" value="${esc(DC.amt)}" placeholder="예: 300000" aria-label="목표 배당금"><span>원</span></span>
@@ -119,13 +132,13 @@ function divCalcCard() {
   return `<section class="card" id="dc-card">${head}
     <nav class="chips"><button type="button" data-dc-tax="0" aria-pressed="${!DC.net}">세전</button><button type="button" data-dc-tax="1" aria-pressed="${DC.net}">세후</button></nav>
     <div class="sav-hero ast-hero" data-dc-hero>${dcHero(xs)}</div>
-    <ul class="ast-mix dc-list">${rows}</ul>
+    ${rows}
     ${changed ? `<button type="button" class="ast-btn" data-dc-reset style="margin-top:10px">보유 주 수로 되돌리기</button>` : ""}
     <button type="button" class="alert-toggle dc-goal-sw" data-dc-goal aria-expanded="${DC.goal}"><span>🎯 목표 배당금으로 포트폴리오 짜기</span><b>${DC.goal ? "끄기" : "켜기"}</b></button>
     ${goal}
     <p class="muted note" style="margin:10px 0 0">${ymName(ym)} 자산 기록 종목 기준. 1년 배당 = 가장 최근 1회 배당 × 1년에 주는 횟수 × 주 수예요. 회사가 배당을 바꾸면 달라지고, 받을 돈을 약속하는 숫자가 아니에요.
       ${tx === "세후" ? "세후" : "세후로 바꾸면"} = 국장 15.4%(배당소득세 14% + 지방세 1.4%), 미장 15%(미국에서 먼저 뗌) 뺀 값. ISA·연금 계좌는 다르고, 1년 금융소득 2천만 원이 넘으면 종합과세돼요.
-      미장은 환율 ${num(dvFx())}원. 직전 대비는 바로 앞 배당과 비교 (1년에 한 번 주는 종목은 작년). 자료: 야후 파이낸스(무료).</p></section>`;
+      미장은 환율 ${num(dvFx())}원. 종목 이름을 누르면 가격·배당 내역·배당 성장률이 나와요. 직전 대비는 바로 앞 배당과 비교 (1년에 한 번 주는 종목은 작년). 자료: 야후 파이낸스(무료).</p></section>`;
 }
 function dcRefresh() {
   const c = $("#dc-card");
@@ -148,6 +161,7 @@ function bindDivCalc() {
     const hero = card.querySelector("[data-dc-hero]");
     if (hero) hero.innerHTML = dcHero(xs);
     xs.forEach((x) => { const o = card.querySelector(`[data-dc-out="${CSS.escape(dcKey(x.h))}"]`); if (o) o.innerHTML = dcOut(x); });
+    card.querySelectorAll("[data-dc-sec]").forEach((o) => { o.textContent = dcSecSum(xs.filter((x) => x.h.m === o.dataset.dcSec)); });
     const g = card.querySelector("[data-dc-goal-out]");
     if (g) { g.innerHTML = dcGoalOut(xs); bindUse(); }
   };
@@ -161,6 +175,10 @@ function bindDivCalc() {
     const k = b.dataset.dcPm, i = card.querySelector(`[data-dc-q="${CSS.escape(k)}"]`);
     setQ(k, Math.floor(dcNum(i.value)) + +b.dataset.d);
     redraw();
+  }));
+  card.querySelectorAll("[data-dc-open]").forEach((b) => b.addEventListener("click", () => {
+    const x = xsNow().find((y) => dcKey(y.h) === b.dataset.dcOpen);
+    if (x) dcPopOpen(x);
   }));
   card.querySelectorAll("[data-dc-tax]").forEach((b) => b.addEventListener("click", () => { DC.net = b.dataset.dcTax === "1"; redraw(); }));
   const rs = card.querySelector("[data-dc-reset]");
@@ -181,4 +199,100 @@ function bindDivCalc() {
     });
   }
   bindUse();
+}
+
+// ---------------------------------------------------------------- 종목 창 (배당 계산기에서 종목 이름을 누르면)
+// 가격(종목 파일 마지막 종가)·배당 주기·연도별 1주 배당 막대(배당 성장률)·배당 내역. 화면 위에 떠서 뒤 화면 위치는 그대로예요.
+// 배당 내역 = 종목 파일(stocks/<시장>/<코드>.json)의 divs: 최근 10년 [["YYYY-MM", 1주 배당]] (returns.py → stock_pages.py·all_stocks.py)
+let dcPopKey = null;
+const dcPct = (r) => (r == null ? "-" : Math.abs(r) < 0.0005 ? "→ 0%" : `${r > 0 ? "↑" : "↓"} ${Math.abs(r * 100).toFixed(1)}%`);
+// 연도별 합: [{y, amt, n, part}] 오래된 순. 올해는 '진행 중'(part), 10년 창 맨 앞 해는 1월부터가 아니라 빼요
+function dcYears(divs) {
+  const thisY = new Date().getFullYear(), by = new Map();
+  divs.forEach(([ym, a]) => { const y = +ym.slice(0, 4); if (y < thisY - 9) return; const o = by.get(y) || { y, amt: 0, n: 0 }; o.amt += a; o.n++; by.set(y, o); });
+  const ys = [...by.values()].sort((a, b) => a.y - b.y);
+  ys.forEach((o, i) => { o.part = o.y === thisY; o.g = i && !o.part && ys[i - 1].amt ? o.amt / ys[i - 1].amt - 1 : null; });
+  return ys;
+}
+// 배당 성장률: 최근 5년(없으면 있는 만큼) 연평균, 몇 년 연속 늘었는지
+function dcGrowth(ys) {
+  const full = ys.filter((o) => !o.part);
+  if (full.length < 2) return null;
+  const k = Math.min(5, full.length - 1), a = full[full.length - 1 - k].amt, b = full[full.length - 1].amt;
+  let up = 0;
+  for (let i = full.length - 1; i > 0 && full[i].amt > full[i - 1].amt * 1.0005; i--) up++;
+  return { cagr: a > 0 ? (b / a) ** (1 / k) - 1 : null, k, up, last: full[full.length - 1] };
+}
+function dcBars(h, ys) {
+  if (!ys.length) return "";
+  const W = 340, H = 150, top = 22, bot = 22, n = ys.length, gap = 6, bw = Math.min(34, (W - gap * (n - 1)) / n);
+  const x0 = (W - (bw * n + gap * (n - 1))) / 2, max = Math.max(...ys.map((o) => o.amt)) || 1;
+  const bars = ys.map((o, i) => {
+    const bh = Math.max(2, ((H - top - bot) * o.amt) / max), x = x0 + i * (bw + gap), y = H - bot - bh;
+    return `<rect class="dc-bar${o.part ? " part" : ""}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="4"></rect>
+      <text class="dc-bar-g" x="${(x + bw / 2).toFixed(1)}" y="${(y - 6).toFixed(1)}">${o.part ? "진행 중" : o.g == null ? "" : Math.abs(o.g) < 0.005 ? "0%" : `${o.g > 0 ? "↑" : "↓"}${Math.abs(Math.round(o.g * 100))}%`}</text>
+      <text class="dc-bar-y" x="${(x + bw / 2).toFixed(1)}" y="${H - 6}">'${String(o.y).slice(2)}</text>`;
+  }).join("");
+  return `<svg class="dc-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 1주 배당 막대, 위 숫자는 전년 대비 성장률">${bars}</svg>`;
+}
+function dcMonths(x) {
+  const on = new Set(x.months);
+  return `<div class="dc-mo" aria-label="배당락 달">${Array.from({ length: 12 }, (_, i) => `<span class="${on.has(i + 1) ? "on" : ""}">${i + 1}</span>`).join("")}</div>`;
+}
+function dcPopHtml(x, f) {
+  const h = x.h, divs = (f && Array.isArray(f.divs) && f.divs) || null;
+  const c = f && f.candles && f.candles.c && f.candles.c.length ? f.candles : null;
+  const sp = savPx(h);
+  const px = c ? c.c[c.c.length - 1] : sp && sp.px, day = c ? c.dates[c.dates.length - 1] : sp && sp.day;
+  const pxTxt = px ? (h.m === "us" ? `$${px.toLocaleString("en-US", { maximumFractionDigits: 2 })} <small class="muted">약 ${astWon(px * dvFx())}</small>` : astWon(px)) : "가격 몰라요";
+  const yld = px && x.base && x.freq ? (x.base * x.freq) / px : null;
+  const ys = divs ? dcYears(divs) : [], g = dcGrowth(ys);
+  const pay = divs ? divs.slice().reverse() : [];
+  const payRow = (d, i) => { const prev = pay[i + 1]; return `<li><span>${d[0].replace("-", ".")}</span><b>${dcPer1(h, d[1])}</b><small class="muted">${prev ? dcPct(d[1] / prev[1] - 1) : ""}</small></li>`; };
+  const body = !f ? `<p class="muted">불러오는 중…</p>` : `
+    <div class="sav-hero ast-hero"><div class="ast-tile dv-tile"><small>지금 가격${day ? ` (${+day.slice(5, 7)}.${+day.slice(8, 10)} 종가)` : ""}</small><b>${pxTxt}</b></div>
+      <div class="ast-tile dv-tile"><small>배당률 (세전, 최근 배당 기준)</small><b>${yld ? `${(yld * 100).toFixed(2)}%` : "-"}</b></div></div>
+    <div class="dc-pop-freq">${dcFreqTag(x.freq)}${dcMonths(x)}</div>
+    <h4 class="dc-pop-h">배당 성장률</h4>
+    ${divs ? `${g ? `<p class="dc-pop-g">최근 ${g.k}년 연평균 <b>${dcPct(g.cagr)}</b>${g.up ? ` · ${g.up}년 연속 늘림` : ""}</p>` : `<p class="muted dc-pop-g">비교할 해가 모자라요.</p>`}
+      ${dcBars(h, ys)}
+      <p class="muted" style="margin:2px 0 0;font-size:12px">막대 = 그해 1주 배당 합. 위 숫자 = 전년 대비. 올해는 아직 진행 중이라 비교 안 해요.</p>
+      <h4 class="dc-pop-h">연도별 배당</h4>
+      <ul class="dc-yr">${ys.slice().reverse().map((o) => `<li><span>${o.y}${o.part ? " <small class=\"muted\">진행 중</small>" : ""}</span><b>${dcPer1(h, o.amt)}</b><small class="muted">${o.n}번</small><small class="dc-chg">${o.part ? "" : dcPct(o.g)}</small></li>`).join("")}</ul>
+      <h4 class="dc-pop-h">배당 내역 <small class="muted">배당락 달 · 1주 · 직전 대비</small></h4>
+      <ul class="dc-pay">${pay.slice(0, 8).map(payRow).join("")}</ul>
+      ${pay.length > 8 ? `<details class="dc-more"><summary>나머지 ${pay.length - 8}번 더 보기</summary><ul class="dc-pay">${pay.slice(8).map((d, i) => payRow(d, i + 8)).join("")}</ul></details>` : ""}`
+    : `<p class="muted" style="font-size:13px">10년 배당 내역은 매주 토요일 자료를 받은 뒤부터 나와요. 지금은 최근 배당만 있어요: ${x.lastD ? `${x.lastD.mo}월 1주 ${dcPer1(h, x.lastD.amt)} ${dcChg(x)}` : "최근 1년 배당 없음"}</p>`}
+    <p class="muted" style="margin:12px 0 0;font-size:12px">야후 파이낸스(무료) 배당락 기준 1주 금액(세전). 앞으로도 이만큼 준다는 뜻은 아니에요.</p>`;
+  return `<div class="dc-pop-bg" data-dc-close></div>
+    <div class="dc-pop-box" role="dialog" aria-modal="true" aria-label="${esc(h.name)} 배당 정보">
+      <div class="dc-pop-top"><div><b>${esc(h.name)}</b><small class="muted">${h.m === "kr" ? "국장" : "미장"} · ${esc(h.code)}</small></div>
+        <button type="button" class="ast-btn dc-x" data-dc-close aria-label="닫기">✕</button></div>
+      <div class="dc-pop-body">${body}</div></div>`;
+}
+function dcPopClose() {
+  const p = $("#dc-pop");
+  if (p) p.remove();
+  dcPopKey = null;
+  document.removeEventListener("keydown", dcPopEsc);
+}
+function dcPopEsc(e) { if (e.key === "Escape") dcPopClose(); }
+function dcPopOpen(x) {
+  dcPopClose();
+  const k = dcKey(x.h);
+  dcPopKey = k;
+  const box = document.createElement("div");
+  box.id = "dc-pop";
+  box.className = "dc-pop";
+  const paint = (f) => {
+    if (dcPopKey !== k) return;
+    box.innerHTML = dcPopHtml(x, f);
+    box.querySelectorAll("[data-dc-close]").forEach((b) => b.addEventListener("click", dcPopClose));
+  };
+  paint(STOCK_READY.get(`${x.h.m}/${x.h.code}`) || null);
+  document.body.appendChild(box);
+  document.addEventListener("keydown", dcPopEsc);
+  const x1 = box.querySelector(".dc-x");
+  if (x1) x1.focus({ preventScroll: true });
+  if (!STOCK_READY.has(`${x.h.m}/${x.h.code}`)) stockData(x.h.m, x.h.code).then((f) => paint(f || {}));
 }

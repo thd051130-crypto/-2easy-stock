@@ -29,7 +29,7 @@ main.js     서비스워커 등록 + 처음 그리기·자료 받기 (맨 마지
 ★map.js     산업 지도 mapLayout/mapSvg/mapCard/bindMap (지도 화면)
 ★savings.js 적립식 계산기 savingsCard/bindSavings (도구 화면)
 ★asset.js   자산 기록 assetCard/astTree/bindAsset · 기록한 날짜·첫 기록 후 경과 astSinceLine · 펼친 달 요약 칸 그래프 astSumHtml(data-ast-sk) · 백업 파일 bkBox/bindBk/BK_KEYS(~105) · 배당 달력 divCalCard(~890) (도구 화면)
-★divcalc.js 배당 계산기 divCalcCard/dcInfo/dcPlan/bindDivCalc (도구 → 배당 계산기, 자산 기록 종목·asset.js 배당 달력 함수 씀)
+★divcalc.js 배당 계산기 divCalcCard/dcInfo/dcPlan/bindDivCalc · 국장/미장 구역·주기 이모지 dcFreqTag · 종목 창 dcPopOpen/dcPopHtml(가격·성장률 막대 dcBars·내역, 종목 파일 divs) (도구 → 배당 계산기, 자산 기록 종목·asset.js 배당 달력 함수 씀)
 ★lab.js     실험실 labCard · 수익률 달력 retCalendarCard (도구 화면)
 ★feedback.js 의견 보내기 feedbackCard (의견 화면)
 ```
