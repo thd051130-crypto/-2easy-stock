@@ -301,26 +301,41 @@ function dcPopHtml(x, f) {
         <button type="button" class="ast-btn dc-x" data-dc-close aria-label="닫기">✕</button></div>
       <div class="dc-pop-body">${body}</div></div>`;
 }
-// 창 열 때 같은 주소로 기록을 하나 쌓아서, 폰 뒤로 가기를 누르면 홈이 아니라 창만 닫히고 배당 계산기 화면이 그대로 남아요
-let dcPushed = false;
+// 폰 뒤로 가기 = 창만 닫기. 안드로이드 크롬은 CloseWatcher(폰의 '닫기' 신호)로 받아요: 기록을 안 쌓아서
+// 밀어서 뒤로 갈 때 화면이 옆으로 넘어가는 모습 없이 창만 아래로 내려가요 (사용자 2026-11-28 "너무 부자연스러워", "다른 방식으로").
+// CloseWatcher가 없는 브라우저만 예전처럼 같은 주소로 기록을 하나 쌓고 popstate(core.js sheetBack)로 닫아요.
+let dcPushed = false, dcWatch = null;
 function dcPopRemove() {
   const p = $("#dc-pop");
-  if (p) p.remove();
   dcPopKey = null;
   dcPushed = false;
   document.removeEventListener("keydown", dcPopEsc);
+  if (!p) return;
+  if (calm()) { p.remove(); return; }
+  p.id = "";
+  p.classList.add("closing");  // 아래로 내려가며 사라져요
+  setTimeout(() => p.remove(), 200);
 }
-// ✕·바깥·Esc: 쌓은 기록이 있으면 뒤로 가기로 닫아요 (기록이 남아 다음 뒤로 가기가 헛돌지 않게)
+// ✕·바깥·Esc
 function dcPopClose() {
-  if (dcPushed && sheetBack) history.back();
+  if (dcWatch) { const w = dcWatch; dcWatch = null; w.destroy(); dcPopRemove(); }
+  else if (dcPushed && sheetBack) history.back();
   else { sheetBack = null; dcPopRemove(); }
 }
 function dcPopEsc(e) { if (e.key === "Escape") dcPopClose(); }
 function dcPopOpen(x) {
+  if (dcWatch) { dcWatch.destroy(); dcWatch = null; }
   if (dcPushed) dcPopRemove(); else { sheetBack = null; dcPopRemove(); }
-  history.pushState({ ...(history.state || {}), sheet: "dc" }, "", location.href);
-  dcPushed = true;
-  sheetBack = dcPopRemove;
+  let w = null;
+  try { if (typeof CloseWatcher === "function") w = new CloseWatcher(); } catch (e) { w = null; }
+  if (w) {
+    dcWatch = w;
+    w.onclose = () => { if (dcWatch === w) { dcWatch = null; dcPopRemove(); } };
+  } else {
+    history.pushState({ ...(history.state || {}), sheet: "dc" }, "", location.href);
+    dcPushed = true;
+    sheetBack = dcPopRemove;
+  }
   const k = dcKey(x.h);
   dcPopKey = k;
   const box = document.createElement("div");

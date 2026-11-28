@@ -17,3 +17,4 @@ metadata:
 - 브랜치 claude/project-thread-xmvgve, 미리보기 /mnt/project-files/dividend-calc-preview/, PR 전 검수 대기. 관련 [[dividend-calendar]], [[asset-record]].
 - 초기화 버튼(11-28 사용자 "자산 기록에 기록되어있는 정보로 초기화"): 제목 옆 ↻ (목표 칸 goal-reset 모양, 두 번 눌러야), 바꾼 주 수만 자산 기록 보유로. 세전/세후·목표 설정은 그대로. 옛 '보유 주 수로 되돌리기' 버튼은 뺌.
 - 폰 뒤로 가기(11-28 사용자 "창 열고 뒤로가기 누르면 홈으로 감"): 창 열 때 같은 주소로 pushState + core.js `sheetBack`(guide.js popstate가 먼저 부름) → 뒤로 가기는 창만 닫음. ✕·바깥·Esc도 history.back()으로 닫음. 다른 떠 있는 창도 sheetBack 쓰면 됨.
+- 뒤로 가기 2차(11-28 사용자 "너무 부자연스러워"·"창은 좋은데 뒤로가기를 다른 방식으로"): pushState는 안드로이드 크롬이 밀어서 뒤로 갈 때 화면이 옆으로 넘어가는 미리보기를 보여 어색함 → CloseWatcher(폰 닫기 신호, 기록 안 쌓음)로 받고, 없는 브라우저만 pushState 대신. 창은 아래에서 올라오고 닫을 때 아래로 내려감. 창 모양(아래 시트)은 사용자가 좋다고 함 — 꽉 찬 화면으로 바꾸지 말 것.
