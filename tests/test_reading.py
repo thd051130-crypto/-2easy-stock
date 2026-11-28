@@ -30,7 +30,9 @@ def test_summary_is_cut():
     assert len(x["summary"]) == reading.SUMMARY + 1 and x["summary"].endswith("…")
 
 
-def test_run_merges_keeps_old_and_survives_failures(tmp_path):
+def test_run_merges_keeps_old_and_survives_failures(tmp_path, monkeypatch):
+    # 견본 기사 날짜(2026-10-23)가 오늘 기준 KEEP_DAYS를 넘으면 잘려 나가서, 날짜가 지나도 깨지지 않게 넉넉히 둬요
+    monkeypatch.setattr(reading, "KEEP_DAYS", 100000)
     out = tmp_path / "reading.json"
     out.write_text(json.dumps({"items": {"market": [dict(id="market:old", title="옛 리포트", date="2099-01-01")]}}))
 
