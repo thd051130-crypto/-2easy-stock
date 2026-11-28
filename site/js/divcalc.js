@@ -301,15 +301,26 @@ function dcPopHtml(x, f) {
         <button type="button" class="ast-btn dc-x" data-dc-close aria-label="닫기">✕</button></div>
       <div class="dc-pop-body">${body}</div></div>`;
 }
-function dcPopClose() {
+// 창 열 때 같은 주소로 기록을 하나 쌓아서, 폰 뒤로 가기를 누르면 홈이 아니라 창만 닫히고 배당 계산기 화면이 그대로 남아요
+let dcPushed = false;
+function dcPopRemove() {
   const p = $("#dc-pop");
   if (p) p.remove();
   dcPopKey = null;
+  dcPushed = false;
   document.removeEventListener("keydown", dcPopEsc);
+}
+// ✕·바깥·Esc: 쌓은 기록이 있으면 뒤로 가기로 닫아요 (기록이 남아 다음 뒤로 가기가 헛돌지 않게)
+function dcPopClose() {
+  if (dcPushed && sheetBack) history.back();
+  else { sheetBack = null; dcPopRemove(); }
 }
 function dcPopEsc(e) { if (e.key === "Escape") dcPopClose(); }
 function dcPopOpen(x) {
-  dcPopClose();
+  if (dcPushed) dcPopRemove(); else { sheetBack = null; dcPopRemove(); }
+  history.pushState({ ...(history.state || {}), sheet: "dc" }, "", location.href);
+  dcPushed = true;
+  sheetBack = dcPopRemove;
   const k = dcKey(x.h);
   dcPopKey = k;
   const box = document.createElement("div");
