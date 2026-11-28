@@ -15,3 +15,4 @@ metadata:
 - 10년 배당 내역: returns.py가 paper/symbols/<시장>_divs.json 따로 저장 → stock_pages.py·all_stocks.py가 종목 파일 "divs"로 넣음(dashboard.py는 _divs.json 통째로 안 올림). 머지 뒤 첫 토요일 returns 실행 + 그다음 all-stocks·배포가 돌아야 창에 내역이 나옴(그 전엔 '토요일 뒤부터' 안내).
 - 3차(11-28 사용자 "연도별·내역 간소화, 배당락 표기, 소수점, 고점 대비 20% 하락이면 매수 추천"): 연도별 표 없앰(막대로 충분), 최근 배당 4칸 + '전체 내역' 접기. 다음 배당락 = funds exdiv(확정) 또는 지난 1년 배당락 달로 'N월쯤'(예상), 줄·창에 표시. +/− 소수점 유지, 목표에 '소수점으로 사기(0.01주)'. 1년 최고점 대비(종목 파일 일봉, 없으면 _quotes q[4]) −20% 이하면 🛒 매수 신호 꼬리표(주황 wait 색) + 창에 '단순 규칙, 이유 확인' 안내 (DC_BUY).
 - 브랜치 claude/project-thread-xmvgve, 미리보기 /mnt/project-files/dividend-calc-preview/, PR 전 검수 대기. 관련 [[dividend-calendar]], [[asset-record]].
+- 초기화 버튼(11-28 사용자 "자산 기록에 기록되어있는 정보로 초기화"): 제목 옆 ↻ (목표 칸 goal-reset 모양, 두 번 눌러야), 바꾼 주 수만 자산 기록 보유로. 세전/세후·목표 설정은 그대로. 옛 '보유 주 수로 되돌리기' 버튼은 뺌.
