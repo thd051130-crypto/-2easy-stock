@@ -66,5 +66,6 @@ def test_crisis_drawdown_and_recovery():
 
 def test_stats_adds_crises_and_dividend_months():
     s = rt.stats(months(30, div=0.01))
-    assert len(s) == 7 and s[5] == [None, None, None]  # 2000년 시작이라 하락장 기간 자료 없음
+    assert len(s) == 8 and s[5] == [None, None, None]  # 2000년 시작이라 하락장 기간 자료 없음
     assert len(s[6]) == 12 and s[6][0][0] == int(months(30)[-12][0][5:7])
+    assert len(s[7]) == 12 and s[7][-1][0] == int(months(30)[-13][0][5:7])  # 그 전 1년 (직전 배당 비교용)

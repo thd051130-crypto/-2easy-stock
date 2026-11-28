@@ -498,7 +498,7 @@ function openMap(name) {
 // 산업 지도·도구·의견 화면 파일은 처음 열 때 받아요 (홈을 먼저 빨리 띄우려고). 홈이 뜨고 쉬는 틈에 미리 받아 두니까 보통은 기다리지 않아요.
 // 이 파일들이 쓰는 것 중 다른 화면도 쓰는 것(목표 칸의 자산 합계, 하락장 자료 RET, 지도 고른 산업 mapFocus 등)은 먼저 받는 파일에 있어요.
 // 배포본은 dashboard.py가 window.JSV에 파일마다 버전을 넣어요 (js/map.js?v=…, 서비스워커가 폰에 저장).
-const LAZY = { map: ["map"], tools: ["savings", "asset", "lab"], feedback: ["feedback"] };
+const LAZY = { map: ["map"], tools: ["savings", "asset", "lab", "divcalc"], feedback: ["feedback"] };
 const JS_GOT = new Set(), JS_P = {};
 function needJs(name) {
   if (JS_GOT.has(name)) return Promise.resolve();

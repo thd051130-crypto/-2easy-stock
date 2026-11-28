@@ -4,6 +4,7 @@
 // 도구 화면 선택 바: [키, 이름, 그 묶음의 칸들]. 처음엔 적립식 계산기, 고른 건 이 폰에 기억해요
 const PERF_TABS = [
   ["asset", "자산 기록", () => [assetCard(), divCalCard()]],
+  ["div", "배당 계산기", () => [divCalcCard()]],
   ["sav", "적립식 계산기", () => [savingsCard()]],
   ["lab", "포트폴리오 실험실", () => [labCard()]],
   ["cal", "수익률 달력", (d) => [retCalendarCard(d)]],

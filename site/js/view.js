@@ -300,7 +300,7 @@ function render() {
       remember("tools_tab", perfTabKey);
       render();
     }));
-    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab(); bindAsset(); bindDivCal();
+    bindSavings(); bindStress(d); bindGoal(); bindRetCal(d); bindLab(); bindAsset(); bindDivCal(); bindDivCalc();
     if (!RET[market]) loadReturns().then(() => { if (screen === "tools") { const c = $("#stress-card"); if (c) { c.outerHTML = stressCard(d); bindStress(d); } } });
   }
   app.querySelectorAll("[data-tags]").forEach((a) => a.addEventListener("click", (e) => {

@@ -81,7 +81,8 @@ def div_months(rows):
 
 
 def stats(months):
-    """[(연월, 종가, 수정 종가, 배당[, 최저가])] 오래된 순 → [시작, 주가 %, 배당 %, 낙폭 %, 햇수, 하락장 3개, 최근 배당].
+    """[(연월, 종가, 수정 종가, 배당[, 최저가])] 오래된 순 → [시작, 주가 %, 배당 %, 낙폭 %, 햇수, 하락장 3개, 최근 배당,
+    그 전 1년 배당(13~24달 전, 배당 계산기의 '직전 대비' — 1년에 한 번 주는 종목도 비교돼요)].
     짧거나 이상하면 None."""
     rows = [m for m in months if m[1] and m[1] > 0 and not math.isnan(m[1])]
     if len(rows) < MIN_MONTHS + 1:
@@ -99,7 +100,7 @@ def stats(months):
     if not (-0.99 < price < 3 and 0 <= div < 1):  # 액면분할 누락 같은 이상한 값
         return None
     return [rows[0][0], round(price * 100, 1), round(div * 100, 2), round(mdd * 100), round(years, 1),
-            crises(rows), div_months(rows)]
+            crises(rows), div_months(rows), div_months(rows[:-12])]
 
 
 def fetch(tickers, retries=2):

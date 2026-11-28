@@ -17,7 +17,7 @@ Actions가 파이썬을 돌려 `paper/`에 커밋 → `pages.yml`이 `dashboard.
 | `paper/watch.json` `paper/alerts.json` `paper/bot.json` | bot.py · watchlist.py | telegram-bot.yml | 관심 종목 |
 | `paper/kr/disclosures.json` | disclosures.py | disclosures.yml | 공시 (생겼을 때만) |
 | `paper/weekly.json` | weekly.py | weekly.yml | 주간 리포트 |
-| `paper/kr/fundamentals.json` `paper/us/fundamentals.json` `paper/symbols/` `paper/sectors.json` | fundamentals·symbols·sectors·returns·lab·etf_monthly | fundamentals.yml | 종목 화면·검색·적립식·실험실 |
+| `paper/kr/fundamentals.json` `paper/us/fundamentals.json` `paper/symbols/` `paper/sectors.json` | fundamentals·symbols·sectors·returns·lab·etf_monthly | fundamentals.yml | 종목 화면·검색·적립식·실험실·배당 달력·배당 계산기(`*_returns.json` r[6] 최근 1년·r[7] 그 전 1년 배당) |
 | `paper/health.json` | health.py weekly | health.yml | 주간 점검 한 줄 |
 | `paper/inbox/` | inbox.py (알림 보내는 워크플로 전부) | 여러 개 | 메시지함 (`_site/inbox.json`) |
 | `paper/policies.json` `paper/risk_events.json` `paper/learn_notes.json` | 손으로 (Claude가 고침) | 없음 | 정책·리스크 일정·공부 노트 |

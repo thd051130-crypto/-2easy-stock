@@ -1565,3 +1565,25 @@ details.help-sec .guide-body { padding: 0 0 12px; }
 .dv-sub { display: block; font-size: 12px; margin-top: 3px; line-height: 1.5; }
 .dv-tag { padding: 1px 6px; border-radius: 999px; background: var(--surface-0); color: var(--text-secondary); white-space: nowrap; }
 .dv-tag.sure { background: var(--accent-bg); color: var(--accent-fg); }
+/* 배당 계산기 (도구 → 배당 계산기, 2026-11-28) — 등락은 글자(↑↓)만, 색 없음 */
+.dc-list { gap: 0; }
+.dc-row { padding: 12px 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+.dc-list, .dc-plan, .dc-plan li { min-width: 0; }
+.dc-row:first-child { border-top: 0; }
+.dc-row .dv-sub { margin-top: 0; }
+.dc-chg { font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.dc-qty { display: flex; align-items: center; gap: 6px; }
+.dc-qty .alert-input { flex: 1 1 0; min-width: 0; max-width: 200px; }
+.dc-qty .alert-input input { padding: 8px 0; text-align: right; }
+.dc-pm { min-width: 44px; padding: 0; font-size: 18px; }
+.dc-out { font-size: 13px; font-variant-numeric: tabular-nums; }
+.dc-out b { color: var(--good-fg); }
+.dc-have { font-size: 12px; }
+.dc-goal-sw { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 4px; }
+.dc-goal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
+.dc-goal-in { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.dc-goal-in .alert-input { flex: 1 1 160px; }
+.dc-goal-in .chips { margin-top: 0; }
+.dc-goal .chips { margin-top: 6px; }
+.dc-plan { margin-top: 10px; }
+.dc-goal-sum { margin: 10px 0 0; font-size: 13px; font-variant-numeric: tabular-nums; }
