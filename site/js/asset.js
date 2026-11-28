@@ -686,7 +686,16 @@ function bindAsset() {
   card.querySelector("[data-ast-close]").addEventListener("click", () => { AST.year = +ym.slice(0, 4); astOpen = null; astSave(); lastTap = null; redraw(); });
   const goMon = (m) => astMonKey(m) || astMonKeys(m).pop() || astNewKey(m) || `${m}-01`;
   card.querySelectorAll("[data-ast-step]").forEach((b) => b.addEventListener("click", () => { astOpen = goMon(ymAdd(ym.slice(0, 7), +b.dataset.astStep)); redraw(); }));
-  card.querySelectorAll("[data-ast-day]").forEach((b) => b.addEventListener("click", () => { astOpen = b.dataset.astDay; lastTap = null; redraw(); keepTap(); }));
+  // '＋ 다른 날'은 바로 앞 기록의 종목·주 수·투자금·예수금을 그대로 이어받아 만들어요 (사용자 2026-11-28 "종목 유지가 안되는데"). 배당·메모는 비워요
+  card.querySelectorAll("[data-ast-day]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.astDay;
+    if (b.classList.contains("ast-day-add") && !AST.months[k]) {
+      const p = astPrevYm(k), px = p && AST.months[p];
+      AST.months[k] = { memo: "", items: px ? px.items.map((i) => ({ ...i, id: astId(), div: 0 })) : [], cash: px ? { ...(px.cash || {}) } : {} };
+      astSave();
+    }
+    astOpen = k; lastTap = null; redraw(); keepTap();
+  }));
   const memo = card.querySelector("[data-ast-memo]");
   memo.addEventListener("input", () => { month(ym).memo = memo.value; astSave(); });
   const dt = card.querySelector("[data-ast-date]");
